@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="15dp" android:background="@drawable/rounded_bg">
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="COMPASS · HEUTE" android:textSize="12sp" android:textStyle="bold" android:textColor="#356857" />
+  <TextView android:id="@+id/widget_date" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Heute" android:layout_marginTop="6dp" android:textSize="16sp" android:textColor="#24392F" />
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Aufgaben und Termine in Compass ansehen" android:layout_marginTop="3dp" android:textSize="11sp" android:textColor="#697B71" />
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp">
+    <TextView android:id="@+id/widget_today_button" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Heute öffnen" android:textStyle="bold" android:padding="7dp" android:textColor="#295F50" />
+    <TextView android:id="@+id/widget_capture_button" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="+ Erfassen" android:textStyle="bold" android:padding="7dp" android:textColor="#295F50" />
+  </LinearLayout>
+</LinearLayout>

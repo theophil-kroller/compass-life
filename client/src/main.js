@@ -1,7 +1,7 @@
 import './style.css';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
-import {request,nextBatch,applyResult,mergePulled,sameItemContent} from './sync.js';
+import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
 
 registerSW({immediate:true});
 const app=document.getElementById('app');
@@ -44,9 +44,10 @@ let inboxQuery='';
 const bootSearch=new URLSearchParams(location.search);
 const bootCapture=bootSearch.get('capture')==='1';
 const bootView=bootSearch.get('view');
-if(['today','inbox','review','forecast','overview','someday'].includes(bootView))tab=bootView;
+if(['today','inbox','review','forecast','overview','someday','activity'].includes(bootView))tab=bootView;
 if(bootCapture){captureAfterUnlock=true;tab='inbox';}
 
+let watchPairCode='', watchPairExpires='', watchSessions=[], watchDevices=[], watchError='';
 let weather={status:'idle',city:'Graz',temperature:null,label:''};
 function persist() {
   const snapshot=structuredClone(state);
@@ -137,8 +138,8 @@ function navItem(id,label,iconName,{disabled=false,count=null}={}) {
 function chrome(content){
  const num=rows().length;
  const today=new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
- const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation'})[tab]||'Heute');
- const sub=({today:'Was heute wirklich zählt.',forecast:'Termine und Verpflichtungen in den kommenden Tagen.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
+ const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten'})[tab]||'Heute');
+ const sub=({activity:'Aktivitäten, Zeit und Fokus. Auch von der Garmin.',today:'Was heute wirklich zählt.',forecast:'Termine und Verpflichtungen in den kommenden Tagen.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
  return `<div class="shell"><aside class="sidebar" aria-label="Navigation">
  <div class="brand"><span class="brand-icon">${ico('compass',24)}</span><span class="brand-name">Compass<small>Personal Life Manager</small></span></div>
  <nav class="side-nav" aria-label="Hauptnavigation">
@@ -151,7 +152,7 @@ function chrome(content){
  ${navItem('projects','Projekte','folder',{disabled:true})}${navItem('people','Menschen','people',{disabled:true})}
  ${navItem('progress','Fortschritt','activity',{disabled:true})}${navItem('recovery','Erholung','heart',{disabled:true})}
  <div class="nav-separator"></div>${navItem('overview','Übersicht','layers')}
- ${navItem('system','System & Sync','settings')}
+ ${navItem('activity','Aktivitäten','activity')}${navItem('system','System & Sync','settings')}
  </nav><div class="sidebar-foot">${ico('shield',16)} <span>Dein persönlicher Arbeitsraum</span></div>
  </aside><main class="workspace"><div class="utility-bar">
  <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>Ctrl / ⌘ K</kbd></button>
@@ -193,6 +194,7 @@ function dashboardCards(locked=false){
  ${moduleCard({name:'Kalender & Fokus',iconName:'calendar',cls:'grid-calendar',sub:'Raum für das Wesentliche',body:`<div class="calendar-preview"><span>09:00</span><div></div><span>11:00</span><div></div><span>14:00</span><div></div></div><p class="quiet-bottom">Keine Kalenderdaten verbunden</p>`})}
  ${moduleCard({name:'Fortschritt',iconName:'activity',cls:'grid-progress',sub:'Entwicklung sichtbar machen',body:`<div class="ring-row"><div class="ring-unit"><span class="donut">–</span><small>Ziele</small></div><div class="ring-unit"><span class="donut">–</span><small>Gewohnheiten</small></div><div class="ring-unit"><span class="donut">–</span><small>Fokuszeit</small></div></div>`})}
  ${moduleCard({name:'Menschen',iconName:'people',cls:'grid-people',sub:'Offene Gespräche & Kontakte',body:`<div class="people-preview"><span class="people-circles"><i></i><i></i><i></i></span><p>Keine Personen erfasst</p></div>`})}
+ ${moduleCard({name:'Activity Tracking',iconName:'activity',cls:'grid-activity',active:true,sub:'Garmin · Fokuszeit · Pomodoro',body:watchSessions.length?`<div class="activity-stat"><strong>${Math.round(watchSessions.reduce((sum,s)=>sum+s.focusSec,0)/3600*10)/10} h</strong> erfasste Fokuszeit · ${watchSessions.length} Sessions</div>`:placeholder('Noch keine Uhr-Sessions synchronisiert.')}).replace('</section>',`<button class="text-link" type="button" data-tab="activity">Aktivitäten ansehen ${ico('arrow',14)}</button></section>`)}
  ${moduleCard({name:'Erholung',iconName:'heart',cls:'grid-recovery',sub:'Energie & Schlaf im Blick',body:`<div class="energy-placeholder"><span class="donut big">–</span><div><span>${ico('moon',14)} Schlaf</span><span>${ico('heart',14)} Erholung</span><span>${ico('activity',14)} Energie</span></div></div>`})}
  </div>`;
 }
@@ -259,7 +261,7 @@ async function loadWeather(city){
  }catch(ex){weather={city,status:'idle',temperature:null,label:''};toast(`Wetter konnte nicht geladen werden: ${ex.message}`,true);}
 }
 function vaultScreen(){
- tab=['inbox','forecast','overview','someday','review'].includes(tab)?'today':tab;
+ tab=['inbox','forecast','overview','someday','review','activity'].includes(tab)?'today':tab;
  return chrome(`<section class="vault-compact" aria-label="Lokalen Tresor einrichten"><div class="vault-copy"><span class="vault-icon">${ico('lock',18)}</span><div><h2>${hasVault?'Tresor entsperren':'Lokalen Tresor einrichten'}</h2><p>${hasVault?'Deine Daten bleiben verborgen, bis du sie entsperrst.':'Einmalig eine Passphrase festlegen; deine lokalen Daten werden verschlüsselt gespeichert.'}</p></div></div>
  <form class="vault-form" id="vault-form" autocomplete="off"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" placeholder="Passphrase (mindestens 12 Zeichen)" autocomplete="off" />
  ${!hasVault?'<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" minlength="12" required autocomplete="off" placeholder="Passphrase wiederholen"/>':''}
@@ -334,14 +336,39 @@ function systemScreen(){
  <button class="secondary-btn full" data-action="export-encrypted">Verschlüsseltes Backup herunterladen</button><button class="secondary-btn full" data-action="export-json">Klartext-JSON exportieren</button><p class="small-muted">Klartext-Exporte enthalten unverschlüsselte private Inhalte.</p></section></div>
  ${state.conflicts.length?`<section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('sync',21)}<h2>Synchronisationskonflikte (${state.conflicts.length})</h2></div></div><p class="module-subtitle">Wähle bewusst die gewünschte Fassung.</p>${state.conflicts.map(c=>`<div class="conflict"><p><strong>Lokal:</strong> ${h(c.local?.title||'(gelöscht)')}</p><p><strong>Cloud:</strong> ${h(c.remote?.title||'(fehlt)')}</p>${c.local?.note||c.remote?.note?`<p class="small-muted"><strong>Notiz lokal:</strong> ${h(c.local?.note||'(leer)')} · <strong>Cloud:</strong> ${h(c.remote?.note||'(leer)')}</p>`:''}<div class="system-actions"><button class="secondary-btn" data-action="resolve-remote" data-id="${h(c.id)}">Cloud übernehmen</button><button class="primary-btn" data-action="resolve-local" data-id="${h(c.id)}">Meine Version behalten</button></div></div>`).join('')}</section>`:''}`);
 }
+function activityScreen(){
+  const rows=watchSessions.map(x=>{
+    const day=new Date(x.startedAt*1000).toLocaleString('de-AT',{dateStyle:'short',timeStyle:'short'});
+    const mins=Math.round(x.durationSec/60);
+    const heart=x.hrSamples?.length?Math.round(x.hrSamples.reduce((sum,p)=>sum+p[1],0)/x.hrSamples.length)+' bpm Ø':'–';
+    return `<div class="watch-session"><div><strong>${h(x.activity)}</strong><small>${h(day)} · ${mins} Minuten · ${x.pomodoros} Pomodoros</small></div><span>♥ ${h(heart)} · BB ${x.bbStart==null?'–':x.bbStart} → ${x.bbEnd==null?'–':x.bbEnd} (${x.bbSamples?.length||0} Werte)</span></div>`;
+  }).join('');
+  return chrome(`<div class="watch-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('activity',22)}<h2>Garmin Compass</h2></div></div>
+   <p class="module-subtitle">Forschung, Prüfungskorrektur, Verwaltung, Meeting oder Familienzeit direkt an der fēnix 7S erfassen.</p>
+   <div class="watch-pair-block"><h3>Uhr koppeln</h3><p>Compass-Tresor und Google-Verbindung müssen entsperrt sein. Tippe auf „Kopplungscode erstellen“ und gib die acht Ziffern in der Garmin-App ein (UP/DOWN ändern, START bestätigt).</p>
+   ${watchPairCode?`<div class="watch-code">${h(watchPairCode)}</div><small>Gültig bis ${h(new Date(watchPairExpires).toLocaleTimeString('de-AT'))}. Nicht öffentlich teilen.</small>`:''}
+   <button class="primary-btn" type="button" data-action="watch-pair" ${!authToken?'disabled':''}>Kopplungscode erstellen</button></div>
+   <div class="watch-device-list">${watchDevices.map(d=>`<div class="watch-session"><div><strong>${h(d.label)}</strong><small>Gekoppelt seit ${h(new Date(d.createdAt).toLocaleDateString('de-AT'))}</small></div><button type="button" class="secondary-btn" data-action="watch-revoke" data-id="${h(d.deviceHash)}">Trennen</button></div>`).join('')}</div>
+   ${watchError?`<p class="watch-error">${h(watchError)}</p>`:''}
+   <p class="small-muted">Für den Garmin-Prototyp wird eine eigene Connect-IQ-App benötigt. Ohne installierte Uhr-App zeichnet Compass noch nichts auf.</p></section>
+   <section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('clock',22)}<h2>Aufgezeichnete Sessions</h2></div></div>
+   <p class="module-subtitle">Herzfrequenzwerte sind Messungen der Uhr, Body Battery ist je nach Firmware verfügbar. Kein medizinischer Befund.</p>
+   <button class="secondary-btn" type="button" data-action="watch-refresh" ${!authToken?'disabled':''}>Sessions aktualisieren</button>
+   <div class="watch-session-list">${rows||'<div class="watch-empty">Noch keine Uhr-Sessions synchronisiert.</div>'}</div></section></div>`);
+}
+async function reloadWatchSessions(){
+ if(!authToken)return;
+ try{const [data,dev]=await Promise.all([request(config.apiUrl,authToken,'/api/watch/sessions'),request(config.apiUrl,authToken,'/api/watch/devices')]);watchSessions=data.sessions||[];watchDevices=dev.devices||[];watchError='';render();}
+ catch(ex){watchError='Uhr-Daten derzeit nicht erreichbar ('+ex.message+').';render();}
+}
 function render(){
  if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
- app.innerHTML=tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():todayScreen();bind();
+ app.innerHTML=tab==='activity'?activityScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():todayScreen();bind();
  if(captureOverlayOpen)requestAnimationFrame(()=>app.querySelector('#capture-modal-input')?.focus());
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();});
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if(tab==='activity'&&authToken)reloadWatchSessions().catch(()=>{});});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
@@ -392,6 +419,16 @@ async function runAction(action,id) {
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
     if(action==='lock'){clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='watch-pair'){
+      try{const d=await request(config.apiUrl,authToken,'/api/watch/pair/start',{method:'POST'});watchPairCode=d.code;watchPairExpires=d.expiresAt;watchError='';render();}
+      catch(ex){watchError='Kopplung derzeit nicht bereit: '+ex.message;render();}return;
+    }
+    if(action==='watch-refresh'){await reloadWatchSessions();return;}
+    if(action==='watch-revoke'){
+      if(!confirm('Uhr wirklich trennen? Noch nicht synchronisierte Sessions bleiben lokal auf der Uhr, lassen sich aber erst nach erneuter Kopplung hochladen.'))return;
+      try{await request(config.apiUrl,authToken,'/api/watch/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWatchSessions();}
+      catch(ex){watchError='Gerät konnte nicht getrennt werden: '+ex.message;render();}return;
+    }
     if(action==='sync'){await syncNow();return;}
     if(action==='logout'){
       const previous=authToken;authToken='';currentUser='';clearTimeout(syncTimer);
@@ -484,6 +521,7 @@ async function syncNow() {
       await persist();
       if(!data.hasMore)break;
     }
+    const fixed=pruneIdenticalConflicts(state);if(fixed)await persist();
     lastSyncAt=Date.now();
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
     error='';

@@ -177,3 +177,10 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 @media(max-width:1040px){.inbox-mvp-layout{grid-template-columns:1fr}.inbox-mvp-card,.inbox-mvp-detail{min-height:0}.inbox-mvp-list{max-height:400px}}
 @media(max-width:700px){.inbox-mvp-card,.inbox-mvp-detail{padding:18px}.inbox-mvp-head h2{font-size:24px}.inbox-mvp-head{align-items:flex-start}.inbox-mvp-head .primary-btn{padding:9px 12px}.inbox-mvp-row{padding:13px 7px}.capture-fab{display:flex}.capture-modal-layer{padding:8vh 12px 18px;align-items:flex-start}.capture-modal{padding:21px 18px 18px;border-radius:18px}.capture-modal-heading h2{font-size:23px}.capture-modal-foot{align-items:stretch;flex-direction:column}.capture-modal-foot button{justify-content:center}.inbox-mvp-list{max-height:none}.inbox-mvp-bottom{padding-right:64px}}
 @media(prefers-reduced-motion:reduce){.inbox-mvp-row{transition:none}}
+
+/* Compass Activity / Garmin beta 0.3.0 */
+.watch-grid{display:grid;grid-template-columns:1fr 1.12fr;gap:18px;max-width:1450px}.watch-grid .module-card{padding:27px;min-height:370px}
+.watch-pair-block{margin:26px 0;padding:20px;border-radius:16px;background:#f1f6f2}.watch-pair-block h3{margin:0 0 8px;font-family:Georgia,serif;color:#284839}
+.watch-pair-block p{font-size:13px;color:#627d70;line-height:1.7}.watch-code{font-variant-numeric:tabular-nums;font-weight:700;font-size:34px;letter-spacing:7px;margin:15px 0;color:#206e5d}
+.watch-session-list{margin-top:22px}.watch-session{display:flex;justify-content:space-between;gap:20px;padding:15px 0;border-bottom:1px solid #e7eee8}.watch-session strong{display:block;font-size:14px;color:#25483b}.watch-session small{display:block;color:#83978a;padding-top:6px}.watch-session>span{font-size:12px;color:#557e6d;text-align:right}.watch-empty{color:#84978a;font-size:13px;padding:40px 10px}.watch-error{color:#ad482c;font-size:12px}
+@media(max-width:900px){.watch-grid{grid-template-columns:1fr}.watch-grid .module-card{padding:20px;min-height:0}}

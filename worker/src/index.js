@@ -1,3 +1,4 @@
+import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice} from './watch.js';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import {MAX_BATCH, validateMutation, validCursor, cleanMutation} from './validation.js';
 
@@ -125,6 +126,10 @@ async function applyOne(env,sub,raw) {
 }
 async function route(req,env,identity) {
   const url=new URL(req.url);
+  if(req.method==='POST' && url.pathname==='/api/watch/pair/start')return createPair(env,identity);
+  if(req.method==='GET' && url.pathname==='/api/watch/sessions')return listWatchSessions(env,identity);
+  if(req.method==='GET' && url.pathname==='/api/watch/devices')return listWatchDevices(env,identity);
+  if(req.method==='POST' && url.pathname==='/api/watch/device/revoke')return revokeWatchDevice(req,env,identity);
   if (req.method==='GET' && url.pathname==='/api/me') {
     return json({email:identity.email,phase:'A',apiVersion:1});
   }
@@ -171,6 +176,8 @@ export default {
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));
     try {
+      if(path==='/api/watch/pair/claim' && req.method==='POST')return finish(await claimPair(req,env));
+      if(path==='/api/watch/sessions' && req.method==='POST')return finish(await acceptWatchSession(req,env));
       if(path==='/api/session' && req.method==='POST') {
         const googleIdentity=await authorizeGoogle(req,env);
         return finish(googleIdentity?await issueSession(env,googleIdentity):json({error:'unauthorized'},401));

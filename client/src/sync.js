@@ -69,3 +69,15 @@ export function mergePulled(state,changes) {
     }
   }
 }
+
+// Repair only stale conflicts whose local and cloud contents are proven identical.
+export function pruneIdenticalConflicts(state){
+  const before=state.conflicts.length;
+  state.conflicts=state.conflicts.filter(c=>{
+    if(!sameItemContent(state.records[c.id],c.remote))return true;
+    state.serverVersions[c.id]=Math.max(state.serverVersions[c.id]||0,c.remote.version||0);
+    state.pending=state.pending.filter(m=>m.id!==c.id);
+    return false;
+  });
+  return before-state.conflicts.length;
+}
