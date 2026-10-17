@@ -251,3 +251,18 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 @media(max-width:700px){.workflow-layout,.projects-layout,.project-details,.forecast-inspector{display:flex;flex-direction:column}.project-details>.work-card{width:100%}.task-field-grid,.project-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.compass-tracking-grid{grid-template-columns:1fr}.grid-activity .tracking-period{flex-direction:row;justify-content:space-between;align-items:center}.tracking-period small{max-width:110px}.timeline-item{padding:11px 8px}.forecast-full{min-height:0}}
 
 .review-next-section{margin-top:20px;border-radius:13px;border:1px solid #e3eee6;padding:15px;background:#f8fbf8}.review-status-columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.review-status-columns>div{background:white;border:1px solid #e6eee9;border-radius:9px;display:flex;flex-direction:column;padding:11px;gap:5px}.review-status-columns strong{font-size:23px;color:#477d65}.review-status-columns span{font-size:10px;color:#80988a}.review-next-section .secondary-btn{margin:4px 4px 0 0}
+
+/* Compass 0.4.3 – context, review, progress */
+.context-filter{border:1px solid #e1eae2;background:#f6faf6;padding:10px 12px;border-radius:12px;margin:0 0 14px}
+.context-filter label{display:flex;gap:12px;align-items:center;font-size:12px;color:#517260;flex-wrap:wrap}
+.context-filter select{flex:1;min-width:180px;border:1px solid #dae8de;border-radius:9px;padding:9px;background:white;color:#345647}
+.progress-hint{font-size:11px;color:#75897b;margin:0 0 16px}
+.progress-track{height:7px;border-radius:30px;background:#eaf1ec;overflow:hidden;margin-top:6px}
+.progress-track>span{display:block;height:100%;background:#79ab8d;border-radius:30px}
+.project-review-info{font-size:11px;color:#638272;margin-bottom:12px}
+.project-edit-actions{display:flex;gap:8px;flex-wrap:wrap}
+.project-review-queue{margin:18px 0 0;padding:15px;border:1px solid #e2eae4;border-radius:12px;background:#fafcf9;font-size:12px}
+.project-review-queue>strong{display:block;margin-bottom:10px}
+.review-project-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #e9efea}
+.review-project-row:last-child{border-bottom:0}.review-project-row>span{min-width:0;overflow-wrap:anywhere}
+@media(max-width:650px){.review-project-row{align-items:start;flex-direction:column}.project-edit-actions{flex-direction:column}}
