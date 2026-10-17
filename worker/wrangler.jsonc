@@ -13,7 +13,7 @@
     }
   ],
   "vars": {
-    "GOOGLE_CLIENT_ID": "REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+    "GOOGLE_CLIENT_ID": "354585107256-00iq18hra8e8kk4aetsojmou2n06qbqd.apps.googleusercontent.com",
     "ALLOWED_ORIGIN": "https://theophil-kroller.github.io"
   }
 }
