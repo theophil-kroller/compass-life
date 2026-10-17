@@ -1,0 +1,4 @@
+{
+  "apiUrl": "https://YOUR_WORKER_NAME.YOUR_SUBDOMAIN.workers.dev",
+  "googleClientId": "REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "compass-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "compass-db",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "GOOGLE_CLIENT_ID": "REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+    "ALLOWED_ORIGIN": "https://theophil-kroller.github.io"
+  }
+}
