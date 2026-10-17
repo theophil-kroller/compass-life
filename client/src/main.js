@@ -12,6 +12,16 @@ let calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let selectedDay=localDateString(new Date());
 let selectedInboxId=null;
 let showCaptureDetails=false;
+let syncResyncRequested=false;
+let captureOverlayOpen=false;
+let captureAfterUnlock=false;
+let inboxQuery='';
+const bootSearch=new URLSearchParams(location.search);
+const bootCapture=bootSearch.get('capture')==='1';
+const bootView=bootSearch.get('view');
+if(['today','inbox','review','forecast','overview','someday'].includes(bootView))tab=bootView;
+if(bootCapture){captureAfterUnlock=true;tab='inbox';}
+
 let weather={status:'idle',city:'Graz',temperature:null,label:''};
 function persist() {
   const snapshot=structuredClone(state);
@@ -29,10 +39,26 @@ function download(filename,obj) {
   setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
 async function mutate(fn) {
-  if(!state||busy)return;
-  fn(state);await persist();render();
-  if(authToken&&navigator.onLine) syncNow().catch(()=>{});
+  if(!state)throw new Error('Der Tresor muss entsperrt sein.');
+  const previous=structuredClone(state);
+  try {
+    fn(state);
+    await persist();
+  }catch(ex){state=previous;render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
+  render();
+  if(busy)syncResyncRequested=true;
+  else if(authToken&&navigator.onLine)syncNow().catch(()=>{});
 }
+async function addCapture(title,note=''){
+  const cleanTitle=String(title||'').trim();const cleanNote=String(note||'').trim();
+  if(!cleanTitle||cleanTitle.length>1000)throw new Error('Bitte einen Gedanken mit maximal 1.000 Zeichen eingeben.');
+  if(cleanNote.length>10000)throw new Error('Die Notiz ist zu lang (max. 10.000 Zeichen).');
+  await mutate(s=>{
+    const r={id:crypto.randomUUID(),title:cleanTitle,note:cleanNote,deleted:false,updatedAt:stamp()};
+    s.records[r.id]=r;s.pending.push(makeMutation(r));s.history.push({type:'captured',at:stamp(),id:r.id});
+  });
+}
+
 const stamp=()=>new Date().toISOString();
 function makeMutation(record) {
   return {id:record.id,mutationId:crypto.randomUUID(),baseVersion:0,title:record.title,
@@ -103,14 +129,14 @@ function chrome(content){
  ${navItem('system','System & Sync','settings')}
  </nav><div class="sidebar-foot">${ico('shield',16)} <span>Dein persönlicher Arbeitsraum</span></div>
  </aside><main class="workspace"><div class="utility-bar">
- <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>⌘ K</kbd></button>
+ <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>Ctrl / ⌘ K</kbd></button>
  <div class="utility-right">${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
  <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?'Google angemeldet':'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':''}">
  <div class="page-intro"><div><p class="page-overline">${tab==='today'?'DEIN TAGESKOMPASS':tab==='overview'?'DEIN PERSÖNLICHER KOMPASS':'COMPASS · DEIN ARBEITSRAUM'}</p><h1>${h(title)}</h1><p class="intro-subtitle">${h(sub)}</p></div><div class="today-label">${h(today)}<span>${state?'Tresor entsperrt':'Tresor gesperrt'}</span></div></div>
  ${notice?`<div role="status" class="alert good">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main></div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${state&&captureOverlayOpen?captureOverlay():``}</div>`;
 }
 
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
@@ -218,22 +244,33 @@ function vaultScreen(){
 function todayScreen(){return chrome(todayWork());}
 function homeScreen(){return chrome(dashboardCards());}
 
-function inboxScreen(){
- const list=rows();
- const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
- return chrome(`<div class="inbox-layout"><section class="module-card module-active inbox-capture-large"><div class="module-head"><div class="module-title">${ico('pencil',22)}<h2>Quick Capture</h2></div></div><p class="module-subtitle">Ein Satz genügt. Du kannst Details gleich ergänzen oder später beim Review klären.</p>
- <form id="capture-form"><label for="capture">Was möchtest du festhalten?</label><textarea id="capture" name="title" maxlength="1000" rows="4" placeholder="Was beschäftigt dich gerade?" required></textarea>
- <details class="optional-capture"><summary>${ico('plus',15)} Notiz ergänzen <span>optional</span></summary><label for="capture-note" class="sr-only">Optionale Notiz zum Inbox-Eintrag</label><textarea id="capture-note" name="note" maxlength="10000" rows="3" placeholder="Zusätzliche Gedanken, Links, Informationen …"></textarea></details>
- <button class="primary-btn wide" type="submit">Zur Inbox hinzufügen ${ico('arrow',16)}</button></form>
- <div class="capture-principle">${ico('shield',16)} Kein Pflichtfeld für Energie, Priorität, Datum oder Projekt.</div></section>
- <section class="module-card module-active inbox-items-large"><div class="module-head"><div class="module-title">${ico('inbox',22)}<h2>Deine Inbox</h2><span class="count">${list.length}</span></div><button class="review-link" type="button" data-tab="review">Zum Review ${ico('arrow',14)}</button></div><p class="module-subtitle">Alles, was noch auf Klärung wartet.</p>
- ${list.length?`<div class="full-items">${list.map(r=>`<div class="inbox-row ${current?.id===r.id?'inbox-selected':''}"><span class="tiny-square"></span><div class="item-text"><strong>${h(r.title)}</strong>${r.note?`<small class="inbox-note">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)} · ${state.pending.some(p=>p.id===r.id)?'Synchronisation ausstehend':'Lokal gespeichert'}</small></div><button class="icon-button" type="button" data-action="select-inbox" data-id="${h(r.id)}" aria-label="Eintrag für die Klärung ansehen" title="Klärung ansehen">${ico('target',17)}</button><button class="icon-button" type="button" data-action="edit" data-id="${h(r.id)}" aria-label="Eintrag bearbeiten" title="Bearbeiten">${ico('pencil',17)}</button><button class="icon-button" type="button" data-action="remove" data-id="${h(r.id)}" aria-label="Eintrag archivieren" title="Archivieren">${ico('check',18)}</button></div>`).join('')}</div>`:placeholder('Deine Inbox ist leer. Ein guter Anfang.')}
- </section></div>
- <section class="work-card clarify-preview"><div class="work-heading"><span>${ico('target',18)} Klären & Einordnen</span><span class="quiet-tag">Vorbereitung des GTD-Reviews</span></div>
- <div class="clarify-intro"><strong>${current?h(current.title):'Noch kein Eintrag ausgewählt'}</strong><p>${current?'Beim Review entscheidest du, was daraus werden soll. Die folgenden Zuordnungen sind noch nicht aktiv.':'Erfasse einen Gedanken in der Inbox. Später kannst du ihn hier ohne Zeitdruck verarbeiten.'}</p></div>
- ${clarifyControls()}
- </section>`);
+function captureOverlay(){
+ return `<div class="capture-modal-layer" data-action="capture-close-backdrop">
+ <section class="capture-modal" role="dialog" aria-modal="true" aria-labelledby="capture-modal-title" tabindex="-1">
+ <div class="capture-modal-heading"><div><p class="capture-eyebrow">QUICK CAPTURE · INBOX</p><h2 id="capture-modal-title">Aus dem Kopf. In Compass.</h2></div><button type="button" class="capture-modal-close" data-action="capture-close" aria-label="Schnellerfassung schließen">${ico('plus',20)}</button></div>
+ <form id="capture-modal-form"><label for="capture-modal-input" class="sr-only">Neuer Gedanke</label>
+ <textarea autofocus id="capture-modal-input" name="title" rows="3" maxlength="1000" required placeholder="Was möchtest du nicht vergessen?"></textarea>
+ <details class="optional-capture"><summary>${ico('plus',15)} Notiz oder Link ergänzen <span>optional</span></summary><label for="capture-modal-note" class="sr-only">Zusätzliche Notiz</label><textarea id="capture-modal-note" name="note" maxlength="10000" rows="3" placeholder="Zusätzliche Informationen …"></textarea></details>
+ <div class="capture-modal-foot"><span>${ico('lock',14)} Verschlüsselt und offline gespeichert</span><button class="primary-btn" type="submit">In Inbox erfassen ${ico('arrow',15)}</button></div></form>
+ <p class="capture-modal-hint">Kein Projekt, keine Deadline, keine Priorität nötig · Esc zum Schließen</p></section></div>`;
 }
+function inboxScreen(){
+ const fullList=rows();
+ const query=inboxQuery.trim().toLocaleLowerCase('de');
+ const list=query?fullList.filter(r=>`${r.title} ${r.note||''}`.toLocaleLowerCase('de').includes(query)):fullList;
+ const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
+ return chrome(`<div class="inbox-mvp-layout"><section class="module-card module-active inbox-mvp-card">
+ <div class="inbox-mvp-head"><div><p class="capture-eyebrow">VERLÄSSLICHER EINGANG</p><h2>Deine Inbox <span class="count">${fullList.length}</span></h2><p>Alles sammeln. Noch nichts entscheiden müssen.</p></div><button type="button" class="primary-btn" data-action="capture-focus">${ico('plus',17)} Erfassen</button></div>
+ <div class="inbox-search-box">${ico('search',17)}<input id="inbox-query" type="search" placeholder="Inbox durchsuchen …" value="${h(inboxQuery)}" autocomplete="off" aria-label="Inbox durchsuchen"/></div>
+ <div class="inbox-mvp-list">
+ ${list.length?list.map(r=>`<button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button>`).join(''):
+ `<div class="inbox-mvp-empty">${ico(query?'search':'inbox',32)}<strong>${query?'Keine passenden Einträge':'Dein Kopf darf leerer werden.'}</strong><span>${query?'Versuche einen anderen Suchbegriff.':'Halte hier alles fest, was dir im Alltag begegnet.'}</span></div>`}
+ </div><div class="inbox-mvp-bottom"><span>${state.pending.length} ausstehende Änderungen</span><button type="button" class="review-link" data-tab="review">Wochenreview ${ico('arrow',14)}</button></div></section>
+ <aside class="module-card module-active inbox-mvp-detail">${current?
+ `<div class="inbox-detail-top"><span class="capture-eyebrow">EINTRAG · INBOX</span><span class="inbox-detail-date">${date(current.updatedAt)}</span></div><form id="inbox-edit-form" data-id="${h(current.id)}"><label for="inbox-edit-title">Gedanke</label><textarea id="inbox-edit-title" name="title" maxlength="1000" rows="3" required>${h(current.title)}</textarea><label for="inbox-edit-note">Notizen, Links, Kontext</label><textarea id="inbox-edit-note" name="note" maxlength="10000" rows="7" placeholder="Optional – für den späteren Review">${h(current.note||'')}</textarea><div class="inbox-detail-actions"><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="remove" data-id="${h(current.id)}">Archivieren</button></div></form><div class="inbox-detail-next">${ico('target',18)}<div><strong>Später klären</strong><p>Im Wochenreview wird daraus eine Next Action, ein Projekt, eine Agenda oder Dreams. Bis dahin bleibt dieser Gedanke zuverlässig in der Inbox.</p><button type="button" class="review-link" data-tab="review">Zum Review ${ico('arrow',14)}</button></div></div>`:
+ `<div class="inbox-mvp-empty detail-empty">${ico('pencil',32)}<strong>Ein Gedanke genügt.</strong><span>Öffne die Schnellerfassung und halte fest, was dich beschäftigt.</span></div>`}</aside></div>`);
+}
+
 function clarifyControls(){
  return `<div class="clarify-options" aria-label="Künftige Klärungskategorien (Vorschau)"><div class="clarify-choice"><h3>Wohin gehört es?</h3><div class="choice-row">${['Next Action','Projekt','Agenda / Person','Waiting For','Dreams','Referenz'].map(x=>`<button type="button" disabled class="choice-pill">${h(x)}</button>`).join('')}</div></div>
  <div class="clarify-choice"><h3>Wie viel Energie braucht es?</h3><div class="choice-row">${['Low Energy','Medium Energy','High Energy'].map(x=>`<button type="button" disabled class="choice-pill">${h(x)}</button>`).join('')}</div></div>
@@ -273,8 +310,9 @@ function systemScreen(){
  ${state.conflicts.length?`<section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('sync',21)}<h2>Synchronisationskonflikte (${state.conflicts.length})</h2></div></div><p class="module-subtitle">Wähle bewusst die gewünschte Fassung.</p>${state.conflicts.map(c=>`<div class="conflict"><p><strong>Lokal:</strong> ${h(c.local?.title||'(gelöscht)')}</p><p><strong>Cloud:</strong> ${h(c.remote?.title||'(fehlt)')}</p><div class="system-actions"><button class="secondary-btn" data-action="resolve-remote" data-id="${h(c.id)}">Cloud übernehmen</button><button class="primary-btn" data-action="resolve-local" data-id="${h(c.id)}">Meine Version behalten</button></div></div>`).join('')}</section>`:''}`);
 }
 function render(){
- if(!state){app.innerHTML=vaultScreen();bind();return;}
+ if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
  app.innerHTML=tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():todayScreen();bind();
+ if(captureOverlayOpen)requestAnimationFrame(()=>app.querySelector('#capture-modal-input')?.focus());
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
@@ -282,25 +320,46 @@ function bind() {
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
-      toast('Lokaler Tresor bereit.');}catch(ex){toast(ex.message,true);}
+      if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit.');}catch(ex){toast(ex.message,true);}
   };
   const reviewSelect=app.querySelector('#review-select');if(reviewSelect)reviewSelect.onchange=ev=>{selectedInboxId=ev.target.value;render();};
   const importField=app.querySelector('#encrypted-import');if(importField)importField.onchange=async ev=>{
     try {const obj=JSON.parse(await ev.target.files[0].text());await vault.importEncrypted(obj);hasVault=true;toast('Backup importiert. Jetzt mit der ursprünglichen Passphrase entsperren.');}
     catch(ex){toast(ex.message,true);}
   };
-  const capture=app.querySelector('#capture-form');if(capture)capture.onsubmit=async ev=>{
-    ev.preventDefault();const form=new FormData(capture);const value=String(form.get('title')||'').trim();const note=String(form.get('note')||'').trim();if(!value)return;if(note.length>10000){toast('Notiz ist zu lang.',true);return;}
-    await mutate(s=>{const r={id:crypto.randomUUID(),title:value,note,deleted:false,updatedAt:stamp()};
-      s.records[r.id]=r;s.pending.push(makeMutation(r));s.history.push({type:'captured',at:stamp(),id:r.id});});
-    notice='Erfasst und verschlüsselt gespeichert.';render();
+  app.querySelectorAll('#capture-form, #capture-modal-form').forEach(form=>form.onsubmit=async ev=>{
+    ev.preventDefault();
+    const submit=form.querySelector('[type=submit]');if(submit)submit.disabled=true;
+    try {const data=new FormData(form);await addCapture(data.get('title'),data.get('note'));captureOverlayOpen=false;
+      notice='Sicher in deiner Inbox gespeichert'+(authToken?' · Synchronisierung läuft':' · nur auf diesem Gerät')+'.';error='';render();
+    }catch(ex){if(submit)submit.disabled=false;toast(ex.message,true);}
+  });
+  const editForm=app.querySelector('#inbox-edit-form');if(editForm)editForm.onsubmit=async ev=>{
+    ev.preventDefault();const id=editForm.dataset.id;const form=new FormData(editForm);
+    const title=String(form.get('title')||'').trim(),note=String(form.get('note')||'').trim();
+    if(!title||title.length>1000||note.length>10000){toast('Bitte Titel und Notizlänge prüfen.',true);return;}
+    const existing=state.records[id];if(!existing)return;
+    if(existing.title===title&&(existing.note||'')===note){notice='Keine Änderungen.';render();return;}
+    try{await mutate(s=>{const r=s.records[id];r.title=title;r.note=note;r.updatedAt=stamp();s.pending.push(makeMutation(r));});notice='Änderungen lokal gespeichert.';render();}
+    catch(ex){toast(ex.message,true);}
   };
-  app.querySelectorAll('[data-action]').forEach(el=>el.onclick=()=>runAction(el.dataset.action,el.dataset.id));
+  const search=app.querySelector('#inbox-query');if(search)search.oninput=ev=>{
+    const v=ev.target.value;const caret=ev.target.selectionStart??v.length;inboxQuery=v;render();
+    const field=app.querySelector('#inbox-query');if(field){field.focus();try{field.setSelectionRange(caret,caret);}catch{}}
+  };
+  app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
+    if(el.dataset.action==='capture-close-backdrop'&&ev.target!==el)return;
+    runAction(el.dataset.action,el.dataset.id);
+  });
 }
 async function runAction(action,id) {
   lastActivity=Date.now();
   try {
-    if(action==='capture-focus'){if(!state){document.querySelector('#passphrase')?.focus();return;}if(!document.querySelector('#capture')){tab='today';render();}document.querySelector('#capture')?.focus();return;}
+    if(action==='capture-focus'){
+      if(!state){captureAfterUnlock=true;document.querySelector('#passphrase')?.focus();return;}
+      captureOverlayOpen=true;render();return;
+    }
+    if(action==='capture-close'||action==='capture-close-backdrop'){captureOverlayOpen=false;render();return;}
     if(action==='select-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;selectedDay=id;calendarMonth=new Date(`${id}T12:00:00`);render();return;}
     if(action==='reset-today'){selectedDay=localDateString(new Date());calendarMonth=new Date();render();return;}
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
@@ -309,7 +368,7 @@ async function runAction(action,id) {
     if(action==='lock'){vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='sync'){await syncNow();return;}
     if(action==='logout'){authToken='';currentUser='';toast('Von Google getrennt. Lokale Daten bleiben geschützt.');return;}
-    if(action==='select-inbox'){if(!state?.records[id]||state.records[id].deleted)return;selectedInboxId=id;render();return;}
+    if(action==='select-inbox'){if(!state?.records[id]||state.records[id].deleted)return;selectedInboxId=id;tab='inbox';render();return;}
     if(action==='edit'){
       const current=state.records[id];if(!current||current.deleted)return;
       const value=prompt('Inbox-Eintrag bearbeiten',current.title);if(value===null)return;
@@ -389,10 +448,25 @@ async function syncNow() {
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
     error='';
   }catch(ex){
+    syncResyncRequested=false;
     error=ex.status===401?'Google-Sitzung abgelaufen. Bitte erneut anmelden.':`Synchronisation: ${ex.message}`;
     if(ex.status===401){authToken='';currentUser='';}
-  }finally{busy=false;render();}
+  }finally{
+    busy=false;render();
+    const retry=syncResyncRequested&&Boolean(state?.pending.length)&&Boolean(authToken)&&navigator.onLine&&!error;
+    syncResyncRequested=false;
+    if(retry)queueMicrotask(()=>syncNow().catch(()=>{}));
+  }
 }
+document.addEventListener('keydown',ev=>{
+  const target=ev.target;
+  const typing=target instanceof HTMLElement && (['INPUT','TEXTAREA','SELECT'].includes(target.tagName)||target.isContentEditable);
+  if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){
+    ev.preventDefault();runAction('capture-focus');return;
+  }
+  if(ev.key==='Escape'&&captureOverlayOpen){ev.preventDefault();captureOverlayOpen=false;render();return;}
+  if(!typing&&!ev.ctrlKey&&!ev.altKey&&!ev.metaKey&&ev.key.toLowerCase()==='n'&&state){ev.preventDefault();runAction('capture-focus');}
+});
 window.addEventListener('online',()=>{render();if(authToken)syncNow().catch(()=>{});});
 window.addEventListener('offline',render);
 for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();},{passive:true});
@@ -400,5 +474,5 @@ setInterval(()=>{if(state&&Date.now()-lastActivity>15*60*1000){vault.lock();stat
 (async()=>{
   try{config=await fetch(`${import.meta.env.BASE_URL}runtime-config.json`,{cache:'no-store'}).then(r=>r.json());}
   catch{config={};}
-  hasVault=await vault.exists();render();
+  hasVault=await vault.exists();if(bootCapture&&hasVault){captureAfterUnlock=true;}render();if(bootCapture)history.replaceState(null,'',location.pathname);
 })().catch(ex=>{app.innerHTML=`<div class="fatal">Lokaler Speicher nicht verfügbar: ${h(ex.message)}. Bitte einen sicheren Browserkontext verwenden.</div>`;});

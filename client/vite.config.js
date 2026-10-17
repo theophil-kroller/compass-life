@@ -13,6 +13,10 @@ export default defineConfig({
       name: 'Compass – Personal Life Manager', short_name: 'Compass',
       description: 'Capture, clarify, review. GTD, local-first.',
       start_url: base, scope: base, display: 'standalone',
+      shortcuts: [
+        {name:'Schnellerfassung',short_name:'Erfassen',description:'Neuen Gedanken in Compass erfassen',url:`${base}?capture=1`,icons:[{src:`${base}icon-192.png`,sizes:'192x192',type:'image/png'}]},
+        {name:'Inbox öffnen',short_name:'Inbox',description:'Deine Compass Inbox öffnen',url:`${base}?view=inbox`,icons:[{src:`${base}icon-192.png`,sizes:'192x192',type:'image/png'}]}
+      ],
       theme_color: '#f7f8f6', background_color: '#f7f8f6',
       icons: [
         { src: `${base}icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },

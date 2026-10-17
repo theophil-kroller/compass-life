@@ -138,3 +138,42 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .review-ai-hint strong{color:#68836e;font-size:11px}.review-ai-hint p{font-size:10px;line-height:1.6;margin:5px 0 0;color:#94a296}
 @media(max-width:980px){.guided-review{grid-template-columns:1fr}.clarify-options{grid-template-columns:1fr}}
 @media(max-width:700px){.inbox-layout{grid-template-columns:1fr}.clarify-preview{margin-top:12px}.clarify-options{gap:18px}.review-flow-step{padding:12px 7px}.optional-capture summary{font-size:11px}}
+
+/* 0.2.0 – Capture Everywhere: the Inbox is a real workspace, never a preview. */
+.inbox-mvp-layout{display:grid;grid-template-columns:minmax(330px,1.05fr) minmax(320px,.95fr);align-items:start;gap:17px;max-width:1330px}
+.inbox-mvp-card,.inbox-mvp-detail{min-height:510px;padding:26px}
+.inbox-mvp-head{display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid #eff3ef;padding-bottom:21px}
+.capture-eyebrow{font-size:9px;color:#6b987c;font-weight:750;letter-spacing:1.3px;margin:0 0 8px}
+.inbox-mvp-head h2{font-size:26px;font-weight:500;font-family:Georgia,'Times New Roman',serif;letter-spacing:-.65px;margin:0;color:#2b4438}
+.inbox-mvp-head h2 .count{font-family:system-ui,sans-serif;vertical-align:middle;font-size:11px;margin-left:5px}
+.inbox-mvp-head p{font-size:12px;margin:8px 0 0;color:#899c8e}
+.inbox-mvp-head .primary-btn{white-space:nowrap;display:flex;align-items:center;gap:7px}
+.inbox-search-box{display:flex;align-items:center;gap:10px;background:#f8faf8;border:1px solid #e7ede8;border-radius:12px;padding:0 13px;margin-top:20px;color:#789083}
+.inbox-search-box input{width:100%;min-width:0;outline:none;border:0;background:transparent;height:44px;color:#35483b;font-size:13px}
+.inbox-mvp-list{padding:10px 0;max-height:53vh;overflow:auto;scrollbar-width:thin}
+.inbox-mvp-row{display:flex;gap:12px;padding:14px 12px;border:1px solid transparent;border-radius:12px;background:transparent;width:100%;text-align:left;align-items:center;cursor:pointer;transition:background .15s,border-color .15s}
+.inbox-mvp-row:hover{background:#f7faf7}.inbox-mvp-row.is-current{background:#f0f6f1;border-color:#e4eee6}
+.inbox-list-mark{color:#81a594;flex:none}.inbox-list-copy{min-width:0;flex:1}.inbox-list-copy strong{display:block;font-size:13px;font-weight:610;color:#3f5548;overflow-wrap:anywhere;line-height:1.5}
+.inbox-list-copy small{display:block;font-size:10px;color:#a0afa3;margin-top:4px}.inbox-list-copy .item-preview{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:430px;color:#85998a}
+.inbox-list-sync{color:#93aa9a;flex:none}.inbox-list-sync.needs-sync{color:#cc9f66}
+.inbox-mvp-bottom{border-top:1px solid #edf1ed;padding-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;color:#9aaa9c;font-size:10px}
+.inbox-mvp-empty{min-height:205px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:11px;color:#aec1b1;padding:15px}
+.inbox-mvp-empty strong{font-size:13px;color:#648470}.inbox-mvp-empty span{max-width:275px;font-size:11px;line-height:1.5}
+.inbox-detail-top{display:flex;justify-content:space-between;align-items:center;gap:12px}.inbox-detail-date{font-size:10px;color:#a2aea5}
+.inbox-mvp-detail form{display:flex;flex-direction:column;gap:8px;margin-top:15px}.inbox-mvp-detail form label{font-size:11px;font-weight:650;color:#6a8272}
+.inbox-mvp-detail form textarea{border:1px solid #e3ebe5;background:#fcfdfc;color:#2e4437;border-radius:10px;padding:12px 13px;resize:vertical;font-size:12px;line-height:1.6;width:100%;min-height:76px}
+.inbox-mvp-detail form textarea[name=note]{min-height:160px}.inbox-detail-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:8px}
+.inbox-detail-next{display:flex;gap:13px;margin-top:24px;padding:18px 14px;border-radius:12px;background:#f6faf6;color:#648d74;align-items:flex-start}
+.inbox-detail-next strong{font-size:12px;color:#52745a}.inbox-detail-next p{color:#8ca08e;font-size:11px;line-height:1.7;margin:7px 0 13px}
+.capture-fab{display:none;position:fixed;bottom:22px;right:18px;z-index:80;border:0;box-shadow:0 8px 26px #17493645;color:#fff;background:#34715c;border-radius:19px;width:56px;height:56px;align-items:center;justify-content:center;cursor:pointer}
+.capture-modal-layer{z-index:200;position:fixed;inset:0;background:rgba(16,32,25,.34);backdrop-filter:blur(8px);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:clamp(38px,13vh,140px) 15px 25px}
+.capture-modal{border:1px solid #e3eae4;box-shadow:0 24px 90px #18382938;background:#fff;max-width:610px;width:100%;border-radius:22px;padding:27px 30px 22px}
+.capture-modal-heading{display:flex;justify-content:space-between;align-items:start;gap:16px}.capture-modal-heading h2{font-family:Georgia,'Times New Roman',serif;font-size:27px;letter-spacing:-.6px;font-weight:400;margin:0 0 20px;color:#2e493a}
+.capture-modal-close{border:1px solid #e8eeea;color:#617e6b;background:#f6faf7;border-radius:50%;width:33px;height:33px;display:grid;place-items:center;transform:rotate(45deg)}
+.capture-modal form>textarea{width:100%;min-height:100px;resize:vertical;border:1px solid #dfece3;border-radius:14px;padding:16px 17px;outline-color:#76ae8e;font-size:15px;line-height:1.6;color:#294738;background:#fbfdfb}
+.capture-modal .optional-capture{margin-top:12px}.capture-modal .optional-capture textarea{width:100%;border-radius:8px;border:1px solid #e2ece4;padding:12px;resize:vertical}
+.capture-modal-foot{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:19px}.capture-modal-foot span{font-size:10px;color:#93a69a;display:flex;gap:6px;align-items:center}.capture-modal-foot button{white-space:nowrap}
+.capture-modal-hint{font-size:10px;color:#a0aea4;margin:15px 0 0}
+@media(max-width:1040px){.inbox-mvp-layout{grid-template-columns:1fr}.inbox-mvp-card,.inbox-mvp-detail{min-height:0}.inbox-mvp-list{max-height:400px}}
+@media(max-width:700px){.inbox-mvp-card,.inbox-mvp-detail{padding:18px}.inbox-mvp-head h2{font-size:24px}.inbox-mvp-head{align-items:flex-start}.inbox-mvp-head .primary-btn{padding:9px 12px}.inbox-mvp-row{padding:13px 7px}.capture-fab{display:flex}.capture-modal-layer{padding:8vh 12px 18px;align-items:flex-start}.capture-modal{padding:21px 18px 18px;border-radius:18px}.capture-modal-heading h2{font-size:23px}.capture-modal-foot{align-items:stretch;flex-direction:column}.capture-modal-foot button{justify-content:center}.inbox-mvp-list{max-height:none}.inbox-mvp-bottom{padding-right:64px}}
+@media(prefers-reduced-motion:reduce){.inbox-mvp-row{transition:none}}
