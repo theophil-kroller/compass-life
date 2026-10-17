@@ -6,8 +6,13 @@ import {request,nextBatch,applyResult,mergePulled} from './sync.js';
 registerSW({immediate:true});
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
-let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='home', lastActivity=Date.now();
+let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
 let saveQueue=Promise.resolve();
+let calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+let selectedDay=localDateString(new Date());
+let selectedInboxId=null;
+let showCaptureDetails=false;
+let weather={status:'idle',city:'Graz',temperature:null,label:''};
 function persist() {
   const snapshot=structuredClone(state);
   saveQueue=saveQueue.catch(()=>{}).then(()=>vault.save(snapshot));
@@ -61,6 +66,13 @@ const symbol = {
   moon:'<path d="M20.5 14.2a8.6 8.6 0 0 1-10.7-10.7 9 9 0 1 0 10.7 10.7z"/>',
   shield:'<path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5z"/><path d="m8.5 12 2.3 2.3 4.7-4.8"/>',
   sync:'<path d="M20 8a8 8 0 0 0-14-2L4 8m0-4v4h4M4 16a8 8 0 0 0 14 2l2-2m0 4v-4h-4"/>',
+  flag:'<path d="M5 3v19M5 4h14l-3 5 3 5H5"/>',
+  pause:'<circle cx="12" cy="12" r="9"/><path d="M9 8v8M15 8v8"/>',
+  list:'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  book:'<path d="M12 7a8 8 0 0 0-9-2v14a8 8 0 0 1 9 2M12 7a8 8 0 0 1 9-2v14a8 8 0 0 0-9 2M12 7v14"/>',
+  bookmark:'<path d="M5 3h14v18l-7-5-7 5z"/>',
+  suitcase:'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M9 7V4h6v3M3 12h18"/>',
+  bolt:'<path d="m13 2-9 12h7l-1 8 10-13h-7z"/>',
   bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>'
 };
 function ico(name, size=19) {return `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${symbol[name]||symbol.compass}</svg>`;}
@@ -74,23 +86,33 @@ function navItem(id,label,iconName,{disabled=false,count=null}={}) {
 function chrome(content){
  const num=rows().length;
  const today=new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
+ const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation'})[tab]||'Heute');
+ const sub=({today:'Was heute wirklich zählt.',forecast:'Termine und Verpflichtungen in den kommenden Tagen.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
  return `<div class="shell"><aside class="sidebar" aria-label="Navigation">
  <div class="brand"><span class="brand-icon">${ico('compass',24)}</span><span class="brand-name">Compass<small>Personal Life Manager</small></span></div>
  <nav class="side-nav" aria-label="Hauptnavigation">
- ${navItem('home','Übersicht','home')}${navItem('inbox','Inbox','inbox',{count:num})}
- ${navItem('next','Next Actions','target',{disabled:true})}${navItem('review','Wochenreview','sync',{disabled:true})}
- ${navItem('projects','Projekte','folder',{disabled:true})}${navItem('calendar','Kalender & Fokus','calendar',{disabled:true})}
- ${navItem('progress','Fortschritt','activity',{disabled:true})}${navItem('people','Menschen','people',{disabled:true})}
- ${navItem('recovery','Erholung','heart',{disabled:true})}
- <div class="nav-separator"></div>${navItem('system','System & Sync','settings')}
+ ${navItem('inbox','Inbox','inbox',{count:num})}
+ ${navItem('today','Heute','sun')}${navItem('forecast','Forecast','calendar')}
+ ${navItem('next','Next Actions','target',{disabled:true})}${navItem('review','Wochenreview','sync')}
+ ${navItem('flagged','Flagged','flag',{disabled:true})}${navItem('hold','On Hold','pause',{disabled:true})}
+ ${navItem('someday','Dreams','spark')}
+ <div class="nav-separator"></div>
+ ${navItem('projects','Projekte','folder',{disabled:true})}${navItem('people','Menschen','people',{disabled:true})}
+ ${navItem('progress','Fortschritt','activity',{disabled:true})}${navItem('recovery','Erholung','heart',{disabled:true})}
+ <div class="nav-separator"></div>${navItem('overview','Übersicht','layers')}
+ ${navItem('system','System & Sync','settings')}
  </nav><div class="sidebar-foot">${ico('shield',16)} <span>Dein persönlicher Arbeitsraum</span></div>
- </aside><main class="workspace"><div class="utility-bar"><div class="search-shell" aria-label="Suche noch nicht verfügbar">${ico('search',17)}<span>In Compass suchen</span><kbd>⌘ K</kbd></div>
- <div class="utility-right"><span class="connection"><span class="connection-dot ${state?(navigator.onLine?'green':'amber'):'gray'}"></span><span>${state?(authToken?'Google angemeldet':navigator.onLine?'Lokal entsperrt':'Offline · lokal'):'Tresor gesperrt'}</span></span>
+ </aside><main class="workspace"><div class="utility-bar">
+ <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>⌘ K</kbd></button>
+ <div class="utility-right">${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
+ <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?'Google angemeldet':'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
- <div class="content"><div class="page-intro"><div><p class="page-overline">PERSÖNLICHER KOMPASS</p><h1>${tab==='home'?'Dein Tag, im Blick.':tab==='inbox'?'Inbox': 'System & Synchronisation'}</h1><p class="intro-subtitle">${tab==='home'?'Weniger im Kopf behalten. Mehr Raum zum Handeln.':tab==='inbox'?'Alles erfassen. Das Wesentliche später klären.':'Dein Datenfundament und deine Geräteverbindung.'}</p></div><div class="today-label">${h(today)}<span>${state?'Lokaler Tresor entsperrt':'Lokaler Tresor gesperrt'}</span></div></div>
+ <div class="content ${tab==='today'||tab==='forecast'?'content-work':''}">
+ <div class="page-intro"><div><p class="page-overline">${tab==='today'?'DEIN TAGESKOMPASS':tab==='overview'?'DEIN PERSÖNLICHER KOMPASS':'COMPASS · DEIN ARBEITSRAUM'}</p><h1>${h(title)}</h1><p class="intro-subtitle">${h(sub)}</p></div><div class="today-label">${h(today)}<span>${state?'Tresor entsperrt':'Tresor gesperrt'}</span></div></div>
  ${notice?`<div role="status" class="alert good">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
  ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main></div>`;
 }
+
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
  return `<section class="module-card ${cls} ${active?'module-active':'module-inactive'}" aria-label="${h(name)}">
  <div class="module-head"><div class="module-title">${ico(iconName,21)}<h2>${h(name)}</h2></div>${action?disabledButton(action):''}</div>
@@ -123,24 +145,121 @@ function dashboardCards(locked=false){
  ${moduleCard({name:'Erholung',iconName:'heart',cls:'grid-recovery',sub:'Energie & Schlaf im Blick',body:`<div class="energy-placeholder"><span class="donut big">–</span><div><span>${ico('moon',14)} Schlaf</span><span>${ico('heart',14)} Erholung</span><span>${ico('activity',14)} Energie</span></div></div>`})}
  </div>`;
 }
-function vaultScreen(){
- tab='home';
- return chrome(`<section class="vault-banner" aria-label="Lokalen Tresor einrichten"><div class="vault-banner-copy"><div class="banner-symbol">${ico('lock',22)}</div><span class="little-overline">DEIN PRIVATER ARBEITSRAUM</span><h2>${hasVault?'Willkommen zurück.':'Dein Compass ist bereit.'}</h2><p>${hasVault?'Entsperre deinen persönlichen Tresor, um deine Daten zu sehen.':'Richte einmalig deinen verschlüsselten lokalen Tresor ein. Die Daten bleiben auf diesem Gerät geschützt.'}</p></div>
- <form class="vault-form" id="vault-form" autocomplete="off"><label for="passphrase">${hasVault?'Passphrase eingeben':'Neue Passphrase (mind. 12 Zeichen)'}</label><input id="passphrase" name="passphrase" type="password" required minlength="12" placeholder="••••••••••••" autocomplete="off" />
- ${!hasVault?'<label for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" minlength="12" required autocomplete="off" placeholder="••••••••••••"/>':''}
- <button class="primary-btn wide" type="submit">${hasVault?'Tresor entsperren':'Tresor einrichten'} ${ico('arrow',16)}</button>
- ${!hasVault?'<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/>':''}</form></section>
- ${dashboardCards(true)}`);
+function localDateString(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+const dayFormat=d=>new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric'}).format(d);
+function miniCalendar(){
+ const first=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth(),1);
+ const start=new Date(first);start.setDate(1-((first.getDay()+6)%7));
+ const now=localDateString(new Date());
+ const cells=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);const key=localDateString(d);
+  return `<button type="button" data-action="select-day" data-id="${key}" class="cal-cell ${d.getMonth()!==first.getMonth()?'outside':''} ${key===now?'today-mark':''} ${key===selectedDay?'selected':''}" aria-label="${h(dayFormat(d))}" aria-pressed="${key===selectedDay}">${d.getDate()}</button>`;}).join('');
+ const month=new Intl.DateTimeFormat('de-AT',{month:'long',year:'numeric'}).format(first);
+ const days=['Mo','Di','Mi','Do','Fr','Sa','So'].map(x=>`<span>${x}</span>`).join('');
+ return `<section class="mini-month" aria-label="Monatskalender"><div class="month-head"><strong>${h(month)}</strong><div><button type="button" class="month-arrow" data-action="month-prev" title="Vorheriger Monat" aria-label="Vorheriger Monat">‹</button><button type="button" class="month-arrow" data-action="month-next" title="Nächster Monat" aria-label="Nächster Monat">›</button></div></div><div class="cal-weekdays">${days}</div><div class="cal-cells">${cells}</div></section>`;
 }
+function calendarRail(){
+ const shown=new Date(`${selectedDay}T12:00:00`);
+ return `<aside class="date-rail" aria-label="Kalender und Tagesnavigation">${miniCalendar()}
+ <div class="rail-metrics"><button type="button" data-action="reset-today" class="rail-metric"><strong>Heute</strong><small>${h(new Intl.DateTimeFormat('de-AT',{day:'2-digit',month:'2-digit'}).format(new Date()))}</small></button><span class="rail-metric rail-inert"><strong>Offen</strong><small>–</small></span></div>
+ <div class="rail-caption">Nächste 7 Tage</div><div class="rail-days">${Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);return `<button class="rail-day ${localDateString(d)===selectedDay?'on':''}" type="button" data-action="select-day" data-id="${localDateString(d)}"><span>${h(dayFormat(d))}</span><small>–</small></button>`;}).join('')}</div><p class="rail-footnote">Kalendereinträge erscheinen nach der Google-Verbindung. Aufgaben bleiben in Compass.</p></aside>`;
+}
+function datesPreview(){return `<div class="date-prototype"><div>${ico('calendar',16)}<span>Wunschtermin</span><span class="date-value">–</span></div><div>${ico('flag',16)}<span>Harte Deadline</span><span class="date-value">–</span></div><div>${ico('clock',16)}<span>Frühestens ab</span><span class="date-value">–</span></div></div>`;}
+function todayWork(locked=false){
+ const selected=localDateString(new Date())===selectedDay;
+ return `<div class="today-layout">${calendarRail()}<div class="today-center">
+ <section class="work-card appointments"><div class="work-heading"><span>${ico('calendar',18)} Termine ${selected?'heute':h(dayFormat(new Date(`${selectedDay}T12:00:00`)))}</span><span class="quiet-tag">Google Kalender nicht verbunden</span></div>
+ <div class="appointments-empty"><span>${ico('calendar',21)}</span><div><strong>Keine Kalendertermine verfügbar</strong><small>Nach dem Verknüpfen erscheinen hier deine echten Termine – ohne Aufgaben in Google Calendar einzutragen.</small></div></div></section>
+ <section class="work-card today-tasks"><div class="work-heading"><span>${ico('list',18)} Meine Aufgaben ${selected?'für heute':'für diesen Tag'}</span><span class="quiet-tag">Manuelle Reihenfolge</span></div>
+ <div class="today-tasks-empty">${ico('target',36)}<h2>${locked?'Deine Tagesplanung bleibt geschützt.':'Noch keine Aufgaben ausgewählt.'}</h2><p>${locked?'Entsperre deinen Tresor. Die Tagesliste wird später aus deinen bewusst eingeplanten Next Actions zusammengestellt.':'Hier planst du künftig die Reihenfolge deiner Next Actions per Drag-and-drop. Inbox-Einträge werden nicht automatisch zu Tagesaufgaben.'}</p><button type="button" class="soft-button" disabled>+ Aufgabe für diesen Tag planen</button></div>
+ <div class="capture-inline"><form id="capture-form"><label class="sr-only" for="capture">Schnell in die Inbox erfassen</label><input id="capture" name="title" maxlength="1000" required placeholder="Gedanken sofort in der Inbox festhalten …" ${locked?'disabled':''}/><button type="submit" class="primary-btn" ${locked?'disabled':''}>${ico('plus',17)} Erfassen</button></form><small>Ohne Projekt, Datum oder Priorität – erst einmal sicher erfasst.</small></div></section>
+ <div class="below-today"><section class="work-card deadline-card"><div class="work-heading"><span>${ico('flag',18)} Fristen & Vorausschau</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Keine Fristen erfasst. Wunschtermin und harte Deadline bleiben getrennt.</div></section>
+ <section class="work-card review-card"><div class="work-heading"><span>${ico('sync',18)} Review</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Offene Schleifen werden später regelmäßig geprüft – ohne künstliche Deadlines.</div></section></div>
+ </div><aside class="inspector-rail" aria-label="Aufgabendetails und Personen-Kontext"><section class="work-card inspector-card"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabendetails</span><span class="quiet-tag">Vorschau</span></div>
+ <div class="inspector-placeholder">${ico('target',27)}<strong>Keine Aufgabe ausgewählt</strong><span>Wenn du eine Aufgabe auswählst, erscheinen hier ihre Angaben.</span></div>${datesPreview()}
+ <div class="inspector-other"><span>Projekt</span><b>–</b><span>Kontext</span><b>–</b><span>Personen</span><b>–</b><span>Aufwand</span><b>–</b></div></section>
+ <section class="work-card person-preview"><div class="work-heading"><span>${ico('people',18)} Offene Gesprächsthemen</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Person auswählen → alle offenen Agenda-Punkte sehen. Personen-Agendas folgen im GTD-Ausbau.</div></section>
+ <section class="work-card energy-context"><div class="work-heading"><span>${ico('bolt',18)} Energie & Kontext</span><span class="quiet-tag">Planungsfilter</span></div><div class="energy-levels" aria-label="Energiestufen (Vorschau)"><button disabled type="button">Wenig</button><button disabled type="button">Mittel</button><button disabled type="button">Viel</button></div><p class="energy-hint">Wenn du erschöpft oder blockiert bist, zeigt Compass später kleine, passende Next Actions – statt dir zusätzliche Aufgaben aufzudrängen.</p></section>
+ <button type="button" class="overview-nudge" data-tab="overview">${ico('layers',17)} Große Übersicht ansehen ${ico('arrow',14)}</button></aside></div>`;
+}
+function forecastScreen(){return chrome(`${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast – die nächsten Tage</span><span class="quiet-tag">Vorschau</span></div>${Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);return `<div class="forecast-day-row"><span>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(d))}</span><small>Keine geplanten Aufgaben oder Kalendertermine verfügbar</small></div>`;}).join('')}<p class="rail-footnote">Forecast vereint später echte Kalendertermine, harte Fristen und bewusst geplante Next Actions – die Kalenderdaten werden nicht mit Aufgaben überschrieben.</p></section>` .replace(/^/, '<div class="forecast-layout">') .concat('</div>'));}
+function somedayScreen(){
+ return chrome(`<div class="dream-layout"><section class="dream-intro work-card">
+ <div class="dream-lead"><span class="dream-symbol">${ico('spark',31)}</span><div><p class="little-overline">DEIN DREAM SPACE</p><h2>Möglichkeiten dürfen warten.</h2><p>Eine Ausbildung, ein Buch, die Tauchweiterbildung oder eine Idee. Sammle, was dich inspiriert – ohne Datum, ohne Prioritätsdruck und ohne dass es automatisch in „Heute“ erscheint.</p></div></div>
+ <div class="dream-capture-shell"><input type="text" disabled placeholder="Neue Idee, Wunsch oder Inspiration …" aria-label="Someday / Maybe erfassen (noch nicht verfügbar)"/><button type="button" class="primary-btn" disabled>${ico('plus',16)} Sammeln</button></div>
+ <p class="dream-caption">Bis die Sammlung freigeschaltet ist, kannst du Gedanken über die Schnellerfassung sicher in die Inbox geben.</p></section>
+ <div class="dream-grid">${[
+ ['Lernen & Weiterbilden','book','Kurse, Seminare, Zertifikate und neue Kompetenzen'],
+ ['Lesen & Entdecken','bookmark','Interessante Artikel, Bücher, Podcasts und Links'],
+ ['Erleben & Ausprobieren','suitcase','Reisen, Tauchen, Tanzen und persönliche Wünsche'],
+ ['Projekte & Ideen','spark','Vorhaben, für die gerade noch keine Zeit ist']
+ ].map(([title,iconName,desc])=>`<section class="dream-category work-card"><div class="work-heading"><span>${ico(iconName,19)} ${h(title)}</span><span class="quiet-tag">0</span></div><p>${h(desc)}</p><div class="dream-empty">Noch nichts gesammelt</div></section>`).join('')}</div>
+ <section class="work-card dream-review"><div class="work-heading"><span>${ico('sync',18)} In Ruhe wiederentdecken</span><span class="quiet-tag">Review</span></div><p>Diese Sammlung bleibt aus Today und Forecast heraus. Du kannst sie später in deinem Wochenreview oder bei einem gelegentlichen Inspirations-Review sichten. Nur was du bewusst aktivierst, wird zu einem Projekt oder einer Next Action.</p><button disabled type="button" class="soft-button">Someday-Review öffnen</button></section></div>`);
+}
+function weatherCondition(code){if(code===0)return 'Klar';if(code<=3)return 'Bewölkt';if(code<=48)return 'Nebel';if(code<=67)return 'Regen';if(code<=77)return 'Schnee';if(code<=82)return 'Schauer';return 'Gewitter';}
+async function loadWeather(city){
+ weather={...weather,city,status:'loading'};render();
+ try{const geo=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=de&format=json`).then(r=>{if(!r.ok)throw new Error('Ort nicht gefunden');return r.json()});
+  const g=geo.results?.[0];if(!g)throw new Error('Ort nicht gefunden');
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${g.latitude}&longitude=${g.longitude}&current=temperature_2m,weather_code&timezone=auto`;
+  const data=await fetch(url).then(r=>{if(!r.ok)throw new Error('Wetterdienst nicht erreichbar');return r.json()});
+  if(typeof data.current?.temperature_2m!=='number')throw new Error('Keine Wetterdaten');
+  weather={city:g.name,status:'loaded',temperature:Math.round(data.current.temperature_2m),label:weatherCondition(data.current.weather_code)};
+  render();
+ }catch(ex){weather={city,status:'idle',temperature:null,label:''};toast(`Wetter konnte nicht geladen werden: ${ex.message}`,true);}
+}
+function vaultScreen(){
+ tab=['inbox','forecast','overview','someday','review'].includes(tab)?'today':tab;
+ return chrome(`<section class="vault-compact" aria-label="Lokalen Tresor einrichten"><div class="vault-copy"><span class="vault-icon">${ico('lock',18)}</span><div><h2>${hasVault?'Tresor entsperren':'Lokalen Tresor einrichten'}</h2><p>${hasVault?'Deine Daten bleiben verborgen, bis du sie entsperrst.':'Einmalig eine Passphrase festlegen; deine lokalen Daten werden verschlüsselt gespeichert.'}</p></div></div>
+ <form class="vault-form" id="vault-form" autocomplete="off"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" placeholder="Passphrase (mindestens 12 Zeichen)" autocomplete="off" />
+ ${!hasVault?'<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" minlength="12" required autocomplete="off" placeholder="Passphrase wiederholen"/>':''}
+ <button class="primary-btn" type="submit">${hasVault?'Entsperren':'Einrichten'} ${ico('arrow',15)}</button>
+ ${!hasVault?'<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/>':''}</form></section>${todayWork(true)}`);
+}
+function todayScreen(){return chrome(todayWork());}
 function homeScreen(){return chrome(dashboardCards());}
+
 function inboxScreen(){
  const list=rows();
- return chrome(`<div class="inbox-layout"><section class="module-card module-active inbox-capture-large"><div class="module-head"><div class="module-title">${ico('pencil',22)}<h2>Quick Capture</h2></div></div><p class="module-subtitle">Einfach erfassen – strukturieren kannst du später.</p>
- <form id="capture-form"><label for="capture">Was möchtest du festhalten?</label><textarea id="capture" name="title" maxlength="1000" rows="5" placeholder="Was beschäftigt dich gerade?" required></textarea><button class="primary-btn wide" type="submit">Zur Inbox hinzufügen ${ico('arrow',16)}</button></form></section>
- <section class="module-card module-active inbox-items-large"><div class="module-head"><div class="module-title">${ico('inbox',22)}<h2>Deine Inbox</h2><span class="count">${list.length}</span></div></div><p class="module-subtitle">Alles, was noch auf Klärung wartet.</p>
- ${list.length?`<div class="full-items">${list.map(r=>`<div class="inbox-row"><span class="tiny-square"></span><div class="item-text"><strong>${h(r.title)}</strong><small>${date(r.updatedAt)} · ${state.pending.some(p=>p.id===r.id)?'Synchronisation ausstehend':'Lokal gespeichert'}</small></div><button class="icon-button" type="button" data-action="edit" data-id="${h(r.id)}" aria-label="Eintrag bearbeiten" title="Bearbeiten">${ico('pencil',17)}</button><button class="icon-button" type="button" data-action="remove" data-id="${h(r.id)}" aria-label="Eintrag archivieren" title="Archivieren">${ico('check',18)}</button></div>`).join('')}</div>`:placeholder('Deine Inbox ist leer. Ein guter Anfang.')}
+ const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
+ return chrome(`<div class="inbox-layout"><section class="module-card module-active inbox-capture-large"><div class="module-head"><div class="module-title">${ico('pencil',22)}<h2>Quick Capture</h2></div></div><p class="module-subtitle">Ein Satz genügt. Du kannst Details gleich ergänzen oder später beim Review klären.</p>
+ <form id="capture-form"><label for="capture">Was möchtest du festhalten?</label><textarea id="capture" name="title" maxlength="1000" rows="4" placeholder="Was beschäftigt dich gerade?" required></textarea>
+ <details class="optional-capture"><summary>${ico('plus',15)} Notiz ergänzen <span>optional</span></summary><label for="capture-note" class="sr-only">Optionale Notiz zum Inbox-Eintrag</label><textarea id="capture-note" name="note" maxlength="10000" rows="3" placeholder="Zusätzliche Gedanken, Links, Informationen …"></textarea></details>
+ <button class="primary-btn wide" type="submit">Zur Inbox hinzufügen ${ico('arrow',16)}</button></form>
+ <div class="capture-principle">${ico('shield',16)} Kein Pflichtfeld für Energie, Priorität, Datum oder Projekt.</div></section>
+ <section class="module-card module-active inbox-items-large"><div class="module-head"><div class="module-title">${ico('inbox',22)}<h2>Deine Inbox</h2><span class="count">${list.length}</span></div><button class="review-link" type="button" data-tab="review">Zum Review ${ico('arrow',14)}</button></div><p class="module-subtitle">Alles, was noch auf Klärung wartet.</p>
+ ${list.length?`<div class="full-items">${list.map(r=>`<div class="inbox-row ${current?.id===r.id?'inbox-selected':''}"><span class="tiny-square"></span><div class="item-text"><strong>${h(r.title)}</strong>${r.note?`<small class="inbox-note">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)} · ${state.pending.some(p=>p.id===r.id)?'Synchronisation ausstehend':'Lokal gespeichert'}</small></div><button class="icon-button" type="button" data-action="select-inbox" data-id="${h(r.id)}" aria-label="Eintrag für die Klärung ansehen" title="Klärung ansehen">${ico('target',17)}</button><button class="icon-button" type="button" data-action="edit" data-id="${h(r.id)}" aria-label="Eintrag bearbeiten" title="Bearbeiten">${ico('pencil',17)}</button><button class="icon-button" type="button" data-action="remove" data-id="${h(r.id)}" aria-label="Eintrag archivieren" title="Archivieren">${ico('check',18)}</button></div>`).join('')}</div>`:placeholder('Deine Inbox ist leer. Ein guter Anfang.')}
+ </section></div>
+ <section class="work-card clarify-preview"><div class="work-heading"><span>${ico('target',18)} Klären & Einordnen</span><span class="quiet-tag">Vorbereitung des GTD-Reviews</span></div>
+ <div class="clarify-intro"><strong>${current?h(current.title):'Noch kein Eintrag ausgewählt'}</strong><p>${current?'Beim Review entscheidest du, was daraus werden soll. Die folgenden Zuordnungen sind noch nicht aktiv.':'Erfasse einen Gedanken in der Inbox. Später kannst du ihn hier ohne Zeitdruck verarbeiten.'}</p></div>
+ ${clarifyControls()}
+ </section>`);
+}
+function clarifyControls(){
+ return `<div class="clarify-options" aria-label="Künftige Klärungskategorien (Vorschau)"><div class="clarify-choice"><h3>Wohin gehört es?</h3><div class="choice-row">${['Next Action','Projekt','Agenda / Person','Waiting For','Dreams','Referenz'].map(x=>`<button type="button" disabled class="choice-pill">${h(x)}</button>`).join('')}</div></div>
+ <div class="clarify-choice"><h3>Wie viel Energie braucht es?</h3><div class="choice-row">${['Low Energy','Medium Energy','High Energy'].map(x=>`<button type="button" disabled class="choice-pill">${h(x)}</button>`).join('')}</div></div>
+ <div class="clarify-choice"><h3>Welche Art von Aufmerksamkeit?</h3><div class="choice-row">${['Routine','Geistige Klarheit','Tiefes Denken'].map(x=>`<button type="button" disabled class="choice-pill">${h(x)}</button>`).join('')}</div></div>
+ <div class="clarify-choice"><h3>Wichtigkeit & Dringlichkeit</h3><p class="clarify-tip">Zwei getrennte Dimensionen. Dringlichkeit kann sich ändern, ohne dass ein Ziel wichtiger wird.</p><div class="choice-row">${['Wichtig: hoch / mittel / niedrig','Dringend: ja / nein'].map(x=>`<button type="button" disabled class="choice-pill">${h(x)}</button>`).join('')}</div></div>
+ <div class="clarify-choice"><h3>Termine (nur bei Bedarf)</h3><div class="choice-row">${['Frühestens ab','Wunschtermin','Harte Deadline','Wiedervorlage'].map(x=>`<button type="button" disabled class="choice-pill">${h(x)}</button>`).join('')}</div></div>
+ </div>`;
+}
+function reviewScreen(){
+ const list=rows();const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
+ return chrome(`<div class="guided-review"><div class="review-flow work-card"><div class="work-heading"><span>${ico('sync',20)} Dein Weekly Review</span><span class="quiet-tag">Geführte Vorschau</span></div>
+ <p class="review-explainer">Nicht alles muss sofort geklärt werden. Einmal pro Woche bringst du die offenen Schleifen systematisch auf den aktuellen Stand.</p>
+ <div class="review-flow-steps">${[
+ ['1','Eingang leeren','Jeden erfassten Gedanken klären oder bewusst parken.',String(list.length)+' offene Einträge'],
+ ['2','Nächste Schritte','Projekte, Next Actions und offene Entscheidungen prüfen.','Noch nicht aktiv'],
+ ['3','Waiting For & Agendas','Worauf wartest du? Mit wem gibt es Gesprächsbedarf?','Noch nicht aktiv'],
+ ['4','Termine & Fristen','Vergangene und kommende Kalendertermine ansehen.','Noch nicht verbunden'],
+ ['5','Dreams & Möglichkeiten','Ideen freiwillig sichten, ohne neue Verpflichtungen.','Nur auf Wunsch']
+ ].map(([n,title,desc,tag],i)=>`<div class="review-flow-step ${i===0?'review-step-current':''}"><span class="review-step-number">${n}</span><div><strong>${title}</strong><p>${desc}</p></div><small>${tag}</small></div>`).join('')}</div></div>
+ <section class="work-card review-item-pane"><div class="work-heading"><span>${ico('inbox',19)} Inbox klären</span><span class="quiet-tag">${list.length} offen</span></div>
+ ${current?`<label class="sr-only" for="review-select">Inbox-Eintrag auswählen</label><select id="review-select" class="review-select">${list.map(r=>`<option value="${h(r.id)}" ${r.id===current.id?'selected':''}>${h(r.title)}</option>`).join('')}</select><p class="review-item-note">${current.note?h(current.note):'Noch keine zusätzliche Notiz hinterlegt.'}</p>`:'<div class="review-none">Deine Inbox ist leer. Erfasse neue Gedanken jederzeit über Quick Capture.</div>'}
+ ${clarifyControls()}
+ <div class="review-ai-hint">${ico('spark',19)} <div><strong>Später: Lokaler KI-Vorschlag</strong><p>Compass kann bei der Klärung unterstützen, z. B. wenn aus einer wichtigen Aufgabe aufgrund einer näher rückenden harten Deadline auch eine dringliche wird. Die Entscheidung bleibt bei dir.</p></div></div>
  </section></div>`);
 }
+
 function systemScreen(){
  return chrome(`<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
  <div class="connection-detail"><span class="connection-dot ${configured()?'green':'amber'}"></span><span>${configured()?'Konfiguration hinterlegt':'Google-Anmeldung noch nicht konfiguriert'}</span></div>
@@ -155,7 +274,7 @@ function systemScreen(){
 }
 function render(){
  if(!state){app.innerHTML=vaultScreen();bind();return;}
- app.innerHTML=tab==='system'?systemScreen():tab==='inbox'?inboxScreen():homeScreen();bind();
+ app.innerHTML=tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():todayScreen();bind();
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
@@ -165,13 +284,14 @@ function bind() {
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
       toast('Lokaler Tresor bereit.');}catch(ex){toast(ex.message,true);}
   };
+  const reviewSelect=app.querySelector('#review-select');if(reviewSelect)reviewSelect.onchange=ev=>{selectedInboxId=ev.target.value;render();};
   const importField=app.querySelector('#encrypted-import');if(importField)importField.onchange=async ev=>{
     try {const obj=JSON.parse(await ev.target.files[0].text());await vault.importEncrypted(obj);hasVault=true;toast('Backup importiert. Jetzt mit der ursprünglichen Passphrase entsperren.');}
     catch(ex){toast(ex.message,true);}
   };
   const capture=app.querySelector('#capture-form');if(capture)capture.onsubmit=async ev=>{
-    ev.preventDefault();const value=String(new FormData(capture).get('title')||'').trim();if(!value)return;
-    await mutate(s=>{const r={id:crypto.randomUUID(),title:value,note:'',deleted:false,updatedAt:stamp()};
+    ev.preventDefault();const form=new FormData(capture);const value=String(form.get('title')||'').trim();const note=String(form.get('note')||'').trim();if(!value)return;if(note.length>10000){toast('Notiz ist zu lang.',true);return;}
+    await mutate(s=>{const r={id:crypto.randomUUID(),title:value,note,deleted:false,updatedAt:stamp()};
       s.records[r.id]=r;s.pending.push(makeMutation(r));s.history.push({type:'captured',at:stamp(),id:r.id});});
     notice='Erfasst und verschlüsselt gespeichert.';render();
   };
@@ -180,9 +300,16 @@ function bind() {
 async function runAction(action,id) {
   lastActivity=Date.now();
   try {
+    if(action==='capture-focus'){if(!state){document.querySelector('#passphrase')?.focus();return;}if(!document.querySelector('#capture')){tab='today';render();}document.querySelector('#capture')?.focus();return;}
+    if(action==='select-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;selectedDay=id;calendarMonth=new Date(`${id}T12:00:00`);render();return;}
+    if(action==='reset-today'){selectedDay=localDateString(new Date());calendarMonth=new Date();render();return;}
+    if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
+    if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
+    if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
     if(action==='lock'){vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='sync'){await syncNow();return;}
     if(action==='logout'){authToken='';currentUser='';toast('Von Google getrennt. Lokale Daten bleiben geschützt.');return;}
+    if(action==='select-inbox'){if(!state?.records[id]||state.records[id].deleted)return;selectedInboxId=id;render();return;}
     if(action==='edit'){
       const current=state.records[id];if(!current||current.deleted)return;
       const value=prompt('Inbox-Eintrag bearbeiten',current.title);if(value===null)return;
