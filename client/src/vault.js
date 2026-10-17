@@ -22,6 +22,13 @@ async function kvGet(k) {
     tx.oncomplete=()=>db.close();
   });
 }
+async function kvDelete(k) {
+  const db=await openDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('kv','readwrite');tx.objectStore('kv').delete(k);
+    tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);
+  });
+}
 async function kvPut(k,v) {
   const db=await openDb();
   return new Promise((resolve,reject)=>{
@@ -71,3 +78,25 @@ export async function importEncrypted(bundle) {
     throw new Error('Ungültiger Compass-Tresorexport.');
   await kvPut('meta',bundle.meta);await kvPut('payload',bundle.payload);
 }
+
+// Compass bearer credentials are encrypted using the active local vault key.
+// They are not part of the record sync or the ordinary vault state export.
+export async function saveSession(session) {
+  if(!key)throw new Error('Tresor gesperrt.');
+  if(!session?.token?.startsWith('cs1_') || !session?.email)throw new Error('Ungültige Sitzung.');
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const payload=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(session)));
+  await kvPut('auth_session',{iv:to64(iv),data:to64(new Uint8Array(payload))});
+}
+export async function loadSession() {
+  if(!key)throw new Error('Tresor gesperrt.');
+  const item=await kvGet('auth_session');
+  if(!item)return null;
+  try{
+    const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(item.iv)},key,from64(item.data));
+    const session=JSON.parse(dec.decode(plain));
+    if(!session?.token?.startsWith('cs1_')||!session?.email)return null;
+    return session;
+  }catch{return null;}
+}
+export async function clearSession() {await kvDelete('auth_session');}

@@ -21,6 +21,10 @@ export function nextBatch(pending,max=25) {
   }
   return batch;
 }
+// Comparisons must include notes and archive state, never title alone.
+export function sameItemContent(a,b) {
+  return Boolean(a&&b&&a.title===b.title&&(a.note||'')===(b.note||'')&&Boolean(a.deleted)===Boolean(b.deleted));
+}
 export function applyResult(state,result) {
   const index=state.pending.findIndex(x=>x.mutationId===result.mutationId);
   if(index<0)return;
@@ -29,6 +33,12 @@ export function applyResult(state,result) {
     state.serverVersions[pending.id]=result.version;
     state.pending.splice(index,1);
   }else if(result.status==='conflict') {
+    if(result.remote && sameItemContent(state.records[pending.id],result.remote)) {
+      state.serverVersions[pending.id]=result.remote.version;
+      state.pending=state.pending.filter(x=>x.id!==pending.id);
+      state.conflicts=state.conflicts.filter(x=>x.id!==pending.id);
+      return;
+    }
     state.conflicts=state.conflicts.filter(x=>x.id!==pending.id);
     state.conflicts.push({id:pending.id,local:{...state.records[pending.id]},remote:result.remote});
     state.pending=state.pending.filter(x=>x.id!==pending.id);
@@ -39,6 +49,14 @@ export function mergePulled(state,changes) {
     const pending=state.pending.some(m=>m.id===remote.id);
     const already=state.conflicts.some(c=>c.id===remote.id);
     const known=state.serverVersions[remote.id]||0;
+    if(remote.version<known)continue; // Never roll a locally acknowledged version backwards.
+    if(sameItemContent(state.records[remote.id],remote) && (pending || already)) {
+      // One device already wrote this exact content. Nothing to resolve or re-upload.
+      state.pending=state.pending.filter(m=>m.id!==remote.id);
+      state.conflicts=state.conflicts.filter(c=>c.id!==remote.id);
+      state.serverVersions[remote.id]=remote.version;
+      continue;
+    }
     if(pending) {
       if(remote.version>known && !already)state.conflicts.push({id:remote.id,local:{...state.records[remote.id]},remote});
       continue;

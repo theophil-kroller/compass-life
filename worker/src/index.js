@@ -12,7 +12,7 @@ function cors(origin, env) {
   // One exact origin. Do not use '*' with sensitive APIs.
   return origin && origin === env.ALLOWED_ORIGIN
     ? {'access-control-allow-origin':origin,'vary':'Origin',
-       'access-control-allow-methods':'GET, POST, OPTIONS',
+       'access-control-allow-methods':'GET, POST, DELETE, OPTIONS',
        'access-control-allow-headers':'Authorization, Content-Type',
        'access-control-max-age':'600'} : {'vary':'Origin'};
 }
@@ -21,11 +21,24 @@ function configIsSafe(env) {
     !env.GOOGLE_CLIENT_ID.includes('REPLACE') && env.OWNER_EMAIL?.includes('@') &&
     env.OWNER_EMAIL !== 'owner@example.com' && /^https?:\/\//.test(env.ALLOWED_ORIGIN));
 }
-async function authorize(req,env) {
-  const auth = req.headers.get('authorization') || '';
-  if (!auth.startsWith('Bearer ') || auth.length > 12000) return null;
+// Server-controlled opaque device sessions (no third-party cookies required).
+const SESSION_DAYS=30;
+const MS_DAY=86400000;
+const secretHex=bytes=>Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+async function sha256(value) {
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
+  return secretHex(new Uint8Array(digest));
+}
+function bearer(req){
+  const auth=req.headers.get('authorization')||'';
+  if(!auth.startsWith('Bearer ')||auth.length>12000)return '';
+  return auth.slice(7);
+}
+async function authorizeGoogle(req,env) {
+  const token=bearer(req);
+  if(!token || token.startsWith('cs1_'))return null;
   try {
-    const {payload} = await jwtVerify(auth.slice(7),googleKeys,{
+    const {payload} = await jwtVerify(token,googleKeys,{
       issuer:['accounts.google.com','https://accounts.google.com'],
       audience:env.GOOGLE_CLIENT_ID, clockTolerance:10
     });
@@ -33,6 +46,38 @@ async function authorize(req,env) {
     if (env.OWNER_GOOGLE_SUB && env.OWNER_GOOGLE_SUB !== payload.sub) return null;
     return {sub:String(payload.sub),email:String(payload.email)};
   } catch { return null; }
+}
+async function authorize(req,env) {
+  const token=bearer(req);
+  if(!token.startsWith('cs1_'))return authorizeGoogle(req,env);
+  if(!/^cs1_[0-9a-f]{64}$/.test(token))return null;
+  const hash=await sha256(token);
+  const session=await env.DB.prepare(
+    'SELECT owner_sub,owner_email,expires_at FROM auth_sessions WHERE token_hash=?'
+  ).bind(hash).first();
+  if(!session || session.expires_at<=new Date().toISOString() ||
+    session.owner_email.toLowerCase()!==env.OWNER_EMAIL.toLowerCase() ||
+    (env.OWNER_GOOGLE_SUB && session.owner_sub!==env.OWNER_GOOGLE_SUB))return null;
+  // Sliding expiry requires roughly one D1 write per device every 23 days, not per sync.
+  if(Date.parse(session.expires_at)-Date.now()<7*MS_DAY){
+    await env.DB.prepare('UPDATE auth_sessions SET expires_at=? WHERE token_hash=?')
+      .bind(new Date(Date.now()+SESSION_DAYS*MS_DAY).toISOString(),hash).run();
+  }
+  return {sub:session.owner_sub,email:session.owner_email};
+}
+async function issueSession(env,identity){
+  const token='cs1_'+secretHex(crypto.getRandomValues(new Uint8Array(32)));
+  const expiresAt=new Date(Date.now()+SESSION_DAYS*MS_DAY).toISOString();
+  await env.DB.prepare(`INSERT INTO auth_sessions
+    (token_hash,owner_sub,owner_email,created_at,expires_at) VALUES(?,?,?,?,?)`)
+    .bind(await sha256(token),identity.sub,identity.email,new Date().toISOString(),expiresAt).run();
+  return json({token,email:identity.email,expiresAt});
+}
+async function revokeSession(req,env){
+  const token=bearer(req);
+  if(!/^cs1_[0-9a-f]{64}$/.test(token))return json({error:'unauthorized'},401);
+  await env.DB.prepare('DELETE FROM auth_sessions WHERE token_hash=?').bind(await sha256(token)).run();
+  return json({revoked:true});
 }
 function itemRecord(row) {
   return {id:row.id,title:row.title,note:row.note,deleted:!!row.deleted,
@@ -125,9 +170,18 @@ export default {
     if (path==='/api/health' && req.method==='GET') return finish(json({ok:true,phase:'A',apiVersion:1}));
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));
-    const identity=await authorize(req,env);
-    if (!identity) return finish(json({error:'unauthorized'},401));
-    try {return finish(await route(req,env,identity));}
-    catch(err) {console.error('Compass API failure',err?.name||'Unknown');return finish(json({error:'internal-server-error'},500));}
+    try {
+      if(path==='/api/session' && req.method==='POST') {
+        const googleIdentity=await authorizeGoogle(req,env);
+        return finish(googleIdentity?await issueSession(env,googleIdentity):json({error:'unauthorized'},401));
+      }
+      if(path==='/api/session' && req.method==='DELETE')return finish(await revokeSession(req,env));
+      const identity=await authorize(req,env);
+      if(!identity)return finish(json({error:'unauthorized'},401));
+      return finish(await route(req,env,identity));
+    }catch(err){
+      console.error('Compass API failure',err?.name||'Unknown');
+      return finish(json({error:'internal-server-error'},500));
+    }
   }
 };

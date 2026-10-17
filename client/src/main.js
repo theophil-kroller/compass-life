@@ -1,7 +1,7 @@
 import './style.css';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
-import {request,nextBatch,applyResult,mergePulled} from './sync.js';
+import {request,nextBatch,applyResult,mergePulled,sameItemContent} from './sync.js';
 
 registerSW({immediate:true});
 const app=document.getElementById('app');
@@ -13,6 +13,31 @@ let selectedDay=localDateString(new Date());
 let selectedInboxId=null;
 let showCaptureDetails=false;
 let syncResyncRequested=false;
+let syncTimer=null, lastSyncAt=0;
+const SYNC_INTERVAL_MS=15*60*1000;
+const CHANGE_DEBOUNCE_MS=7000;
+function scheduleSync(delay=CHANGE_DEBOUNCE_MS) {
+  if(!state||!authToken||!navigator.onLine||document.visibilityState==='hidden')return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>{syncTimer=null;syncNow().catch(()=>{});},delay);
+}
+async function resumeSession(){
+  if(!state)return;
+  try {
+    const session=await vault.loadSession();
+    if(!session)return;
+    authToken=session.token;currentUser=session.email;
+    render();
+    if(!navigator.onLine)return;
+    const who=await request(config.apiUrl,authToken,'/api/me');
+    currentUser=who.email;render();
+    await syncNow();
+  }catch(ex){
+    if(ex.status===401){authToken='';currentUser='';await vault.clearSession();toast('Compass-Sitzung abgelaufen. Bitte einmalig mit Google anmelden.');}
+    else {error='Verbindung derzeit nicht erreichbar. Lokale Erfassung bleibt möglich.';render();}
+  }
+}
+
 let captureOverlayOpen=false;
 let captureAfterUnlock=false;
 let inboxQuery='';
@@ -47,7 +72,7 @@ async function mutate(fn) {
   }catch(ex){state=previous;render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
   render();
   if(busy)syncResyncRequested=true;
-  else if(authToken&&navigator.onLine)syncNow().catch(()=>{});
+  else scheduleSync();
 }
 async function addCapture(title,note=''){
   const cleanTitle=String(title||'').trim();const cleanNote=String(note||'').trim();
@@ -131,7 +156,7 @@ function chrome(content){
  </aside><main class="workspace"><div class="utility-bar">
  <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>Ctrl / ⌘ K</kbd></button>
  <div class="utility-right">${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
- <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?'Google angemeldet':'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
+ <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?'Compass verbunden':'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':''}">
  <div class="page-intro"><div><p class="page-overline">${tab==='today'?'DEIN TAGESKOMPASS':tab==='overview'?'DEIN PERSÖNLICHER KOMPASS':'COMPASS · DEIN ARBEITSRAUM'}</p><h1>${h(title)}</h1><p class="intro-subtitle">${h(sub)}</p></div><div class="today-label">${h(today)}<span>${state?'Tresor entsperrt':'Tresor gesperrt'}</span></div></div>
@@ -301,13 +326,13 @@ function systemScreen(){
  return chrome(`<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
  <div class="connection-detail"><span class="connection-dot ${configured()?'green':'amber'}"></span><span>${configured()?'Konfiguration hinterlegt':'Google-Anmeldung noch nicht konfiguriert'}</span></div>
  <p class="small-muted">${configured()?'API: '+h(config.apiUrl):'In client/public/runtime-config.json sind noch Konfigurationswerte zu ergänzen.'}</p>
- <div id="google-button" class="google-button"></div><p class="small-muted">${authToken?'Angemeldet: '+h(currentUser):'Google-Anmeldung bleibt bis zur Konfiguration deaktiviert. Deine lokalen Daten sind unabhängig davon nutzbar.'}</p>
+ <div id="google-button" class="google-button"></div><p class="small-muted">${authToken?'Compass-Sitzung aktiv: '+h(currentUser)+' · bleibt nach erneutem Tresor-Entsperren erhalten.':'Google-Anmeldung einmalig verknüpfen; danach wird die Compass-Sitzung verschlüsselt im Tresor gespeichert.'}</p><p class="small-muted">Automatisch: 7 Sekunden nach Änderungen und etwa alle 15 Minuten, solange Compass geöffnet und sichtbar ist. Manuell jederzeit über „Jetzt synchronisieren“.</p>
  <div class="system-actions"><button class="primary-btn" data-action="sync" ${!authToken||busy?'disabled':''}>${busy?'Synchronisiere …':'Jetzt synchronisieren'} ${ico('sync',16)}</button><button class="secondary-btn" data-action="logout" ${!authToken?'disabled':''}>Google trennen</button></div>
  <div class="mini-stats"><div><span>Wartende Änderungen</span><strong>${state.pending.length}</strong></div><div><span>Konflikte</span><strong>${state.conflicts.length}</strong></div><div><span>Sync-Cursor</span><strong>${state.cursor}</strong></div></div></section>
  <section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('shield',22)}<h2>Lokaler Tresor</h2></div></div><p class="module-subtitle">Verschlüsselt und offline nutzbar.</p>
  <div class="security-line">${ico('check',17)} AES-256-GCM verschlüsselte Speicherung</div><div class="security-line">${ico('check',17)} Passphrase bleibt auf deinem Gerät</div><div class="security-line">${ico('check',17)} Keine privaten Aufgaben in GitHub</div>
  <button class="secondary-btn full" data-action="export-encrypted">Verschlüsseltes Backup herunterladen</button><button class="secondary-btn full" data-action="export-json">Klartext-JSON exportieren</button><p class="small-muted">Klartext-Exporte enthalten unverschlüsselte private Inhalte.</p></section></div>
- ${state.conflicts.length?`<section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('sync',21)}<h2>Synchronisationskonflikte (${state.conflicts.length})</h2></div></div><p class="module-subtitle">Wähle bewusst die gewünschte Fassung.</p>${state.conflicts.map(c=>`<div class="conflict"><p><strong>Lokal:</strong> ${h(c.local?.title||'(gelöscht)')}</p><p><strong>Cloud:</strong> ${h(c.remote?.title||'(fehlt)')}</p><div class="system-actions"><button class="secondary-btn" data-action="resolve-remote" data-id="${h(c.id)}">Cloud übernehmen</button><button class="primary-btn" data-action="resolve-local" data-id="${h(c.id)}">Meine Version behalten</button></div></div>`).join('')}</section>`:''}`);
+ ${state.conflicts.length?`<section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('sync',21)}<h2>Synchronisationskonflikte (${state.conflicts.length})</h2></div></div><p class="module-subtitle">Wähle bewusst die gewünschte Fassung.</p>${state.conflicts.map(c=>`<div class="conflict"><p><strong>Lokal:</strong> ${h(c.local?.title||'(gelöscht)')}</p><p><strong>Cloud:</strong> ${h(c.remote?.title||'(fehlt)')}</p>${c.local?.note||c.remote?.note?`<p class="small-muted"><strong>Notiz lokal:</strong> ${h(c.local?.note||'(leer)')} · <strong>Cloud:</strong> ${h(c.remote?.note||'(leer)')}</p>`:''}<div class="system-actions"><button class="secondary-btn" data-action="resolve-remote" data-id="${h(c.id)}">Cloud übernehmen</button><button class="primary-btn" data-action="resolve-local" data-id="${h(c.id)}">Meine Version behalten</button></div></div>`).join('')}</section>`:''}`);
 }
 function render(){
  if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
@@ -320,7 +345,8 @@ function bind() {
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
-      if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit.');}catch(ex){toast(ex.message,true);}
+      if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit.');
+      resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
   const reviewSelect=app.querySelector('#review-select');if(reviewSelect)reviewSelect.onchange=ev=>{selectedInboxId=ev.target.value;render();};
   const importField=app.querySelector('#encrypted-import');if(importField)importField.onchange=async ev=>{
@@ -331,7 +357,7 @@ function bind() {
     ev.preventDefault();
     const submit=form.querySelector('[type=submit]');if(submit)submit.disabled=true;
     try {const data=new FormData(form);await addCapture(data.get('title'),data.get('note'));captureOverlayOpen=false;
-      notice='Sicher in deiner Inbox gespeichert'+(authToken?' · Synchronisierung läuft':' · nur auf diesem Gerät')+'.';error='';render();
+      notice='Sicher in deiner Inbox gespeichert'+(authToken?' · Cloud-Abgleich vorgemerkt':' · nur auf diesem Gerät')+'.';error='';render();
     }catch(ex){if(submit)submit.disabled=false;toast(ex.message,true);}
   });
   const editForm=app.querySelector('#inbox-edit-form');if(editForm)editForm.onsubmit=async ev=>{
@@ -365,9 +391,16 @@ async function runAction(action,id) {
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
-    if(action==='lock'){vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='sync'){await syncNow();return;}
-    if(action==='logout'){authToken='';currentUser='';toast('Von Google getrennt. Lokale Daten bleiben geschützt.');return;}
+    if(action==='logout'){
+      const previous=authToken;authToken='';currentUser='';clearTimeout(syncTimer);
+      await vault.clearSession();
+      try {if(previous)await request(config.apiUrl,previous,'/api/session',{method:'DELETE'});
+        toast('Compass-Sitzung auf diesem Gerät beendet. Lokale Daten bleiben geschützt.');}
+      catch {toast('Lokal abgemeldet. Serverseitiger Widerruf gerade nicht erreichbar – bitte bei Gelegenheit erneut verbinden und abmelden.',true);}
+      return;
+    }
     if(action==='select-inbox'){if(!state?.records[id]||state.records[id].deleted)return;selectedInboxId=id;tab='inbox';render();return;}
     if(action==='edit'){
       const current=state.records[id];if(!current||current.deleted)return;
@@ -390,7 +423,9 @@ async function runAction(action,id) {
           else {delete s.records[id];delete s.serverVersions[id];}
         }else {
           s.serverVersions[id]=c.remote?.version||0;
-          s.pending.push(makeMutation(s.records[id]));
+          if(sameItemContent(s.records[id],c.remote)) {
+            s.pending=s.pending.filter(x=>x.id!==id);
+          }else {s.pending.push(makeMutation(s.records[id]));}
         }
       });toast('Konfliktentscheidung gespeichert.');return;
     }
@@ -410,10 +445,13 @@ async function renderGoogleButton() {
     await ensureGoogle();
     const root=document.getElementById('google-button');if(!root||authToken)return;
     window.google.accounts.id.initialize({client_id:config.googleClientId,callback:async response=>{
-      authToken=response.credential;
       try {
-        const who=await request(config.apiUrl,authToken,'/api/me');currentUser=who.email;
-        toast('Google-Anmeldung erfolgreich.');await syncNow();
+        // Exchange the short-lived Google ID token for a revocable 30-day Compass session.
+        const session=await request(config.apiUrl,response.credential,'/api/session',{method:'POST'});
+        await vault.saveSession(session);
+        authToken=session.token;currentUser=session.email;
+        toast('Compass verbunden. Die Anmeldung bleibt im verschlüsselten Tresor gespeichert.');
+        await syncNow();
       }catch(ex){authToken='';currentUser='';toast(ex.status===401?'Dieses Google-Konto ist nicht freigeschaltet.':ex.message,true);}
     },auto_select:false});
     window.google.accounts.id.renderButton(root,{theme:'outline',size:'large',type:'standard',text:'signin_with',shape:'rectangular'});
@@ -421,6 +459,7 @@ async function renderGoogleButton() {
 }
 async function syncNow() {
   if(!state||!authToken||busy||!navigator.onLine)return;
+  clearTimeout(syncTimer);syncTimer=null;
   busy=true;render();
   try {
     // No concurrent writes while in flight: mutations queue before a request starts.
@@ -445,17 +484,18 @@ async function syncNow() {
       await persist();
       if(!data.hasMore)break;
     }
+    lastSyncAt=Date.now();
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
     error='';
   }catch(ex){
     syncResyncRequested=false;
     error=ex.status===401?'Google-Sitzung abgelaufen. Bitte erneut anmelden.':`Synchronisation: ${ex.message}`;
-    if(ex.status===401){authToken='';currentUser='';}
+    if(ex.status===401){authToken='';currentUser='';await vault.clearSession().catch(()=>{});}
   }finally{
     busy=false;render();
     const retry=syncResyncRequested&&Boolean(state?.pending.length)&&Boolean(authToken)&&navigator.onLine&&!error;
     syncResyncRequested=false;
-    if(retry)queueMicrotask(()=>syncNow().catch(()=>{}));
+    if(retry)scheduleSync(0);
   }
 }
 document.addEventListener('keydown',ev=>{
@@ -467,10 +507,18 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'&&captureOverlayOpen){ev.preventDefault();captureOverlayOpen=false;render();return;}
   if(!typing&&!ev.ctrlKey&&!ev.altKey&&!ev.metaKey&&ev.key.toLowerCase()==='n'&&state){ev.preventDefault();runAction('capture-focus');}
 });
-window.addEventListener('online',()=>{render();if(authToken)syncNow().catch(()=>{});});
+window.addEventListener('online',()=>{render();if(authToken)scheduleSync(0);});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&authToken&&state&&
+    (state.pending.length||Date.now()-lastSyncAt>=SYNC_INTERVAL_MS))scheduleSync(1000);
+});
+setInterval(()=>{
+  if(state&&authToken&&navigator.onLine&&document.visibilityState==='visible'&&
+     Date.now()-lastSyncAt>=SYNC_INTERVAL_MS&&!busy)scheduleSync(0);
+},60000);
 window.addEventListener('offline',render);
 for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();},{passive:true});
-setInterval(()=>{if(state&&Date.now()-lastActivity>15*60*1000){vault.lock();state=null;authToken='';currentUser='';notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
+setInterval(()=>{if(state&&Date.now()-lastActivity>15*60*1000){clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
 (async()=>{
   try{config=await fetch(`${import.meta.env.BASE_URL}runtime-config.json`,{cache:'no-store'}).then(r=>r.json());}
   catch{config={};}
