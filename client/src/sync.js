@@ -29,7 +29,7 @@ export function nextBatch(pending,max=25) {
 }
 // Comparisons must include notes and archive state, never title alone.
 export function sameItemContent(a,b) {
-  return Boolean(a&&b&&a.title===b.title&&(a.note||'')===(b.note||'')&&Boolean(a.deleted)===Boolean(b.deleted));
+  return Boolean(a&&b&&a.title===b.title&&(a.note||'')===(b.note||'')&&Boolean(a.deleted)===Boolean(b.deleted)&&JSON.stringify(a.tags||[])===JSON.stringify(b.tags||[]));
 }
 export function applyResult(state,result) {
   const index=state.pending.findIndex(x=>x.mutationId===result.mutationId);
@@ -70,7 +70,7 @@ export function mergePulled(state,changes) {
     if(already)continue;
     if(remote.version>=known) {
       state.records[remote.id]={id:remote.id,title:remote.title,note:remote.note,
-        deleted:remote.deleted,updatedAt:remote.updatedAt};
+        deleted:remote.deleted,tags:remote.tags||[],updatedAt:remote.updatedAt};
       state.serverVersions[remote.id]=remote.version;
     }
   }

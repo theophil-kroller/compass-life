@@ -9,6 +9,7 @@ let source=await fs.readFile(file,'utf8');
 source=source.replace("import { createRemoteJWKSet, jwtVerify } from 'jose';", `const createRemoteJWKSet=()=>({});\nconst jwtVerify=async(token)=>{if(token!=='google-ok')throw Error('invalid token');return {payload:{email_verified:true,email:'owner@example.org',sub:'google-user-1'}};};`);
 source=source.replace("import {MAX_BATCH, validateMutation, validCursor, cleanMutation} from './validation.js';",'const MAX_BATCH=25;const validateMutation=()=>null;const validCursor=()=>0;const cleanMutation=x=>x;');
 source=source.replace("import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice,watchPlanning} from './watch.js';", `const createPair=()=>{};const claimPair=()=>{};const acceptWatchSession=()=>{};const listWatchSessions=()=>{};const listWatchDevices=()=>{};const revokeWatchDevice=()=>{};const watchPlanning=()=>{};`);
+source=source.replace("import {listProjects,putProject} from './projects.js';", "const listProjects=()=>{};const putProject=()=>{};");
 source=source.replace("import {listTasks,putTask} from './tasks.js';", "const listTasks=()=>{};const putTask=()=>{};");
 const {default:worker}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 function fakeD1(){

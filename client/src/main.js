@@ -2,7 +2,7 @@ import './style.css';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
-import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot} from './tasks.js';
+import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent} from './tasks.js';
 
 registerSW({immediate:true});
 const app=document.getElementById('app');
@@ -13,6 +13,9 @@ let calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let selectedDay=localDateString(new Date());
 let selectedInboxId=null;
 let selectedTaskId=null;
+let selectedProjectId=null;
+let selectedAgendaEventId=null;
+let showCalendarBlocks=false;
 let showCaptureDetails=false;
 let syncResyncRequested=false;
 let syncTimer=null, lastSyncAt=0;
@@ -47,7 +50,7 @@ let inboxQuery='';
 const bootSearch=new URLSearchParams(location.search);
 const bootCapture=bootSearch.get('capture')==='1';
 const bootView=bootSearch.get('view');
-if(['today','inbox','review','forecast','overview','someday','activity'].includes(bootView))tab=bootView;
+if(['today','inbox','review','forecast','overview','someday','activity','projects','next','flagged','hold'].includes(bootView))tab=bootView;
 if(bootCapture){captureAfterUnlock=true;tab='inbox';}
 
 let watchPairCode='', watchPairExpires='', watchSessions=[], watchDevices=[], watchError='';
@@ -66,10 +69,27 @@ function calendarTime(e){
  if(!t)return 'Ganztägig';
  try{return new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit'}).format(new Date(t));}catch{return 'Termin';}
 }
+function visibleCalendarEvents(day){return dailyCalendar(day).filter(e=>showCalendarBlocks||!isRoutineBlock(e));}
+function isRoutineBlock(e){return /^(work|research blocker)$/i.test(String(e?.summary||'').trim());}
+function agendaEvent(e){const matched=agendaForEvent(state,e);return matched.length?`<span class="agenda-count">${ico('list',13)} ${matched.length} Agenda</span>`:'';}
 function calendarCardRows(day){
- const ev=dailyCalendar(day);
- return ev.length?`<div class="compass-calendar-list">${ev.map(e=>`<div class="compass-calendar-event"><span class="compass-calendar-hour">${h(calendarTime(e))}</span><strong>${h(e.summary||'Termin (ohne Titel)')}</strong></div>`).join('')}</div>`
-  :'<div class="appointments-empty"><span>Keine Termine für diesen Tag.</span></div>';
+ const ev=visibleCalendarEvents(day);
+ return ev.length?`<div class="compass-calendar-list">${ev.map(e=>`<button type="button" class="compass-calendar-event calendar-clickable" data-action="agenda-open" data-id="${h(e.id)}"><span class="compass-calendar-hour">${h(calendarTime(e))}</span><strong>${h(e.summary||'Termin')}</strong>${agendaEvent(e)}${ico('arrow',14)}</button>`).join('')}</div>`
+  :'<div class="appointments-empty"><span>Keine relevanten Termine für diesen Tag.</span></div>';
+}
+function calendarFilterToggle(){return `<button type="button" class="secondary-btn calendar-filter-toggle" data-action="calendar-toggle-blocks">${ico(showCalendarBlocks?'eye':'eyeOff',15)} ${showCalendarBlocks?'Zeitblöcke ausblenden':'Zeitblöcke einblenden'}</button>`;}
+function eventAgendaPanel(){
+ const event=calendarEvents.find(e=>e.id===selectedAgendaEventId);
+ if(!event||!state)return '';
+ const notes=agendaForEvent(state,event);
+ const title=String(event.summary||'');
+ const person=title.match(/\b(?:mit|bei)\s+([\p{Lu}][\p{L}-]{2,})/u);
+ const suggested=/\buko\b/i.test(title)?'uko':person?person[1].toLocaleLowerCase('de'):(title.match(/[\p{L}\p{N}]{3,}/u)?.[0]?.toLocaleLowerCase('de')||'');
+ return `<section class="work-card agenda-panel" aria-label="Besprechungsagenda"><div class="work-heading"><span>${ico('users',19)} Gesprächsvorbereitung</span><button type="button" class="secondary-btn" data-action="agenda-close">Schließen</button></div>
+ <h3>${h(event.summary||'Termin')}</h3><p class="muted-line">${h(calendarDate(event))} · ${h(calendarTime(event))} · Google Calendar (nur lesen)</p>
+ ${notes.length?`<div class="agenda-items">${notes.map(x=>`<div class="agenda-item">${ico('checkSquare',16)} <span>${h(x.title)}</span><small>${x.tags?.map(t=>'#'+h(t)).join(' ')||''}</small></div>`).join('')}</div>`:'<p class="muted-line">Noch keine offenen Gesprächspunkte mit passenden Tags.</p>'}
+ <form id="agenda-note-form" class="project-form"><input type="hidden" name="tag" value="${h(suggested)}"><label>Neuen Agendapunkt notieren<input name="title" required maxlength="180" placeholder="Was möchte ich besprechen?"/></label><button type="submit" class="primary-btn">${ico('plus',16)} Agendapunkt hinzufügen</button></form>
+ <p class="form-hint">Tag-Vorschlag: #${h(suggested)}. Du kannst Tags anschließend im Aufgabeneditor ändern. Keine Kalendereinträge werden verändert.</p></section>`;
 }
 function calendarConnectUI(){
  if(calendarBusy)return '<span class="calendar-connection">Google Calendar wird geladen …</span>';
@@ -110,10 +130,9 @@ async function connectCalendar(){
 }
 function watchOverview(){
  const sessions=watchSessions||[];
- const focusSec=sessions.reduce((a,s)=>a+(s.focusSec||0),0);
- const count=sessions.reduce((a,s)=>a+(s.pomodoros||0),0);
- const hrs=(focusSec/3600).toLocaleString('de-AT',{maximumFractionDigits:1});
- return `<div class="compass-stats"><div><strong>${hrs} h</strong><span>Fokuszeit</span></div><div><strong>${count}</strong><span>Pomodoros</span></div><div><strong>${sessions.length}</strong><span>Sessions</span></div></div><small class="stats-caption">${sessions.length?'Letzte 50 von Compass synchronisierte Garmin-Sessions, keine Garmin-Connect-Gesamtdaten.':'Noch keine Uhr-Sessions synchronisiert.'}</small>`;
+ const today=localDate();const monday=new Date(today+'T12:00:00');monday.setDate(monday.getDate()-((monday.getDay()+6)%7));const weekStart=localDate(monday);
+ const rows=[['Heute',sessions.filter(x=>new Date(x.startedAt*1000).toLocaleDateString('en-CA')===today)],['Diese Woche',sessions.filter(x=>new Date(x.startedAt*1000).toLocaleDateString('en-CA')>=weekStart)],['Synchronisiert',sessions]];
+ return `<div class="compass-tracking-grid">${rows.map(([label,items])=>`<div class="tracking-period"><span>${label}</span><strong>${(items.reduce((a,x)=>a+(x.focusSec||0),0)/3600).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>${items.reduce((a,x)=>a+(x.pomodoros||0),0)} Pomodoros · ${items.length} Sessions</small></div>`).join('')}</div><p class="stats-caption">Letzte maximal 50 synchronisierte Compass-Garmin-Sessions. Schlafdaten sind nicht angebunden.</p>`;
 }
 
 let weather={status:'idle',city:'Graz',temperature:null,label:''};
@@ -149,7 +168,7 @@ async function addCapture(title,note=''){
   if(!cleanTitle||cleanTitle.length>1000)throw new Error('Bitte einen Gedanken mit maximal 1.000 Zeichen eingeben.');
   if(cleanNote.length>10000)throw new Error('Die Notiz ist zu lang (max. 10.000 Zeichen).');
   await mutate(s=>{
-    const r={id:crypto.randomUUID(),title:cleanTitle,note:cleanNote,deleted:false,updatedAt:stamp()};
+    const r={id:crypto.randomUUID(),title:cleanTitle,note:cleanNote,tags:[],deleted:false,updatedAt:stamp()};
     s.records[r.id]=r;s.pending.push(makeMutation(r));s.history.push({type:'captured',at:stamp(),id:r.id});
   });
 }
@@ -157,7 +176,7 @@ async function addCapture(title,note=''){
 const stamp=()=>new Date().toISOString();
 function makeMutation(record) {
   return {id:record.id,mutationId:crypto.randomUUID(),baseVersion:0,title:record.title,
-    note:record.note,deleted:record.deleted};
+    note:record.note,deleted:record.deleted,tags:record.tags||[]};
 }
 // The dashboard is the permanent future-state information architecture.
 // Locked and not-yet-implemented modules display neutral, inert states.
@@ -175,6 +194,8 @@ const symbol = {
   compass:'<circle cx="12" cy="12" r="9"/><path d="m16.6 7.4-2.5 6.7-6.7 2.5 2.5-6.7z"/>',
   spark:'<path d="m12 2 2.8 7.2L22 12l-7.2 2.8L12 22l-2.8-7.2L2 12l7.2-2.8z"/>',
   pencil:'<path d="m15 5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11z"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="m3 3 18 18M2 12s4-7 10-7 10 7 10 7c-.6 1-1.3 1.9-2.2 2.8M7 18.5A12 12 0 0 1 2 12"/>',
   folder:'<path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3z"/>',
   search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
   settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.9 4.9l1.5 1.5m11.2 11.2 1.5 1.5M2 12h2m16 0h2M4.9 19.1l1.5-1.5M17.6 6.4l1.5-1.5"/>',
@@ -207,18 +228,18 @@ function navItem(id,label,iconName,{disabled=false,count=null}={}) {
 function chrome(content){
  const num=rows().length;
  const today=new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
- const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten'})[tab]||'Heute');
- const sub=({activity:'Aktivitäten, Zeit und Fokus. Auch von der Garmin.',today:'Was heute wirklich zählt.',forecast:'Termine und Verpflichtungen in den kommenden Tagen.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
+ const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',projects:'Projekte',next:'Next Actions',flagged:'Flagged',hold:'On Hold',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten'})[tab]||'Heute');
+ const sub=({activity:'Aktivitäten, Zeit und Fokus. Auch von der Garmin.',today:'Was heute wirklich zählt.',forecast:'Termine, Fristen und Agenden auf einer Zeitachse.',projects:'Ergebnisse verfolgen, nächste Schritte verbinden.',next:'Alle ausführbaren nächsten Schritte, auch ohne Datum.',flagged:'Bewusst hervorgehobene Aufgaben.',hold:'Bewusst pausiert oder auf Rückmeldung wartend.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
  return `<div class="shell"><aside class="sidebar" aria-label="Navigation">
  <div class="brand"><span class="brand-icon">${ico('compass',24)}</span><span class="brand-name">Compass<small>Personal Life Manager</small></span></div>
  <nav class="side-nav" aria-label="Hauptnavigation">
  ${navItem('inbox','Inbox','inbox',{count:num})}
  ${navItem('today','Heute','sun')}${navItem('forecast','Forecast','calendar')}
- ${navItem('next','Next Actions','target',{disabled:true})}${navItem('review','Wochenreview','sync')}
- ${navItem('flagged','Flagged','flag',{disabled:true})}${navItem('hold','On Hold','pause',{disabled:true})}
+ ${navItem('next','Next Actions','target')}${navItem('review','Wochenreview','sync')}
+ ${navItem('flagged','Flagged','flag')}${navItem('hold','On Hold','pause')}
  ${navItem('someday','Dreams','spark')}
  <div class="nav-separator"></div>
- ${navItem('projects','Projekte','folder',{disabled:true})}${navItem('people','Menschen','people',{disabled:true})}
+ ${navItem('projects','Projekte','folder')}${navItem('people','Menschen','people',{disabled:true})}
  ${navItem('progress','Fortschritt','activity',{disabled:true})}${navItem('recovery','Erholung','heart',{disabled:true})}
  <div class="nav-separator"></div>${navItem('overview','Übersicht','layers')}
  ${navItem('activity','Aktivitäten','activity')}${navItem('system','System & Sync','settings')}
@@ -256,16 +277,15 @@ function dashboardCards(locked=false){
  const skeleton='<div class="skeleton-lines"><div></div><div></div><div></div></div>';
  return `<div class="dashboard-grid">
  ${moduleCard({name:'Heute',iconName:'sun',cls:'grid-today',active:true,sub:'Deine Tagesübersicht',body:todayCards.length?`<div class="dashboard-today-tasks">${todayCards.slice(0,4).map(t=>`<div>${ico(t.completed?'check':'checkSquare',16)} <span>${h(t.title)}</span></div>`).join('')}</div><small class="stats-caption">${todayCards.filter(t=>t.completed).length} / ${todayCards.length} erledigt</small>`:`<div class="today-placeholder">${ico('calendar',28)}<span>Keine Aufgaben für heute geplant</span><small>Geplante Aufgaben findest du unter Heute.</small></div>`}).replace('</section>',`<button class="text-link" type="button" data-tab="today">Heute öffnen ${ico('arrow',14)}</button></section>`)}
- ${moduleCard({name:'Nächste Empfehlung',iconName:'spark',cls:'grid-next',sub:'Dein nächster sinnvoller Schritt',body:`<div class="recommend-placeholder"><span class="little-overline">NÄCHSTE AKTION</span><div class="recommend-icon">${ico('target',24)}</div><strong>Noch keine Empfehlung</strong><p>Hier erscheint später eine passende nächste Handlung.</p><button class="primary-btn disabled-primary" disabled>Fokus starten ${ico('arrow',15)}</button></div>`})}
+ ${moduleCard({name:'Nächste Aktionen',iconName:'target',cls:'grid-next',active:true,sub:'Ausführbar, ohne künstliche Deadline',body:nextActions(state).length?taskList(nextActions(state).slice(0,3),'dashboard')+'<button class="text-link" type="button" data-tab="next">Alle Next Actions '+ico('arrow',14)+'</button>':placeholder('Noch keine nächsten Schritte erfasst.')})}
  ${captureCard(locked)}
  ${inboxPreview()}
  ${moduleCard({name:'Wochenreview',iconName:'sync',cls:'grid-review',active:true,sub:'Klarheit gewinnen. Regelmäßig.',body:`<div class="review-steps review-steps-icon"><div>${ico('inbox',16)} Eingang klären</div><div>${ico('checkSquare',16)} Nächste Schritte</div><div>${ico('calendar',16)} Fristen prüfen</div></div><button class="text-link" type="button" data-tab="review">Wochenreview öffnen ${ico('arrow',14)}</button>`})}
- ${moduleCard({name:'Projekte',iconName:'folder',cls:'grid-projects',sub:'Alle Vorhaben an einem Ort',action:'Projekte öffnen',body:`<div class="project-skeleton"><div><i></i><span></span><b></b></div><div><i></i><span></span><b></b></div><div><i></i><span></span><b></b></div></div><div class="quiet-bottom">Noch keine Projekte angelegt</div>`})}
+ ${moduleCard({name:'Projekte',iconName:'folder',cls:'grid-projects',active:true,sub:'Aktive Ergebnisse und nächste Schritte',body:`<div class="project-summary"><strong>${Object.values(state?.projects||{}).filter(p=>p.status==='active').length}</strong><span>aktive Projekte</span><small>${Object.values(state?.projects||{}).filter(p=>p.status==='active'&&!nextActions(state).some(t=>t.projectId===p.id)).length} ohne nächste Aktion</small></div><button type="button" class="text-link" data-tab="projects">Projekte öffnen ${ico('arrow',14)}</button>`})}
  ${moduleCard({name:'Kalender & Fokus',iconName:'calendar',cls:'grid-calendar',active:true,sub:'Deine Termine (Google, nur lesend)',body:calendarToken?calendarCardRows(localDateString(new Date())):calendarConnectUI()})}
- ${moduleCard({name:'Fortschritt',iconName:'activity',cls:'grid-progress',active:true,sub:'Aus deinen Compass-Sessions',body:watchOverview()})}
+
  ${moduleCard({name:'Menschen',iconName:'people',cls:'grid-people',sub:'Offene Gespräche & Kontakte',body:`<div class="people-preview"><span class="people-circles"><i></i><i></i><i></i></span><p>Keine Personen erfasst</p></div>`})}
  ${moduleCard({name:'Activity Tracking',iconName:'activity',cls:'grid-activity',active:true,sub:'Garmin · Fokuszeit · Pomodoro',body:watchOverview()}).replace('</section>',`<button class="text-link" type="button" data-tab="activity">Aktivitäten ansehen ${ico('arrow',14)}</button></section>`)}
- ${moduleCard({name:'Erholung',iconName:'heart',cls:'grid-recovery',sub:'Garmin-Gesundheitsdaten',body:`<div class="energy-placeholder"><span class="donut big">–</span><div><span>${ico('moon',14)} Schlaf: nicht verbunden</span><span>${ico('heart',14)} HR: nur in Uhr-Sessions</span><span>${ico('activity',14)} Body Battery: wenn verfügbar</span></div></div><small class="stats-caption">Schlaf benötigt eine separate unterstützte Datenquelle.</small>`})}
  </div>`;
 }
 function localDateString(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -291,7 +311,7 @@ function todayWork(locked=false){
  const selected=localDateString(new Date())===selectedDay;
  return `<div class="today-layout">${calendarRail()}<div class="today-center">
  <section class="work-card appointments"><div class="work-heading"><span>${ico('calendar',18)} Termine ${selected?'heute':h(dayFormat(new Date(`${selectedDay}T12:00:00`)))}</span><span class="quiet-tag">${h(calendarStatus)}</span></div>
- ${calendarToken?calendarCardRows(selectedDay):calendarConnectUI()}</section>
+ ${calendarToken?calendarCardRows(selectedDay)+calendarFilterToggle():calendarConnectUI()}</section>${eventAgendaPanel()}
  <section class="work-card today-tasks"><div class="work-heading"><span>${ico('list',18)} Meine Aufgaben ${selected?'für heute':'für diesen Tag'}</span><span class="quiet-tag">${tasksForDay(state,selectedDay).filter(t=>t.completed).length} / ${tasksForDay(state,selectedDay).length} erledigt</span></div>
  ${state?taskCreateForm(selectedDay):''}
  ${taskList(tasksForDay(state,selectedDay), 'day')}
@@ -309,17 +329,55 @@ function forecastScreen(){
  const list=dueTasks(state,600),today=localDate();
  const days=Array.from({length:14},(_,i)=>{const d=new Date(today+'T12:00:00');d.setDate(d.getDate()+i);return localDate(d);});
  const overdue=list.filter(t=>t.dueDate<today);
- const grouped=(day)=>list.filter(t=>t.dueDate===day);
- return chrome(`<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Fristen</span><span class="quiet-tag">14 Tage · ${list.length} offene Deadlines</span></div>
- ${state?taskCreateForm(selectedDay):''}
+ const dayContent=day=>{
+  const tasks=list.filter(t=>t.dueDate===day);
+  const ev=calendarToken?visibleCalendarEvents(day):[];
+  if(!tasks.length&&!ev.length)return '';
+  const combined=[...tasks.map(t=>({type:'task',sort:'0',obj:t})),...ev.map(e=>({type:'event',sort:e.start?.dateTime||'1',obj:e}))].sort((a,b)=>a.sort.localeCompare(b.sort));
+  return `<div class="forecast-date-group"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(day+'T12:00:00')))}</h3><div class="timeline-day">${combined.map(x=>x.type==='task'?`<div class="timeline-item deadline-event">${ico('flag',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · harte Deadline · ${h(CATEGORY_LABELS[x.obj.category]||x.obj.category)}</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:`<button type="button" class="timeline-item calendar-event" data-action="agenda-open" data-id="${h(x.obj.id)}">${ico('calendar',19)}<div><strong>${h(x.obj.summary||'Kalendertermin')}</strong><small>Google Calendar · ${h(calendarTime(x.obj))}${x.obj.start?.date?' · Ganztagsmarker':''}</small></div>${agendaEvent(x.obj)}${ico('arrow',15)}</button>`).join('')}</div></div>`;
+ };
+ return chrome(`<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Fristen und Termine</span><span class="quiet-tag">14 Tage</span></div>
+ <div class="forecast-tools">${calendarToken?calendarFilterToggle():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · Google Calendar nur lesend</span></div>
  ${overdue.length?`<div class="forecast-date-overdue"><strong>Überfällig</strong>${taskList(overdue,'forecast')}</div>`:''}
- ${days.map(d=>`<div class="forecast-date-group"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(d+'T12:00:00')))}</h3>${taskList(grouped(d),'forecast',true)}</div>`).join('')}
- <section class="compass-forecast-cal"><strong>${ico('calendar',16)} Google Calendar · die nächsten 14 Tage</strong>${calendarToken?`<div class="compass-calendar-list">${calendarEvents.filter(e=>days.includes(calendarDate(e))).slice(0,25).map(e=>`<div class="compass-calendar-event"><span class="compass-calendar-hour">${h(calendarDate(e))} ${h(calendarTime(e))}</span><strong>${h(e.summary||'Termin')}</strong></div>`).join('')||'<span>Keine Termine im Zeitraum.</span>'}</div>`:calendarConnectUI()}</section><p class="rail-footnote">Geplant für heute ≠ harte Deadline. Google Calendar ist nur lesend.</p></section><aside class="work-card task-inspector"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabe bearbeiten</span></div>${taskEditor()}</aside></div>`);
+ ${days.map(dayContent).join('')||'<div class="task-empty">Keine Termine oder Fristen für die kommenden 14 Tage.</div>'}
+ <p class="rail-footnote">Ganztägig markierte Fristen blockieren nicht automatisch deinen ganzen Tag. Zeitblöcke können ausgeblendet werden.</p></section><aside class="forecast-inspector">${eventAgendaPanel()}<section class="work-card task-inspector"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabe bearbeiten</span></div>${taskEditor()}</section></aside></div>`);
 }
-function taskCreateForm(defaultDay){return `<form class="task-create-form" id="task-create-form"><div class="task-form-title"><strong>Neue Aufgabe</strong><span>Auch offline möglich</span></div><input name="title" aria-label="Aufgabentitel" maxlength="180" required placeholder="Was steht an?"/><div class="task-field-grid"><label>Für welchen Tag?<input name="plannedDate" type="date" value="${h(defaultDay||'')}"></label><label>Harte Deadline (optional)<input name="dueDate" type="date"></label><label>Kategorie<select name="category">${TASK_CATEGORIES.map(c=>`<option value="${h(c)}">${h(CATEGORY_LABELS[c]||c)}</option>`).join('')}</select></label><button class="primary-btn" type="submit" ${state?'':'disabled'}>${ico('plus',16)} Hinzufügen</button></div></form>`;}
-function taskList(items,scope,hideEmpty=false){return items.length?`<div class="task-list" data-scope="${h(scope)}">${items.map(t=>`<div class="task-row ${t.completed?'completed':''}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}"><strong>${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small></button>${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Für diesen Tag ist noch keine Aufgabe eingeplant.</div>`;}
+function projectOptions(selected=''){
+ return `<option value="">Kein Projekt</option>`+Object.values(state?.projects||{}).filter(x=>x.status!=='completed'||x.id===selected).sort((a,b)=>a.title.localeCompare(b.title,'de')).map(p=>`<option value="${h(p.id)}" ${selected===p.id?'selected':''}>${h(p.title)}</option>`).join('');
+}
+function categoryOptions(selected='Allgemein'){
+ return TASK_CATEGORIES.map(c=>`<option value="${h(c)}" ${c===selected?'selected':''}>${h(CATEGORY_LABELS[c]||c)}</option>`).join('');
+}
+function workflowOptions(selected='next'){
+ return [['next','Next Action'],['waiting','Waiting For'],['hold','On Hold']].map(([value,label])=>`<option value="${value}" ${selected===value?'selected':''}>${label}</option>`).join('');
+}
+function taskCreateForm(defaultDay='',defaultProject=''){
+ return `<form class="task-create-form" id="task-create-form"><div class="task-form-title"><strong>Neue Aufgabe</strong><span>Auch ohne Datum möglich</span></div><input name="title" aria-label="Aufgabentitel" maxlength="180" required placeholder="Was ist der nächste konkrete Schritt?"/><div class="task-field-grid">
+ <label>Geplanter Tag<input name="plannedDate" type="date" value="${h(defaultDay||'')}"></label><label>Harte Deadline<input name="dueDate" type="date"></label>
+ <label>Kategorie<select name="category">${categoryOptions()}</select></label><label>Status<select name="workflow">${workflowOptions()}</select></label>
+ <label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label><label>Agenda-Tags<input name="tags" placeholder="UKO, Martin" maxlength="300"/></label>
+ <label class="flag-check"><input type="checkbox" name="flagged"/> Flagged</label><button class="primary-btn" type="submit">${ico('plus',16)} Hinzufügen</button></div></form>`;
+}
+function taskList(items,scope,hideEmpty=false){return items.length?`<div class="task-list" data-scope="${h(scope)}">${items.map(t=>`<div class="task-row ${t.completed?'completed':''}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}"><strong>${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small>${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</button>${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;}
 function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)return '<div class="task-empty">Tippe auf eine Aufgabe, um sie zu bearbeiten.</div>';
- return `<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="3">${h(t.note||'')}</textarea></label><label>Geplanter Tag<input type="date" name="plannedDate" value="${h(t.plannedDate||'')}"></label><label>Harte Deadline<input type="date" name="dueDate" value="${h(t.dueDate||'')}"></label><label>Kategorie<select name="category">${TASK_CATEGORIES.map(c=>`<option value="${h(c)}" ${c===t.category?'selected':''}>${h(CATEGORY_LABELS[c]||c)}</option>`).join('')}</select></label><div class="task-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button></div></form>${state.taskConflicts[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Diese Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten, bis du entscheidest.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
+ return `<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="3">${h(t.note||'')}</textarea></label><label>Geplanter Tag<input type="date" name="plannedDate" value="${h(t.plannedDate||'')}"></label><label>Harte Deadline<input type="date" name="dueDate" value="${h(t.dueDate||'')}"></label><label>Kategorie<select name="category">${categoryOptions(t.category)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>Tags (mit Komma trennen)<input name="tags" value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label><label class="flag-check"><input type="checkbox" name="flagged" ${t.flagged?'checked':''}/> Flagged</label><div class="task-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button></div></form>${state.taskConflicts[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Die Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
+}
+function workflowScreen(which){
+ const titles={next:'Next Actions',flagged:'Flagged',hold:'On Hold & Waiting For'};
+ const tasks=which==='next'?nextActions(state):which==='flagged'?flaggedTasks(state):heldTasks(state);
+ return chrome(`<div class="workflow-layout"><section class="work-card"><div class="work-heading"><span>${ico(which==='flagged'?'flag':which==='hold'?'pause':'target',20)} ${titles[which]}</span><span class="quiet-tag">${tasks.length} offen</span></div>
+ ${taskCreateForm('')}${taskList(tasks,which)}</section><aside class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Aufgabendetails</span></div>${taskEditor()}</aside></div>`);
+}
+function projectScreen(){
+ const projects=Object.values(state?.projects||{}).sort((a,b)=>['active','hold','completed'].indexOf(a.status)-['active','hold','completed'].indexOf(b.status)||a.title.localeCompare(b.title,'de'));
+ const current=state?.projects?.[selectedProjectId]||projects[0]||null;
+ const items=current?projectTasks(state,current.id):[];
+ const nextCount=items.filter(t=>!t.completed&&!t.archived&&(t.workflow||'next')==='next').length;
+ return chrome(`<div class="projects-layout"><section class="work-card"><div class="work-heading"><span>${ico('folder',20)} Projekte</span><span class="quiet-tag">${projects.filter(x=>x.status==='active').length} aktiv</span></div>
+ <form class="project-form" id="project-create-form"><label>Neues Projekt<input required name="title" maxlength="140" placeholder="z. B. Dissertation: Paper fertigstellen"/></label><label>Gewünschtes Ergebnis<input name="outcome" maxlength="800" placeholder="Woran erkenne ich, dass es fertig ist?"/></label><label>Bereich<select name="category">${categoryOptions()}</select></label><button class="primary-btn" type="submit">${ico('plus',17)} Projekt anlegen</button></form>
+ ${projects.length?`<div class="project-list">${projects.map(x=>`<button type="button" class="project-list-item ${current?.id===x.id?'is-current':''}" data-action="project-select" data-id="${h(x.id)}"><span>${ico('folder',18)}</span><div><strong>${h(x.title)}</strong><small>${h(CATEGORY_LABELS[x.category]||x.category)} · ${x.status==='active'?'Aktiv':x.status==='hold'?'Pausiert':'Abgeschlossen'}</small></div><span>${projectTasks(state,x.id).filter(t=>!t.completed&&!t.archived).length}</span></button>`).join('')}</div>`:'<div class="task-empty">Noch keine Projekte angelegt.</div>'}</section>
+ <div class="project-details">${current?`<section class="work-card"><div class="work-heading"><span>${ico('target',18)} Gewünschtes Ergebnis</span><span class="quiet-tag">${current.status==='active'?'Aktiv':current.status==='hold'?'On Hold':'Abgeschlossen'}</span></div><form id="project-edit-form" class="task-edit-form" data-id="${h(current.id)}"><label>Projektname<input name="title" required maxlength="140" value="${h(current.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(current.outcome||'')}</textarea></label><div class="project-edit-grid"><label>Bereich<select name="category">${categoryOptions(current.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${current.status===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Deadline (optional)<input name="dueDate" type="date" value="${h(current.dueDate||'')}"></label></div><button class="primary-btn" type="submit">Projekt speichern</button></form>${state.projectConflicts[current.id]?`<div class="task-conflict">Konflikt mit anderem Gerät. <button data-action="project-conflict-remote" data-id="${h(current.id)}">Cloud-Version übernehmen</button><button data-action="project-conflict-local" data-id="${h(current.id)}">Meine Version übernehmen</button></div>`:''}</section>
+ <section class="work-card"><div class="work-heading"><span>${ico('target',18)} Nächste Schritte</span><span class="quiet-tag">${nextCount} ausführbar</span></div>${current.status==='active'&&nextCount===0?'<div class="project-warning">Dieses aktive Projekt hat noch keine nächste ausführbare Handlung.</div>':''}${taskCreateForm('',current.id)}${taskList(items,'project')}</section><section class="work-card">${taskEditor()}</section>`:'<section class="work-card"><div class="task-empty">Lege zuerst dein erstes Projekt an.</div></section>'}</div></div>`);
 }
 function somedayScreen(){
  return chrome(`<div class="dream-layout"><section class="dream-intro work-card">
@@ -347,7 +405,7 @@ async function loadWeather(city){
  }catch(ex){weather={city,status:'idle',temperature:null,label:''};toast(`Wetter konnte nicht geladen werden: ${ex.message}`,true);}
 }
 function vaultScreen(){
- tab=['inbox','forecast','overview','someday','review','activity'].includes(tab)?'today':tab;
+ tab=['inbox','forecast','overview','someday','review','activity','projects','next','flagged','hold'].includes(tab)?'today':tab;
  return chrome(`<section class="vault-compact" aria-label="Lokalen Tresor einrichten"><div class="vault-copy"><span class="vault-icon">${ico('lock',18)}</span><div><h2>${hasVault?'Tresor entsperren':'Lokalen Tresor einrichten'}</h2><p>${hasVault?'Deine Daten bleiben verborgen, bis du sie entsperrst.':'Einmalig eine Passphrase festlegen; deine lokalen Daten werden verschlüsselt gespeichert.'}</p></div></div>
  <form class="vault-form" id="vault-form" autocomplete="off"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" placeholder="Passphrase (mindestens 12 Zeichen)" autocomplete="off" />
  ${!hasVault?'<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" minlength="12" required autocomplete="off" placeholder="Passphrase wiederholen"/>':''}
@@ -370,17 +428,17 @@ function captureOverlay(){
 function inboxScreen(){
  const fullList=rows();
  const query=inboxQuery.trim().toLocaleLowerCase('de');
- const list=query?fullList.filter(r=>`${r.title} ${r.note||''}`.toLocaleLowerCase('de').includes(query)):fullList;
+ const list=query?fullList.filter(r=>`${r.title} ${r.note||''} ${(r.tags||[]).join(' ')}`.toLocaleLowerCase('de').includes(query)):fullList;
  const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
  return chrome(`<div class="inbox-mvp-layout"><section class="module-card module-active inbox-mvp-card">
  <div class="inbox-mvp-head"><div><p class="capture-eyebrow">VERLÄSSLICHER EINGANG</p><h2>Deine Inbox <span class="count">${fullList.length}</span></h2><p>Alles sammeln. Noch nichts entscheiden müssen.</p></div><button type="button" class="primary-btn" data-action="capture-focus">${ico('plus',17)} Erfassen</button></div>
  <div class="inbox-search-box">${ico('search',17)}<input id="inbox-query" type="search" placeholder="Inbox durchsuchen …" value="${h(inboxQuery)}" autocomplete="off" aria-label="Inbox durchsuchen"/></div>
  <div class="inbox-mvp-list">
- ${list.length?list.map(r=>`<button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button>`).join(''):
+ ${list.length?list.map(r=>`<button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}${r.tags?.length?' · '+r.tags.map(x=>'#'+h(x)).join(' '):''}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button>`).join(''):
  `<div class="inbox-mvp-empty">${ico(query?'search':'inbox',32)}<strong>${query?'Keine passenden Einträge':'Dein Kopf darf leerer werden.'}</strong><span>${query?'Versuche einen anderen Suchbegriff.':'Halte hier alles fest, was dir im Alltag begegnet.'}</span></div>`}
  </div><div class="inbox-mvp-bottom"><span>${state.pending.length} ausstehende Änderungen</span><button type="button" class="review-link" data-tab="review">Wochenreview ${ico('arrow',14)}</button></div></section>
  <aside class="module-card module-active inbox-mvp-detail">${current?
- `<div class="inbox-detail-top"><span class="capture-eyebrow">EINTRAG · INBOX</span><span class="inbox-detail-date">${date(current.updatedAt)}</span></div><form id="inbox-edit-form" data-id="${h(current.id)}"><label for="inbox-edit-title">Gedanke</label><textarea id="inbox-edit-title" name="title" maxlength="1000" rows="3" required>${h(current.title)}</textarea><label for="inbox-edit-note">Notizen, Links, Kontext</label><textarea id="inbox-edit-note" name="note" maxlength="10000" rows="7" placeholder="Optional – für den späteren Review">${h(current.note||'')}</textarea><div class="inbox-detail-actions"><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="remove" data-id="${h(current.id)}">Archivieren</button></div></form><div class="inbox-detail-next">${ico('target',18)}<div><strong>Später klären</strong><p>Im Wochenreview wird daraus eine Next Action, ein Projekt, eine Agenda oder Dreams. Bis dahin bleibt dieser Gedanke zuverlässig in der Inbox.</p><button type="button" class="review-link" data-tab="review">Zum Review ${ico('arrow',14)}</button></div></div>`:
+ `<div class="inbox-detail-top"><span class="capture-eyebrow">EINTRAG · INBOX</span><span class="inbox-detail-date">${date(current.updatedAt)}</span></div><form id="inbox-edit-form" data-id="${h(current.id)}"><label for="inbox-edit-title">Gedanke</label><textarea id="inbox-edit-title" name="title" maxlength="1000" rows="3" required>${h(current.title)}</textarea><label for="inbox-edit-note">Notizen, Links, Kontext</label><textarea id="inbox-edit-note" name="note" maxlength="10000" rows="7" placeholder="Optional – für den späteren Review">${h(current.note||'')}</textarea><label for="inbox-edit-tags">Agenda-Tags (Komma getrennt)</label><input id="inbox-edit-tags" name="tags" value="${h((current.tags||[]).join(', '))}" placeholder="UKO, Martin"/><div class="inbox-detail-actions"><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="remove" data-id="${h(current.id)}">Archivieren</button></div></form><div class="inbox-detail-next">${ico('target',18)}<div><strong>Später klären</strong><p>Im Wochenreview wird daraus eine Next Action, ein Projekt, eine Agenda oder Dreams. Bis dahin bleibt dieser Gedanke zuverlässig in der Inbox.</p><button type="button" class="review-link" data-tab="review">Zum Review ${ico('arrow',14)}</button></div></div>`:
  `<div class="inbox-mvp-empty detail-empty">${ico('pencil',32)}<strong>Ein Gedanke genügt.</strong><span>Öffne die Schnellerfassung und halte fest, was dich beschäftigt.</span></div>`}</aside></div>`);
 }
 
@@ -402,14 +460,17 @@ function reviewScreen(){
  <p class="review-explainer">Nicht alles muss sofort geklärt werden. Einmal pro Woche bringst du die offenen Schleifen systematisch auf den aktuellen Stand.</p>
  <div class="review-flow-steps">${[
  ['1','Eingang leeren','Jeden erfassten Gedanken klären oder bewusst parken.',String(list.length)+' offene Einträge'],
- ['2','Nächste Schritte','Projekte, Next Actions und offene Entscheidungen prüfen.','Noch nicht aktiv'],
- ['3','Waiting For & Agendas','Worauf wartest du? Mit wem gibt es Gesprächsbedarf?','Noch nicht aktiv'],
+ ['2','Nächste Schritte','Projekte, Next Actions und offene Entscheidungen prüfen.',nextActions(state).length+' Next Actions · '+Object.values(state?.projects||{}).filter(p=>p.status==='active'&&!nextActions(state).some(t=>t.projectId===p.id)).length+' Projekte ohne nächste Aktion'],
+ ['3','Waiting For & Agendas','Worauf wartest du? Mit wem gibt es Gesprächsbedarf?',heldTasks(state).length+' offene Vorgänge'],
  ['4','Termine & Fristen','Vergangene und kommende Termine und Deadlines ansehen.',calendarToken?calendarStatus:'Google Calendar optional'],
  ['5','Dreams & Möglichkeiten','Ideen freiwillig sichten, ohne neue Verpflichtungen.','Nur auf Wunsch']
  ].map(([n,title,desc,tag],i)=>`<div class="review-flow-step ${i===0?'review-step-current':''}"><span class="review-step-number">${ico(['inbox','checkSquare','people','calendar','spark'][i],17)}</span><div><strong>${title}</strong><p>${desc}</p></div><small>${tag}</small></div>`).join('')}</div></div>
  <section class="work-card review-item-pane"><div class="work-heading"><span>${ico('inbox',19)} Inbox klären</span><span class="quiet-tag">${list.length} offen</span></div>
  ${current?`<label class="sr-only" for="review-select">Inbox-Eintrag auswählen</label><select id="review-select" class="review-select">${list.map(r=>`<option value="${h(r.id)}" ${r.id===current.id?'selected':''}>${h(r.title)}</option>`).join('')}</select><p class="review-item-note">${current.note?h(current.note):'Noch keine zusätzliche Notiz hinterlegt.'}</p>`:'<div class="review-none">Deine Inbox ist leer. Erfasse neue Gedanken jederzeit über Quick Capture.</div>'}
  ${clarifyControls(current?.id)}
+ <section class="review-next-section"><div class="work-heading"><span>${ico('folder',18)} Projekte & nächste Schritte</span><button type="button" class="text-link" data-tab="projects">Projekte prüfen ${ico('arrow',14)}</button></div>
+ <div class="review-status-columns"><div><strong>${Object.values(state?.projects||{}).filter(x=>x.status==='active').length}</strong><span>aktive Projekte</span></div><div><strong>${nextActions(state).length}</strong><span>Next Actions</span></div><div><strong>${heldTasks(state).length}</strong><span>On Hold / Waiting</span></div></div>
+ <button type="button" class="secondary-btn" data-tab="next">Next Actions ansehen</button> <button type="button" class="secondary-btn" data-tab="hold">Waiting For prüfen</button></section>
  <div class="compass-review-legend"><strong>Energie auf einen Blick</strong><div class="compass-energy-legend"><span class="energy-low">${ico('bolt',15)} Niedrig · ▰▱▱</span><span class="energy-medium">${ico('bolt',15)} Mittel · ▰▰▱</span><span class="energy-high">${ico('bolt',15)} Hoch · ▰▰▰</span></div><small>Visuelle Orientierung; die tatsächliche Zuordnung zur Aufgabe folgt in einem späteren GTD-Schritt.</small></div>
  <div class="review-ai-hint">${ico('spark',19)} <div><strong>Später: Lokaler KI-Vorschlag</strong><p>Compass kann bei der Klärung unterstützen, z. B. wenn aus einer wichtigen Aufgabe aufgrund einer näher rückenden harten Deadline auch eine dringliche wird. Die Entscheidung bleibt bei dir.</p></div></div>
  </section></div>`);
@@ -457,7 +518,7 @@ async function reloadWatchSessions(){
 }
 function render(){
  if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
- app.innerHTML=tab==='activity'?activityScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():todayScreen();bind();
+ app.innerHTML=tab==='activity'?activityScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='projects'?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();bind();
  if(captureOverlayOpen)requestAnimationFrame(()=>app.querySelector('#capture-modal-input')?.focus());
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
@@ -484,23 +545,38 @@ function bind() {
   });
   const taskForm=app.querySelector('#task-create-form');if(taskForm)taskForm.onsubmit=async ev=>{
     ev.preventDefault();const fd=new FormData(taskForm);
-    const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,updatedAt:stamp()};
+    const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,tags:parseTags(fd.get('tags')),updatedAt:stamp()};
     if(!validLocalTask(t)){toast('Aufgabenfelder prüfen (Titel, Datum oder Kategorie).',true);return;}
     await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;});selectedTaskId=t.id;toast('Aufgabe lokal gespeichert.');
   };
   const taskEditForm=app.querySelector('#task-edit-form');if(taskEditForm)taskEditForm.onsubmit=async ev=>{
     ev.preventDefault();const id=taskEditForm.dataset.id,fd=new FormData(taskEditForm);const existing=state.tasks[id];if(!existing)return;
-    const t={...existing,title:String(fd.get('title')||'').trim(),note:String(fd.get('note')||'').trim(),plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',updatedAt:stamp()};
+    const t={...existing,title:String(fd.get('title')||'').trim(),note:String(fd.get('note')||'').trim(),plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,tags:parseTags(fd.get('tags')),updatedAt:stamp()};
     if(!validLocalTask(t)){toast('Aufgabenfelder prüfen (Titel, Datum oder Kategorie).',true);return;}
     await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;});toast('Aufgabe aktualisiert.');
   };
+  const projectCreate=app.querySelector('#project-create-form');if(projectCreate)projectCreate.onsubmit=async ev=>{
+    ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null};
+    if(!validProject(project)){toast('Projektangaben prüfen.',true);return;}
+    await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;});selectedProjectId=project.id;render();
+  };
+  const projectEdit=app.querySelector('#project-edit-form');if(projectEdit)projectEdit.onsubmit=async ev=>{
+    ev.preventDefault();const id=projectEdit.dataset.id;const d=new FormData(projectEdit);const project={...state.projects[id],title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:d.get('status')||'active',dueDate:d.get('dueDate')||null};
+    if(!validProject(project)){toast('Projektangaben prüfen.',true);return;}
+    await mutate(s=>{s.projects[id]=project;s.projectPending[id]=true;});toast('Projekt gespeichert.');
+  };
+  const agendaForm=app.querySelector('#agenda-note-form');if(agendaForm)agendaForm.onsubmit=async ev=>{
+    ev.preventDefault();const d=new FormData(agendaForm);const t={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),note:'',category:'Meeting',plannedDate:null,dueDate:null,workflow:'next',flagged:false,projectId:null,tags:parseTags([d.get('tag')]),completed:false,archived:false};
+    if(!validLocalTask(t)){toast('Agendapunkt prüfen.',true);return;}
+    await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;});toast('Agendapunkt für das Meeting angelegt.');
+  };
   const editForm=app.querySelector('#inbox-edit-form');if(editForm)editForm.onsubmit=async ev=>{
     ev.preventDefault();const id=editForm.dataset.id;const form=new FormData(editForm);
-    const title=String(form.get('title')||'').trim(),note=String(form.get('note')||'').trim();
+    const title=String(form.get('title')||'').trim(),note=String(form.get('note')||'').trim(),tags=parseTags(form.get('tags'));
     if(!title||title.length>1000||note.length>10000){toast('Bitte Titel und Notizlänge prüfen.',true);return;}
     const existing=state.records[id];if(!existing)return;
-    if(existing.title===title&&(existing.note||'')===note){notice='Keine Änderungen.';render();return;}
-    try{await mutate(s=>{const r=s.records[id];r.title=title;r.note=note;r.updatedAt=stamp();s.pending.push(makeMutation(r));});notice='Änderungen lokal gespeichert.';render();}
+    if(existing.title===title&&(existing.note||'')===note&&JSON.stringify(existing.tags||[])===JSON.stringify(tags)){notice='Keine Änderungen.';render();return;}
+    try{await mutate(s=>{const r=s.records[id];r.title=title;r.note=note;r.tags=tags;r.updatedAt=stamp();s.pending.push(makeMutation(r));});notice='Änderungen lokal gespeichert.';render();}
     catch(ex){toast(ex.message,true);}
   };
   const search=app.querySelector('#inbox-query');if(search)search.oninput=ev=>{
@@ -526,6 +602,15 @@ async function runAction(action,id) {
          s.reviewMeta[id]={...old,[key==='review-energy'?'energy':'attention']:val};
        });
        return;
+    }
+    if(action==='calendar-toggle-blocks'){showCalendarBlocks=!showCalendarBlocks;render();return;}
+    if(action==='agenda-open'){selectedAgendaEventId=id;render();return;}
+    if(action==='agenda-close'){selectedAgendaEventId=null;render();return;}
+    if(action==='project-select'){selectedProjectId=id;selectedTaskId=null;render();return;}
+    if(action==='project-conflict-local'||action==='project-conflict-remote'){
+      const conflict=state?.projectConflicts[id];if(!conflict)return;
+      await mutate(s=>{if(action==='project-conflict-remote'&&conflict.remote){s.projects[id]=conflict.remote;s.projectVersions[id]=conflict.remote.version;delete s.projectPending[id];}
+        else {s.projectVersions[id]=conflict.remote?.version||0;s.projectPending[id]=true;}delete s.projectConflicts[id];});return;
     }
     if(action==='calendar-connect'){await connectCalendar();return;}
     if(action==='calendar-refresh'){await fetchCalendar();return;}
@@ -560,6 +645,7 @@ async function runAction(action,id) {
       return;
     }
     if(action==='task-select'){if(!state?.tasks?.[id])return;selectedTaskId=id;render();return;}
+    if(action==='task-flag'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].flagged=!s.tasks[id].flagged;s.taskPending[id]=true;});return;}
     if(action==='task-toggle'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].completed=!s.tasks[id].completed;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});return;}
     if(action==='task-archive'){if(!confirm('Aufgabe archivieren?'))return;await mutate(s=>{s.tasks[id].archived=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});selectedTaskId=null;return;}
     if(action==='task-conflict-local'||action==='task-conflict-remote'){
@@ -586,7 +672,7 @@ async function runAction(action,id) {
       await mutate(s=>{
         s.conflicts=s.conflicts.filter(x=>x.id!==id);
         if(action==='resolve-remote') {
-          if(c.remote){s.records[id]={id,title:c.remote.title,note:c.remote.note,deleted:c.remote.deleted,updatedAt:c.remote.updatedAt};s.serverVersions[id]=c.remote.version;}
+          if(c.remote){s.records[id]={id,title:c.remote.title,note:c.remote.note,tags:c.remote.tags||[],deleted:c.remote.deleted,updatedAt:c.remote.updatedAt};s.serverVersions[id]=c.remote.version;}
           else {delete s.records[id];delete s.serverVersions[id];}
         }else {
           s.serverVersions[id]=c.remote?.version||0;
@@ -623,6 +709,26 @@ async function renderGoogleButton() {
     },auto_select:false});
     window.google.accounts.id.renderButton(root,{theme:'outline',size:'large',type:'standard',text:'signin_with',shape:'rectangular'});
   }catch(ex){toast(ex.message,true);}
+}
+async function syncProjects(){
+ prepareTasks(state);
+ for(const id of Object.keys(state.projectPending).slice(0,75)){
+  if(state.projectConflicts[id])continue;
+  const project=state.projects[id];if(!project){delete state.projectPending[id];continue;}
+  const before=JSON.stringify(projectPlain(project));
+  try{
+   const data=await request(config.apiUrl,authToken,'/api/projects',{method:'POST',body:JSON.stringify({...projectPlain(project),baseVersion:state.projectVersions[id]||0})});
+   if(data.project){state.projectVersions[id]=data.project.version;if(before===JSON.stringify(projectPlain(state.projects[id]))){state.projects[id]=data.project;delete state.projectPending[id];}}
+  }catch(ex){
+   if(ex.status!==409)throw ex;
+   const remote=(await request(config.apiUrl,authToken,'/api/projects')).projects?.find(p=>p.id===id)||null;
+   if(remote&&sameProject(project,remote)){state.projectVersions[id]=remote.version;if(before===JSON.stringify(projectPlain(state.projects[id]))){state.projects[id]=remote;delete state.projectPending[id];}}
+   else {state.projectConflicts[id]={remote};delete state.projectPending[id];}
+  }
+  await persist();
+ }
+ const data=await request(config.apiUrl,authToken,'/api/projects');
+ mergeProjectSnapshot(state,data.projects||[]);await persist();
 }
 async function syncTasks(){
   prepareTasks(state);
@@ -673,6 +779,7 @@ async function syncNow() {
       if(!data.hasMore)break;
     }
     const fixed=pruneIdenticalConflicts(state);if(fixed)await persist();
+    await syncProjects();
     await syncTasks();
     lastSyncAt=Date.now();
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
@@ -683,7 +790,7 @@ async function syncNow() {
     if(ex.status===401){authToken='';currentUser='';await vault.clearSession().catch(()=>{});}
   }finally{
     busy=false;render();
-    const retry=syncResyncRequested&&Boolean(state?.pending.length||Object.keys(state?.taskPending||{}).length)&&Boolean(authToken)&&navigator.onLine&&!error;
+    const retry=syncResyncRequested&&Boolean(state?.pending.length||Object.keys(state?.taskPending||{}).length||Object.keys(state?.projectPending||{}).length)&&Boolean(authToken)&&navigator.onLine&&!error;
     syncResyncRequested=false;
     if(retry)scheduleSync(0);
   }

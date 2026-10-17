@@ -1,3 +1,4 @@
+const validTags=t=>Array.isArray(t)&&t.length<=12&&t.every(x=>typeof x==='string'&&x.length>0&&x.length<=32&&/^[\p{L}\p{N}][\p{L}\p{N} _-]*$/u.test(x));
 export const MAX_BATCH = 25;
 const idPattern = /^[a-zA-Z0-9-]{8,80}$/;
 export function validateMutation(m) {
@@ -8,6 +9,7 @@ export function validateMutation(m) {
   if (m.deleted !== true && m.deleted !== false) return 'invalid-deleted-flag';
   if (typeof m.title !== 'string' || !m.title.trim() || m.title.trim().length > 1000) return 'invalid-title';
   if (typeof m.note !== 'string' || m.note.length > 10000) return 'invalid-note';
+  if(!validTags(m.tags??[]))return 'invalid-tags';
   return null;
 }
 export function validCursor(value) {
@@ -15,5 +17,5 @@ export function validCursor(value) {
 }
 export function cleanMutation(m) {
   return {mutationId:m.mutationId,id:m.id,baseVersion:m.baseVersion,
-    title:m.title.trim(),note:m.note,deleted:m.deleted};
+    title:m.title.trim(),note:m.note,deleted:m.deleted,tags:m.tags??[]};
 }

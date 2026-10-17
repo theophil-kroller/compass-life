@@ -1,3 +1,4 @@
+import {listProjects,putProject} from './projects.js';
 import {listTasks,putTask} from './tasks.js';
 import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice,watchPlanning} from './watch.js';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
@@ -83,7 +84,7 @@ async function revokeSession(req,env){
 }
 function itemRecord(row) {
   return {id:row.id,title:row.title,note:row.note,deleted:!!row.deleted,
-    version:row.version,updatedAt:row.updated_at,kind:row.kind};
+    version:row.version,updatedAt:row.updated_at,kind:row.kind,tags:JSON.parse(row.tags_json||'[]')};
 }
 async function getItem(env,sub,id) {
   const row=await env.DB.prepare('SELECT * FROM items WHERE owner_sub=? AND id=?').bind(sub,id).first();
@@ -103,13 +104,13 @@ async function applyOne(env,sub,raw) {
     let result;
     if (m.baseVersion===0) {
       result=await env.DB.prepare(`INSERT INTO items
-        (id,owner_sub,kind,title,note,deleted,version,updated_at,last_mutation_id)
-        VALUES(?,?,'inbox',?,?,?,1,?,?) ON CONFLICT(id) DO NOTHING`)
-        .bind(m.id,sub,m.title,m.note,Number(m.deleted),now,m.mutationId).run();
+        (id,owner_sub,kind,title,note,deleted,version,updated_at,last_mutation_id,tags_json)
+        VALUES(?,?,'inbox',?,?,?,1,?,?,?) ON CONFLICT(id) DO NOTHING`)
+        .bind(m.id,sub,m.title,m.note,Number(m.deleted),now,m.mutationId,JSON.stringify(m.tags||[])).run();
     } else {
       result=await env.DB.prepare(`UPDATE items SET title=?,note=?,deleted=?,version=version+1,
-        updated_at=?,last_mutation_id=? WHERE owner_sub=? AND id=? AND version=?`)
-        .bind(m.title,m.note,Number(m.deleted),now,m.mutationId,sub,m.id,m.baseVersion).run();
+        updated_at=?,last_mutation_id=?,tags_json=? WHERE owner_sub=? AND id=? AND version=?`)
+        .bind(m.title,m.note,Number(m.deleted),now,m.mutationId,JSON.stringify(m.tags||[]),sub,m.id,m.baseVersion).run();
     }
     if (result.meta?.changes===1) {
       return {mutationId:m.mutationId,id:m.id,status:'applied',version:m.baseVersion+1};
@@ -127,6 +128,8 @@ async function applyOne(env,sub,raw) {
 }
 async function route(req,env,identity) {
   const url=new URL(req.url);
+  if(req.method==='GET' && url.pathname==='/api/projects')return listProjects(env,identity);
+  if(req.method==='POST' && url.pathname==='/api/projects')return putProject(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/tasks')return listTasks(env,identity);
   if(req.method==='POST' && url.pathname==='/api/tasks')return putTask(req,env,identity);
   if(req.method==='POST' && url.pathname==='/api/watch/pair/start')return createPair(env,identity);
@@ -139,7 +142,7 @@ async function route(req,env,identity) {
   if (req.method==='GET' && url.pathname==='/api/sync/pull') {
     const cursor=validCursor(url.searchParams.get('cursor') ?? '0');
     if(cursor===null) return json({error:'invalid-cursor'},400);
-    const rows=await env.DB.prepare(`SELECT c.seq,i.id,i.kind,i.title,i.note,i.deleted,i.version,i.updated_at
+    const rows=await env.DB.prepare(`SELECT c.seq,i.id,i.kind,i.title,i.note,i.tags_json,i.deleted,i.version,i.updated_at
       FROM change_log c JOIN items i ON i.id=c.item_id AND i.owner_sub=c.owner_sub
       WHERE c.owner_sub=? AND c.seq>? ORDER BY c.seq ASC LIMIT 101`).bind(identity.sub,cursor).all();
     const batch=(rows.results||[]).slice(0,100);
@@ -175,7 +178,7 @@ export default {
       return finish(new Response(null,{status:origin===env.ALLOWED_ORIGIN?204:403}));
     }
     const path=new URL(req.url).pathname;
-    if (path==='/api/health' && req.method==='GET') return finish(json({ok:true,phase:'A',apiVersion:2,planning:true}));
+    if (path==='/api/health' && req.method==='GET') return finish(json({ok:true,phase:'A',apiVersion:3,planning:true,gtd:true,projects:true}));
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));
     try {
