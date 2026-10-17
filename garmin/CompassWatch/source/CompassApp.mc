@@ -71,9 +71,15 @@ class CompassModel {
     var lastMessage = "";
     var code = "00000000";
     var digit = 0;
+    // A network callback is never allowed to trap the UI on SYNC.
+    var requestStartedAt = 0;
+    var planningCache = null;
+    var agendaIndex = 0;
+
 
     function initialize() {
         token = Storage.getValue("watchToken");
+        planningCache = Storage.getValue("watchPlanning");
         var saved = Storage.getValue("sessions");
         queue = saved == null ? [] : saved;
         var d = Storage.getValue("pomodoroDay");
@@ -102,8 +108,8 @@ class CompassModel {
     function showHub() { mode = "hub"; hubIndex = 0; redraw(); }
     function openHubItem() {
         if (hubIndex == 0) { mode = "select"; }
-        else if (hubIndex == 1) { mode = "today"; }
-        else if (hubIndex == 2) { mode = "forecast"; }
+        else if (hubIndex == 1) { mode = "today"; agendaIndex=0; }
+        else if (hubIndex == 2) { mode = "forecast"; agendaIndex=0; }
         else if (hubIndex == 3) { pomodoro = !pomodoro; mode = "select"; lastMessage = ""; }
         else if (hubIndex == 4) { mode = "select"; sync(); return; }
         redraw();
@@ -136,6 +142,12 @@ class CompassModel {
     }
     function tick() as Void {
         refreshDay();
+        if (waiting && requestStartedAt > 0 && now() - requestStartedAt > 15) {
+            waiting = false;
+            requestStartedAt = 0;
+            if (mode.equals("syncing")) { mode = "select"; }
+            lastMessage = "Offline - später erneut";
+        }
         if (mode.equals("running") && running && !paused &&
             !phase.equals("focus-due") && !phase.equals("break-due")) {
             var t = now();
@@ -249,7 +261,8 @@ class CompassModel {
         }
         try { Sensor.setEnabledSensors([]); } catch(ex) { }
         redraw();
-        if (token != null && queue.size() > 0) { sync(); }
+        // Never hijack navigation by auto-entering a network screen.
+        // Saved locally and sent on explicit Sync later.
     }
     function onExit() { if (running) { finish(); } }
     function enterPair() { mode = "pairing"; code = "00000000"; digit = 0; lastMessage = ""; redraw(); }
@@ -264,16 +277,20 @@ class CompassModel {
     }
     function nextDigit() {
         if (digit < 7) { digit++; redraw(); return; }
-        mode = "syncing"; lastMessage = "Verbinde ..."; redraw();
+        mode = "syncing"; lastMessage = "Verbinde ...";
+        waiting = true; requestStartedAt = now(); redraw();
         try {
             Communications.makeWebRequest(API+"/api/watch/pair/claim", {"code"=>code},
                 {:method=>Communications.HTTP_REQUEST_METHOD_POST,
                  :headers=>{"Content-Type"=>Communications.REQUEST_CONTENT_TYPE_JSON},
                  :responseType=>Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON}, method(:pairDone));
-        } catch(ex) { mode = "select"; lastMessage = "Keine Verbindung"; redraw(); }
+        } catch(ex) { waiting = false; requestStartedAt = 0;
+            mode = "select"; lastMessage = "Keine Verbindung"; redraw(); }
     }
     function pairDone(status as Lang.Number, data as Lang.Dictionary or Lang.String or PersistedContent.Iterator or Null) as Void {
-        mode = "select";
+        if (!waiting) { return; }
+        waiting = false; requestStartedAt = 0;
+        if (mode.equals("syncing")) { mode = "select"; }
         if (status == 200 && data instanceof Lang.Dictionary && data.hasKey("token")) {
             token = data["token"]; Storage.setValue("watchToken", token); lastMessage = "Verbunden";
         } else { lastMessage = "Kopplung fehlgeschlagen"; }
@@ -281,24 +298,76 @@ class CompassModel {
     }
     function sync() {
         if (token == null) { enterPair(); return; }
-        if (queue.size() == 0) { lastMessage = "Alles übertragen"; redraw(); return; }
+        if (queue.size() == 0) { fetchPlanning(); return; }
         if (waiting) { return; }
-        waiting = true; mode = "syncing"; lastMessage = "Übertrage ..."; redraw();
+        waiting = true; requestStartedAt = now(); mode = "syncing"; lastMessage = "Übertrage ..."; redraw();
         try {
             Communications.makeWebRequest(API+"/api/watch/sessions", queue[0],
                 {:method=>Communications.HTTP_REQUEST_METHOD_POST,
                  :headers=>{"Content-Type"=>Communications.REQUEST_CONTENT_TYPE_JSON,
                      "Authorization"=>"Bearer "+token},
                  :responseType=>Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON}, method(:syncDone));
-        } catch(ex) { waiting = false; mode = "select"; lastMessage = "Keine Verbindung"; redraw(); }
+        } catch(ex) { waiting = false; requestStartedAt = 0;
+            mode = "select"; lastMessage = "Keine Verbindung"; redraw(); }
     }
     function syncDone(status as Lang.Number, data as Lang.Dictionary or Lang.String or PersistedContent.Iterator or Null) as Void {
-        waiting = false; mode = "select";
+        if (!waiting) { return; }
+        var onscreen = mode.equals("syncing");
+        waiting = false; requestStartedAt = 0;
+        if (onscreen) { mode = "select"; }
         if (status == 200 && data instanceof Lang.Dictionary && data["ok"] == true) {
-            queue.remove(queue[0]); Storage.setValue("sessions", queue); lastMessage = "Sync OK";
-            if (queue.size() > 0) { sync(); return; }
+            // Only remove a session after a server acknowledgment, even if user
+            // has pressed BACK and meanwhile started another local session.
+            if (queue.size() > 0) {
+                queue.remove(queue[0]); Storage.setValue("sessions", queue);
+            }
+            lastMessage = "Sync OK";
+            // Never re-enter SYNC from an asynchronous callback after BACK.
+            // Such a callback must not interrupt a running focus timer.
+            if (onscreen) {
+                if (queue.size() > 0) { sync(); return; }
+                fetchPlanning(); return;
+            }
         } else { lastMessage = status == 401 ? "Bitte neu koppeln" : "Offline: später Sync"; }
         redraw();
+    }
+    function fetchPlanning() {
+        if (token == null) { enterPair(); return; }
+        if (waiting) { return; }
+        waiting = true; requestStartedAt = now();
+        mode = "syncing"; lastMessage = "Lade Planung ..."; redraw();
+        try {
+            var day = dateKey(); // yyyy-m-d -> normalize to yyyy-mm-dd
+            var info = Gregorian.info(Time.now(),Time.FORMAT_SHORT);
+            var mm = info.month.toString(); if (info.month < 10) { mm = "0"+mm; }
+            var dd = info.day.toString(); if (info.day < 10) { dd = "0"+dd; }
+            day = info.year.toString()+"-"+mm+"-"+dd;
+            Communications.makeWebRequest(API+"/api/watch/planning?day="+day, {},
+                {:method=>Communications.HTTP_REQUEST_METHOD_GET,
+                 :headers=>{"Authorization"=>"Bearer "+token},
+                 :responseType=>Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON},method(:planningDone));
+        } catch(ex) {
+            waiting = false; requestStartedAt = 0; mode = "select";
+            lastMessage = "Offline - Cache bleibt"; redraw();
+        }
+    }
+    function planningDone(status as Lang.Number, data as Lang.Dictionary or Lang.String or PersistedContent.Iterator or Null) as Void {
+        if (!waiting) { return; }
+        waiting = false; requestStartedAt = 0;
+        if (mode.equals("syncing")) { mode = "select"; }
+        if (status == 200 && data instanceof Lang.Dictionary && data.hasKey("today") && data.hasKey("deadlines")) {
+            planningCache = data;
+            try { Storage.setValue("watchPlanning", data); } catch(ex) { }
+            lastMessage = "Planung aktualisiert";
+        } else { lastMessage = status == 401 ? "Bitte neu koppeln" : "Offline - letzter Stand"; }
+        redraw();
+    }
+    function agendaItems() {
+        if (planningCache == null) { return []; }
+        var key = mode.equals("forecast") ? "deadlines" : "today";
+        if (!planningCache.hasKey(key)) { return []; }
+        var value = planningCache[key];
+        return value == null ? [] : value;
     }
 }
 
@@ -494,12 +563,21 @@ class CompassView extends WatchUi.View {
         }
     }
     function drawAgendaEmpty(dc,w,h,isForecast) {
-        centered(dc,h*30/100,isForecast?"FORECAST":"HEUTE",Graphics.FONT_MEDIUM,AQUA,w*72/100);
-        centered(dc,h*46/100,isForecast?"DEADLINES":"AUFGABEN",Graphics.FONT_SMALL,WHITE,w*72/100);
-        centered(dc,h*61/100,"Planung in Compass",Graphics.FONT_TINY,MUTED,w*76/100);
-        centered(dc,h*71/100,"noch nicht verfügbar",Graphics.FONT_TINY,MUTED,w*76/100);
-        // These are not fake tasks. The Compass cloud schema still supports
-        // only undated inbox items, so no schedule can yet be synchronized.
+        centered(dc,h*28/100,isForecast?"DEADLINES":"HEUTE",Graphics.FONT_MEDIUM,AQUA,w*72/100);
+        var items=model.agendaItems();
+        if (items.size() == 0) {
+            centered(dc,h*48/100,"Keine Einträge",Graphics.FONT_SMALL,WHITE,w*76/100);
+            centered(dc,h*65/100,model.planningCache==null?"Noch nicht geladen":"Letzter Abgleich",Graphics.FONT_TINY,MUTED,w*78/100);
+            centered(dc,h*73/100,"in Compass syncen",Graphics.FONT_TINY,MUTED,w*78/100);
+            return;
+        }
+        var task = items[model.agendaIndex % items.size()];
+        var title = task["title"];
+        if (title.length() > 21) { title = title.substring(0,19)+".."; }
+        centered(dc,h*48/100,title,Graphics.FONT_SMALL,WHITE,w*78/100);
+        var due = task["dueDate"];
+        centered(dc,h*60/100,due==null?"Für heute":due,Graphics.FONT_TINY,model.COLORS[model.index],w*76/100);
+        centered(dc,h*74/100,(model.agendaIndex%items.size()+1).toString()+" / "+items.size().toString(),Graphics.FONT_SMALL,MUTED,w*76/100);
     }
     function menuRow(dc,y,index,label,selected) {
         var cx=dc.getWidth()/2;
@@ -588,9 +666,17 @@ class CompassInput extends WatchUi.InputDelegate {
                 else if (k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) { model.openHubItem(); }
                 else if (k == WatchUi.KEY_ESC) { model.mode = "select"; }
             } else if (model.mode.equals("today") || model.mode.equals("forecast")) {
-                if (k == WatchUi.KEY_ESC || k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) {
+                if (k == WatchUi.KEY_UP || k == WatchUi.KEY_DOWN) {
+                    var items = model.agendaItems();
+                    if (items.size() > 0) {
+                        var dir = k == WatchUi.KEY_DOWN ? 1 : -1;
+                        model.agendaIndex = (model.agendaIndex + dir + items.size()) % items.size();
+                    }
+                } else if (k == WatchUi.KEY_ESC || k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) {
                     model.mode = "hub";
                 }
+            } else if (model.mode.equals("syncing")) {
+                if (k == WatchUi.KEY_ESC || k == WatchUi.KEY_LAP) { model.mode = "select"; model.lastMessage = "Sync im Hintergrund"; }
             } else if (model.mode.equals("select")) {
                 if (k == WatchUi.KEY_UP) { model.chooseCategory(-1); }
                 else if (k == WatchUi.KEY_DOWN) { model.chooseCategory(1); }

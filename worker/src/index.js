@@ -1,4 +1,5 @@
-import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice} from './watch.js';
+import {listTasks,putTask} from './tasks.js';
+import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice,watchPlanning} from './watch.js';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import {MAX_BATCH, validateMutation, validCursor, cleanMutation} from './validation.js';
 
@@ -126,6 +127,8 @@ async function applyOne(env,sub,raw) {
 }
 async function route(req,env,identity) {
   const url=new URL(req.url);
+  if(req.method==='GET' && url.pathname==='/api/tasks')return listTasks(env,identity);
+  if(req.method==='POST' && url.pathname==='/api/tasks')return putTask(req,env,identity);
   if(req.method==='POST' && url.pathname==='/api/watch/pair/start')return createPair(env,identity);
   if(req.method==='GET' && url.pathname==='/api/watch/sessions')return listWatchSessions(env,identity);
   if(req.method==='GET' && url.pathname==='/api/watch/devices')return listWatchDevices(env,identity);
@@ -172,11 +175,12 @@ export default {
       return finish(new Response(null,{status:origin===env.ALLOWED_ORIGIN?204:403}));
     }
     const path=new URL(req.url).pathname;
-    if (path==='/api/health' && req.method==='GET') return finish(json({ok:true,phase:'A',apiVersion:1}));
+    if (path==='/api/health' && req.method==='GET') return finish(json({ok:true,phase:'A',apiVersion:2,planning:true}));
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));
     try {
       if(path==='/api/watch/pair/claim' && req.method==='POST')return finish(await claimPair(req,env));
+      if(path==='/api/watch/planning' && req.method==='GET')return finish(await watchPlanning(req,env));
       if(path==='/api/watch/sessions' && req.method==='POST')return finish(await acceptWatchSession(req,env));
       if(path==='/api/session' && req.method==='POST') {
         const googleIdentity=await authorizeGoogle(req,env);

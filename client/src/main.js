@@ -2,6 +2,7 @@ import './style.css';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
+import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot} from './tasks.js';
 
 registerSW({immediate:true});
 const app=document.getElementById('app');
@@ -11,6 +12,7 @@ let saveQueue=Promise.resolve();
 let calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let selectedDay=localDateString(new Date());
 let selectedInboxId=null;
+let selectedTaskId=null;
 let showCaptureDetails=false;
 let syncResyncRequested=false;
 let syncTimer=null, lastSyncAt=0;
@@ -66,6 +68,7 @@ function download(filename,obj) {
 }
 async function mutate(fn) {
   if(!state)throw new Error('Der Tresor muss entsperrt sein.');
+  prepareTasks(state);
   const previous=structuredClone(state);
   try {
     fn(state);
@@ -222,19 +225,35 @@ function todayWork(locked=false){
  return `<div class="today-layout">${calendarRail()}<div class="today-center">
  <section class="work-card appointments"><div class="work-heading"><span>${ico('calendar',18)} Termine ${selected?'heute':h(dayFormat(new Date(`${selectedDay}T12:00:00`)))}</span><span class="quiet-tag">Google Kalender nicht verbunden</span></div>
  <div class="appointments-empty"><span>${ico('calendar',21)}</span><div><strong>Keine Kalendertermine verfügbar</strong><small>Nach dem Verknüpfen erscheinen hier deine echten Termine – ohne Aufgaben in Google Calendar einzutragen.</small></div></div></section>
- <section class="work-card today-tasks"><div class="work-heading"><span>${ico('list',18)} Meine Aufgaben ${selected?'für heute':'für diesen Tag'}</span><span class="quiet-tag">Manuelle Reihenfolge</span></div>
- <div class="today-tasks-empty">${ico('target',36)}<h2>${locked?'Deine Tagesplanung bleibt geschützt.':'Noch keine Aufgaben ausgewählt.'}</h2><p>${locked?'Entsperre deinen Tresor. Die Tagesliste wird später aus deinen bewusst eingeplanten Next Actions zusammengestellt.':'Hier planst du künftig die Reihenfolge deiner Next Actions per Drag-and-drop. Inbox-Einträge werden nicht automatisch zu Tagesaufgaben.'}</p><button type="button" class="soft-button" disabled>+ Aufgabe für diesen Tag planen</button></div>
- <div class="capture-inline"><form id="capture-form"><label class="sr-only" for="capture">Schnell in die Inbox erfassen</label><input id="capture" name="title" maxlength="1000" required placeholder="Gedanken sofort in der Inbox festhalten …" ${locked?'disabled':''}/><button type="submit" class="primary-btn" ${locked?'disabled':''}>${ico('plus',17)} Erfassen</button></form><small>Ohne Projekt, Datum oder Priorität – erst einmal sicher erfasst.</small></div></section>
- <div class="below-today"><section class="work-card deadline-card"><div class="work-heading"><span>${ico('flag',18)} Fristen & Vorausschau</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Keine Fristen erfasst. Wunschtermin und harte Deadline bleiben getrennt.</div></section>
+ <section class="work-card today-tasks"><div class="work-heading"><span>${ico('list',18)} Meine Aufgaben ${selected?'für heute':'für diesen Tag'}</span><span class="quiet-tag">${tasksForDay(state,selectedDay).filter(t=>t.completed).length} / ${tasksForDay(state,selectedDay).length} erledigt</span></div>
+ ${state?taskCreateForm(selectedDay):''}
+ ${taskList(tasksForDay(state,selectedDay), 'day')}
+ <div class="capture-inline"><form id="capture-form"><label class="sr-only" for="capture">Schnell in die Inbox erfassen</label><input id="capture" name="title" maxlength="1000" required placeholder="Gedanken sofort in der Inbox festhalten …" ${locked?'disabled':''}/><button type="submit" class="primary-btn" ${locked?'disabled':''}>${ico('plus',17)} Erfassen</button></form><small>Inbox bleibt ein eigener Eingang; eine Aufgabe erhält bewusst ein Datum.</small></div></section>
+ <div class="below-today"><section class="work-card deadline-card"><div class="work-heading"><span>${ico('flag',18)} Fristen & Vorausschau</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">${dueTasks(state,4).map(t=>`<div class="deadline-inline"><strong>${h(t.dueDate)}</strong> ${h(t.title)}</div>`).join('')||'Noch keine offenen Deadlines erfasst.'}</div></section>
  <section class="work-card review-card"><div class="work-heading"><span>${ico('sync',18)} Review</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Offene Schleifen werden später regelmäßig geprüft – ohne künstliche Deadlines.</div></section></div>
- </div><aside class="inspector-rail" aria-label="Aufgabendetails und Personen-Kontext"><section class="work-card inspector-card"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabendetails</span><span class="quiet-tag">Vorschau</span></div>
- <div class="inspector-placeholder">${ico('target',27)}<strong>Keine Aufgabe ausgewählt</strong><span>Wenn du eine Aufgabe auswählst, erscheinen hier ihre Angaben.</span></div>${datesPreview()}
+ </div><aside class="inspector-rail" aria-label="Aufgabendetails und Personen-Kontext"><section class="work-card inspector-card"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabendetails</span><span class="quiet-tag">Planung</span></div>
+ ${taskEditor()}
  <div class="inspector-other"><span>Projekt</span><b>–</b><span>Kontext</span><b>–</b><span>Personen</span><b>–</b><span>Aufwand</span><b>–</b></div></section>
  <section class="work-card person-preview"><div class="work-heading"><span>${ico('people',18)} Offene Gesprächsthemen</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Person auswählen → alle offenen Agenda-Punkte sehen. Personen-Agendas folgen im GTD-Ausbau.</div></section>
  <section class="work-card energy-context"><div class="work-heading"><span>${ico('bolt',18)} Energie & Kontext</span><span class="quiet-tag">Planungsfilter</span></div><div class="energy-levels" aria-label="Energiestufen (Vorschau)"><button disabled type="button">Wenig</button><button disabled type="button">Mittel</button><button disabled type="button">Viel</button></div><p class="energy-hint">Wenn du erschöpft oder blockiert bist, zeigt Compass später kleine, passende Next Actions – statt dir zusätzliche Aufgaben aufzudrängen.</p></section>
  <button type="button" class="overview-nudge" data-tab="overview">${ico('layers',17)} Große Übersicht ansehen ${ico('arrow',14)}</button></aside></div>`;
 }
-function forecastScreen(){return chrome(`${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast – die nächsten Tage</span><span class="quiet-tag">Vorschau</span></div>${Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);return `<div class="forecast-day-row"><span>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(d))}</span><small>Keine geplanten Aufgaben oder Kalendertermine verfügbar</small></div>`;}).join('')}<p class="rail-footnote">Forecast vereint später echte Kalendertermine, harte Fristen und bewusst geplante Next Actions – die Kalenderdaten werden nicht mit Aufgaben überschrieben.</p></section>` .replace(/^/, '<div class="forecast-layout">') .concat('</div>'));}
+function forecastScreen(){
+ const list=dueTasks(state,600),today=localDate();
+ const days=Array.from({length:14},(_,i)=>{const d=new Date(today+'T12:00:00');d.setDate(d.getDate()+i);return localDate(d);});
+ const overdue=list.filter(t=>t.dueDate<today);
+ const grouped=(day)=>list.filter(t=>t.dueDate===day);
+ return chrome(`<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Fristen</span><span class="quiet-tag">14 Tage · ${list.length} offene Deadlines</span></div>
+ ${state?taskCreateForm(selectedDay):''}
+ ${overdue.length?`<div class="forecast-date-overdue"><strong>Überfällig</strong>${taskList(overdue,'forecast')}</div>`:''}
+ ${days.map(d=>`<div class="forecast-date-group"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(d+'T12:00:00')))}</h3>${taskList(grouped(d),'forecast',true)}</div>`).join('')}
+ <p class="rail-footnote">Geplant für heute ≠ harte Deadline. Kalendertermine werden erst nach separater Google-Calendar-Anbindung angezeigt.</p></section><aside class="work-card task-inspector"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabe bearbeiten</span></div>${taskEditor()}</aside></div>`);
+}
+function taskCreateForm(defaultDay){return `<form class="task-create-form" id="task-create-form"><div class="task-form-title"><strong>Neue Aufgabe</strong><span>Auch offline möglich</span></div><input name="title" aria-label="Aufgabentitel" maxlength="180" required placeholder="Was steht an?"/><div class="task-field-grid"><label>Für welchen Tag?<input name="plannedDate" type="date" value="${h(defaultDay||'')}"></label><label>Harte Deadline (optional)<input name="dueDate" type="date"></label><label>Kategorie<select name="category">${TASK_CATEGORIES.map(c=>`<option value="${h(c)}">${h(CATEGORY_LABELS[c]||c)}</option>`).join('')}</select></label><button class="primary-btn" type="submit" ${state?'':'disabled'}>${ico('plus',16)} Hinzufügen</button></div></form>`;}
+function taskList(items,scope,hideEmpty=false){return items.length?`<div class="task-list" data-scope="${h(scope)}">${items.map(t=>`<div class="task-row ${t.completed?'completed':''}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}"><strong>${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small></button>${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Für diesen Tag ist noch keine Aufgabe eingeplant.</div>`;}
+function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)return '<div class="task-empty">Tippe auf eine Aufgabe, um sie zu bearbeiten.</div>';
+ return `<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="3">${h(t.note||'')}</textarea></label><label>Geplanter Tag<input type="date" name="plannedDate" value="${h(t.plannedDate||'')}"></label><label>Harte Deadline<input type="date" name="dueDate" value="${h(t.dueDate||'')}"></label><label>Kategorie<select name="category">${TASK_CATEGORIES.map(c=>`<option value="${h(c)}" ${c===t.category?'selected':''}>${h(CATEGORY_LABELS[c]||c)}</option>`).join('')}</select></label><div class="task-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button></div></form>${state.taskConflicts[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Diese Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten, bis du entscheidest.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
+}
 function somedayScreen(){
  return chrome(`<div class="dream-layout"><section class="dream-intro work-card">
  <div class="dream-lead"><span class="dream-symbol">${ico('spark',31)}</span><div><p class="little-overline">DEIN DREAM SPACE</p><h2>Möglichkeiten dürfen warten.</h2><p>Eine Ausbildung, ein Buch, die Tauchweiterbildung oder eine Idee. Sammle, was dich inspiriert – ohne Datum, ohne Prioritätsdruck und ohne dass es automatisch in „Heute“ erscheint.</p></div></div>
@@ -375,6 +394,7 @@ function bind() {
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
+      prepareTasks(state);
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
@@ -390,6 +410,18 @@ function bind() {
       notice='Sicher in deiner Inbox gespeichert'+(authToken?' · Cloud-Abgleich vorgemerkt':' · nur auf diesem Gerät')+'.';error='';render();
     }catch(ex){if(submit)submit.disabled=false;toast(ex.message,true);}
   });
+  const taskForm=app.querySelector('#task-create-form');if(taskForm)taskForm.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(taskForm);
+    const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,updatedAt:stamp()};
+    if(!validLocalTask(t)){toast('Aufgabenfelder prüfen (Titel, Datum oder Kategorie).',true);return;}
+    await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;});selectedTaskId=t.id;toast('Aufgabe lokal gespeichert.');
+  };
+  const taskEditForm=app.querySelector('#task-edit-form');if(taskEditForm)taskEditForm.onsubmit=async ev=>{
+    ev.preventDefault();const id=taskEditForm.dataset.id,fd=new FormData(taskEditForm);const existing=state.tasks[id];if(!existing)return;
+    const t={...existing,title:String(fd.get('title')||'').trim(),note:String(fd.get('note')||'').trim(),plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',updatedAt:stamp()};
+    if(!validLocalTask(t)){toast('Aufgabenfelder prüfen (Titel, Datum oder Kategorie).',true);return;}
+    await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;});toast('Aufgabe aktualisiert.');
+  };
   const editForm=app.querySelector('#inbox-edit-form');if(editForm)editForm.onsubmit=async ev=>{
     ev.preventDefault();const id=editForm.dataset.id;const form=new FormData(editForm);
     const title=String(form.get('title')||'').trim(),note=String(form.get('note')||'').trim();
@@ -440,6 +472,15 @@ async function runAction(action,id) {
         toast('Compass-Sitzung auf diesem Gerät beendet. Lokale Daten bleiben geschützt.');}
       catch {toast('Lokal abgemeldet. Serverseitiger Widerruf gerade nicht erreichbar – bitte bei Gelegenheit erneut verbinden und abmelden.',true);}
       return;
+    }
+    if(action==='task-select'){if(!state?.tasks?.[id])return;selectedTaskId=id;render();return;}
+    if(action==='task-toggle'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].completed=!s.tasks[id].completed;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});return;}
+    if(action==='task-archive'){if(!confirm('Aufgabe archivieren?'))return;await mutate(s=>{s.tasks[id].archived=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});selectedTaskId=null;return;}
+    if(action==='task-conflict-local'||action==='task-conflict-remote'){
+       const conflict=state.taskConflicts[id];if(!conflict)return;
+       await mutate(s=>{if(action==='task-conflict-remote'&&conflict.remote){s.tasks[id]=conflict.remote;s.taskVersions[id]=conflict.remote.version;delete s.taskPending[id];}
+         else{s.taskVersions[id]=conflict.remote?.version||0;s.taskPending[id]=true;}
+         delete s.taskConflicts[id];});return;
     }
     if(action==='select-inbox'){if(!state?.records[id]||state.records[id].deleted)return;selectedInboxId=id;tab='inbox';render();return;}
     if(action==='edit'){
@@ -497,6 +538,27 @@ async function renderGoogleButton() {
     window.google.accounts.id.renderButton(root,{theme:'outline',size:'large',type:'standard',text:'signin_with',shape:'rectangular'});
   }catch(ex){toast(ex.message,true);}
 }
+async function syncTasks(){
+  prepareTasks(state);
+  // Keep local task mutations until the server confirms them.
+  for(const id of Object.keys(state.taskPending).slice(0,75)){
+    if(state.taskConflicts[id])continue;
+    const task=state.tasks[id];if(!task){delete state.taskPending[id];continue;}
+    const before=JSON.stringify(taskPlain(task));
+    try{
+      const data=await request(config.apiUrl,authToken,'/api/tasks',{method:'POST',body:JSON.stringify({...taskPlain(task),baseVersion:state.taskVersions[id]||0})});
+      if(data.task){state.taskVersions[id]=data.task.version;if(before===JSON.stringify(taskPlain(state.tasks[id]))){state.tasks[id]=data.task;delete state.taskPending[id];}}
+    }catch(ex){
+      if(ex.status!==409)throw ex;
+      const snapshot=await request(config.apiUrl,authToken,'/api/tasks');const remote=(snapshot.tasks||[]).find(t=>t.id===id)||null;
+      if(remote&&sameTask(task,remote)){state.taskVersions[id]=remote.version;if(before===JSON.stringify(taskPlain(state.tasks[id]))){state.tasks[id]=remote;delete state.taskPending[id];}}
+      else{state.taskConflicts[id]={remote};delete state.taskPending[id];}
+    }
+    await persist();
+  }
+  const snapshot=await request(config.apiUrl,authToken,'/api/tasks');
+  mergeTaskSnapshot(state,snapshot.tasks||[]);await persist();
+}
 async function syncNow() {
   if(!state||!authToken||busy||!navigator.onLine)return;
   clearTimeout(syncTimer);syncTimer=null;
@@ -525,6 +587,7 @@ async function syncNow() {
       if(!data.hasMore)break;
     }
     const fixed=pruneIdenticalConflicts(state);if(fixed)await persist();
+    await syncTasks();
     lastSyncAt=Date.now();
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
     error='';
@@ -534,7 +597,7 @@ async function syncNow() {
     if(ex.status===401){authToken='';currentUser='';await vault.clearSession().catch(()=>{});}
   }finally{
     busy=false;render();
-    const retry=syncResyncRequested&&Boolean(state?.pending.length)&&Boolean(authToken)&&navigator.onLine&&!error;
+    const retry=syncResyncRequested&&Boolean(state?.pending.length||Object.keys(state?.taskPending||{}).length)&&Boolean(authToken)&&navigator.onLine&&!error;
     syncResyncRequested=false;
     if(retry)scheduleSync(0);
   }
@@ -551,7 +614,7 @@ document.addEventListener('keydown',ev=>{
 window.addEventListener('online',()=>{render();if(authToken)scheduleSync(0);});
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&authToken&&state&&
-    (state.pending.length||Date.now()-lastSyncAt>=SYNC_INTERVAL_MS))scheduleSync(1000);
+    (state.pending.length||Object.keys(state.taskPending||{}).length||Date.now()-lastSyncAt>=SYNC_INTERVAL_MS))scheduleSync(1000);
 });
 setInterval(()=>{
   if(state&&authToken&&navigator.onLine&&document.visibilityState==='visible'&&

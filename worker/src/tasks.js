@@ -1,0 +1,44 @@
+// Owner-only task planning bridge; independent from Inbox and Garmin sessions.
+const ct={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
+const out=(obj,code=200)=>new Response(JSON.stringify(obj),{status:code,headers:ct});
+const dateRE=/^\d{4}-\d{2}-\d{2}$/;
+const isDate=x=>x==null||(typeof x==='string'&&dateRE.test(x)&&Number.isFinite(Date.parse(x+'T12:00:00Z'))&&new Date(x+'T12:00:00Z').toISOString().slice(0,10)===x);
+const categories=new Set(['Allgemein','Forschung','Lehre','Pruefungen','Verwaltung','Meeting','Weiterbildung','Familie','Beziehungsdynamiken']);
+export function validTask(t){return Boolean(t&&typeof t==='object'&&/^[0-9a-f-]{36}$/i.test(t.id||'')&&
+ typeof t.title==='string'&&t.title.trim().length>0&&t.title.length<=180&&
+ typeof t.note==='string'&&t.note.length<=3000&&(t.plannedDate||t.dueDate)&&isDate(t.plannedDate)&&isDate(t.dueDate)&&
+ categories.has(t.category)&&typeof t.completed==='boolean'&&typeof t.archived==='boolean'&&
+ Number.isSafeInteger(t.baseVersion)&&t.baseVersion>=0&&t.baseVersion<=100000000);}
+export const taskRow=r=>({id:r.id,title:r.title,note:r.note,plannedDate:r.planned_date,dueDate:r.due_date,category:r.category,completed:!!r.completed,archived:!!r.archived,updatedAt:r.updated_at,version:r.version});
+export async function listTasks(env,owner){const q=await env.DB.prepare('SELECT * FROM planning_tasks WHERE owner_sub=? ORDER BY updated_at DESC LIMIT 600').bind(owner.sub).all();return out({tasks:(q.results||[]).map(taskRow)});}
+export async function putTask(req,env,owner){
+ let t;try{const raw=await req.text();if(raw.length>5000)return out({error:'payload-too-large'},413);t=JSON.parse(raw);}catch{return out({error:'invalid-json'},400);}
+ if(!validTask(t))return out({error:'invalid-task'},400);
+ let row=await env.DB.prepare('SELECT * FROM planning_tasks WHERE owner_sub=? AND id=?').bind(owner.sub,t.id).first();
+ if(!row && t.baseVersion!==0)return out({error:'task-conflict',remote:null},409);
+ if(row && row.version!==t.baseVersion)return out({error:'task-conflict',remote:taskRow(row)},409);
+ const updatedAt=new Date().toISOString();
+ const params=[t.title.trim(),t.note,t.plannedDate||null,t.dueDate||null,t.category,t.completed?1:0,t.archived?1:0,updatedAt];
+ try{
+  if(row){const upd=await env.DB.prepare(`UPDATE planning_tasks SET title=?,note=?,planned_date=?,due_date=?,category=?,completed=?,archived=?,updated_at=?,version=version+1 WHERE owner_sub=? AND id=? AND version=?`)
+    .bind(...params,owner.sub,t.id,t.baseVersion).run();
+    if(upd.meta?.changes!==1){row=await env.DB.prepare('SELECT * FROM planning_tasks WHERE owner_sub=? AND id=?').bind(owner.sub,t.id).first();return out({error:'task-conflict',remote:row?taskRow(row):null},409);}
+  } else {
+   await env.DB.prepare(`INSERT INTO planning_tasks(owner_sub,id,version,title,note,planned_date,due_date,category,completed,archived,updated_at) VALUES(?,?,1,?,?,?,?,?,?,?,?)`)
+    .bind(owner.sub,t.id,...params).run();
+  }
+ }catch(ex){row=await env.DB.prepare('SELECT * FROM planning_tasks WHERE owner_sub=? AND id=?').bind(owner.sub,t.id).first();return out({error:'task-conflict',remote:row?taskRow(row):null},409);}
+ row=await env.DB.prepare('SELECT * FROM planning_tasks WHERE owner_sub=? AND id=?').bind(owner.sub,t.id).first();
+ return out({ok:true,task:taskRow(row)});
+}
+export async function listWatchPlanning(req,env,ownerSub){
+ const day=new URL(req.url).searchParams.get('day');if(!isDate(day)||day==null)return out({error:'invalid-day'},400);
+ const until=new Date(day+'T12:00:00Z');until.setUTCDate(until.getUTCDate()+14);const max=until.toISOString().slice(0,10);
+ const q=await env.DB.prepare(`SELECT id,title,planned_date,due_date,category,completed
+   FROM planning_tasks WHERE owner_sub=? AND archived=0 AND completed=0 AND
+   (planned_date=? OR (due_date IS NOT NULL AND due_date<=?))
+   ORDER BY CASE WHEN due_date IS NOT NULL AND due_date<? THEN 0 ELSE 1 END, due_date ASC, planned_date ASC, title ASC LIMIT 40`)
+   .bind(ownerSub,day,max,day).all();
+ const tasks=(q.results||[]).map(r=>({id:r.id,title:r.title.slice(0,80),plannedDate:r.planned_date,dueDate:r.due_date,category:r.category}));
+ return out({date:day,generatedAt:new Date().toISOString(),today:tasks.filter(t=>t.plannedDate===day||t.dueDate===day||t.dueDate&&t.dueDate<day).slice(0,12),deadlines:tasks.filter(t=>t.dueDate&&t.dueDate<=max).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)).slice(0,15)});
+}

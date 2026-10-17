@@ -1,3 +1,4 @@
+import {listWatchPlanning} from './tasks.js';
 // Minimal secure Garmin bridge: single owner, short-lived pairing, write-only device credentials.
 // Private health/activity data stays behind authenticated owner endpoints.
 const categories = new Set(['Forschung','Lehre','Pruefungen','Pruefungskorrektur','Pruefungserstellung','Verwaltung','Meeting','Weiterbildung','Familie','Beziehungsdynamiken']);
@@ -75,4 +76,11 @@ export async function revokeWatchDevice(req,env,owner){
 export async function listWatchDevices(env,owner){
  const q=await env.DB.prepare('SELECT token_hash,device_label,created_at FROM watch_devices WHERE owner_sub=? AND revoked=0 ORDER BY created_at DESC LIMIT 10').bind(owner.sub).all();
  return out({devices:(q.results||[]).map(r=>({deviceHash:r.token_hash,label:r.device_label,createdAt:r.created_at}))});
+}
+
+// Device-token-authenticated, read-only task snapshot for paired Garmin watches.
+export async function watchPlanning(req,env){
+ const d=await getDevice(req,env);
+ if(!d)return out({error:'unauthorized'},401);
+ return listWatchPlanning(req,env,d.sub);
 }

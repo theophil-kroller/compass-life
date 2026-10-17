@@ -1,14 +1,20 @@
 export async function request(apiUrl, token, path, opts={}) {
   if (!/^https:\/\//.test(apiUrl) && !/^http:\/\/127\.0\.0\.1:/.test(apiUrl))
     throw new Error('Die API-Adresse muss HTTPS verwenden (Ausnahme: lokaler Test).');
-  const res=await fetch(`${apiUrl.replace(/\/$/,'')}${path}`,{
-    ...opts,
-    headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json',...(opts.headers||{})},
-    cache:'no-store'
-  });
-  let data={};try{data=await res.json();}catch{}
-  if(!res.ok) {const error=new Error(data.error||`HTTP ${res.status}`);error.status=res.status;throw error;}
-  return data;
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),12000);
+  try {
+    const res=await fetch(`${apiUrl.replace(/\/$/,'')}${path}`,{
+      ...opts,
+      signal:controller.signal,
+      headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json',...(opts.headers||{})},
+      cache:'no-store'
+    });
+    let data={};try{data=await res.json();}catch(ex){if(ex?.name==='AbortError')throw ex;}
+    if(!res.ok) {const error=new Error(data.error||`HTTP ${res.status}`);error.status=res.status;throw error;}
+    return data;
+  }catch(ex){if(ex?.name==='AbortError')throw new Error('Zeitüberschreitung (12 s). Lokale Daten bleiben erhalten.');throw ex;}
+  finally{clearTimeout(timeout);}
 }
 // One mutation per item in a batch. Multiple offline edits on the same item are
 // subsequently sent in sequence, preserving stable mutation IDs across retries.

@@ -187,3 +187,16 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 
 /* Compass 0.3.1 — consistent restrained Garmin category accents */
 .watch-cat-mark {display:inline-block;width:.6rem;height:.6rem;border-radius:50%;margin-right:.5rem;vertical-align:middle;box-shadow:0 0 0 2px color-mix(in srgb,currentColor 10%,transparent)}
+/* Compass planning 0.4.0: real dates, deadlines and task editor */
+.task-create-form{border:1px solid #dfeae2;border-radius:14px;background:#f8fbf8;padding:14px;margin:15px 0;display:grid;gap:10px}
+.task-form-title{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:#31513f}.task-form-title span{color:#789383;font-size:11px}
+.task-create-form input,.task-create-form select,.task-edit-form input,.task-edit-form textarea,.task-edit-form select{border:1px solid #dbe8df;border-radius:9px;background:white;color:#2e4837;padding:10px;font:inherit;font-size:12px;width:100%;min-width:0}
+.task-field-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:10px;align-items:end}.task-field-grid label,.task-edit-form label{display:grid;gap:5px;font-size:11px;color:#617868}
+.task-list{display:grid;gap:5px;margin:12px 0 20px}.task-row{display:flex;align-items:center;gap:9px;border:1px solid #e6eee7;background:#fff;border-radius:10px;padding:9px}.task-row.completed{opacity:.65}.task-row.completed strong{text-decoration:line-through}
+.task-check{height:30px;min-width:30px;border:1px solid #bad3c4;background:#f5faf6;border-radius:10px;color:#367b5a;font-size:20px;cursor:pointer}
+.task-title-button{flex:1;min-width:0;text-align:left;background:none;border:0;padding:3px;cursor:pointer}.task-title-button strong{font-size:12px;color:#385342;display:block;overflow-wrap:anywhere}.task-title-button small{font-size:10px;color:#869e8b;display:block;margin-top:3px}
+.task-empty{padding:18px;color:#94a79a;font-size:12px;line-height:1.6;text-align:center}.task-conflict-pill{color:#a44c35;font-size:10px}
+.task-edit-form{display:grid;gap:13px;margin-top:18px}.task-edit-actions{display:flex;gap:8px;flex-wrap:wrap}.task-conflict{margin-top:15px;background:#fff5f0;border-radius:10px;padding:12px;font-size:12px}.task-conflict button{margin:6px;padding:8px;border:1px solid #c9aca5;border-radius:8px;background:#fff}
+.forecast-date-group{border-top:1px solid #e5ece5;padding:12px 0}.forecast-date-group h3,.forecast-date-overdue strong{font-size:13px;color:#4d6756;margin:0 0 5px}.forecast-date-overdue{background:#fff9f3;border-radius:8px;padding:12px}.deadline-inline{font-size:12px;margin:6px 0;color:#587760}
+@media(max-width:1100px){.task-field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.task-field-grid button{justify-content:center}}
+@media(max-width:650px){.task-field-grid{grid-template-columns:1fr}.task-create-form{padding:12px}.forecast-layout{display:block}}
