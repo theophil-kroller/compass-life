@@ -8,7 +8,7 @@
     {
       "binding": "DB",
       "database_name": "compass-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "4e236533-8e35-4382-bcee-e4698b3de9cd",
       "migrations_dir": "migrations"
     }
   ],
