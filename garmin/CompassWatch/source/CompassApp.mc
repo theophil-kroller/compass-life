@@ -1,4 +1,4 @@
-// Compass Focus 0.3.1 — fēnix 7S (240 x 240)
+// Compass Focus 0.3.3 — fēnix 7S (240 x 240)
 // Built from D4: one InputDelegate, String.equals() comparisons.
 // Preview build: compile and test with Garmin Connect IQ SDK 9.2.0.
 using Toybox.Application;
@@ -30,12 +30,19 @@ class CompassApp extends Application.AppBase {
 class CompassModel {
     const API = "https://compass-api.theophil-tiger.workers.dev";
     // Stable category IDs are sent to the Worker; German names are display-only.
-    // 0.3.1 Worker patch must be deployed BEFORE synchronizing Lehre/Pruefungen.
+    // Keep canonical IDs across versions; Counseling is a watch-only display name.
     const IDS = ["Forschung", "Lehre", "Pruefungen", "Verwaltung", "Meeting", "Weiterbildung", "Familie", "Beziehungsdynamiken"];
-    const LABELS = ["Forschung", "Lehre", "Prüfungen", "Verwaltung", "Meetings", "Weiterbildung", "Familie", "Beziehungsdynamiken"];
-    const COLORS = [0x65BEC7, 0xD4B46C, 0xD99868, 0x86A4BA, 0x93A3AD, 0xB7A6CB, 0x8FBC9F, 0xC96B4B];
+    const LABELS = ["Forschung", "Lehre", "Prüfungen", "Verwaltung", "Meetings", "Weiterbildung", "Familie", "Counseling"];
+    // Deliberately separated colors for the fēnix 7S low-color display.
+    // Meetings are muted blue; administration, family and continuing education differ.
+    const COLORS = [0x65BEC7, 0xE5B34D, 0xE98E4F, 0x4F9CCB, 0x749BA9, 0xA28BDE, 0x65B988, 0xCC7168];
+    // Time-limited deep-work sessions vs elapsed-time tracking by category.
+    const DEFAULT_POMODORO = [true, true, true, false, false, true, false, false];
 
-    var mode = "select"; // select / running / session-menu / pairing / syncing
+    var mode = "select"; // select / hub / today / forecast / running / session-menu / pairing / syncing
+    var hubIndex = 0;
+    // Garmin agenda screens remain empty until Compass has actual dated tasks.
+    // Never invent/transform undated inbox captures into scheduled tasks.
     var index = 0;
     var pomodoro = true;
     var running = false;
@@ -92,6 +99,27 @@ class CompassModel {
             Storage.setValue("pomodoroCount", 0);
         }
     }
+    function showHub() { mode = "hub"; hubIndex = 0; redraw(); }
+    function openHubItem() {
+        if (hubIndex == 0) { mode = "select"; }
+        else if (hubIndex == 1) { mode = "today"; }
+        else if (hubIndex == 2) { mode = "forecast"; }
+        else if (hubIndex == 3) { pomodoro = !pomodoro; mode = "select"; lastMessage = ""; }
+        else if (hubIndex == 4) { mode = "select"; sync(); return; }
+        redraw();
+    }
+    function chooseCategory(dir) {
+        index = (index + dir + LABELS.size()) % LABELS.size();
+        pomodoro = DEFAULT_POMODORO[index];
+        lastMessage = "";
+        redraw();
+    }
+    // Every fourth completed focus interval earns a 15-minute rest.
+    function breakDuration() { return (dailyPomodoros > 0 && dailyPomodoros % 4 == 0) ? 900 : 300; }
+    function phaseDuration() {
+        if (phase.equals("break") || phase.equals("break-due")) { return breakDuration(); }
+        return 1500;
+    }
     function begin() {
         if (queue.size() >= 20) { lastMessage = "Speicher voll: Sync"; redraw(); return; }
         refreshDay();
@@ -130,9 +158,9 @@ class CompassModel {
                 phase = "focus-due";
                 phaseSec = 1500;
                 alert();
-            } else if (pomodoro && phase.equals("break") && phaseSec >= 300) {
+            } else if (pomodoro && phase.equals("break") && phaseSec >= breakDuration()) {
                 phase = "break-due";
-                phaseSec = 300;
+                phaseSec = breakDuration();
                 alert();
             }
         }
@@ -275,174 +303,264 @@ class CompassModel {
 }
 
 class CompassView extends WatchUi.View {
-    const BG = 0x091419;
-    const WHITE = 0xF0F4F2;
-    const MUTED = 0x91A5AA;
-    const TRACK = 0x23393E;
-    const AQUA = 0x78C6C7;
+    const BG = 0x061014;
+    const WHITE = 0xF4F6F4;
+    const MUTED = 0x9AADB2;
+    const TRACK = 0x20383D;
+    const AQUA = 0x70C8CC;
+    const TOMATO = 0xE65B50; // Recognizable red, never activity-colored
+    const GOLD = 0xE0BB6A;
     var model;
     function initialize(m) { View.initialize(); model = m; }
-    function pen(dc, c) { dc.setColor(c, BG); }
-    function textAt(dc, x, y, s, f, color, width) {
-        var font = f;
-        if (dc.getTextWidthInPixels(s, font) > width) { font = Graphics.FONT_SMALL; }
-        if (dc.getTextWidthInPixels(s, font) > width) { font = Graphics.FONT_TINY; }
-        pen(dc, color);
-        dc.drawText(x, y, font, s, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+    function pen(dc,c) { dc.setColor(c,BG); }
+    function pad(n) { return (n<10 ? "0" : "")+n.toString(); }
+    function drawTxt(dc,x,y,s,font,color,width) {
+        var f = font;
+        if (dc.getTextWidthInPixels(s,f) > width) { f = Graphics.FONT_SMALL; }
+        if (dc.getTextWidthInPixels(s,f) > width) { f = Graphics.FONT_TINY; }
+        pen(dc,color);
+        dc.drawText(x,y,f,s,Graphics.TEXT_JUSTIFY_CENTER|Graphics.TEXT_JUSTIFY_VCENTER);
     }
-    function centered(dc, y, s, f, c, maxW) { textAt(dc, dc.getWidth()/2, y, s, f, c, maxW); }
-    function pad(n) { return (n < 10 ? "0" : "") + n.toString(); }
+    function centered(dc,y,s,font,color,width) {
+        drawTxt(dc,dc.getWidth()/2,y,s,font,color,width);
+    }
     function clockLabel() {
         try {
-            var d = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
-            return pad(d.day) + "." + pad(d.month) + ".  " + pad(d.hour) + ":" + pad(d.min);
+            var d = Gregorian.info(Time.now(),Time.FORMAT_SHORT);
+            return pad(d.day)+"."+pad(d.month)+". "+pad(d.hour)+":"+pad(d.min);
         } catch(ex) { return "COMPASS"; }
     }
-    function categoryLabel(dc, y, x, maxW, color) {
+    function categoryLabel(dc,y,x,maxW) {
         var label = model.LABELS[model.index];
-        if (model.index == 7) {
-            textAt(dc, x, y-9, "Beziehungs-", Graphics.FONT_SMALL, color, maxW);
-            textAt(dc, x, y+10, "dynamiken", Graphics.FONT_SMALL, color, maxW);
-        } else {
-            textAt(dc, x, y, label, Graphics.FONT_MEDIUM, color, maxW);
-        }
+        drawTxt(dc,x,y,label,Graphics.FONT_MEDIUM,WHITE,maxW);
     }
-    function categoryIcon(dc, x, y, r) {
+    function categoryIcon(dc,x,y,r) {
         var c = model.COLORS[model.index];
-        pen(dc, TRACK); dc.fillCircle(x,y,r);
-        pen(dc, c);
-        var i = model.index;
-        if (i == 0) { // Forschung — microscope / lens
-            dc.drawCircle(x-2,y-3,6); dc.drawLine(x+3,y+2,x+9,y+8); dc.drawLine(x-8,y+9,x+8,y+9);
-        } else if (i == 1 || i == 5) { // Lehre / Weiterbildung — open book
-            dc.drawLine(x,y-6,x,y+8); dc.drawLine(x-9,y-6,x-9,y+6); dc.drawLine(x+9,y-6,x+9,y+6);
-            dc.drawLine(x-9,y-6,x-1,y-4); dc.drawLine(x+1,y-4,x+9,y-6);
-            dc.drawLine(x-9,y+6,x-1,y+8); dc.drawLine(x+1,y+8,x+9,y+6);
-        } else if (i == 2) { // Prüfungen — tick
-            dc.drawRectangle(x-9,y-9,18,18); dc.drawLine(x-5,y,x-1,y+4); dc.drawLine(x-1,y+4,x+6,y-5);
-        } else if (i == 3) { // Verwaltung — folders
-            dc.drawRectangle(x-10,y-5,20,13); dc.drawLine(x-10,y-7,x-2,y-7);
-        } else if (i == 4) { // Meetings — people
-            dc.drawCircle(x-5,y-5,3); dc.drawCircle(x+5,y-5,3);
-            dc.drawLine(x-10,y+7,x-10,y+1); dc.drawLine(x+10,y+7,x+10,y+1);
-            dc.drawLine(x-10,y+7,x-1,y+7); dc.drawLine(x+1,y+7,x+10,y+7);
-        } else if (i == 6) { // Familie — home
-            dc.drawLine(x-10,y,x,y-9); dc.drawLine(x,y-9,x+10,y);
-            dc.drawLine(x-7,y-2,x-7,y+9); dc.drawLine(x+7,y-2,x+7,y+9);
+        pen(dc,c); dc.fillCircle(x,y,r);
+        pen(dc,BG);
+        var i=model.index;
+        if (i==0) { // Research: document with magnifier, not graduation cap.
+            dc.drawRectangle(x-9,y-11,13,17);
+            dc.drawLine(x-6,y-6,x+1,y-6); dc.drawLine(x-6,y-2,x,y-2);
+            dc.drawCircle(x+5,y+5,5); dc.drawLine(x+9,y+9,x+13,y+13);
+        } else if (i==1 || i==5) { // Teaching, continuing education: open book.
+            dc.drawLine(x,y-7,x,y+8);
+            dc.drawLine(x-9,y-7,x-9,y+7); dc.drawLine(x+9,y-7,x+9,y+7);
+            dc.drawLine(x-9,y-7,x-1,y-4); dc.drawLine(x+1,y-4,x+9,y-7);
+            dc.drawLine(x-9,y+7,x-1,y+9); dc.drawLine(x+1,y+9,x+9,y+7);
+        } else if (i==2) { // Exams.
+            dc.drawRectangle(x-9,y-10,18,20);
+            dc.drawLine(x-5,y,x-1,y+4);dc.drawLine(x-1,y+4,x+6,y-5);
+        } else if (i==3) { // Administration.
+            dc.drawRectangle(x-10,y-5,20,14);dc.drawLine(x-9,y-7,x-2,y-7);
+        } else if (i==4) { // Meeting.
+            dc.fillCircle(x-5,y-5,3);dc.fillCircle(x+5,y-5,3);
+            dc.drawLine(x-10,y+7,x-10,y+1);dc.drawLine(x+10,y+7,x+10,y+1);
+            dc.drawLine(x-10,y+7,x-1,y+7);dc.drawLine(x+1,y+7,x+10,y+7);
+        } else if (i==6) { // Family.
+            dc.drawLine(x-10,y,x,y-10);dc.drawLine(x,y-10,x+10,y);
+            dc.drawLine(x-7,y-3,x-7,y+9);dc.drawLine(x+7,y-3,x+7,y+9);
             dc.drawLine(x-7,y+9,x+7,y+9);
-        } else { // Beziehungsdynamiken — two rings
-            dc.drawCircle(x-4,y,6); dc.drawCircle(x+4,y,6);
+        } else { // Counseling: two joined circles.
+            dc.drawCircle(x-4,y,6);dc.drawCircle(x+4,y,6);
         }
     }
     function heart(dc,x,y) {
-        pen(dc,0xD98990);
-        dc.drawLine(x,y+7,x-9,y-1); dc.drawLine(x-9,y-1,x-9,y-6);
-        dc.drawLine(x-9,y-6,x-5,y-9); dc.drawLine(x-5,y-9,x,y-5);
-        dc.drawLine(x,y-5,x+5,y-9); dc.drawLine(x+5,y-9,x+9,y-6);
-        dc.drawLine(x+9,y-6,x+9,y-1); dc.drawLine(x+9,y-1,x,y+7);
+        pen(dc,0xE1898E);
+        dc.drawLine(x,y+7,x-8,y-2);dc.drawLine(x-8,y-2,x-8,y-6);
+        dc.drawLine(x-8,y-6,x-4,y-9);dc.drawLine(x-4,y-9,x,y-5);
+        dc.drawLine(x,y-5,x+4,y-9);dc.drawLine(x+4,y-9,x+8,y-6);
+        dc.drawLine(x+8,y-6,x+8,y-2);dc.drawLine(x+8,y-2,x,y+7);
     }
     function battery(dc,x,y,val) {
-        pen(dc,AQUA); dc.drawRoundedRectangle(x,y,48,22,4);
-        dc.fillRectangle(x+49,y+7,3,8);
+        // Body Battery, not the Garmin hardware battery. A single vector icon
+        // renders all values 0..100. The fixed black number area is legible on
+        // a low-color MIP display and the bottom bar conveys charge visually.
+        var ww=40; var hh=20;
+        pen(dc,MUTED);
+        dc.drawRectangle(x,y,ww,hh);
+        dc.fillRectangle(x+ww,y+6,4,8); // Attached contact at the right.
+        pen(dc,TRACK); dc.fillRectangle(x+2,y+2,ww-4,hh-4);
         if (val != null) {
-            var fill = (val*39/100).toNumber();
-            if (fill > 0) { dc.fillRectangle(x+4,y+4,fill,14); }
-            // Dark text on a pale backdrop retains legibility at low battery values.
-            pen(dc,WHITE); dc.fillRoundedRectangle(x+12,y+3,24,16,3);
-            textAt(dc,x+24,y+11,val.toString(),Graphics.FONT_TINY,BG,23);
+            var v=val.toNumber();
+            if (v<0) { v=0; }
+            if (v>100) { v=100; }
+            var filled=(v*(ww-6)/100).toNumber();
+            if (filled>0) {
+                pen(dc,v<=20?0xD66E69:v<=40?0xDBB66A:AQUA);
+                dc.fillRectangle(x+3,y+15,filled,2);
+            }
+            drawTxt(dc,x+ww/2,y+8,v.toString(),Graphics.FONT_TINY,WHITE,ww-7);
         } else {
-            textAt(dc,x+24,y+11,"--",Graphics.FONT_TINY,WHITE,38);
+            drawTxt(dc,x+ww/2,y+8,"--",Graphics.FONT_TINY,MUTED,ww-7);
         }
     }
     function sensors(dc,y) {
-        var cx = dc.getWidth()/2;
-        heart(dc,cx-63,y);
-        var hr = model.hrLast == null ? "--" : model.hrLast.toString();
-        textAt(dc,cx-37,y,hr,Graphics.FONT_TINY,WHITE,42);
-        // Use cached Body Battery samples. SensorHistory must not be polled on each repaint.
-        var bb = model.bbStart;
-        if (model.bbPoints.size() > 0) {
-            bb = model.bbPoints[model.bbPoints.size()-1][1];
+        var cx=dc.getWidth()/2;
+        heart(dc,cx-65,y);
+        drawTxt(dc,cx-40,y,model.hrLast==null?"--":model.hrLast.toString(),Graphics.FONT_TINY,WHITE,34);
+        var bb=model.bbStart;
+        if (model.bbPoints.size()>0) { bb=model.bbPoints[model.bbPoints.size()-1][1]; }
+        battery(dc,cx+11,y-10,bb);
+    }
+    function tomato(dc,x,y) {
+        pen(dc,TOMATO);dc.fillCircle(x,y+1,7);
+        pen(dc,0x75B888);
+        dc.drawLine(x,y-6,x-2,y-10);dc.drawLine(x,y-6,x+4,y-9);
+        dc.drawLine(x-5,y-7,x+5,y-7);
+    }
+    function diamond(dc,x,y,bright) {
+        pen(dc,bright?GOLD:MUTED);
+        dc.drawLine(x-8,y-3,x-4,y-8);dc.drawLine(x-4,y-8,x+4,y-8);
+        dc.drawLine(x+4,y-8,x+8,y-3);dc.drawLine(x+8,y-3,x,y+8);
+        dc.drawLine(x,y+8,x-8,y-3);dc.drawLine(x-8,y-3,x+8,y-3);
+        if(bright) { dc.fillCircle(x,y-1,2); }
+    }
+    function cycleRow(dc,y) {
+        if (!model.pomodoro) { return; }
+        var cx=dc.getWidth()/2;
+        tomato(dc,cx-71,y);
+        drawTxt(dc,cx-49,y+1,model.dailyPomodoros.toString(),Graphics.FONT_SMALL,WHITE,31);
+        var dots=model.dailyPomodoros%4;
+        for(var i=0;i<4;i++) {
+            pen(dc,i<dots?model.COLORS[model.index]:TRACK);
+            dc.fillCircle(cx-15+i*12,y,4);
         }
-        battery(dc,cx+8,y-11,bb);
+        diamond(dc,cx+60,y,model.dailyPomodoros>0 && model.dailyPomodoros%4==0);
     }
     function timerText() {
-        var s = model.totalSec;
-        if (model.pomodoro) {
-            var length = model.phase.equals("break") || model.phase.equals("break-due") ? 300 : 1500;
-            s = length - model.phaseSec;
-            if (s < 0) { s = 0; }
-            // Round to next whole minute/second, showing 25:00 at session start.
+        var s=model.totalSec;
+        if(model.pomodoro) { s=model.phaseDuration()-model.phaseSec; if(s<0){s=0;} }
+        var m=(s/60).toNumber();
+        if(s>=3600) {
+            var hrs=(s/3600).toNumber();
+            return hrs.toString()+":"+pad((s%3600/60).toNumber())+":"+pad(s%60);
         }
-        var m = (s / 60).toNumber();
-        return m.toString() + ":" + pad(s % 60);
+        return pad(m)+":"+pad(s%60);
     }
-    function drawArcProgress(dc) {
-        if (!model.pomodoro) { return; }
-        var total = model.phase.equals("break") || model.phase.equals("break-due") ? 300 : 1500;
-        var used = model.phaseSec;
-        if (used <= 0) { return; }
-        if (used > total) { used = total; }
-        var degrees = (used*360/total).toNumber();
-        if (degrees >= 360) { degrees = 359; }
-        pen(dc,model.COLORS[model.index]);
-        dc.setPenWidth(3);
-        dc.drawArc(dc.getWidth()/2,dc.getHeight()/2,dc.getWidth()/2-9,Graphics.ARC_CLOCKWISE,90,90-degrees);
+    function drawRing(dc) {
+        var cx=dc.getWidth()/2;var cy=dc.getHeight()/2;var r=cx-11;
+        pen(dc,TRACK);dc.setPenWidth(2);
+        dc.drawCircle(cx,cy,r);
+        if(model.mode.equals("running") && model.pomodoro) {
+            var duration=model.phaseDuration();
+            var used=model.phaseSec;
+            if(used>duration){used=duration;}
+            if(used>0) {
+                var degrees=(used*360/duration).toNumber();
+                if(degrees>=360){degrees=359;}
+                pen(dc,model.COLORS[model.index]);dc.setPenWidth(3);
+                dc.drawArc(cx,cy,r,Graphics.ARC_CLOCKWISE,90,90-degrees);
+            }
+        } else if(model.mode.equals("running") && !model.pomodoro) {
+            // Free timer has no deadline: colored arc is identity, not fake progress.
+            pen(dc,model.COLORS[model.index]);dc.setPenWidth(2);
+            dc.drawArc(cx,cy,r,Graphics.ARC_CLOCKWISE,72,108);
+        }
         dc.setPenWidth(1);
     }
-    function menuRow(dc,y,label,selected) {
-        var cx = dc.getWidth()/2;
-        if (selected) {
-            pen(dc,TRACK); dc.fillRoundedRectangle(cx-91,y-18,182,36,7);
-            pen(dc,AQUA); dc.fillRoundedRectangle(cx-91,y-18,3,36,1);
+    function playIcon(dc,x,y) {
+        pen(dc,AQUA);
+        dc.drawLine(x-5,y-8,x+7,y);dc.drawLine(x+7,y,x-5,y+8);
+        dc.drawLine(x-5,y+8,x-5,y-8);
+    }
+    function pauseIcon(dc,x,y) {
+        pen(dc,AQUA);
+        dc.fillRectangle(x-7,y-9,5,18);dc.fillRectangle(x+3,y-9,5,18);
+    }
+    function saveIcon(dc,x,y) {
+        pen(dc,AQUA);dc.drawRectangle(x-9,y-10,18,20);
+        dc.drawRectangle(x-5,y-9,10,7);dc.drawRectangle(x-5,y+3,10,6);
+    }
+    function hubItem(n) {
+        if (n==0) { return "FOKUS"; }
+        if (n==1) { return "HEUTE"; }
+        if (n==2) { return "FORECAST"; }
+        if (n==3) { return "TIMER-MODUS"; }
+        return "SYNCHRONISIEREN";
+    }
+    function drawHub(dc,w,h) {
+        var cx=w/2;
+        centered(dc,h*29/100,"COMPASS",Graphics.FONT_MEDIUM,AQUA,w*70/100);
+        // Three visible entries on a round face, centered on current selection.
+        for (var off=-1;off<=1;off++) {
+            var n=(model.hubIndex+off+5)%5;
+            var y=h*(51+off*16)/100;
+            if (off==0) {
+                pen(dc,TRACK); dc.fillRoundedRectangle(cx-88,y-17,176,34,4);
+                pen(dc,AQUA); dc.fillRectangle(cx-73,y+17,146,2);
+            }
+            centered(dc,y,hubItem(n),Graphics.FONT_SMALL,off==0?WHITE:MUTED,w*73/100);
         }
-        centered(dc,y,label,Graphics.FONT_SMALL,selected?WHITE:MUTED,174);
+    }
+    function drawAgendaEmpty(dc,w,h,isForecast) {
+        centered(dc,h*30/100,isForecast?"FORECAST":"HEUTE",Graphics.FONT_MEDIUM,AQUA,w*72/100);
+        centered(dc,h*46/100,isForecast?"DEADLINES":"AUFGABEN",Graphics.FONT_SMALL,WHITE,w*72/100);
+        centered(dc,h*61/100,"Planung in Compass",Graphics.FONT_TINY,MUTED,w*76/100);
+        centered(dc,h*71/100,"noch nicht verfügbar",Graphics.FONT_TINY,MUTED,w*76/100);
+        // These are not fake tasks. The Compass cloud schema still supports
+        // only undated inbox items, so no schedule can yet be synchronized.
+    }
+    function menuRow(dc,y,index,label,selected) {
+        var cx=dc.getWidth()/2;
+        if(selected) {
+            pen(dc,TRACK);dc.fillRoundedRectangle(cx-90,y-16,180,33,5);
+            pen(dc,AQUA);dc.fillRectangle(cx-87,y+14,174,2);
+        }
+        if(index==0){playIcon(dc,cx-76,y);}
+        if(index==1){pauseIcon(dc,cx-76,y);}
+        if(index==2){saveIcon(dc,cx-76,y);}
+        drawTxt(dc,cx+7,y,label,Graphics.FONT_SMALL,selected?WHITE:MUTED,148);
     }
     function onUpdate(dc) {
-        var w = dc.getWidth(); var h = dc.getHeight(); var cx = w/2;
-        pen(dc,BG); dc.clear();
-        // A restrained, thin visual bezel that preserves the round display's safe area.
-        pen(dc,TRACK); dc.drawCircle(cx,h/2,w/2-9);
-        centered(dc,h*13/100,clockLabel(),Graphics.FONT_TINY,MUTED,w*64/100);
-        pen(dc,AQUA); dc.fillRoundedRectangle(cx-13,h*20/100,26,2,1);
-        if (model.mode.equals("running")) {
-            drawArcProgress(dc);
-            categoryIcon(dc,cx-65,h*34/100,17);
-            categoryLabel(dc,h*34/100,cx+16,w*62/100,WHITE);
-            centered(dc,h*52/100,timerText(),Graphics.FONT_LARGE,WHITE,w*72/100);
-            var status = "FOKUS";
-            if (model.paused) { status = "PAUSIERT"; }
-            else if (model.phase.equals("focus-due")) { status = "FOKUS FERTIG"; }
-            else if (model.phase.equals("break-due")) { status = "PAUSE FERTIG"; }
-            else if (model.phase.equals("break")) { status = "PAUSE"; }
-            else if (!model.pomodoro) { status = "FREIER FOKUS"; }
-            centered(dc,h*65/100,status,Graphics.FONT_TINY,model.paused?0xD8B277:AQUA,w*70/100);
-            sensors(dc,h*77/100);
-            centered(dc,h*88/100,model.dailyPomodoros.toString()+" POMODOROS HEUTE",Graphics.FONT_TINY,MUTED,w*67/100);
-        } else if (model.mode.equals("session-menu")) {
-            centered(dc,h*32/100,"SESSION",Graphics.FONT_MEDIUM,AQUA,w*60/100);
-            menuRow(dc,h*45/100,"Fortsetzen",model.menuIndex==0);
-            menuRow(dc,h*61/100,"Pausieren",model.menuIndex==1);
-            menuRow(dc,h*77/100,"Beenden & speichern",model.menuIndex==2);
-        } else if (model.mode.equals("pairing")) {
-            centered(dc,h*35/100,"KOPPELN",Graphics.FONT_MEDIUM,AQUA,w*70/100);
-            var d = model.digit;
-            var code = model.code.substring(0,d)+"["+model.code.substring(d,d+1)+"]"+model.code.substring(d+1,8);
-            centered(dc,h*50/100,code,Graphics.FONT_SMALL,WHITE,w*82/100);
-            centered(dc,h*66/100,"STELLE "+(d+1).toString()+" / 8",Graphics.FONT_TINY,MUTED,w*70/100);
-            centered(dc,h*80/100,"UP/DOWN: ZAHL",Graphics.FONT_TINY,MUTED,w*69/100);
-            centered(dc,h*89/100,"START: WEITER",Graphics.FONT_TINY,MUTED,w*58/100);
-        } else if (model.mode.equals("syncing")) {
-            centered(dc,h*39/100,"SYNCHRONISATION",Graphics.FONT_SMALL,AQUA,w*76/100);
-            centered(dc,h*58/100,model.lastMessage,Graphics.FONT_SMALL,WHITE,w*77/100);
+        var w=dc.getWidth();var h=dc.getHeight();var cx=w/2;
+        pen(dc,BG);dc.clear();
+        drawRing(dc);
+        centered(dc,h*15/100,clockLabel(),Graphics.FONT_TINY,MUTED,w*68/100);
+        pen(dc,AQUA);dc.fillRectangle(cx-11,h*20/100,22,2);
+        if(model.mode.equals("running")) {
+            sensors(dc,h*29/100);
+            categoryIcon(dc,cx-62,h*42/100,17);
+            categoryLabel(dc,h*42/100,cx+18,w*65/100);
+            var status=model.paused?"PAUSIERT":(!model.pomodoro?"LÄUFT":model.phase.equals("focus")?"FOKUS":model.phase.equals("break")?"PAUSE":model.phase.equals("focus-due")?"FOKUS FERTIG":"PAUSE FERTIG");
+            centered(dc,h*54/100,status,Graphics.FONT_TINY,model.paused?GOLD:model.COLORS[model.index],w*64/100);
+            centered(dc,h*66/100,timerText(),Graphics.FONT_LARGE,WHITE,w*70/100);
+            cycleRow(dc,h*83/100);
+        } else if(model.mode.equals("session-menu")) {
+            centered(dc,h*30/100,"SESSION",Graphics.FONT_MEDIUM,AQUA,w*68/100);
+            menuRow(dc,h*44/100,0,"Fortsetzen",model.menuIndex==0);
+            menuRow(dc,h*59/100,1,"Pausieren",model.menuIndex==1);
+            menuRow(dc,h*74/100,2,"Beenden",model.menuIndex==2);
+        } else if(model.mode.equals("hub")) {
+            drawHub(dc,w,h);
+        } else if(model.mode.equals("today") || model.mode.equals("forecast")) {
+            drawAgendaEmpty(dc,w,h,model.mode.equals("forecast"));
+        } else if(model.mode.equals("pairing")) {
+            centered(dc,h*33/100,"KOPPELN",Graphics.FONT_MEDIUM,AQUA,w*67/100);
+            var d=model.digit;
+            var code=model.code.substring(0,d)+"["+model.code.substring(d,d+1)+"]"+model.code.substring(d+1,8);
+            centered(dc,h*50/100,code,Graphics.FONT_SMALL,WHITE,w*84/100);
+            centered(dc,h*64/100,"STELLE "+(d+1).toString()+" / 8",Graphics.FONT_TINY,MUTED,w*68/100);
+            centered(dc,h*81/100,"UP/DOWN: ZAHL",Graphics.FONT_TINY,MUTED,w*70/100);
+        } else if(model.mode.equals("syncing")) {
+            centered(dc,h*40/100,"SYNC",Graphics.FONT_MEDIUM,AQUA,w*70/100);
+            centered(dc,h*57/100,model.lastMessage,Graphics.FONT_SMALL,WHITE,w*80/100);
         } else {
-            centered(dc,h*30/100,"COMPASS",Graphics.FONT_SMALL,AQUA,w*65/100);
-            categoryIcon(dc,cx-69,h*44/100,18);
-            categoryLabel(dc,h*44/100,cx+18,w*60/100,WHITE);
-            centered(dc,h*61/100,model.pomodoro?"POMODORO":"FREIER TIMER",Graphics.FONT_TINY,AQUA,w*70/100);
-            centered(dc,h*72/100,model.pomodoro?"25 / 5":"OHNE LIMIT",Graphics.FONT_LARGE,WHITE,w*70/100);
-            var bottom = model.lastMessage.equals("") ? model.dailyPomodoros.toString()+" POMODOROS HEUTE" : model.lastMessage;
-            centered(dc,h*86/100,bottom,Graphics.FONT_TINY,MUTED,w*70/100);
+            centered(dc,h*29/100,"COMPASS",Graphics.FONT_SMALL,AQUA,w*65/100);
+            categoryIcon(dc,cx-64,h*43/100,18);
+            categoryLabel(dc,h*43/100,cx+17,w*64/100);
+            if(model.pomodoro) {
+                // Tomato replaces redundant '25 / 5' Pomodoro explanation.
+                tomato(dc,cx-54,h*62/100);
+                drawTxt(dc,cx+18,h*63/100,"25:00",Graphics.FONT_LARGE,WHITE,w*47/100);
+                if(model.lastMessage.equals("")) { cycleRow(dc,h*82/100); }
+            } else {
+                centered(dc,h*61/100,"FREIER TIMER",Graphics.FONT_TINY,model.COLORS[model.index],w*65/100);
+                centered(dc,h*73/100,"00:00",Graphics.FONT_LARGE,WHITE,w*65/100);
+            }
+            if(!model.lastMessage.equals("")) {
+                centered(dc,h*82/100,model.lastMessage,Graphics.FONT_TINY,MUTED,w*72/100);
+            }
         }
     }
 }
@@ -464,17 +582,26 @@ class CompassInput extends WatchUi.InputDelegate {
                 else if (k == WatchUi.KEY_DOWN) { model.incDigit(-1); }
                 else if (k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) { model.nextDigit(); }
                 else if (k == WatchUi.KEY_ESC) { model.mode = "select"; }
+            } else if (model.mode.equals("hub")) {
+                if (k == WatchUi.KEY_UP) { model.hubIndex = (model.hubIndex+4)%5; }
+                else if (k == WatchUi.KEY_DOWN) { model.hubIndex = (model.hubIndex+1)%5; }
+                else if (k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) { model.openHubItem(); }
+                else if (k == WatchUi.KEY_ESC) { model.mode = "select"; }
+            } else if (model.mode.equals("today") || model.mode.equals("forecast")) {
+                if (k == WatchUi.KEY_ESC || k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) {
+                    model.mode = "hub";
+                }
             } else if (model.mode.equals("select")) {
-                if (k == WatchUi.KEY_UP) { model.index = (model.index+model.LABELS.size()-1)%model.LABELS.size(); }
-                else if (k == WatchUi.KEY_DOWN) { model.index = (model.index+1)%model.LABELS.size(); }
+                if (k == WatchUi.KEY_UP) { model.chooseCategory(-1); }
+                else if (k == WatchUi.KEY_DOWN) { model.chooseCategory(1); }
                 else if (k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) { model.begin(); }
-                else if (k == WatchUi.KEY_MENU) { model.pomodoro = !model.pomodoro; }
+                else if (k == WatchUi.KEY_MENU) { model.showHub(); }
                 else if (k == WatchUi.KEY_ESC || k == WatchUi.KEY_LAP) { model.sync(); }
             } else if (model.mode.equals("running")) {
                 if (k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) { model.pauseToggle(); }
                 else if (k == WatchUi.KEY_ESC) { model.openMenu(); }
             }
-        } catch(ex) { System.println("COMPASS 0.3.1 INPUT ERROR"); }
+        } catch(ex) { System.println("COMPASS 0.3.3 INPUT ERROR"); }
         model.redraw();
         return true;
     }
