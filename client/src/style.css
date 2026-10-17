@@ -266,3 +266,18 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .review-project-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #e9efea}
 .review-project-row:last-child{border-bottom:0}.review-project-row>span{min-width:0;overflow-wrap:anywhere}
 @media(max-width:650px){.review-project-row{align-items:start;flex-direction:column}.project-edit-actions{flex-direction:column}}
+
+/* 0.4.4: Forecast with three explicit columns (previous 2-column grid wrapped inspector). */
+@media (min-width:1260px){.forecast-layout{grid-template-columns:195px minmax(0,1fr) minmax(290px,340px);align-items:start}.forecast-inspector{min-width:0;grid-column:3;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}}
+@media (min-width:981px) and (max-width:1259px){.forecast-layout{grid-template-columns:195px minmax(0,1fr);align-items:start}.forecast-inspector{grid-column:1 / -1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
+.forecast-full,.forecast-inspector,.agenda-panel,.task-inspector{min-width:0;overflow-wrap:anywhere}
+.forecast-inspector .agenda-panel{max-width:100%;position:relative;z-index:0;box-sizing:border-box}
+.forecast-inspector .agenda-panel input,.forecast-inspector .agenda-panel textarea{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.forecast-inspector .agenda-panel:focus{outline:2px solid #86b7a1;outline-offset:2px}
+@media(max-width:980px){.forecast-inspector{grid-column:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.forecast-inspector{display:flex;flex-direction:column}}
+/* 0.4.4: interactive Dreams and precise status perspectives. */
+.dream-capture-shell select{max-width:210px;min-width:135px;border:1px solid #dfeae1;border-radius:9px;padding:10px;background:#fff;color:#315745}
+.dream-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}.dream-item{display:flex;align-items:center;gap:9px;width:100%;min-width:0;border:1px solid #e4eee7;background:#fff;border-radius:9px;padding:10px;text-align:left;color:#426b57;cursor:pointer}.dream-item span{flex:1;overflow-wrap:anywhere;font-size:12px}.dream-item.is-current,.dream-item:hover{background:#edf6ef;border-color:#a9c8b6}.dream-edit-form{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:12px}.dream-edit-form label{flex:1 1 240px;font-size:12px;color:#537560}.dream-edit-form input,.dream-edit-form select,.dream-edit-form textarea{display:block;box-sizing:border-box;width:100%;border-radius:9px;border:1px solid #dfe9e1;padding:9px;color:#345e45;background:#fff;margin-top:5px}.dream-edit-form button{align-self:center}
+.held-sections h3{color:#3e6b56;font-size:14px;margin:19px 0 9px}.held-project-link{display:flex;align-items:center;gap:9px;text-align:left;padding:10px 14px;margin:5px 0;border:1px solid #dfebe4;background:#f6faf7;border-radius:9px;color:#37634c;cursor:pointer;width:100%}.held-project-link:hover{background:#e8f4ec}.perspective-empty p{font-size:12px;line-height:1.65}.perspective-empty .secondary-btn{margin:7px 7px 0 0}
+@media(max-width:650px){.dream-capture-shell{display:flex;flex-direction:column;align-items:stretch}.dream-capture-shell select{max-width:none;width:100%}}

@@ -2,7 +2,7 @@ import './style.css';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
-import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor} from './tasks.js';
+import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords} from './tasks.js';
 
 registerSW({immediate:true});
 const app=document.getElementById('app');
@@ -12,6 +12,7 @@ let saveQueue=Promise.resolve();
 let calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let selectedDay=localDateString(new Date());
 let selectedInboxId=null;
+let selectedDreamId=null;
 let selectedTaskId=null;
 let selectedProjectId=null;
 let selectedAgendaEventId=null;
@@ -86,7 +87,7 @@ function eventAgendaPanel(){
  const title=String(event.summary||'');
  const person=title.match(/\b(?:mit|bei)\s+([\p{Lu}][\p{L}-]{2,})/u);
  const suggested=/\buko\b/i.test(title)?'uko':person?person[1].toLocaleLowerCase('de'):(title.match(/[\p{L}\p{N}]{3,}/u)?.[0]?.toLocaleLowerCase('de')||'');
- return `<section class="work-card agenda-panel" aria-label="Besprechungsagenda"><div class="work-heading"><span>${ico('users',19)} Gesprächsvorbereitung</span><button type="button" class="secondary-btn" data-action="agenda-close">Schließen</button></div>
+ return `<section id="agenda-details" tabindex="-1" class="work-card agenda-panel" aria-label="Besprechungsagenda"><div class="work-heading"><span>${ico('users',19)} Gesprächsvorbereitung</span><button type="button" class="secondary-btn" data-action="agenda-close">Schließen</button></div>
  <h3>${h(event.summary||'Termin')}</h3><p class="muted-line">${h(calendarDate(event))} · ${h(calendarTime(event))} · Google Calendar (nur lesen)</p>
  ${notes.length?`<div class="agenda-items">${notes.map(x=>`<div class="agenda-item">${ico('checkSquare',16)} <span>${h(x.title)}</span><small>${x.tags?.map(t=>'#'+h(t)).join(' ')||''}</small></div>`).join('')}</div>`:'<p class="muted-line">Noch keine offenen Gesprächspunkte mit passenden Tags.</p>'}
  <form id="agenda-note-form" class="project-form"><input type="hidden" name="tag" value="${h(suggested)}"><label>Neuen Agendapunkt notieren<input name="title" required maxlength="180" placeholder="Was möchte ich besprechen?"/></label><button type="submit" class="primary-btn">${ico('plus',16)} Agendapunkt hinzufügen</button></form>
@@ -219,7 +220,7 @@ const symbol = {
   bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>'
 };
 function ico(name, size=19) {return `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${symbol[name]||symbol.compass}</svg>`;}
-const rows=()=>state?Object.values(state.records).filter(r=>!r.deleted).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)):[];
+const rows=()=>inboxRecords(state);
 const disabledButton=(label='Öffnen')=>`<button class="ghost-cta" type="button" disabled aria-label="${h(label)} – noch nicht freigeschaltet">${h(label)} ${ico('arrow',13)}</button>`;
 function navItem(id,label,iconName,{disabled=false,count=null}={}) {
  const attr=disabled?'disabled aria-disabled="true" title="Noch nicht freigeschaltet"':`data-tab="${id}"`;
@@ -373,9 +374,18 @@ function workflowScreen(which){
  const tasks=which==='next'?nextActions(state):which==='flagged'?flaggedTasks(state):heldTasks(state);
  const shown=which==='next'&&contextFilter?contextsFor(state,contextFilter):tasks;
  const availableContexts=[...new Set(nextActions(state).flatMap(t=>t.contextTags||[]))].sort((a,b)=>a.localeCompare(b,'de'));
- return chrome(`<div class="workflow-layout"><section class="work-card"><div class="work-heading"><span>${ico(which==='flagged'?'flag':which==='hold'?'pause':'target',20)} ${titles[which]}</span><span class="quiet-tag">${shown.length} offen</span></div>
+ const waiting=which==='hold'?shown.filter(t=>t.workflow==='waiting'):[];
+ const paused=which==='hold'?shown.filter(t=>t.workflow==='hold'):[];
+ const blocked=which==='hold'?blockedByProject(state):[];
+ const pausedProjects=which==='hold'?Object.values(state?.projects||{}).filter(p=>p.status==='hold'):[];
+ const perspectiveItems=which==='hold'?[...shown,...blocked]:shown;
+ if(!perspectiveItems.some(t=>t.id===selectedTaskId))selectedTaskId=null;
+ const noActions=which==='next'&&!shown.length?`<div class="task-empty perspective-empty"><strong>${contextFilter?'Für diesen Kontext ist gerade nichts verfügbar.':'Keine verfügbaren Next Actions.'}</strong><p>Prüfe die Inbox, kläre deine nächsten Schritte im Review oder lege eine konkrete Aufgabe an. Verschobene und pausierte Aufgaben erscheinen hier nicht.</p><button type="button" class="secondary-btn" data-tab="review">Inbox im Review klären</button> <button type="button" class="secondary-btn" data-tab="inbox">Inbox öffnen</button></div>`:'';
+ return chrome(`<div class="workflow-layout"><section class="work-card"><div class="work-heading"><span>${ico(which==='flagged'?'flag':which==='hold'?'pause':'target',20)} ${titles[which]}</span><span class="quiet-tag">${perspectiveItems.length} offen</span></div>
  ${which==='next'?`<div class="context-filter"><label>Aktueller Kontext <select id="context-filter"><option value="">Alle verfügbaren Next Actions</option>${availableContexts.map(c=>`<option value="${h(c)}" ${contextFilter===c?'selected':''}>@${h(c)}</option>`).join('')}</select></label></div>`:''}
- ${taskCreateForm('')}${taskList(shown,which)}</section><aside class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Aufgabendetails</span></div>${taskEditor()}</aside></div>`);
+ ${which==='flagged'?'<p class="muted-line">Hier erscheinen nur Aufgaben, die du ausdrücklich mit der Flagge markiert hast. Über das Fahnensymbol kannst du die Markierung sofort entfernen.</p>':''}
+ ${which==='hold'?`<div class="held-sections"><h3>Waiting For · ${waiting.length}</h3>${taskList(waiting,'waiting')}<h3>On Hold · ${paused.length}</h3>${taskList(paused,'paused')}<h3>Durch pausierte Projekte zurückgestellt · ${blocked.length}</h3>${taskList(blocked,'project-hold')}<h3>Pausierte Projekte · ${pausedProjects.length}</h3>${pausedProjects.length?pausedProjects.map(p=>`<button type="button" class="held-project-link" data-action="hold-open-project" data-id="${h(p.id)}">${ico('folder',15)} ${h(p.title)} ${ico('arrow',13)}</button>`).join(''):'<p class="muted-line">Keine Projekte pausiert.</p>'}</div>`:`${taskCreateForm('')}${taskList(shown,which,which==='next')}${noActions}`}
+ </section><aside class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Aufgabendetails</span></div>${taskEditor()}</aside></div>`);
 }
 function projectScreen(){
  const projects=Object.values(state?.projects||{}).sort((a,b)=>['active','hold','completed'].indexOf(a.status)-['active','hold','completed'].indexOf(b.status)||a.title.localeCompare(b.title,'de'));
@@ -388,18 +398,16 @@ function projectScreen(){
  <div class="project-details">${current?`<section class="work-card"><div class="work-heading"><span>${ico('target',18)} Gewünschtes Ergebnis</span><span class="quiet-tag">${current.status==='active'?'Aktiv':current.status==='hold'?'On Hold':'Abgeschlossen'}</span></div><form id="project-edit-form" class="task-edit-form" data-id="${h(current.id)}"><label>Projektname<input name="title" required maxlength="140" value="${h(current.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(current.outcome||'')}</textarea></label><div class="project-edit-grid"><label>Bereich<select name="category">${categoryOptions(current.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${current.status===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Deadline (optional)<input name="dueDate" type="date" value="${h(current.dueDate||'')}"></label><label>Review alle (Tage)<input name="reviewIntervalDays" type="number" min="1" max="90" value="${current.reviewIntervalDays||7}"/></label></div><div class="project-review-info">Letzter Review: ${current.reviewedAt?h(new Date(current.reviewedAt).toLocaleDateString('de-AT')):'Noch nicht geprüft'} · ${projectNeedsReview(current)?'Review fällig':'Aktuell'}</div><div class="project-edit-actions"><button class="primary-btn" type="submit">Projekt speichern</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(current.id)}">${ico('checkSquare',15)} Jetzt geprüft</button></div></form>${state.projectConflicts[current.id]?`<div class="task-conflict">Konflikt mit anderem Gerät. <button data-action="project-conflict-remote" data-id="${h(current.id)}">Cloud-Version übernehmen</button><button data-action="project-conflict-local" data-id="${h(current.id)}">Meine Version übernehmen</button></div>`:''}</section>
  <section class="work-card"><div class="work-heading"><span>${ico('target',18)} Nächste Schritte</span><span class="quiet-tag">${nextCount} ausführbar</span></div><div class="progress-hint"><span>Abgeschlossene Aufgaben: ${items.filter(t=>t.completed).length} von ${items.length}</span><div class="progress-track"><span style="width:${items.length?Math.round(100*items.filter(t=>t.completed).length/items.length):0}%"></span></div></div>${current.status==='active'&&nextCount===0?'<div class="project-warning">Dieses aktive Projekt hat noch keine nächste ausführbare Handlung.</div>':''}${taskCreateForm('',current.id)}${taskList(items,'project')}</section><section class="work-card">${taskEditor()}</section>`:'<section class="work-card"><div class="task-empty">Lege zuerst dein erstes Projekt an.</div></section>'}</div></div>`);
 }
+const DREAM_CATEGORIES=[['lernen','Lernen & Weiterbilden','book'],['lesen','Lesen & Entdecken','bookmark'],['erleben','Erleben & Ausprobieren','suitcase'],['ideen','Projekte & Ideen','spark']];
+function dreamCategory(r){return DREAM_CATEGORIES.find(([key])=>(r.tags||[]).includes('dream-'+key))?.[0]||'ideen';}
 function somedayScreen(){
- return chrome(`<div class="dream-layout"><section class="dream-intro work-card">
- <div class="dream-lead"><span class="dream-symbol">${ico('spark',31)}</span><div><p class="little-overline">DEIN DREAM SPACE</p><h2>Möglichkeiten dürfen warten.</h2><p>Eine Ausbildung, ein Buch, die Tauchweiterbildung oder eine Idee. Sammle, was dich inspiriert – ohne Datum, ohne Prioritätsdruck und ohne dass es automatisch in „Heute“ erscheint.</p></div></div>
- <div class="dream-capture-shell"><input type="text" disabled placeholder="Neue Idee, Wunsch oder Inspiration …" aria-label="Someday / Maybe erfassen (noch nicht verfügbar)"/><button type="button" class="primary-btn" disabled>${ico('plus',16)} Sammeln</button></div>
- <p class="dream-caption">Bis die Sammlung freigeschaltet ist, kannst du Gedanken über die Schnellerfassung sicher in die Inbox geben.</p></section>
- <div class="dream-grid">${[
- ['Lernen & Weiterbilden','book','Kurse, Seminare, Zertifikate und neue Kompetenzen'],
- ['Lesen & Entdecken','bookmark','Interessante Artikel, Bücher, Podcasts und Links'],
- ['Erleben & Ausprobieren','suitcase','Reisen, Tauchen, Tanzen und persönliche Wünsche'],
- ['Projekte & Ideen','spark','Vorhaben, für die gerade noch keine Zeit ist']
- ].map(([title,iconName,desc])=>`<section class="dream-category work-card"><div class="work-heading"><span>${ico(iconName,19)} ${h(title)}</span><span class="quiet-tag">0</span></div><p>${h(desc)}</p><div class="dream-empty">Noch nichts gesammelt</div></section>`).join('')}</div>
- <section class="work-card dream-review"><div class="work-heading"><span>${ico('sync',18)} In Ruhe wiederentdecken</span><span class="quiet-tag">Review</span></div><p>Diese Sammlung bleibt aus Today und Forecast heraus. Du kannst sie später in deinem Wochenreview oder bei einem gelegentlichen Inspirations-Review sichten. Nur was du bewusst aktivierst, wird zu einem Projekt oder einer Next Action.</p><button disabled type="button" class="soft-button">Someday-Review öffnen</button></section></div>`);
+ const dreams=dreamRecords(state);
+ const current=dreams.find(r=>r.id===selectedDreamId)||dreams[0]||null;
+ return chrome(`<div class="dream-layout"><section class="dream-intro work-card"><div class="dream-lead"><span class="dream-symbol">${ico('spark',31)}</span><div><p class="little-overline">DEIN DREAM SPACE</p><h2>Möglichkeiten dürfen warten.</h2><p>Ideen bewusst aufheben, ohne sie zu einer Verpflichtung zu machen. Nur du entscheidest, wann du sie aktivierst.</p></div></div>
+ <form id="dream-create-form" class="dream-capture-shell"><input name="title" type="text" required maxlength="1000" placeholder="Neue Idee, Wunsch oder Inspiration …" aria-label="Someday / Maybe erfassen"/><select name="category" aria-label="Dreams-Kategorie">${DREAM_CATEGORIES.map(([key,title])=>`<option value="${key}">${h(title)}</option>`).join('')}</select><button type="submit" class="primary-btn">${ico('plus',16)} Sammeln</button></form>
+ <p class="dream-caption">Diese Ideen werden mit dem Tag #dreams geräteübergreifend synchronisiert und erscheinen nicht mehr in der Inbox.</p></section>
+ <div class="dream-grid">${DREAM_CATEGORIES.map(([key,title,iconName])=>{const entries=dreams.filter(r=>dreamCategory(r)===key);return `<section class="dream-category work-card"><div class="work-heading"><span>${ico(iconName,19)} ${h(title)}</span><span class="quiet-tag">${entries.length}</span></div>${entries.length?`<div class="dream-list">${entries.map(r=>`<button type="button" class="dream-item ${current?.id===r.id?'is-current':''}" data-action="dream-select" data-id="${h(r.id)}">${ico('spark',14)}<span>${h(r.title)}</span>${ico('arrow',13)}</button>`).join('')}</div>`:'<div class="dream-empty">Noch nichts gesammelt</div>'}</section>`}).join('')}</div>
+ <section class="work-card dream-review"><div class="work-heading"><span>${ico('sync',18)} Dreams durchsehen</span><span class="quiet-tag">${dreams.length} Ideen</span></div>${current?`<form id="dream-edit-form" data-id="${h(current.id)}" class="dream-edit-form"><label>Gedanke<input name="title" required maxlength="1000" value="${h(current.title)}"/></label><label>Notizen<textarea name="note" rows="3" maxlength="10000">${h(current.note||'')}</textarea></label><label>Kategorie<select name="category">${DREAM_CATEGORIES.map(([key,title])=>`<option value="${key}" ${dreamCategory(current)===key?'selected':''}>${h(title)}</option>`).join('')}</select></label><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="dream-to-inbox" data-id="${h(current.id)}">Zurück in die Inbox</button><button type="button" class="secondary-btn" data-action="dream-to-next" data-id="${h(current.id)}">Als Next Action aktivieren</button></form>`:'<p class="muted-line">Noch keine Dreams vorhanden. Du kannst hier jederzeit eine Idee aufnehmen.</p>'}</section></div>`);
 }
 function weatherCondition(code){if(code===0)return 'Klar';if(code<=3)return 'Bewölkt';if(code<=48)return 'Nebel';if(code<=67)return 'Regen';if(code<=77)return 'Schnee';if(code<=82)return 'Schauer';return 'Gewitter';}
 async function loadWeather(city){
@@ -455,7 +463,7 @@ function clarifyControls(currentId=null){
  const saved=(currentId&&state?.reviewMeta?.[currentId])||{};
  const energy=[['low','Wenig',1],['medium','Mittel',2],['high','Viel',3]];
  const attentions=[['routine','Routine','sync'],['clarity','Geistige Klarheit','sun'],['deep','Tiefes Denken','book']];
- return `<div class="clarify-options" aria-label="Klärung und Energie"><div class="clarify-choice"><h3>Wohin gehört es?</h3><div class="choice-row">${[['next','Next Action'],['waiting','Waiting For'],['hold','On Hold']].map(([value,label])=>`<button type="button" data-action="review-clarify:${value}" data-id="${h(currentId||'')}" class="choice-pill" ${currentId?'':'disabled'}>${label}</button>`).join('')}<span class="muted-line">Weitere Ziele können als Projekte oder Ideen angelegt werden.</span></div></div>
+ return `<div class="clarify-options" aria-label="Klärung und Energie"><div class="clarify-choice"><h3>Wohin gehört es?</h3><div class="choice-row">${[['next','Next Action'],['waiting','Waiting For'],['hold','On Hold'],['dreams','Dreams']].map(([value,label])=>`<button type="button" data-action="review-clarify:${value}" data-id="${h(currentId||'')}" class="choice-pill" ${currentId?'':'disabled'}>${label}</button>`).join('')}<span class="muted-line">Weitere Ziele können als Projekte oder Ideen angelegt werden.</span></div></div>
  <div class="clarify-choice"><h3>Wie viel Energie braucht es?</h3><div class="choice-row review-energy-choices">${energy.map(([key,label,level])=>`<button type="button" class="review-choice review-energy-${key} ${saved.energy===key?'chosen':''}" aria-pressed="${saved.energy===key}" data-action="review-energy:${key}" data-id="${h(currentId||'')}" ${currentId?'':'disabled'}><span class="mini-battery battery-${level}"><i></i></span>${label}</button>`).join('')}</div></div>
  <div class="clarify-choice"><h3>Welche Art von Aufmerksamkeit?</h3><div class="choice-row">${attentions.map(([key,label,icon])=>`<button type="button" class="review-choice review-attention ${saved.attention===key?'chosen':''}" aria-pressed="${saved.attention===key}" data-action="review-attention:${key}" data-id="${h(currentId||'')}" ${currentId?'':'disabled'}>${ico(icon,15)} ${label}</button>`).join('')}</div></div>
  <small class="review-local-caption">Energie und Aufmerksamkeit werden verschlüsselt in diesem lokalen Tresor gespeichert. Die Synchronisierung dieser Review-Merkmale auf andere Geräte folgt später.</small>
@@ -580,6 +588,16 @@ function bind() {
     if(!validLocalTask(t)){toast('Agendapunkt prüfen.',true);return;}
     await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;});toast('Agendapunkt für das Meeting angelegt.');
   };
+  const dreamCreate=app.querySelector('#dream-create-form');if(dreamCreate)dreamCreate.onsubmit=async ev=>{
+    ev.preventDefault();const data=new FormData(dreamCreate),title=String(data.get('title')||'').trim(),category=String(data.get('category')||'ideen');
+    if(!title||title.length>1000||!DREAM_CATEGORIES.some(([key])=>key===category)){toast('Dreams-Eingabe prüfen.',true);return;}
+    const id=crypto.randomUUID();await mutate(s=>{const r={id,title,note:'',tags:['dreams','dream-'+category],deleted:false,updatedAt:stamp()};s.records[id]=r;s.pending.push(makeMutation(r));s.history.push({type:'dream-captured',at:stamp(),id});});selectedDreamId=id;toast('Idee in Dreams gespeichert.');
+  };
+  const dreamEdit=app.querySelector('#dream-edit-form');if(dreamEdit)dreamEdit.onsubmit=async ev=>{
+    ev.preventDefault();const id=dreamEdit.dataset.id,fd=new FormData(dreamEdit);const title=String(fd.get('title')||'').trim(),note=String(fd.get('note')||'').trim(),category=String(fd.get('category')||'ideen');
+    if(!title||title.length>1000||note.length>10000||!DREAM_CATEGORIES.some(([key])=>key===category)){toast('Dreams-Felder prüfen.',true);return;}
+    await mutate(s=>{const r=s.records[id];if(!r||r.deleted)return;r.title=title;r.note=note;r.tags=parseTags(['dreams','dream-'+category,...(r.tags||[]).filter(t=>t!=='dreams'&&!t.startsWith('dream-'))]);r.updatedAt=stamp();s.pending.push(makeMutation(r));});toast('Dream aktualisiert.');
+  };
   const editForm=app.querySelector('#inbox-edit-form');if(editForm)editForm.onsubmit=async ev=>{
     ev.preventDefault();const id=editForm.dataset.id;const form=new FormData(editForm);
     const title=String(form.get('title')||'').trim(),note=String(form.get('note')||'').trim(),tags=parseTags(form.get('tags'));
@@ -603,7 +621,8 @@ async function runAction(action,id) {
   lastActivity=Date.now();
   try {
     if(action.startsWith('review-clarify:')){
-      const workflow=action.split(':')[1],r=state?.records?.[id];if(!r||r.deleted||!['next','waiting','hold'].includes(workflow))return;
+      const workflow=action.split(':')[1],r=state?.records?.[id];if(!r||r.deleted||!['next','waiting','hold','dreams'].includes(workflow))return;
+      if(workflow==='dreams'){await mutate(s=>{const record=s.records[id];record.tags=parseTags(['dreams','dream-ideen',...(record.tags||[]).filter(t=>t!=='dreams'&&!t.startsWith('dream-'))]);record.updatedAt=stamp();s.pending.push(makeMutation(record));});selectedDreamId=id;tab='someday';toast('Idee nach Dreams verschoben.');return;}
       if(r.title.length>180){toast('Bitte den Inbox-Titel zunächst auf 180 Zeichen kürzen.',true);return;}
       const task={id:crypto.randomUUID(),title:r.title,note:(r.note||'').slice(0,3000),plannedDate:null,dueDate:null,category:'Allgemein',completed:false,archived:false,workflow,flagged:false,projectId:null,tags:r.tags||[],contextTags:[],deferUntil:null,estimateMinutes:null,updatedAt:stamp()};
       if(!validLocalTask(task)){toast('Eintrag zuerst prüfen.',true);return;}
@@ -622,8 +641,21 @@ async function runAction(action,id) {
        });
        return;
     }
+    if(action==='dream-select'){if(!state?.records?.[id])return;selectedDreamId=id;render();return;}
+    if(action==='dream-to-inbox'){
+      if(!state?.records?.[id])return;
+      await mutate(s=>{const r=s.records[id];r.tags=(r.tags||[]).filter(t=>t!=='dreams'&&!t.startsWith('dream-'));r.updatedAt=stamp();s.pending.push(makeMutation(r));});selectedDreamId=null;selectedInboxId=id;tab='inbox';toast('Idee liegt wieder in der Inbox.');return;
+    }
+    if(action==='dream-to-next'){
+      const r=state?.records?.[id];if(!r||r.deleted||!r.tags?.includes('dreams'))return;
+      if(r.title.length>180){toast('Bitte Titel vor der Aktivierung auf höchstens 180 Zeichen kürzen.',true);return;}
+      const t={id:crypto.randomUUID(),title:r.title,note:(r.note||'').slice(0,3000),plannedDate:null,dueDate:null,category:'Allgemein',completed:false,archived:false,workflow:'next',flagged:false,projectId:null,tags:parseTags((r.tags||[]).filter(x=>x!=='dreams'&&!x.startsWith('dream-'))),contextTags:[],deferUntil:null,estimateMinutes:null,updatedAt:stamp()};
+      if(!validLocalTask(t)){toast('Eintrag konnte nicht aktiviert werden.',true);return;}
+      await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;const dream=s.records[id];dream.deleted=true;dream.updatedAt=stamp();s.pending.push(makeMutation(dream));});selectedDreamId=null;selectedTaskId=t.id;tab='next';toast('Dream als Next Action aktiviert.');return;
+    }
+    if(action==='hold-open-project'){if(!state?.projects?.[id])return;selectedProjectId=id;selectedTaskId=null;tab='projects';render();return;}
     if(action==='calendar-toggle-blocks'){showCalendarBlocks=!showCalendarBlocks;render();return;}
-    if(action==='agenda-open'){selectedAgendaEventId=id;render();return;}
+    if(action==='agenda-open'){selectedAgendaEventId=id;render();requestAnimationFrame(()=>{const panel=app.querySelector('#agenda-details');if(panel){panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest',behavior:'smooth'});}});return;}
     if(action==='agenda-close'){selectedAgendaEventId=null;render();return;}
     if(action==='project-select'){selectedProjectId=id;selectedTaskId=null;render();return;}
     if(action==='project-reviewed'){if(!state?.projects?.[id])return;await mutate(s=>{s.projects[id].reviewedAt=stamp();s.projectPending[id]=true;});toast('Projekt-Review dokumentiert.');return;}
@@ -777,7 +809,7 @@ async function syncNow() {
   busy=true;render();
   try {
     const health=await request(config.apiUrl,authToken,'/api/health');
-    if(health.apiVersion!==4||health.schema?.ready!==true)throw new Error(`Cloud-Datenbank noch nicht bereit: Worker 0.4.3 und Migration ${health.schema?.requiredMigration||'0005/0006'} prüfen. Lokale Änderungen bleiben sicher.`);
+    if(health.apiVersion!==4||health.schema?.ready!==true)throw new Error(`Cloud-Datenbank noch nicht bereit: Worker 0.4.4 und Migration ${health.schema?.requiredMigration||'0005/0006'} prüfen. Lokale Änderungen bleiben sicher.`);
     // No concurrent writes while in flight: mutations queue before a request starts.
     let rounds=0;
     while(state.pending.length&&rounds++<100) {
