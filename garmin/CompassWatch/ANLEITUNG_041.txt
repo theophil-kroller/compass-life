@@ -1,0 +1,12 @@
+Compass Focus Garmin 0.4.1 – fēnix 7S (Test-Build)
+
+Lokaler PATCH: source/CompassApp.mc ins funktionierende Projekt kopieren.
+Garmin-Developer-Key NICHT nach GitHub hochladen.
+Ctrl+F5: Simulator. Monkey C: Build for Device -> fenix7s: für echte Uhr.
+MENU lang / Simulator M: Fokus, Heute, Deadlines, Sync.
+In Heute/Deadlines: UP/DOWN durch Einträge, START Detail, UP/DOWN Detailtext scrollen,
+BACK zurück. Die Serverversion 0.4.1 ist für 60-Tage-Fristen notwendig.
+Echte Garmin mit *.prg per USB nach GARMIN/APPS bespielen.
+
+Für Einzelheiten siehe docs/COMPASS_0.4.1_GARMIN_REVIEW_CALENDAR.md
+Connect-IQ-Build und echte Hardware wurden hier noch NICHT getestet.

@@ -1,4 +1,4 @@
-// Compass Focus 0.3.3 — fēnix 7S (240 x 240)
+// Compass Focus 0.4.1 — fēnix 7S (240 x 240)
 // Built from D4: one InputDelegate, String.equals() comparisons.
 // Preview build: compile and test with Garmin Connect IQ SDK 9.2.0.
 using Toybox.Application;
@@ -39,7 +39,7 @@ class CompassModel {
     // Time-limited deep-work sessions vs elapsed-time tracking by category.
     const DEFAULT_POMODORO = [true, true, true, false, false, true, false, false];
 
-    var mode = "select"; // select / hub / today / forecast / running / session-menu / pairing / syncing
+    var mode = "select"; // select / hub / today / forecast / detail / running / session-menu / pairing / syncing
     var hubIndex = 0;
     // Garmin agenda screens remain empty until Compass has actual dated tasks.
     // Never invent/transform undated inbox captures into scheduled tasks.
@@ -75,11 +75,17 @@ class CompassModel {
     var requestStartedAt = 0;
     var planningCache = null;
     var agendaIndex = 0;
+    var detailOrigin = "forecast";
+    var detailOffset = 0;
+    var lastPlanningAttemptEpoch = 0;
+    var lastPlanningFetchEpoch = 0;
 
 
     function initialize() {
         token = Storage.getValue("watchToken");
         planningCache = Storage.getValue("watchPlanning");
+        var cacheEpoch = Storage.getValue("planningFetchedEpoch");
+        lastPlanningFetchEpoch = cacheEpoch == null ? 0 : cacheEpoch;
         var saved = Storage.getValue("sessions");
         queue = saved == null ? [] : saved;
         var d = Storage.getValue("pomodoroDay");
@@ -108,11 +114,17 @@ class CompassModel {
     function showHub() { mode = "hub"; hubIndex = 0; redraw(); }
     function openHubItem() {
         if (hubIndex == 0) { mode = "select"; }
-        else if (hubIndex == 1) { mode = "today"; agendaIndex=0; }
-        else if (hubIndex == 2) { mode = "forecast"; agendaIndex=0; }
-        else if (hubIndex == 3) { pomodoro = !pomodoro; mode = "select"; lastMessage = ""; }
-        else if (hubIndex == 4) { mode = "select"; sync(); return; }
+        else if (hubIndex == 1) { mode = "today"; agendaIndex=0; refreshAgendaIfStale(); }
+        else if (hubIndex == 2) { mode = "forecast"; agendaIndex=0; refreshAgendaIfStale(); }
+        else if (hubIndex == 3) { mode = "select"; sync(); return; }
         redraw();
+    }
+    // A stale snapshot updates quietly; never hold the agenda UI hostage.
+    function refreshAgendaIfStale() {
+        if (token != null && !waiting && now()-lastPlanningAttemptEpoch > 300 &&
+            (lastPlanningFetchEpoch == 0 || now()-lastPlanningFetchEpoch > 900)) {
+            fetchPlanning();
+        }
     }
     function chooseCategory(dir) {
         index = (index + dir + LABELS.size()) % LABELS.size();
@@ -293,6 +305,9 @@ class CompassModel {
         if (mode.equals("syncing")) { mode = "select"; }
         if (status == 200 && data instanceof Lang.Dictionary && data.hasKey("token")) {
             token = data["token"]; Storage.setValue("watchToken", token); lastMessage = "Verbunden";
+            redraw();
+            // First successful pairing also fetches the planning snapshot.
+            fetchPlanning(); return;
         } else { lastMessage = "Kopplung fehlgeschlagen"; }
         redraw();
     }
@@ -334,8 +349,12 @@ class CompassModel {
     function fetchPlanning() {
         if (token == null) { enterPair(); return; }
         if (waiting) { return; }
-        waiting = true; requestStartedAt = now();
-        mode = "syncing"; lastMessage = "Lade Planung ..."; redraw();
+        waiting = true; requestStartedAt = now(); lastPlanningAttemptEpoch = now();
+        // Keep cached agenda visible during a background refresh.
+        if (!mode.equals("today") && !mode.equals("forecast") && !mode.equals("detail")) {
+            mode = "syncing";
+        }
+        lastMessage = "Lade Planung ..."; redraw();
         try {
             var day = dateKey(); // yyyy-m-d -> normalize to yyyy-mm-dd
             var info = Gregorian.info(Time.now(),Time.FORMAT_SHORT);
@@ -357,14 +376,17 @@ class CompassModel {
         if (mode.equals("syncing")) { mode = "select"; }
         if (status == 200 && data instanceof Lang.Dictionary && data.hasKey("today") && data.hasKey("deadlines")) {
             planningCache = data;
-            try { Storage.setValue("watchPlanning", data); } catch(ex) { }
+            lastPlanningFetchEpoch = now();
+            try { Storage.setValue("watchPlanning", data);
+                  Storage.setValue("planningFetchedEpoch", lastPlanningFetchEpoch); } catch(ex) { }
             lastMessage = "Planung aktualisiert";
         } else { lastMessage = status == 401 ? "Bitte neu koppeln" : "Offline - letzter Stand"; }
         redraw();
     }
     function agendaItems() {
         if (planningCache == null) { return []; }
-        var key = mode.equals("forecast") ? "deadlines" : "today";
+        var sourceMode = mode.equals("detail") ? detailOrigin : mode;
+        var key = sourceMode.equals("forecast") ? "deadlines" : "today";
         if (!planningCache.hasKey(key)) { return []; }
         var value = planningCache[key];
         return value == null ? [] : value;
@@ -544,40 +566,119 @@ class CompassView extends WatchUi.View {
     function hubItem(n) {
         if (n==0) { return "FOKUS"; }
         if (n==1) { return "HEUTE"; }
-        if (n==2) { return "FORECAST"; }
-        if (n==3) { return "TIMER-MODUS"; }
-        return "SYNCHRONISIEREN";
+        if (n==2) { return "DEADLINES"; }
+        return "SYNC";
     }
     function drawHub(dc,w,h) {
         var cx=w/2;
-        centered(dc,h*29/100,"COMPASS",Graphics.FONT_MEDIUM,AQUA,w*70/100);
-        // Three visible entries on a round face, centered on current selection.
+        centered(dc,h*29/100,"COMPASS",Graphics.FONT_SMALL,AQUA,w*70/100);
+        // All menu rows stay clear of the COMPASS header and outer circle.
         for (var off=-1;off<=1;off++) {
-            var n=(model.hubIndex+off+5)%5;
-            var y=h*(51+off*16)/100;
+            var n=(model.hubIndex+off+4)%4;
+            var y=h*(59+off*14)/100;
             if (off==0) {
-                pen(dc,TRACK); dc.fillRoundedRectangle(cx-88,y-17,176,34,4);
-                pen(dc,AQUA); dc.fillRectangle(cx-73,y+17,146,2);
+                pen(dc,TRACK); dc.fillRoundedRectangle(cx-86,y-15,172,30,4);
+                pen(dc,AQUA); dc.fillRectangle(cx-72,y+15,144,2);
             }
-            centered(dc,y,hubItem(n),Graphics.FONT_SMALL,off==0?WHITE:MUTED,w*73/100);
+            centered(dc,y,hubItem(n),Graphics.FONT_TINY,off==0?WHITE:MUTED,w*72/100);
         }
     }
+    function shortDate(iso) {
+        if (iso == null || iso.length() < 10) { return "Für heute"; }
+        return iso.substring(8,10)+"."+iso.substring(5,7)+"."+iso.substring(0,4);
+    }
+    function daysUntil(iso) {
+        if (iso == null) { return 9999; }
+        try {
+            var today=Gregorian.info(Time.now(), Time.FORMAT_SHORT);
+            var present=Gregorian.moment({:year=>today.year, :month=>today.month, :day=>today.day});
+            var yr=iso.substring(0,4).toNumber();
+            var mo=iso.substring(5,7).toNumber();
+            var da=iso.substring(8,10).toNumber();
+            var deadline=Gregorian.moment({:year=>yr, :month=>mo, :day=>da});
+            return (deadline.value()-present.value())/86400;
+        } catch(ex) { return 9999; }
+    }
+    function urgencyColor(iso) {
+        var days=daysUntil(iso);
+        if (days <= 0) { return 0xE46F71; }
+        if (days <= 2) { return GOLD; }
+        return MUTED;
+    }
+    function calendarMark(dc,cx,cy,color) {
+        pen(dc,color);dc.setPenWidth(2);
+        dc.drawRectangle(cx-9,cy-9,18,17);
+        dc.drawLine(cx-9,cy-3,cx+9,cy-3);
+        dc.drawLine(cx-5,cy-12,cx-5,cy-6);
+        dc.drawLine(cx+5,cy-12,cx+5,cy-6);
+        dc.setPenWidth(1);
+    }
+    // Wrap using actual Connect IQ glyph widths; prefer breaking at word boundaries.
+    function titleLines(dc,title,maxPx) {
+        var result=[];
+        var current="";
+        var space=-1;
+        for (var i=0;i<title.length();i++) {
+            var c=title.substring(i,i+1);
+            if (c.equals(" ")) { space=current.length(); }
+            current+=c;
+            if (dc.getTextWidthInPixels(current,Graphics.FONT_TINY)>maxPx && current.length()>1) {
+                if (space>0) {
+                    result.add(current.substring(0,space));
+                    current=current.substring(space+1,current.length());
+                } else {
+                    result.add(current.substring(0,current.length()-1));
+                    current=c;
+                }
+                space=-1;
+            }
+        }
+        if (current.length()>0) { result.add(current); }
+        return result;
+    }
     function drawAgendaEmpty(dc,w,h,isForecast) {
-        centered(dc,h*28/100,isForecast?"DEADLINES":"HEUTE",Graphics.FONT_MEDIUM,AQUA,w*72/100);
+        var head=isForecast?"DEADLINES":"HEUTE";
+        centered(dc,h*29/100,head,Graphics.FONT_SMALL,AQUA,w*72/100);
         var items=model.agendaItems();
         if (items.size() == 0) {
-            centered(dc,h*48/100,"Keine Einträge",Graphics.FONT_SMALL,WHITE,w*76/100);
-            centered(dc,h*65/100,model.planningCache==null?"Noch nicht geladen":"Letzter Abgleich",Graphics.FONT_TINY,MUTED,w*78/100);
-            centered(dc,h*73/100,"in Compass syncen",Graphics.FONT_TINY,MUTED,w*78/100);
+            centered(dc,h*47/100,"Keine Einträge",Graphics.FONT_SMALL,WHITE,w*76/100);
+            centered(dc,h*65/100,model.planningCache==null?"Noch nicht geladen":"Keine offenen Aufgaben",Graphics.FONT_TINY,MUTED,w*78/100);
+            centered(dc,h*74/100,"BACK zum Menü",Graphics.FONT_TINY,MUTED,w*73/100);
             return;
         }
-        var task = items[model.agendaIndex % items.size()];
-        var title = task["title"];
-        if (title.length() > 21) { title = title.substring(0,19)+".."; }
-        centered(dc,h*48/100,title,Graphics.FONT_SMALL,WHITE,w*78/100);
-        var due = task["dueDate"];
-        centered(dc,h*60/100,due==null?"Für heute":due,Graphics.FONT_TINY,model.COLORS[model.index],w*76/100);
-        centered(dc,h*74/100,(model.agendaIndex%items.size()+1).toString()+" / "+items.size().toString(),Graphics.FONT_SMALL,MUTED,w*76/100);
+        var task=items[model.agendaIndex%items.size()];
+        var title=task["title"];
+        var due=task["dueDate"];
+        var col=urgencyColor(due);
+        if (isForecast) { calendarMark(dc,w/2,h*40/100,col); }
+        var lines=titleLines(dc,title,w*73/100);
+        var shown=lines.size()>2?2:lines.size();
+        for (var k=0;k<shown;k++) {
+            var text=lines[k];
+            if (k==1 && lines.size()>2) { text=text+"…"; }
+            centered(dc,h*(51+k*10)/100,text,Graphics.FONT_TINY,WHITE,w*76/100);
+        }
+        centered(dc,h*72/100,shortDate(due),Graphics.FONT_TINY,col,w*72/100);
+        centered(dc,h*83/100,(model.agendaIndex%items.size()+1).toString()+" / "+items.size().toString(),Graphics.FONT_TINY,MUTED,w*70/100);
+    }
+    function drawAgendaDetail(dc,w,h) {
+        var items=model.agendaItems();
+        if (items.size()==0) { centered(dc,h*52/100,"Keine Einträge",Graphics.FONT_SMALL,WHITE,w*72/100); return; }
+        var task=items[model.agendaIndex%items.size()];
+        var due=task["dueDate"];
+        var col=urgencyColor(due);
+        centered(dc,h*28/100,model.detailOrigin.equals("forecast")?"DEADLINE":"AUFGABE",Graphics.FONT_SMALL,AQUA,w*69/100);
+        var lines=titleLines(dc,task["title"],w*76/100);
+        var maxOffset=lines.size()>3?lines.size()-3:0;
+        if (model.detailOffset>maxOffset) { model.detailOffset=maxOffset; }
+        for(var j=0;j<3;j++) {
+            var ix=j+model.detailOffset;
+            if(ix<lines.size()) {
+                centered(dc,h*(42+j*10)/100,lines[ix],Graphics.FONT_TINY,WHITE,w*78/100);
+            }
+        }
+        centered(dc,h*76/100,shortDate(due),Graphics.FONT_TINY,col,w*73/100);
+        centered(dc,h*85/100,task["category"],Graphics.FONT_TINY,MUTED,w*75/100);
     }
     function menuRow(dc,y,index,label,selected) {
         var cx=dc.getWidth()/2;
@@ -613,6 +714,8 @@ class CompassView extends WatchUi.View {
             drawHub(dc,w,h);
         } else if(model.mode.equals("today") || model.mode.equals("forecast")) {
             drawAgendaEmpty(dc,w,h,model.mode.equals("forecast"));
+        } else if(model.mode.equals("detail")) {
+            drawAgendaDetail(dc,w,h);
         } else if(model.mode.equals("pairing")) {
             centered(dc,h*33/100,"KOPPELN",Graphics.FONT_MEDIUM,AQUA,w*67/100);
             var d=model.digit;
@@ -661,8 +764,8 @@ class CompassInput extends WatchUi.InputDelegate {
                 else if (k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) { model.nextDigit(); }
                 else if (k == WatchUi.KEY_ESC) { model.mode = "select"; }
             } else if (model.mode.equals("hub")) {
-                if (k == WatchUi.KEY_UP) { model.hubIndex = (model.hubIndex+4)%5; }
-                else if (k == WatchUi.KEY_DOWN) { model.hubIndex = (model.hubIndex+1)%5; }
+                if (k == WatchUi.KEY_UP) { model.hubIndex = (model.hubIndex+3)%4; }
+                else if (k == WatchUi.KEY_DOWN) { model.hubIndex = (model.hubIndex+1)%4; }
                 else if (k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) { model.openHubItem(); }
                 else if (k == WatchUi.KEY_ESC) { model.mode = "select"; }
             } else if (model.mode.equals("today") || model.mode.equals("forecast")) {
@@ -672,8 +775,16 @@ class CompassInput extends WatchUi.InputDelegate {
                         var dir = k == WatchUi.KEY_DOWN ? 1 : -1;
                         model.agendaIndex = (model.agendaIndex + dir + items.size()) % items.size();
                     }
-                } else if (k == WatchUi.KEY_ESC || k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) {
-                    model.mode = "hub";
+                } else if (k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) {
+                    if (model.agendaItems().size() > 0) {
+                        model.detailOrigin=model.mode;model.detailOffset=0;model.mode="detail";
+                    }
+                } else if (k == WatchUi.KEY_ESC) { model.mode = "hub"; }
+            } else if (model.mode.equals("detail")) {
+                if (k == WatchUi.KEY_UP) { if (model.detailOffset>0) { model.detailOffset--; } }
+                else if (k == WatchUi.KEY_DOWN) { model.detailOffset++; }
+                else if (k == WatchUi.KEY_ESC || k == WatchUi.KEY_ENTER || k == WatchUi.KEY_START) {
+                    model.mode=model.detailOrigin;
                 }
             } else if (model.mode.equals("syncing")) {
                 if (k == WatchUi.KEY_ESC || k == WatchUi.KEY_LAP) { model.mode = "select"; model.lastMessage = "Sync im Hintergrund"; }

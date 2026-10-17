@@ -33,7 +33,7 @@ export async function putTask(req,env,owner){
 }
 export async function listWatchPlanning(req,env,ownerSub){
  const day=new URL(req.url).searchParams.get('day');if(!isDate(day)||day==null)return out({error:'invalid-day'},400);
- const until=new Date(day+'T12:00:00Z');until.setUTCDate(until.getUTCDate()+14);const max=until.toISOString().slice(0,10);
+ const until=new Date(day+'T12:00:00Z');until.setUTCDate(until.getUTCDate()+60);const max=until.toISOString().slice(0,10);
  const q=await env.DB.prepare(`SELECT id,title,planned_date,due_date,category,completed
    FROM planning_tasks WHERE owner_sub=? AND archived=0 AND completed=0 AND
    (planned_date=? OR (due_date IS NOT NULL AND due_date<=?))

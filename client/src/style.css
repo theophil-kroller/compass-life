@@ -200,3 +200,36 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .forecast-date-group{border-top:1px solid #e5ece5;padding:12px 0}.forecast-date-group h3,.forecast-date-overdue strong{font-size:13px;color:#4d6756;margin:0 0 5px}.forecast-date-overdue{background:#fff9f3;border-radius:8px;padding:12px}.deadline-inline{font-size:12px;margin:6px 0;color:#587760}
 @media(max-width:1100px){.task-field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.task-field-grid button{justify-content:center}}
 @media(max-width:650px){.task-field-grid{grid-template-columns:1fr}.task-create-form{padding:12px}.forecast-layout{display:block}}
+
+/* Compass 0.4.1: real watch metrics, calm calendar read-only UI and visual review cues */
+.compass-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+.compass-stats>div{background:#f4f8f5;border:1px solid #e4ebe5;border-radius:12px;padding:11px 7px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.compass-stats strong{font-size:20px;color:#326b60;font-family:Georgia,serif;white-space:nowrap}.compass-stats span{font-size:10px;color:#70857c}
+.stats-caption{display:block;font-size:10px;line-height:1.5;color:#8d9d94;margin-top:7px}
+.compass-calendar-list{display:flex;flex-direction:column;gap:8px;padding-top:8px;max-width:100%}
+.compass-calendar-event{display:flex;align-items:baseline;gap:11px;border-left:3px solid #78a99a;background:#f7faf8;padding:9px 11px;border-radius:0 9px 9px 0;font-size:12px;color:#384d42;overflow-wrap:anywhere}
+.compass-calendar-hour{font-size:10px;color:#528577;min-width:54px;flex-shrink:0}
+.calendar-connection{font-size:11px;color:#6a8479}.compass-forecast-cal{padding:18px 4px;border-top:1px solid #e5ece7;margin-top:18px}
+.compass-forecast-cal>strong{display:flex;align-items:center;gap:8px;color:#3f6f62;font-size:13px}
+.review-steps-icon>div{color:#6b8479}.review-steps-icon svg{color:#4a8977;flex-shrink:0}
+.review-step-number{border-radius:10px!important;width:28px!important;height:28px!important;color:#467e70!important}
+.compass-review-legend{padding:12px;margin:16px 0;background:#f7faf8;border:1px solid #e6eee8;border-radius:12px}
+.compass-review-legend>strong{font-size:12px;color:#48675a}.compass-review-legend>small{display:block;font-size:10px;color:#8ca099;line-height:1.5;margin-top:9px}
+.compass-energy-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.compass-energy-legend span{display:flex;align-items:center;gap:4px;font-size:11px;padding:7px 9px;border-radius:12px;border:1px solid}
+.energy-low{background:#eff1ed;color:#77847d;border-color:#e1e8e1!important}
+.energy-medium{background:#fbf5e7;color:#a27c3c;border-color:#eee0bb!important}
+.energy-high{background:#e8f5eb;color:#36835c;border-color:#c7e6d1!important}
+
+.review-energy-choices{gap:10px!important}.review-choice{display:inline-flex;gap:7px;align-items:center;border:1px solid #dfe8e1;border-radius:14px;padding:9px 12px;color:#56766a;background:#f8faf9;cursor:pointer;font-size:12px;transition:background .15s ease,border-color .15s ease}
+.review-choice:disabled{opacity:.55;cursor:default}.review-choice.chosen{border-color:#458374;background:#eaf4ef;box-shadow:inset 0 0 0 1px #458374}.review-choice:focus-visible{outline:2px solid #408f79;outline-offset:2px}
+.review-energy-low{color:#8a958f;background:#f4f5f3}.review-energy-medium{color:#a88338;background:#fdf8ed}.review-energy-high{color:#2f875c;background:#eff9f2}
+.review-energy-low.chosen{border-color:#a3b0a9;background:#ebefec;box-shadow:inset 0 0 0 1px #b1beb6}
+.review-energy-medium.chosen{border-color:#d8ab5a;background:#fff4d9;box-shadow:inset 0 0 0 1px #e0b85d}
+.review-energy-high.chosen{border-color:#4ca56f;background:#e3f6e8;box-shadow:inset 0 0 0 1px #4da975}
+.mini-battery{width:28px;height:14px;display:inline-flex;border:2px solid currentColor;border-radius:3px;position:relative;align-items:stretch;padding:2px;flex-shrink:0}
+.mini-battery:after{content:'';position:absolute;right:-5px;top:3px;height:4px;width:3px;background:currentColor;border-radius:0 2px 2px 0}
+.mini-battery>i{display:block;background:currentColor;border-radius:1px;height:100%}.battery-1>i{width:30%}.battery-2>i{width:64%}.battery-3>i{width:100%}
+.review-local-caption{color:#899a91;font-size:10px;line-height:1.5;display:block;margin-top:8px}
+
+.dashboard-today-tasks{display:flex;flex-direction:column;gap:10px;margin:9px 0 13px}.dashboard-today-tasks>div{display:flex;align-items:center;gap:8px;color:#445e51;font-size:12px;overflow-wrap:anywhere}.dashboard-today-tasks svg{flex-shrink:0;color:#5e9b83}
