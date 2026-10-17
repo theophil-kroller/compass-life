@@ -5,6 +5,9 @@ import {validWatchSession,createPair,claimPair,acceptWatchSession,listWatchSessi
 const sample={id:'w'+'a'.repeat(32),activity:'Forschung',startedAt:Math.floor(Date.now()/1000)-200,durationSec:180,focusSec:160,breakSec:20,pomodoros:1,hrSamples:[[30,78],[60,84]],bbSamples:[[0,66],[180,64]],bbStart:66,bbEnd:64};
 test('strict watch input validation protects health data and sessions',()=>{
  assert.equal(validWatchSession(sample),true);
+ for (const activity of ['Lehre','Pruefungen','Pruefungskorrektur','Pruefungserstellung']) {
+  assert.equal(validWatchSession({...sample,activity}),true,activity);
+ }
  assert.equal(validWatchSession({...sample,hrSamples:[[33,350]]}),false);
  assert.equal(validWatchSession({...sample,activity:'DROP TABLE watch_sessions'}),false);
  assert.equal(validWatchSession({...sample,bbEnd:999}),false);

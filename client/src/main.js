@@ -341,10 +341,13 @@ function activityScreen(){
     const day=new Date(x.startedAt*1000).toLocaleString('de-AT',{dateStyle:'short',timeStyle:'short'});
     const mins=Math.round(x.durationSec/60);
     const heart=x.hrSamples?.length?Math.round(x.hrSamples.reduce((sum,p)=>sum+p[1],0)/x.hrSamples.length)+' bpm Ø':'–';
-    return `<div class="watch-session"><div><strong>${h(x.activity)}</strong><small>${h(day)} · ${mins} Minuten · ${x.pomodoros} Pomodoros</small></div><span>♥ ${h(heart)} · BB ${x.bbStart==null?'–':x.bbStart} → ${x.bbEnd==null?'–':x.bbEnd} (${x.bbSamples?.length||0} Werte)</span></div>`;
+    const activityName=({Pruefungen:'Prüfungen',Pruefungskorrektur:'Prüfungskorrektur',Pruefungserstellung:'Prüfungserstellung',Lehre:'Lehre',Meeting:'Meetings'})[x.activity]||x.activity;
+    const palette={Forschung:'#65BEC7',Lehre:'#D4B46C',Pruefungen:'#D99868',Pruefungskorrektur:'#D99868',Pruefungserstellung:'#D99868',Meeting:'#93A3AD',Verwaltung:'#86A4BA',Weiterbildung:'#B7A6CB',Familie:'#8FBC9F',Beziehungsdynamiken:'#C96B4B'};
+    const color=palette[x.activity]||'#93A3AD';
+    return `<div class="watch-session"><div><strong><span class="watch-cat-mark" style="background:${color}" aria-hidden="true"></span>${h(activityName)}</strong><small>${h(day)} · ${mins} Minuten · ${x.pomodoros} Pomodoros</small></div><span>♥ ${h(heart)} · BB ${x.bbStart==null?'–':x.bbStart} → ${x.bbEnd==null?'–':x.bbEnd} (${x.bbSamples?.length||0} Werte)</span></div>`;
   }).join('');
   return chrome(`<div class="watch-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('activity',22)}<h2>Garmin Compass</h2></div></div>
-   <p class="module-subtitle">Forschung, Prüfungskorrektur, Verwaltung, Meeting oder Familienzeit direkt an der fēnix 7S erfassen.</p>
+   <p class="module-subtitle">Forschung, Lehre, Prüfungen, Meetings und weitere Tätigkeiten direkt auf der fēnix 7S erfassen.</p>
    <div class="watch-pair-block"><h3>Uhr koppeln</h3><p>Compass-Tresor und Google-Verbindung müssen entsperrt sein. Tippe auf „Kopplungscode erstellen“ und gib die acht Ziffern in der Garmin-App ein (UP/DOWN ändern, START bestätigt).</p>
    ${watchPairCode?`<div class="watch-code">${h(watchPairCode)}</div><small>Gültig bis ${h(new Date(watchPairExpires).toLocaleTimeString('de-AT'))}. Nicht öffentlich teilen.</small>`:''}
    <button class="primary-btn" type="button" data-action="watch-pair" ${!authToken?'disabled':''}>Kopplungscode erstellen</button></div>

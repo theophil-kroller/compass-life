@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
-    <iq:application id="147fb41d980a4f5e85ac79d908a7c12c" type="watch-app" name="Compass Focus" entry="CompassApp" minApiLevel="3.3.0" launcherIcon="@Drawables.LauncherIcon">
+    <iq:application id="147fb41d980a4f5e85ac79d908a7c12c" type="watch-app" name="@Strings.AppName" entry="CompassApp" minApiLevel="3.3.0" launcherIcon="@Drawables.LauncherIcon">
         <iq:products><iq:product id="fenix7s" /></iq:products>
-        <iq:permissions><iq:uses-permission id="Communications" /><iq:uses-permission id="Sensor" /></iq:permissions>
+        <iq:permissions><iq:uses-permission id="Communications" /><iq:uses-permission id="Sensor" /><iq:uses-permission id="SensorHistory" /><iq:uses-permission id="PersistedContent" /></iq:permissions>
         <iq:languages><iq:language>eng</iq:language></iq:languages>
     </iq:application>
 </iq:manifest>

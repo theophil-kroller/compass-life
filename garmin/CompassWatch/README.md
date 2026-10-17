@@ -1,15 +1,20 @@
-# Compass Focus – fēnix 7S (Monkey C Prototyp)
+# Compass Focus 0.3.1 — Garmin fēnix 7S
 
-Achtung: Nicht kompiliert oder am Gerät getestet. Quellen unter `source/CompassApp.mc`.
-Bitte `docs/GARMIN_WIDGET_MVP_0.3.0.md` lesen und zuerst Worker-/D1-Teil installieren.
+Eigenständiges Connect-IQ-Projekt für die fēnix 7S (nicht Pro).
 
-## UI
-- In Kategorienliste: UP/DOWN Kategorie, START Aufnahme starten, MENU Pomodoro umschalten.
-- Während der Session: START Pause/Fortsetzen, BACK Aufnahme beenden; bei 25-Minuten-Signal DOWN fünfminütige Pause beginnen, UP Pause frühzeitig beenden.
-- In Kategorienliste: BACK löst Kopplung bzw. Nachsynchronisierung aus; LAP kann ebenfalls synchronisieren.
-- Achtstellige Zifferneingabe beim Pairing: UP/DOWN Ziffer ändern, START nächste Ziffer, bei Ziffer 8 Verbindung versuchen.
+**Wichtig:** Dies ist ein neuer Quellcode-Build; der 0.3.1-Code wurde hier
+nicht mit dem Garmin Connect IQ SDK kompiliert oder auf der Uhr getestet.
+Die Eingabebehandlung baut auf dem im Simulator bestätigten D4-Fix auf.
 
-## Messwerte
-- HR beim aktiven Tracken ungefähr alle 30s (bis 180 Werte), Body Battery alle 300s und am Session-Anfang/-Ende (bis 72 Werte) falls unterstützt. Keine medizinischen Schlussfolgerungen.
-- Bei ausbleibender Bluetooth-Verbindung lokal gespeichert; über BACK nachsynchronisieren.
-- Maximal 20 Sessions in lokaler Warteschlange. Achtung: Garmin Storage ist kein AES-GCM-Tresor. Aktivität endet bei Verlassen der App und wird lokal gespeichert.
+- `source/CompassApp.mc`: Uhr-App, runde UI, Kategorie-Auswahl, Timer,
+  Session-Menü, lokale Sessions und Bridge-Synchronisierung.
+- `manifest.xml`: App-Name über Ressourcen, Sensor-, SensorHistory- und
+  Communications-Rechte.
+- `resources/strings/strings.xml`: App-Name „Compass Focus“.
+- `resources/icon.png`: Launcher-Icon in 40 × 40 Pixel.
+
+**Schritt-für-Schritt und API-Abhängigkeiten:**
+`docs/GARMIN_FOCUS_0.3.1.md` im Compass-Repo oder `ANLEITUNG.txt` im Download.
+
+Bei Backend-Upload der Kategorien Lehre/Prüfungen muss zuerst der Worker-Patch
+0.3.1 deployed werden. Für den reinen Simulator-Test reicht das Garmin-Projekt.

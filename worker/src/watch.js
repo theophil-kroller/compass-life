@@ -1,6 +1,6 @@
 // Minimal secure Garmin bridge: single owner, short-lived pairing, write-only device credentials.
 // Private health/activity data stays behind authenticated owner endpoints.
-const categories = new Set(['Forschung','Pruefungskorrektur','Pruefungserstellung','Verwaltung','Meeting','Weiterbildung','Familie','Beziehungsdynamiken']);
+const categories = new Set(['Forschung','Lehre','Pruefungen','Pruefungskorrektur','Pruefungserstellung','Verwaltung','Meeting','Weiterbildung','Familie','Beziehungsdynamiken']);
 const out=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const bytesHex=b=>Array.from(b,v=>v.toString(16).padStart(2,'0')).join('');
 export async function hash(value){return bytesHex(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))));}
