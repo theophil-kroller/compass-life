@@ -1,7 +1,7 @@
 {
   "name": "@compass/worker",
   "private": true,
-  "version": "0.4.4-alpha.1",
+  "version": "0.4.6-alpha.1",
   "type": "module",
   "scripts": {"dev":"wrangler dev", "deploy":"wrangler deploy", "check":"node --check src/index.js && node --check src/validation.js && node --check src/watch.js && node --check src/schema.js && node --check src/projects.js && node --check src/tasks.js", "db:local":"wrangler d1 migrations apply compass-db --local", "db:remote":"wrangler d1 migrations apply compass-db --remote"},
   "dependencies": {"jose":"^6.0.0"},

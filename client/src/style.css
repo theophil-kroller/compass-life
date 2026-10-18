@@ -281,3 +281,47 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .dream-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}.dream-item{display:flex;align-items:center;gap:9px;width:100%;min-width:0;border:1px solid #e4eee7;background:#fff;border-radius:9px;padding:10px;text-align:left;color:#426b57;cursor:pointer}.dream-item span{flex:1;overflow-wrap:anywhere;font-size:12px}.dream-item.is-current,.dream-item:hover{background:#edf6ef;border-color:#a9c8b6}.dream-edit-form{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:12px}.dream-edit-form label{flex:1 1 240px;font-size:12px;color:#537560}.dream-edit-form input,.dream-edit-form select,.dream-edit-form textarea{display:block;box-sizing:border-box;width:100%;border-radius:9px;border:1px solid #dfe9e1;padding:9px;color:#345e45;background:#fff;margin-top:5px}.dream-edit-form button{align-self:center}
 .held-sections h3{color:#3e6b56;font-size:14px;margin:19px 0 9px}.held-project-link{display:flex;align-items:center;gap:9px;text-align:left;padding:10px 14px;margin:5px 0;border:1px solid #dfebe4;background:#f6faf7;border-radius:9px;color:#37634c;cursor:pointer;width:100%}.held-project-link:hover{background:#e8f4ec}.perspective-empty p{font-size:12px;line-height:1.65}.perspective-empty .secondary-btn{margin:7px 7px 0 0}
 @media(max-width:650px){.dream-capture-shell{display:flex;flex-direction:column;align-items:stretch}.dream-capture-shell select{max-width:none;width:100%}}
+
+/* Compass 0.4.6 — three-pane project workspace + date inspector */
+.omni-projects{display:grid;grid-template-columns:minmax(225px, .78fr) minmax(335px,1.42fr) minmax(270px,.92fr);gap:14px;align-items:start}
+.omni-projects>.work-card{min-width:0;box-sizing:border-box}
+.project-navigation,.project-inspector{max-height:calc(100vh - 115px);overflow:auto;overscroll-behavior:contain}
+.project-navigation .project-form{margin-top:13px;padding:12px}
+.project-create-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.project-create-row label{min-width:0}
+.project-tree{display:flex;flex-direction:column;gap:3px;margin-top:16px}
+.project-branch{min-width:0}
+.project-branch-line{display:flex;gap:3px;align-items:center;min-width:0}
+.tree-chevron,.tree-chevron-placeholder{width:23px;min-width:23px;flex:none;display:inline-flex;align-items:center;justify-content:center}
+.tree-chevron{background:none;border:0;color:#678b78;cursor:pointer;font-size:18px}
+.omni-projects .project-list-item{flex:1;min-width:0;margin:0;padding:9px 7px;gap:7px}
+.project-tree-name{min-width:0;flex:1}
+.project-tree-name strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-heading-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.project-middle .task-create-form{margin-top:22px}
+.project-folder-children{display:grid;gap:8px;margin-top:14px}
+.hierarchical-task-list{margin-top:17px;border-top:1px solid #e3ece5}
+.hier-task{display:flex;align-items:center;gap:7px;min-width:0;border-bottom:1px solid #e5eee7;padding:10px 4px 10px calc(4px + var(--task-depth,0)*19px)}
+.hier-task.is-selected{background:#eaf4ee}
+.hier-task.completed .hier-task-title strong{text-decoration:line-through;opacity:.62}
+.hier-task-title{border:0;background:transparent;min-width:0;flex:1;cursor:pointer;text-align:left;color:#314d3f;overflow-wrap:anywhere}
+.hier-task-title strong{font-size:13px;display:block}
+.hier-task-title small{font-size:10px;color:#738b7a;display:block;margin-top:3px}
+.hier-actions{display:flex;gap:2px;flex:none}
+.hier-actions button{cursor:pointer;border:1px solid #e2e9e4;background:white;color:#557766;border-radius:7px;padding:5px 6px;min-width:25px;font-size:12px}
+.project-properties{border-bottom:1px solid #e0ebe4;padding-bottom:14px;margin-bottom:16px}
+.project-properties summary{cursor:pointer;color:#385d48;font-weight:650;font-size:13px;line-height:1.6}
+.inspector-task-heading{border-bottom:1px solid #e0ebe4;padding:4px 0 11px;color:#3c604b;font-size:13px}
+.omni-projects.is-focused{grid-template-columns:minmax(0,1.6fr) minmax(290px,.8fr)}
+.omni-projects.is-focused .project-navigation{display:none}
+.date-control{min-width:0}
+.date-control input{width:100%;min-width:0}
+.date-control small{font-size:10px;font-weight:400;color:#7c9183;line-height:1.45}
+.date-shortcuts{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.date-shortcuts button{background:#f3f8f4;border:1px solid #e0ebe3;border-radius:6px;padding:4px 6px;color:#527463;font-size:10px;cursor:pointer;flex:none}
+.date-shortcuts button:hover,.hier-actions button:hover{background:#e4f1e8}
+.inspector-dates{display:grid;gap:10px;border:1px solid #e2ebe5;background:#fafcf9;border-radius:12px;padding:12px}
+.planned-event{background:#f3f8f6}
+.task-row.is-selected{background:#eaf4ee}
+@media(max-width:1330px){.omni-projects{grid-template-columns:minmax(220px,.8fr) minmax(0,1.5fr)}.omni-projects .project-inspector{grid-column:1 / -1;max-height:none;overflow:visible}.omni-projects.is-focused{grid-template-columns:1fr}.omni-projects.is-focused .project-inspector{grid-column:auto}}
+@media(max-width:810px){.omni-projects,.omni-projects.is-focused{display:flex;flex-direction:column}.omni-projects>.work-card{width:100%}.project-navigation{max-height:none;overflow:visible}.project-inspector{max-height:none;overflow:visible}.omni-projects.is-focused .project-navigation{display:none}.project-create-row{grid-template-columns:1fr 1fr}}

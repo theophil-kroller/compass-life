@@ -3,8 +3,8 @@
 // incompatible Worker/D1 database.
 const REQUIRED = {
   items: ['id', 'tags_json'],
-  planning_tasks: ['id', 'workflow', 'flagged', 'project_id', 'tags_json', 'defer_until', 'context_tags_json', 'estimate_minutes'],
-  planning_projects: ['id', 'review_interval_days', 'reviewed_at'],
+  planning_tasks: ['id', 'workflow', 'flagged', 'project_id', 'tags_json', 'defer_until', 'context_tags_json', 'estimate_minutes', 'parent_task_id', 'sort_order'],
+  planning_projects: ['id', 'review_interval_days', 'reviewed_at', 'kind', 'project_type', 'parent_id', 'sort_order'],
 };
 export async function schemaStatus(db) {
   try {
@@ -18,10 +18,11 @@ export async function schemaStatus(db) {
     if (missing.length) {
       if (missing.some(x => ['items.id', 'planning_tasks.id'].includes(x))) requiredMigration = '0001–0004';
       else if (missing.some(x => ['items.tags_json', 'planning_tasks.workflow', 'planning_tasks.flagged', 'planning_tasks.project_id', 'planning_tasks.tags_json', 'planning_projects.id'].includes(x))) requiredMigration = '0005';
-      else requiredMigration = '0006';
+      else if(missing.some(x => x.includes('defer_until') || x.includes('context_tags_json') || x.includes('review_interval_days'))) requiredMigration = '0006';
+      else requiredMigration = '0007';
     }
     return {ready: missing.length===0, requiredMigration, missing};
   } catch {
-    return {ready:false, requiredMigration:'0001–0006', missing:[]};
+    return {ready:false, requiredMigration:'0001–0007', missing:[]};
   }
 }

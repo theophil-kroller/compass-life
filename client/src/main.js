@@ -2,7 +2,7 @@ import './style.css';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
-import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords} from './tasks.js';
+import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
 const app=document.getElementById('app');
@@ -15,6 +15,8 @@ let selectedInboxId=null;
 let selectedDreamId=null;
 let selectedTaskId=null;
 let selectedProjectId=null;
+let projectFocus=false;
+const projectCollapsed=new Set();
 let selectedAgendaEventId=null;
 let showCalendarBlocks=false;
 let showCaptureDetails=false;
@@ -328,24 +330,58 @@ function todayWork(locked=false){
  <button type="button" class="overview-nudge" data-tab="overview">${ico('layers',17)} Große Übersicht ansehen ${ico('arrow',14)}</button></aside></div>`;
 }
 function forecastScreen(){
- const list=dueTasks(state,600),today=localDate();
+ const list=dueTasks(state,600),planned=Object.values(state?.tasks||{}).filter(t=>!t.archived&&!t.completed&&t.plannedDate),today=localDate();
  const days=Array.from({length:14},(_,i)=>{const d=new Date(today+'T12:00:00');d.setDate(d.getDate()+i);return localDate(d);});
  const overdue=list.filter(t=>t.dueDate<today);
  const dayContent=day=>{
-  const tasks=list.filter(t=>t.dueDate===day);
+  const tasks=list.filter(t=>t.dueDate===day);const plannedTasks=planned.filter(t=>t.plannedDate===day&&t.dueDate!==day);
   const ev=calendarToken?visibleCalendarEvents(day):[];
-  if(!tasks.length&&!ev.length)return '';
-  const combined=[...tasks.map(t=>({type:'task',sort:'0',obj:t})),...ev.map(e=>({type:'event',sort:e.start?.dateTime||'1',obj:e}))].sort((a,b)=>a.sort.localeCompare(b.sort));
-  return `<div class="forecast-date-group"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(day+'T12:00:00')))}</h3><div class="timeline-day">${combined.map(x=>x.type==='task'?`<div class="timeline-item deadline-event">${ico('flag',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · harte Deadline · ${h(CATEGORY_LABELS[x.obj.category]||x.obj.category)}</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:`<button type="button" class="timeline-item calendar-event" data-action="agenda-open" data-id="${h(x.obj.id)}">${ico('calendar',19)}<div><strong>${h(x.obj.summary||'Kalendertermin')}</strong><small>Google Calendar · ${h(calendarTime(x.obj))}${x.obj.start?.date?' · Ganztagsmarker':''}</small></div>${agendaEvent(x.obj)}${ico('arrow',15)}</button>`).join('')}</div></div>`;
+  if(!tasks.length&&!plannedTasks.length&&!ev.length)return '';
+  const combined=[...tasks.map(t=>({type:'task',sort:'0',obj:t})),...plannedTasks.map(t=>({type:'planned',sort:'0b',obj:t})),...ev.map(e=>({type:'event',sort:e.start?.dateTime||'1',obj:e}))].sort((a,b)=>a.sort.localeCompare(b.sort));
+  return `<div class="forecast-date-group"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(day+'T12:00:00')))}</h3><div class="timeline-day">${combined.map(x=>x.type==='task'?`<div class="timeline-item deadline-event">${ico('flag',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · harte Deadline · ${h(CATEGORY_LABELS[x.obj.category]||x.obj.category)}</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:x.type==='planned'?`<div class="timeline-item planned-event">${ico('calendar',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · Planned (Wunschtermin, keine Deadline)</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:`<button type="button" class="timeline-item calendar-event" data-action="agenda-open" data-id="${h(x.obj.id)}">${ico('calendar',19)}<div><strong>${h(x.obj.summary||'Kalendertermin')}</strong><small>Google Calendar · ${h(calendarTime(x.obj))}${x.obj.start?.date?' · Ganztagsmarker':''}</small></div>${agendaEvent(x.obj)}${ico('arrow',15)}</button>`).join('')}</div></div>`;
  };
- return chrome(`<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Fristen und Termine</span><span class="quiet-tag">14 Tage</span></div>
- <div class="forecast-tools">${calendarToken?calendarFilterToggle():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · Google Calendar nur lesend</span></div>
+ return chrome(`<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Deadlines, Planung & Termine</span><span class="quiet-tag">14 Tage</span></div>
+ <div class="forecast-tools">${calendarToken?calendarFilterToggle():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · ${planned.length} geplante Aufgaben · Google Calendar nur lesend</span></div>
  ${overdue.length?`<div class="forecast-date-overdue"><strong>Überfällig</strong>${taskList(overdue,'forecast')}</div>`:''}
  ${days.map(dayContent).join('')||'<div class="task-empty">Keine Termine oder Fristen für die kommenden 14 Tage.</div>'}
  <p class="rail-footnote">Ganztägig markierte Fristen blockieren nicht automatisch deinen ganzen Tag. Zeitblöcke können ausgeblendet werden.</p></section><aside class="forecast-inspector">${eventAgendaPanel()}<section class="work-card task-inspector"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabe bearbeiten</span></div>${taskEditor()}</section></aside></div>`);
 }
 function projectOptions(selected=''){
- return `<option value="">Kein Projekt</option>`+Object.values(state?.projects||{}).filter(x=>x.status!=='completed'||x.id===selected).sort((a,b)=>a.title.localeCompare(b.title,'de')).map(p=>`<option value="${h(p.id)}" ${selected===p.id?'selected':''}>${h(p.title)}</option>`).join('');
+ const options=['<option value="">Kein Projekt</option>'];
+ const visit=(parent,depth)=>{for(const proj of childProjects(state,parent)){
+  if(proj.kind==='project'&&(proj.status!=='completed'||proj.id===selected))options.push(`<option value="${h(proj.id)}" ${selected===proj.id?'selected':''}>${'  '.repeat(depth)}${h(proj.title)}</option>`);
+  if(depth<15)visit(proj.id,depth+1);
+ }};visit(null,0);return options.join('');
+}
+function projectParentOptions(selected='',excludeId=''){
+ const blocked=excludeId?new Set([excludeId,...projectDescendantIds(state,excludeId)]):new Set();
+ const roots=['<option value="">Oberste Ebene</option>'];
+ const walk=(parent,depth)=>{for(const proj of childProjects(state,parent)){
+  if(blocked.has(proj.id))continue;
+  roots.push(`<option value="${h(proj.id)}" ${proj.id===selected?'selected':''}>${'  '.repeat(depth)}${proj.kind==='folder'?'▸ ':''}${h(proj.title)}</option>`);
+  if(depth<15)walk(proj.id,depth+1);
+ }};
+ walk(null,0);return roots.join('');
+}
+function taskParentOptions(projectId,selected='',self=''){
+ const blocked=new Set([self]);const visit=(id)=>{for(const t of Object.values(state?.tasks||{}).filter(t=>t.parentTaskId===id)){if(blocked.has(t.id))continue;blocked.add(t.id);visit(t.id);}};
+ if(self)visit(self);
+ return '<option value="">Hauptebene</option>'+hierarchicalProjectTasks(state,projectId).filter(t=>!blocked.has(t.id)&&!t.completed).map(t=>`<option value="${h(t.id)}" ${selected===t.id?'selected':''}>${'  '.repeat(Math.min(t.depth,8))}${h(t.title)}</option>`).join('');
+}
+function dateButtons(field){return `<div class="date-shortcuts" data-date-target="${field}"><button type="button" data-action="date-adjust" data-field="${field}" data-offset="day">+1d</button><button type="button" data-action="date-adjust" data-field="${field}" data-offset="week">+1w</button><button type="button" data-action="date-adjust" data-field="${field}" data-offset="month">+1m</button><button type="button" data-action="date-clear" data-field="${field}">Löschen</button></div>`;}
+function dateControl(field,label,value='',hint=''){return `<label class="date-control">${label}<input name="${field}" type="date" value="${h(value||'')}">${dateButtons(field)}${hint?`<small>${h(hint)}</small>`:''}</label>`;}
+function moveOrder(state,collection,id,direction){
+ const current=state[collection][id];if(!current)return false;
+ const peers=collection==='projects'?childProjects(state,current.parentId||null):taskChildren(state,current.projectId,current.parentTaskId||null);
+ const index=peers.findIndex(x=>x.id===id),other=peers[index+direction];if(!other)return false;
+ const changed=[peers[index],other];
+ // Normalize all sibling ordering once to avoid tie ambiguity in older projects.
+ peers.forEach((entry,i)=>{state[collection][entry.id].sortOrder=(i+1)*100;});
+ state[collection][changed[0].id].sortOrder=(index+direction+1)*100;
+ state[collection][changed[1].id].sortOrder=(index+1)*100;
+ const pending=collection==='projects'?'projectPending':'taskPending';
+ peers.forEach(entry=>{state[pending][entry.id]=true;});
+ return true;
 }
 function categoryOptions(selected='Allgemein'){
  return TASK_CATEGORIES.map(c=>`<option value="${h(c)}" ${c===selected?'selected':''}>${h(CATEGORY_LABELS[c]||c)}</option>`).join('');
@@ -354,20 +390,27 @@ function workflowOptions(selected='next'){
  return [['next','Next Action'],['waiting','Waiting For'],['hold','On Hold']].map(([value,label])=>`<option value="${value}" ${selected===value?'selected':''}>${label}</option>`).join('');
 }
 function taskCreateForm(defaultDay='',defaultProject=''){
- return `<form class="task-create-form" id="task-create-form"><div class="task-form-title"><strong>Neue Aufgabe</strong><span>Auch ohne Datum möglich</span></div><input name="title" aria-label="Aufgabentitel" maxlength="180" required placeholder="Was ist der nächste konkrete Schritt?"/><div class="task-field-grid">
- <label>Geplanter Tag<input name="plannedDate" type="date" value="${h(defaultDay||'')}"></label><label>Harte Deadline<input name="dueDate" type="date"></label>
- <label>Kategorie<select name="category">${categoryOptions()}</select></label><label>Status<select name="workflow">${workflowOptions()}</select></label>
- <label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label><label>Agenda-Tags<input name="tags" placeholder="UKO, Martin" maxlength="300"/></label>
- <label>Frühestens ab<input name="deferUntil" type="date" title="Erst ab diesem Datum in Next Actions anzeigen; ist keine Deadline"/></label><label>Kontext-Tags<input name="contextTags" placeholder="büro, laptop" maxlength="300"/></label>
- <label>Aufwand (Min.)<input name="estimateMinutes" type="number" min="5" max="1440" step="5" placeholder="optional"/></label>
+ return `<form class="task-create-form" id="task-create-form"><div class="task-form-title"><strong>Neue Aufgabe</strong><span>Ohne künstliche Deadline</span></div><input name="title" aria-label="Aufgabentitel" maxlength="180" required placeholder="Was ist der nächste konkrete Schritt?"/><div class="task-field-grid">
+ ${dateControl('plannedDate','Planned · Wunschtermin',defaultDay,'Für Heute / Forecast; keine Frist')}
+ ${dateControl('dueDate','Due · harte Deadline')}
+ ${dateControl('deferUntil','Defer · frühestens ab','','Bis dahin keine Next Action')}
+ <label>Duration · Minuten<input name="estimateMinutes" type="number" min="5" max="1440" step="5" placeholder="optional"/></label>
+ <label>Bereich<select name="category">${categoryOptions()}</select></label><label>GTD-Status<select name="workflow">${workflowOptions()}</select></label>
+ <label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label>${defaultProject?`<label>Unteraufgabe von<select name="parentTaskId">${taskParentOptions(defaultProject)}</select></label>`:''}
+ <label>Agenda-Tags<input name="tags" placeholder="UKO, Martin" maxlength="300"/></label>
+ <label>Kontext-Tags<input name="contextTags" placeholder="büro, laptop" maxlength="300"/></label>
  <label class="flag-check"><input type="checkbox" name="flagged"/> Flagged</label><button class="primary-btn" type="submit">${ico('plus',16)} Hinzufügen</button></div></form>`;
 }
-function taskList(items,scope,hideEmpty=false){return items.length?`<div class="task-list" data-scope="${h(scope)}">${items.map(t=>`<div class="task-row ${t.completed?'completed':''}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}"><strong>${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small>${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</button>${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;}
-function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)return '<div class="task-empty">Tippe auf eine Aufgabe, um sie zu bearbeiten.</div>';
- return `<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="3">${h(t.note||'')}</textarea></label><label>Geplanter Tag<input type="date" name="plannedDate" value="${h(t.plannedDate||'')}"></label><label>Harte Deadline<input type="date" name="dueDate" value="${h(t.dueDate||'')}"></label><label>Kategorie<select name="category">${categoryOptions(t.category)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>Tags (mit Komma trennen)<input name="tags" value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label>
- <label>Frühestens ab (keine Deadline)<input type="date" name="deferUntil" value="${h(t.deferUntil||'')}"/></label>
- <label>Kontexte (Komma getrennt)<input name="contextTags" value="${h((t.contextTags||[]).join(', '))}" placeholder="büro, laptop"/></label>
- <label>Aufwand (Min.)<input name="estimateMinutes" type="number" min="5" max="1440" step="5" value="${t.estimateMinutes??''}"/></label><label class="flag-check"><input type="checkbox" name="flagged" ${t.flagged?'checked':''}/> Flagged</label><div class="task-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button></div></form>${state.taskConflicts[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Die Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
+function taskList(items,scope,hideEmpty=false){return items.length?`<div class="task-list" data-scope="${h(scope)}">${items.map(t=>`<div class="task-row ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}" ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`: ''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small>${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</button>${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;}
+function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)return '<div class="task-empty">Wähle eine Aufgabe, um ihre Details zu bearbeiten.</div>';
+ return `<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="3">${h(t.note||'')}</textarea></label>
+ <div class="inspector-dates">${dateControl('deferUntil','Defer · frühestens ab',t.deferUntil,'Verfügbarkeit; keine Deadline')}${dateControl('plannedDate','Planned · Wunschtermin',t.plannedDate,'Für Heute und Forecast')}${dateControl('dueDate','Due · harte Deadline',t.dueDate,'Fälligkeit und Überfälligkeit')}</div>
+ <label>Duration · geschätzter Aufwand (Min.)<input name="estimateMinutes" type="number" min="5" max="1440" step="5" value="${t.estimateMinutes??''}"/></label>
+ <label>Bereich<select name="category">${categoryOptions(t.category)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label>
+ ${t.projectId?`<label>Hierarchie · Unteraufgabe von<select name="parentTaskId">${taskParentOptions(t.projectId,t.parentTaskId,t.id)}</select></label>`:''}
+ <label>Agenda-Tags<input name="tags" value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label><label>Kontexte<input name="contextTags" value="${h((t.contextTags||[]).join(', '))}" placeholder="büro, laptop"/></label>
+ <label class="flag-check"><input type="checkbox" name="flagged" ${t.flagged?'checked':''}/> Flagged</label>
+ <div class="task-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button></div></form>${state.taskConflicts[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Die Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
 }
 function workflowScreen(which){
  const titles={next:'Next Actions',flagged:'Flagged',hold:'On Hold & Waiting For'};
@@ -387,16 +430,37 @@ function workflowScreen(which){
  ${which==='hold'?`<div class="held-sections"><h3>Waiting For · ${waiting.length}</h3>${taskList(waiting,'waiting')}<h3>On Hold · ${paused.length}</h3>${taskList(paused,'paused')}<h3>Durch pausierte Projekte zurückgestellt · ${blocked.length}</h3>${taskList(blocked,'project-hold')}<h3>Pausierte Projekte · ${pausedProjects.length}</h3>${pausedProjects.length?pausedProjects.map(p=>`<button type="button" class="held-project-link" data-action="hold-open-project" data-id="${h(p.id)}">${ico('folder',15)} ${h(p.title)} ${ico('arrow',13)}</button>`).join(''):'<p class="muted-line">Keine Projekte pausiert.</p>'}</div>`:`${taskCreateForm('')}${taskList(shown,which,which==='next')}${noActions}`}
  </section><aside class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Aufgabendetails</span></div>${taskEditor()}</aside></div>`);
 }
+function projectTree(){
+ const visited=new Set();
+ const draw=(parent,depth)=>childProjects(state,parent).map(pr=>{
+  if(visited.has(pr.id))return '';visited.add(pr.id);
+  const children=childProjects(state,pr.id);const selected=pr.id===selectedProjectId;const collapsed=projectCollapsed.has(pr.id);
+  return `<div class="project-branch"><div class="project-branch-line" style="padding-left:${Math.min(depth,10)*14}px">${children.length?`<button type="button" class="tree-chevron" data-action="project-toggle-expand" data-id="${h(pr.id)}" aria-label="${collapsed?'Aufklappen':'Zuklappen'}">${collapsed?'▸':'▾'}</button>`:'<span class="tree-chevron-placeholder"></span>'}<button type="button" class="project-list-item ${selected?'is-current':''}" data-action="project-select" data-id="${h(pr.id)}">${ico('folder',16)}<span class="project-tree-name"><strong>${h(pr.title)}</strong><small>${pr.kind==='folder'?'Ordner':pr.projectType==='sequential'?'Sequential':pr.projectType==='single'?'Single Actions':'Parallel'} · ${pr.status==='active'?'Aktiv':pr.status==='hold'?'Pausiert':'Fertig'}</small></span></button></div>${collapsed?'':draw(pr.id,depth+1)}</div>`;
+ }).join('');
+ return draw(null,0);
+}
+function projectTaskTree(project){
+ const items=hierarchicalProjectTasks(state,project.id);const ready=new Set(nextActions(state).map(t=>t.id));
+ if(!items.length)return '<p class="muted-line">Noch keine Aufgaben. Erstelle unten den ersten Schritt.</p>';
+ return `<div class="hierarchical-task-list">${items.map(t=>`<div class="hier-task ${t.completed?'completed':''} ${selectedTaskId===t.id?'is-selected':''}" style="--task-depth:${Math.min(t.depth,10)}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}">${t.completed?'✓':'○'}</button><button type="button" class="hier-task-title" data-action="task-select" data-id="${h(t.id)}"><strong>${h(t.title)}</strong><small>${t.completed?'Erledigt':ready.has(t.id)?'Verfügbar':t.deferUntil&&t.deferUntil>localDate()?'Defer bis '+h(t.deferUntil):'Nicht verfügbar'}${t.dueDate?' · Due '+h(t.dueDate):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}</small></button><div class="hier-actions"><button type="button" data-action="task-move-up" data-id="${h(t.id)}" aria-label="Nach oben">↑</button><button type="button" data-action="task-move-down" data-id="${h(t.id)}" aria-label="Nach unten">↓</button><button type="button" data-action="task-add-subtask" data-id="${h(t.id)}" aria-label="Unteraufgabe anlegen">+</button></div></div>`).join('')}</div>`;
+}
 function projectScreen(){
- const projects=Object.values(state?.projects||{}).sort((a,b)=>['active','hold','completed'].indexOf(a.status)-['active','hold','completed'].indexOf(b.status)||a.title.localeCompare(b.title,'de'));
- const current=state?.projects?.[selectedProjectId]||projects[0]||null;
- const items=current?projectTasks(state,current.id):[];
- const nextCount=nextActions(state).filter(t=>t.projectId===current?.id).length;
- return chrome(`<div class="projects-layout"><section class="work-card"><div class="work-heading"><span>${ico('folder',20)} Projekte</span><span class="quiet-tag">${projects.filter(x=>x.status==='active').length} aktiv</span></div>
- <form class="project-form" id="project-create-form"><label>Neues Projekt<input required name="title" maxlength="140" placeholder="z. B. Dissertation: Paper fertigstellen"/></label><label>Gewünschtes Ergebnis<input name="outcome" maxlength="800" placeholder="Woran erkenne ich, dass es fertig ist?"/></label><label>Bereich<select name="category">${categoryOptions()}</select></label><label>Review alle (Tage)<input type="number" name="reviewIntervalDays" min="1" max="90" value="7"/></label><button class="primary-btn" type="submit">${ico('plus',17)} Projekt anlegen</button></form>
- ${projects.length?`<div class="project-list">${projects.map(x=>`<button type="button" class="project-list-item ${current?.id===x.id?'is-current':''}" data-action="project-select" data-id="${h(x.id)}"><span>${ico('folder',18)}</span><div><strong>${h(x.title)}</strong><small>${h(CATEGORY_LABELS[x.category]||x.category)} · ${x.status==='active'?'Aktiv':x.status==='hold'?'Pausiert':'Abgeschlossen'}</small></div><span>${projectTasks(state,x.id).filter(t=>!t.completed&&!t.archived).length}</span></button>`).join('')}</div>`:'<div class="task-empty">Noch keine Projekte angelegt.</div>'}</section>
- <div class="project-details">${current?`<section class="work-card"><div class="work-heading"><span>${ico('target',18)} Gewünschtes Ergebnis</span><span class="quiet-tag">${current.status==='active'?'Aktiv':current.status==='hold'?'On Hold':'Abgeschlossen'}</span></div><form id="project-edit-form" class="task-edit-form" data-id="${h(current.id)}"><label>Projektname<input name="title" required maxlength="140" value="${h(current.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(current.outcome||'')}</textarea></label><div class="project-edit-grid"><label>Bereich<select name="category">${categoryOptions(current.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${current.status===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Deadline (optional)<input name="dueDate" type="date" value="${h(current.dueDate||'')}"></label><label>Review alle (Tage)<input name="reviewIntervalDays" type="number" min="1" max="90" value="${current.reviewIntervalDays||7}"/></label></div><div class="project-review-info">Letzter Review: ${current.reviewedAt?h(new Date(current.reviewedAt).toLocaleDateString('de-AT')):'Noch nicht geprüft'} · ${projectNeedsReview(current)?'Review fällig':'Aktuell'}</div><div class="project-edit-actions"><button class="primary-btn" type="submit">Projekt speichern</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(current.id)}">${ico('checkSquare',15)} Jetzt geprüft</button></div></form>${state.projectConflicts[current.id]?`<div class="task-conflict">Konflikt mit anderem Gerät. <button data-action="project-conflict-remote" data-id="${h(current.id)}">Cloud-Version übernehmen</button><button data-action="project-conflict-local" data-id="${h(current.id)}">Meine Version übernehmen</button></div>`:''}</section>
- <section class="work-card"><div class="work-heading"><span>${ico('target',18)} Nächste Schritte</span><span class="quiet-tag">${nextCount} ausführbar</span></div><div class="progress-hint"><span>Abgeschlossene Aufgaben: ${items.filter(t=>t.completed).length} von ${items.length}</span><div class="progress-track"><span style="width:${items.length?Math.round(100*items.filter(t=>t.completed).length/items.length):0}%"></span></div></div>${current.status==='active'&&nextCount===0?'<div class="project-warning">Dieses aktive Projekt hat noch keine nächste ausführbare Handlung.</div>':''}${taskCreateForm('',current.id)}${taskList(items,'project')}</section><section class="work-card">${taskEditor()}</section>`:'<section class="work-card"><div class="task-empty">Lege zuerst dein erstes Projekt an.</div></section>'}</div></div>`);
+ const projects=Object.values(state?.projects||{});const current=state?.projects?.[selectedProjectId]||childProjects(state,null)[0]||projects[0]||null;
+ if(current&&!state?.projects?.[selectedProjectId])selectedProjectId=current.id;
+ if(current?.kind==='folder'||!current||state?.tasks?.[selectedTaskId]?.projectId!==current.id)selectedTaskId=null;
+ const items=current?.kind==='project'?projectTasks(state,current.id):[];
+ const nextCount=current?nextActions(state).filter(t=>t.projectId===current.id).length:0;
+ const active=projects.filter(x=>x.kind!=='folder'&&x.status==='active').length;
+ return chrome(`<div class="projects-layout omni-projects ${projectFocus?'is-focused':''}">
+ <aside class="work-card project-navigation"><div class="work-heading"><span>${ico('folder',20)} Ordner & Projekte</span><span class="quiet-tag">${active} aktiv</span></div>
+ <form class="project-form" id="project-create-form"><label>Name<input required name="title" maxlength="140" placeholder="Projekt oder Ordner"/></label><div class="project-create-row"><label>Art<select name="kind"><option value="project">Projekt</option><option value="folder">Ordner</option></select></label><label>Typ<select name="projectType"><option value="parallel">Parallel</option><option value="sequential">Sequential</option><option value="single">Single Actions</option></select></label></div><label>Unterhalb von<select name="parentId">${projectParentOptions(current?.id||'')}</select></label><label>Ergebnis<input name="outcome" maxlength="800" placeholder="Optional"/></label><button class="primary-btn" type="submit">${ico('plus',16)} Anlegen</button></form>
+ <div class="project-tree">${projectTree()||'<p class="muted-line">Noch keine Projekte.</p>'}</div></aside>
+ <main class="work-card project-middle"><div class="work-heading"><span>${ico('target',18)} ${current?h(current.title):'Projektaufgaben'}</span><div class="project-heading-actions"><span class="quiet-tag">${current?.kind==='folder'?'Ordner':`${nextCount} verfügbar`}</span><button type="button" class="secondary-btn" data-action="project-focus-toggle">${projectFocus?'Übersicht':'Fokusmodus'}</button></div></div>
+ ${current?.kind==='folder'?`<p class="muted-line">Dieser Ordner strukturiert deine Projekte.</p><div class="project-folder-children">${childProjects(state,current.id).map(pr=>`<button type="button" class="project-list-item" data-action="project-select" data-id="${h(pr.id)}">${ico('folder',18)} <strong>${h(pr.title)}</strong></button>`).join('')||'<p>Ordner ist leer.</p>'}</div>`:current?`<div class="progress-hint"><span>${items.filter(t=>t.completed).length} von ${items.length} Aufgaben erledigt</span><div class="progress-track"><span style="width:${items.length?Math.round(100*items.filter(t=>t.completed).length/items.length):0}%"></span></div></div>${current.status==='active'&&nextCount===0?'<div class="project-warning">Noch keine verfügbare Next Action in diesem Projekt.</div>':''}${projectTaskTree(current)}${taskCreateForm('',current.id)}`:'<div class="task-empty">Lege zuerst dein erstes Projekt an.</div>'}</main>
+ <aside class="work-card project-inspector"><div class="work-heading"><span>${ico('pencil',18)} Inspector</span></div>
+ ${current?`<details class="project-properties" ${!selectedTaskId?'open':''}><summary>${current.kind==='folder'?'Ordner':'Projekt'} bearbeiten</summary><form id="project-edit-form" class="task-edit-form" data-id="${h(current.id)}"><label>Name<input name="title" required maxlength="140" value="${h(current.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(current.outcome||'')}</textarea></label><label>Bereich<select name="category">${categoryOptions(current.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${current.status===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Art<select name="kind"><option value="project" ${current.kind!=='folder'?'selected':''}>Projekt</option><option value="folder" ${current.kind==='folder'?'selected':''}>Ordner</option></select></label><label>Projekttyp<select name="projectType">${[['parallel','Parallel'],['sequential','Sequential'],['single','Single Actions']].map(([v,l])=>`<option value="${v}" ${(current.projectType||'parallel')===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Übergeordnet<select name="parentId">${projectParentOptions(current.parentId,current.id)}</select></label>${dateControl('dueDate','Projekt-Deadline',current.dueDate)}<label>Review alle (Tage)<input name="reviewIntervalDays" type="number" min="1" max="90" value="${current.reviewIntervalDays||7}"/></label><div class="project-review-info">Letzter Review: ${current.reviewedAt?h(new Date(current.reviewedAt).toLocaleDateString('de-AT')):'Noch nie'} · ${projectNeedsReview(current)?'Review fällig':'Aktuell'}</div><div class="project-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(current.id)}">Jetzt geprüft</button></div></form>${state.projectConflicts[current.id]?`<div class="task-conflict">Änderungskonflikt. <button data-action="project-conflict-remote" data-id="${h(current.id)}">Cloud</button><button data-action="project-conflict-local" data-id="${h(current.id)}">Lokal</button></div>`:''}</details>`:''}
+ ${selectedTaskId?`<div class="inspector-task-heading"><strong>Ausgewählte Aufgabe</strong></div>${taskEditor()}`:current?.kind==='project'?'<div class="task-empty">Wähle links in der Aufgabenliste einen Schritt für den Inspector.</div>':''}
+ </aside></div>`);
 }
 const DREAM_CATEGORIES=[['lernen','Lernen & Weiterbilden','book'],['lesen','Lesen & Entdecken','bookmark'],['erleben','Erleben & Ausprobieren','suitcase'],['ideen','Projekte & Ideen','spark']];
 function dreamCategory(r){return DREAM_CATEGORIES.find(([key])=>(r.tags||[]).includes('dream-'+key))?.[0]||'ideen';}
@@ -563,24 +627,28 @@ function bind() {
   });
   const taskForm=app.querySelector('#task-create-form');if(taskForm)taskForm.onsubmit=async ev=>{
     ev.preventDefault();const fd=new FormData(taskForm);
-    const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,updatedAt:stamp()};
-    if(!validLocalTask(t)){toast('Aufgabenfelder prüfen (Titel, Datum oder Kategorie).',true);return;}
+    const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:fd.get('parentTaskId')||null,sortOrder:0,tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,updatedAt:stamp()};
+    if(!validLocalTask(t)||!validTaskParent(state,t.id,t.projectId,t.parentTaskId)){toast('Aufgabenfelder bzw. Hierarchie prüfen.',true);return;}
+    t.sortOrder=Math.min(1000000,100+Math.max(0,...taskChildren(state,t.projectId,t.parentTaskId).map(x=>x.sortOrder||0)));
     await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;});selectedTaskId=t.id;toast('Aufgabe lokal gespeichert.');
   };
   const taskEditForm=app.querySelector('#task-edit-form');if(taskEditForm)taskEditForm.onsubmit=async ev=>{
     ev.preventDefault();const id=taskEditForm.dataset.id,fd=new FormData(taskEditForm);const existing=state.tasks[id];if(!existing)return;
-    const t={...existing,title:String(fd.get('title')||'').trim(),note:String(fd.get('note')||'').trim(),plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,updatedAt:stamp()};
-    if(!validLocalTask(t)){toast('Aufgabenfelder prüfen (Titel, Datum oder Kategorie).',true);return;}
+    const t={...existing,title:String(fd.get('title')||'').trim(),note:String(fd.get('note')||'').trim(),plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:(fd.get('projectId')===existing.projectId?fd.get('parentTaskId')||null:null),tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,updatedAt:stamp()};
+    if(!validLocalTask(t)||!validTaskParent(state,id,t.projectId,t.parentTaskId)){toast('Aufgabenfelder bzw. Hierarchie prüfen.',true);return;}
+    if(t.projectId!==existing.projectId&&Object.values(state.tasks).some(child=>!child.archived&&child.parentTaskId===id)){toast('Unteraufgaben zuerst einzeln verschieben, bevor du das Projekt dieser Aufgabe wechselst.',true);return;}
     await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;});toast('Aufgabe aktualisiert.');
   };
   const projectCreate=app.querySelector('#project-create-form');if(projectCreate)projectCreate.onsubmit=async ev=>{
-    ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),reviewedAt:null};
-    if(!validProject(project)){toast('Projektangaben prüfen.',true);return;}
+    ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),reviewedAt:null,kind:d.get('kind')||'project',projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null,sortOrder:0};
+    if(!validProject(project)||!validProjectParent(state,project.id,project.parentId)){toast('Projektangaben bzw. Ordnerhierarchie prüfen.',true);return;}
+    project.sortOrder=Math.min(1000000,100+Math.max(0,...childProjects(state,project.parentId).map(x=>x.sortOrder||0)));
     await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;});selectedProjectId=project.id;render();
   };
   const projectEdit=app.querySelector('#project-edit-form');if(projectEdit)projectEdit.onsubmit=async ev=>{
-    ev.preventDefault();const id=projectEdit.dataset.id;const d=new FormData(projectEdit);const project={...state.projects[id],title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:d.get('status')||'active',dueDate:d.get('dueDate')||null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7)};
-    if(!validProject(project)){toast('Projektangaben prüfen.',true);return;}
+    ev.preventDefault();const id=projectEdit.dataset.id;const d=new FormData(projectEdit);const project={...state.projects[id],title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:d.get('status')||'active',dueDate:d.get('dueDate')||null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),kind:d.get('kind')||'project',projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null};
+    if(!validProject(project)||!validProjectParent(state,id,project.parentId)){toast('Projektangaben bzw. Ordnerhierarchie prüfen.',true);return;}
+    if(project.kind==='folder'&&state.projects[id].kind!=='folder'&&projectTasks(state,id).length){toast('Ein Projekt mit Aufgaben kann nicht in einen Ordner umgewandelt werden.',true);return;}
     await mutate(s=>{s.projects[id]=project;s.projectPending[id]=true;});toast('Projekt gespeichert.');
   };
   const agendaForm=app.querySelector('#agenda-note-form');if(agendaForm)agendaForm.onsubmit=async ev=>{
@@ -614,6 +682,13 @@ function bind() {
   };
   app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
     if(el.dataset.action==='capture-close-backdrop'&&ev.target!==el)return;
+    if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
+      const field=el.closest('form')?.querySelector(`[name="${el.dataset.field}"]`);
+      if(!field)return;
+      if(el.dataset.action==='date-clear')field.value='';
+      else {const from=field.value||localDate();const dt=new Date(from+'T12:00:00');if(el.dataset.offset==='day')dt.setDate(dt.getDate()+1);else if(el.dataset.offset==='week')dt.setDate(dt.getDate()+7);else if(el.dataset.offset==='month'){const day=dt.getDate();dt.setDate(1);dt.setMonth(dt.getMonth()+1);dt.setDate(Math.min(day,new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate()));}field.value=localDate(dt);}
+      field.focus();return;
+    }
     runAction(el.dataset.action,el.dataset.id);
   });
 }
@@ -657,6 +732,18 @@ async function runAction(action,id) {
     if(action==='calendar-toggle-blocks'){showCalendarBlocks=!showCalendarBlocks;render();return;}
     if(action==='agenda-open'){selectedAgendaEventId=id;render();requestAnimationFrame(()=>{const panel=app.querySelector('#agenda-details');if(panel){panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest',behavior:'smooth'});}});return;}
     if(action==='agenda-close'){selectedAgendaEventId=null;render();return;}
+    if(action==='project-focus-toggle'){projectFocus=!projectFocus;render();return;}
+    if(action==='project-toggle-expand'){if(projectCollapsed.has(id))projectCollapsed.delete(id);else projectCollapsed.add(id);render();return;}
+    if(action==='task-add-subtask'){
+      const t=state?.tasks?.[id];if(!t||!t.projectId)return;
+      selectedProjectId=t.projectId;tab='projects';render();
+      const input=app.querySelector('#task-create-form [name="parentTaskId"]');if(input)input.value=id;
+      app.querySelector('#task-create-form [name="title"]')?.focus();return;
+    }
+    if(action==='task-move-up'||action==='task-move-down'){
+      if(!state?.tasks?.[id])return;
+      await mutate(s=>moveOrder(s,'tasks',id,action==='task-move-up'?-1:1));return;
+    }
     if(action==='project-select'){selectedProjectId=id;selectedTaskId=null;render();return;}
     if(action==='project-reviewed'){if(!state?.projects?.[id])return;await mutate(s=>{s.projects[id].reviewedAt=stamp();s.projectPending[id]=true;});toast('Projekt-Review dokumentiert.');return;}
     if(action==='project-conflict-local'||action==='project-conflict-remote'){
@@ -764,7 +851,7 @@ async function renderGoogleButton() {
 }
 async function syncProjects(){
  prepareTasks(state);
- for(const id of Object.keys(state.projectPending).slice(0,75)){
+ for(const id of Object.keys(state.projectPending).sort((a,b)=>{const depth=id=>{let n=0,c=state.projects[id],seen=new Set();while(c?.parentId&&n<50&&!seen.has(c.id)){seen.add(c.id);c=state.projects[c.parentId];n++;}return n;};return depth(a)-depth(b);}).slice(0,75)){
   if(state.projectConflicts[id])continue;
   const project=state.projects[id];if(!project){delete state.projectPending[id];continue;}
   const before=JSON.stringify(projectPlain(project));
@@ -785,7 +872,7 @@ async function syncProjects(){
 async function syncTasks(){
   prepareTasks(state);
   // Keep local task mutations until the server confirms them.
-  for(const id of Object.keys(state.taskPending).slice(0,75)){
+  for(const id of Object.keys(state.taskPending).sort((a,b)=>{const depth=id=>{let n=0,c=state.tasks[id],seen=new Set();while(c?.parentTaskId&&n<50&&!seen.has(c.id)){seen.add(c.id);c=state.tasks[c.parentTaskId];n++;}return n;};return depth(a)-depth(b);}).slice(0,75)){
     if(state.taskConflicts[id])continue;
     const task=state.tasks[id];if(!task){delete state.taskPending[id];continue;}
     const before=JSON.stringify(taskPlain(task));
@@ -809,7 +896,7 @@ async function syncNow() {
   busy=true;render();
   try {
     const health=await request(config.apiUrl,authToken,'/api/health');
-    if(health.apiVersion!==4||health.schema?.ready!==true)throw new Error(`Cloud-Datenbank noch nicht bereit: Worker 0.4.4 und Migration ${health.schema?.requiredMigration||'0005/0006'} prüfen. Lokale Änderungen bleiben sicher.`);
+    if(health.apiVersion!==5||health.schema?.ready!==true)throw new Error(`Cloud-Datenbank noch nicht bereit: Worker 0.4.6 und Migration ${health.schema?.requiredMigration||'0007'} prüfen. Lokale Änderungen bleiben sicher.`);
     // No concurrent writes while in flight: mutations queue before a request starts.
     let rounds=0;
     while(state.pending.length&&rounds++<100) {

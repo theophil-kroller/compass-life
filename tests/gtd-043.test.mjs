@@ -42,9 +42,12 @@ test('project review date and custom interval are validated and preserved',()=>{
 });
 
 test('read-only D1 schema readiness reports correct missing migrations',async()=>{
-  const columns={items:['id','tags_json'],planning_tasks:['id','workflow','flagged','project_id','tags_json','defer_until','context_tags_json','estimate_minutes'],planning_projects:['id','review_interval_days','reviewed_at']};
+  const columns={items:['id','tags_json'],planning_tasks:['id','workflow','flagged','project_id','tags_json','defer_until','context_tags_json','estimate_minutes','parent_task_id','sort_order'],planning_projects:['id','review_interval_days','reviewed_at','kind','project_type','parent_id','sort_order']};
   const db={prepare(sql){const table=sql.match(/table_info\((\w+)\)/)[1];return {all:async()=>({results:(columns[table]||[]).map(name=>({name}))})};}};
   assert.deepEqual((await schemaStatus(db)).missing,[]);
+  columns.planning_projects=columns.planning_projects.filter(x=>x!=='kind');
+  assert.equal((await schemaStatus(db)).requiredMigration,'0007');
+  columns.planning_projects.push('kind');
   columns.planning_tasks=columns.planning_tasks.filter(x=>x!=='defer_until');
   assert.equal((await schemaStatus(db)).requiredMigration,'0006');
   columns.items=columns.items.filter(x=>x!=='tags_json');
