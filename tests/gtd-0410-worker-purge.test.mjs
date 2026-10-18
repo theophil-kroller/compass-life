@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
+import {join,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {purgeWatchSession,acceptWatchSession,hash} from '../worker/src/watch.js';
+const base=join(dirname(fileURLToPath(import.meta.url)),'../worker/migrations');
+const sqlFiles=['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql'];
+function dbFixture(){
+ const sqlite=new DatabaseSync(':memory:');
+ for(const name of sqlFiles)sqlite.exec(readFileSync(join(base,name),'utf8'));
+ const prepare=sql=>{const statement=sqlite.prepare(sql);return {bind(...params){return {first:async()=>statement.get(...params)||null,all:async()=>({results:statement.all(...params)}),run:async()=>({meta:{changes:Number(statement.run(...params).changes)}}),_run:()=>statement.run(...params)};}};};
+ return {sqlite,env:{DB:{prepare,batch:async statements=>{sqlite.exec('BEGIN');try{const result=statements.map(x=>x._run());sqlite.exec('COMMIT');return result;}catch(e){sqlite.exec('ROLLBACK');throw e;}}}}};
+}
+const id='w'+'d'.repeat(32),sub='user-aaa',otherSub='user-bbb';
+const owner={sub};
+const packet={id,activity:'Forschung',startedAt:Math.floor(Date.now()/1000)-3600,durationSec:300,focusSec:250,breakSec:50,pomodoros:1,hrSamples:[],bbSamples:[],bbStart:null,bbEnd:null};
+test('authenticated purge leaves a D1 tombstone: delayed Garmin upload cannot resurrect permanent deletion',async()=>{
+ const {sqlite,env}=dbFixture();
+ const token='cw1_'+'a'.repeat(64),tokenHash=await hash(token);
+ sqlite.prepare('INSERT INTO watch_devices(token_hash,owner_sub,device_label,created_at) VALUES(?,?,?,?)').run(tokenHash,sub,'test-device',new Date().toISOString());
+ const req=(url,payload,auth=false)=>new Request(url,{method:'POST',headers:auth?{Authorization:'Bearer '+token}:{},body:JSON.stringify(payload)});
+ const upload=()=>acceptWatchSession(req('https://compass.example/api/watch/sessions',packet,true),env);
+ assert.equal((await upload()).status,200);
+ assert.equal(sqlite.prepare('SELECT count(*) AS n FROM watch_sessions WHERE session_id=?').get(id).n,1);
+ const invalid=await purgeWatchSession(req('https://compass.example/api/watch/sessions/purge',{sessionId:'other'}),env,owner);
+ assert.equal(invalid.status,400);
+ const foreign=await purgeWatchSession(req('https://compass.example/api/watch/sessions/purge',{sessionId:id}),env,{sub:otherSub});
+ assert.equal(foreign.status,404);
+ const removed=await purgeWatchSession(req('https://compass.example/api/watch/sessions/purge',{sessionId:id}),env,owner);
+ assert.equal(removed.status,200);
+ assert.deepEqual(await removed.json(),{purged:true,sessionId:id});
+ assert.equal(sqlite.prepare('SELECT count(*) AS n FROM watch_sessions WHERE session_id=?').get(id).n,0);
+ assert.equal(sqlite.prepare('SELECT count(*) AS n FROM watch_deleted_sessions WHERE owner_sub=? AND session_id=?').get(sub,id).n,1);
+ const lateUpload=await upload();assert.equal(lateUpload.status,200);
+ assert.equal((await lateUpload.json()).deleted,true);
+ assert.equal(sqlite.prepare('SELECT count(*) AS n FROM watch_sessions WHERE session_id=?').get(id).n,0);
+ const retry=await purgeWatchSession(req('https://compass.example/api/watch/sessions/purge',{sessionId:id}),env,owner);
+ assert.equal(retry.status,200);assert.equal((await retry.json()).alreadyDeleted,true);
+ sqlite.close();
+});

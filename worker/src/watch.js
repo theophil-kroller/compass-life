@@ -57,6 +57,8 @@ export async function acceptWatchSession(req,env){
   const d=await getDevice(req,env);if(!d)return out({error:'unauthorized'},401);
   let s;try{s=await body(req,14000);}catch{return out({error:'invalid-payload'},400);}
   if(!validWatchSession(s))return out({error:'invalid-session'},400);
+  const tombstone=await env.DB.prepare('SELECT 1 AS deleted FROM watch_deleted_sessions WHERE owner_sub=? AND session_id=?').bind(d.sub,s.id).first();
+  if(tombstone)return out({ok:true,duplicate:true,deleted:true});
   const result=await env.DB.prepare(`INSERT INTO watch_sessions(owner_sub,session_id,token_hash,activity,started_at,duration_sec,focus_sec,break_sec,pomodoros,hr_samples_json,bb_samples_json,body_battery_start,body_battery_end,received_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(owner_sub,session_id) DO NOTHING`)
     .bind(d.sub,s.id,d.hash,s.activity,s.startedAt,s.durationSec,s.focusSec,s.breakSec,s.pomodoros,JSON.stringify(s.hrSamples),JSON.stringify(s.bbSamples),s.bbStart??null,s.bbEnd??null,nowISO()).run();
@@ -65,6 +67,23 @@ export async function acceptWatchSession(req,env){
 export async function listWatchSessions(env,owner){
   const q=await env.DB.prepare('SELECT session_id,activity,started_at,duration_sec,focus_sec,break_sec,pomodoros,hr_samples_json,bb_samples_json,body_battery_start,body_battery_end FROM watch_sessions WHERE owner_sub=? ORDER BY started_at DESC LIMIT 50').bind(owner.sub).all();
   return out({sessions:(q.results||[]).map(r=>({id:r.session_id,activity:r.activity,startedAt:r.started_at,durationSec:r.duration_sec,focusSec:r.focus_sec,breakSec:r.break_sec,pomodoros:r.pomodoros,hrSamples:JSON.parse(r.hr_samples_json),bbSamples:JSON.parse(r.bb_samples_json),bbStart:r.body_battery_start,bbEnd:r.body_battery_end}))});
+}
+// Only an authenticated owner can permanently purge an activity; devices cannot purge.
+// A tombstone makes later device retries idempotent rather than restoring purged data.
+export async function purgeWatchSession(req,env,owner){
+ let data;try{data=await body(req,500);}catch{return out({error:'invalid-payload'},400);}
+ if(typeof data?.sessionId!=='string'||!/^w[0-9a-f]{32}$/.test(data.sessionId))return out({error:'invalid-session-id'},400);
+ const id=data.sessionId;
+ const row=await env.DB.prepare('SELECT session_id FROM watch_sessions WHERE owner_sub=? AND session_id=?').bind(owner.sub,id).first();
+ if(!row){
+  const deleted=await env.DB.prepare('SELECT 1 AS deleted FROM watch_deleted_sessions WHERE owner_sub=? AND session_id=?').bind(owner.sub,id).first();
+  return deleted?out({purged:true,sessionId:id,alreadyDeleted:true}):out({error:'session-not-found'},404);
+ }
+ await env.DB.batch([
+  env.DB.prepare('INSERT OR IGNORE INTO watch_deleted_sessions(owner_sub,session_id,deleted_at) VALUES(?,?,?)').bind(owner.sub,id,nowISO()),
+  env.DB.prepare('DELETE FROM watch_sessions WHERE owner_sub=? AND session_id=?').bind(owner.sub,id)
+ ]);
+ return out({purged:true,sessionId:id});
 }
 export async function revokeWatchDevice(req,env,owner){
  let d;try{d=await body(req,1000);}catch{return out({error:'invalid-payload'},400);}

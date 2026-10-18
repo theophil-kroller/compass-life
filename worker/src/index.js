@@ -1,7 +1,7 @@
 import {listProjects,putProject} from './projects.js';
 import {schemaStatus} from './schema.js';
 import {listTasks,putTask} from './tasks.js';
-import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice,watchPlanning} from './watch.js';
+import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice,purgeWatchSession,watchPlanning} from './watch.js';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import {MAX_BATCH, validateMutation, validCursor, cleanMutation} from './validation.js';
 
@@ -135,6 +135,7 @@ async function route(req,env,identity) {
   if(req.method==='POST' && url.pathname==='/api/tasks')return putTask(req,env,identity);
   if(req.method==='POST' && url.pathname==='/api/watch/pair/start')return createPair(env,identity);
   if(req.method==='GET' && url.pathname==='/api/watch/sessions')return listWatchSessions(env,identity);
+  if(req.method==='POST' && url.pathname==='/api/watch/sessions/purge')return purgeWatchSession(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/watch/devices')return listWatchDevices(env,identity);
   if(req.method==='POST' && url.pathname==='/api/watch/device/revoke')return revokeWatchDevice(req,env,identity);
   if (req.method==='GET' && url.pathname==='/api/me') {
@@ -181,7 +182,7 @@ export default {
     const path=new URL(req.url).pathname;
     if (path==='/api/health' && req.method==='GET') {
       const schema=env.DB?await schemaStatus(env.DB):{ready:false,requiredMigration:'0001–0006',missing:[]};
-      return finish(json({ok:true,phase:'GTD',apiVersion:5,release:'0.4.6',planning:true,gtd:true,projects:true,schema}));
+      return finish(json({ok:true,phase:'GTD',apiVersion:6,release:'0.4.10',planning:true,gtd:true,projects:true,schema}));
     }
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));

@@ -14,8 +14,8 @@ const pid='11111111-1111-4111-a111-111111111111',childId='22222222-2222-4222-a22
 const taskId='33333333-3333-4333-a333-333333333333',task2Id='44444444-4444-4444-a444-444444444444';
 function testDB(){
  const db=new DatabaseSync(':memory:');
- for(let i=1;i<=7;i++){
-  const name=({1:'0001_core.sql',2:'0002_auth_sessions.sql',3:'0003_watch_tracker.sql',4:'0004_planning_tasks.sql',5:'0005_gtd_projects_agendas.sql',6:'0006_gtd_context_review.sql',7:'0007_project_hierarchy.sql'})[i];
+ for(let i=1;i<=8;i++){
+  const name=({1:'0001_core.sql',2:'0002_auth_sessions.sql',3:'0003_watch_tracker.sql',4:'0004_planning_tasks.sql',5:'0005_gtd_projects_agendas.sql',6:'0006_gtd_context_review.sql',7:'0007_project_hierarchy.sql',8:'0008_watch_session_tombstones.sql'})[i];
   db.exec(readFileSync(join(dir,name),'utf8'));
  }
  const env={DB:{prepare(sql){const mk=(...args)=>{const stmt=db.prepare(sql);return {first:async()=>stmt.get(...args)||null,all:async()=>({results:stmt.all(...args)}),run:async()=>{const r=stmt.run(...args);return {meta:{changes:Number(r.changes)}}}}};return {...mk(),bind:(...args)=>mk(...args)};}}};
