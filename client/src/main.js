@@ -9,6 +9,7 @@ import {eventState,queueEvent,queueEventPreference,removeEvents,prunePastEvents,
 import {healthViewModel,healthBars,healthTime,healthObservation} from './health-visual.js';
 import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-import.js';
 import {importedHealthDashboard} from './health-dashboard.js';
+import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insightsPlannedView} from './insights.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
@@ -20,7 +21,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.6';
+const COMPASS_CLIENT_VERSION='0.5.7';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -79,7 +80,7 @@ let inboxQuery='';
 const bootSearch=new URLSearchParams(location.search);
 const bootCapture=bootSearch.get('capture')==='1';
 const bootView=bootSearch.get('view');
-if(['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','health','projects','next','flagged','hold'].includes(bootView))tab=bootView;
+if(['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','health','insights','projects','next','flagged','hold'].includes(bootView))tab=bootView;
 if(bootCapture){captureAfterUnlock=true;tab='inbox';}
 
 let watchPairCode='', watchPairExpires='', watchSessions=[], watchDevices=[], watchError='';
@@ -87,6 +88,7 @@ let healthDays=[],healthDevices=[],healthPairCode='',healthError='',healthLastUp
 let widgetPairCode='',widgetDevices=[],widgetConnectError='';
 let healthSpan=7,healthDetailsOpen=false,healthDevicesOpen=false;
 let importHealthSpan=90,selectedGarminNight='',healthFilePreview=null,healthFileReading=false;
+let insightTab='sleep',insightPeriod='28',insightNight='';
 let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryImportOpen=false,discoveryWeekOffset=0,discoveryImportPreview=null;
 const discoveryExpandedDays=new Set();
 // Calendar OAuth is independent from Compass login; token stays in RAM only.
@@ -282,8 +284,8 @@ function navItem(id,label,iconName,{disabled=false,count=null}={}) {
 function chrome(content){
  const num=rows().length;
  const today=new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
- const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',projects:'Projekte',next:'Next Actions',flagged:'Flagged',hold:'On Hold',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten',people:'Menschen',progress:'Fortschritt',recovery:'Erholung',health:'Gesundheit'})[tab]||'Heute');
- const sub=({activity:'Sessions bearbeiten, zuordnen und verwalten.',people:'Gespräche, offene Punkte und Kontakte.',progress:'Fortschritt bei Projekten und Tätigkeiten.',recovery:'Aktive Erholung und freie Zeit im Blick.',health:'Schlaf, HRV und Körperzusammensetzung – Garmin und Fitdays an einem Ort.',today:'Was heute wirklich zählt.',forecast:'Termine, Fristen und Agenden auf einer Zeitachse.',projects:'Ergebnisse verfolgen, nächste Schritte verbinden.',next:'Alle ausführbaren nächsten Schritte, auch ohne Datum.',flagged:'Bewusst hervorgehobene Aufgaben.',hold:'Bewusst pausiert oder auf Rückmeldung wartend.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
+ const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',projects:'Projekte',next:'Next Actions',flagged:'Flagged',hold:'On Hold',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten',people:'Menschen',progress:'Fortschritt',recovery:'Erholung',health:'Gesundheit',insights:'Insights'})[tab]||'Heute');
+ const sub=({activity:'Sessions bearbeiten, zuordnen und verwalten.',people:'Gespräche, offene Punkte und Kontakte.',progress:'Fortschritt bei Projekten und Tätigkeiten.',recovery:'Aktive Erholung und freie Zeit im Blick.',health:'Schlaf, HRV und Körperzusammensetzung – Garmin und Fitdays an einem Ort.',insights:'Personal Analytics · Muster in Schlaf, Energie und Produktivität erkennen.',today:'Was heute wirklich zählt.',forecast:'Termine, Fristen und Agenden auf einer Zeitachse.',projects:'Ergebnisse verfolgen, nächste Schritte verbinden.',next:'Alle ausführbaren nächsten Schritte, auch ohne Datum.',flagged:'Bewusst hervorgehobene Aufgaben.',hold:'Bewusst pausiert oder auf Rückmeldung wartend.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
  return `<div class="shell"><aside class="sidebar" aria-label="Navigation">
  <div class="brand"><span class="brand-icon">${ico('compass',24)}</span><span class="brand-name">Compass<small>Personal Life Manager · ${COMPASS_CLIENT_VERSION}</small></span></div>
  <nav class="side-nav" aria-label="Hauptnavigation">
@@ -299,6 +301,7 @@ function chrome(content){
  ${navItem('people','Menschen','people')}
  ${navItem('recovery','Erholung','heart')}
  ${navItem('health','Gesundheit','activity')}
+ ${navItem('insights','Insights','layers')}
  ${navItem('progress','Fortschritt','activity')}
  <button type="button" class="nav-group-toggle" data-action="nav-more" aria-expanded="${state?.uiPreferences?.advancedNav===true||['flagged','hold','someday','activity'].includes(tab)?'true':'false'}">${ico('list',16)} Weitere Ansichten ${ico('arrow',14)}</button>
  ${state?.uiPreferences?.advancedNav===true||['flagged','hold','someday','activity'].includes(tab)?`<div class="nav-subgroup">
@@ -736,6 +739,22 @@ function peopleScreen(){
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
 function healthScreen(){return chrome(healthSummaryPanel());}
+function insightsScreen(){
+ const tabDef=INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0];
+ const today=localDate();
+ const model=buildSleepInsights(state?.healthImports||{},today,insightPeriod);
+ const tabs=INSIGHT_TABS.map(t=>`<button type="button" class="insights-nav-tab ${t.id===insightTab?'selected':''}" data-action="insights-tab" data-id="${h(t.id)}" aria-pressed="${t.id===insightTab}">${ico(t.icon,19)}<span>${h(t.label)}</span>${t.state==='live'?'<i class="insight-tab-live" aria-label="Bereits verfügbar"></i>':''}</button>`).join('');
+ const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
+ const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0);
+ const content=insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
+ <header class="insight-hero"><div><span class="insight-kicker">COMPASS / PERSONAL ANALYTICS</span><h2>Dein Leben in Daten.</h2><p>Ein gemeinsamer Blick auf Schlaf, Erholung, Aktivität und Fokus. Lokal analysiert – ohne automatisch erzeugte Gesundheitsbewertungen.</p></div><div class="insight-hero-side"><span>${ico('shield',18)} Lokaler Vault</span><strong>${dataCount}</strong><small>Garmin- und Fitdays-Datensätze</small></div></header>
+ <nav class="insights-nav" aria-label="Insights-Kategorien">${tabs}</nav>
+ <div class="insight-view-header"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ANALYSE</div><h2>${h(tabDef.subtitle)}</h2></div><div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div></div>
+ ${content}
+ <div class="insight-import-bridge"><div>${ico('heart',22)}<span><strong>Daten ergänzen</strong><small>Garmin-ZIPs und Fitdays-Export kannst du gesammelt unter Gesundheit importieren.</small></span></div><button class="secondary-btn" type="button" data-tab="health">Gesundheit & Import öffnen →</button></div>
+ </div>`);
+}
 function progressScreen(){
  const projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&p.status==='active');
  const today=localDate(),earlier=new Date(today+'T12:00:00');earlier.setDate(earlier.getDate()-6);const begin=localDate(earlier);
@@ -842,13 +861,13 @@ async function reloadWatchSessions(){
 }
 function render(){
  if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
- app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='health'?healthScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='projects'?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();bind();
+ app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='health'?healthScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='projects'?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();bind();
  if(captureOverlayOpen)requestAnimationFrame(()=>app.querySelector('#capture-modal-input')?.focus());
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
  if(state)wireSmartTags(app,()=>state);
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='health')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='health'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
@@ -1020,6 +1039,7 @@ function bind() {
     finally{healthFileReading=false;}
   };
   const selectedNight=app.querySelector('#health-night-select');if(selectedNight)selectedNight.onchange=()=>{selectedGarminNight=selectedNight.value;render();};
+  const insightSelect=app.querySelector('#insights-night-select');if(insightSelect)insightSelect.onchange=()=>{insightNight=insightSelect.value;render();};
   app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
     if(el.dataset.action==='capture-close-backdrop'&&ev.target!==el)return;
     if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
@@ -1219,6 +1239,8 @@ async function runAction(action,id,stepId=null) {
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
+    if(action==='insights-tab'){if(INSIGHT_TABS.some(t=>t.id===id)){insightTab=id;render();}return;}
+    if(action==='insights-period'){if(INSIGHT_PERIODS.some(([v])=>v===id)){insightPeriod=id;render();}return;}
     if(action==='import-health-range'){importHealthSpan=id==='all'?'all':Number(id)||90;render();return;}
     if(action==='health-import-cancel'){healthFilePreview=null;render();return;}
     if(action==='health-import-confirm'){
