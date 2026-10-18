@@ -1,3 +1,4 @@
+import {hierarchicalSankey} from './finance-exotic-hierarchy.js';
 /** Compass 0.5.17 — Monarch-inspired, original SVG visualizations with local-only data.
  * Color conveys amount relative to user's own history, not a moral judgement.
  */
@@ -64,17 +65,8 @@ export function financeTreemap(rows=[],selected=''){
  const tiles=treemapLayout(shown,0,0,920,380);
  return `<div class="fin-treemap-shell"><svg viewBox="0 0 920 380" class="fin-treemap" role="img" aria-label="Treemap der Ausgaben, Rechteckfläche entspricht Ausgabebetrag">${tiles.map(t=>`<g ${select(t.name)} class="fin-treemap-tile ${t.name===selected?'active':''}"><rect x="${round(t.x+2)}" y="${round(t.y+2)}" width="${round(Math.max(0,t.w-4))}" height="${round(Math.max(0,t.h-4))}" rx="8" fill="${t.color}"/><title>${h(t.name)} · ${h(euro(t.cents))} · ${h(pct(t.cents/total))}</title>${t.w>98&&t.h>51?`<text x="${round(t.x+14)}" y="${round(t.y+23)}" font-size="14" font-weight="700" fill="#fff">${h(t.name.length>Math.floor(t.w/11)?t.name.slice(0,Math.floor(t.w/11)-1)+'…':t.name)}</text><text x="${round(t.x+14)}" y="${round(t.y+44)}" font-size="12" fill="#fff">${h(euro(t.cents))}</text>`:''}</g>`).join('')}</svg></div><p class="fin-art-note">Je größer die Fläche, desto höher die Ausgaben. Klicke auf eine Kategorie für Details.</p>`;
 }
-export function financeOutflowSankey(rows=[]){
- const categories=groupExpense(rows),transfer=rows.filter(x=>x.flow==='transfer'&&!x.needsReview&&x.amountCents<0).reduce((a,x)=>a-x.amountCents,0),cash=rows.filter(x=>x.flow==='cash'&&!x.needsReview&&x.amountCents<0).reduce((a,x)=>a-x.amountCents,0),pending=rows.filter(x=>x.needsReview&&x.amountCents<0).reduce((a,x)=>a-x.amountCents,0);
- let flows=categories.slice(0,7).map((c,i)=>({...c,color:palette[i%palette.length]}));const others=categories.slice(7).reduce((a,c)=>a+c.cents,0);if(others)flows.push({name:'Sonstiger Konsum',cents:others,color:'#9BAFA8'});
- if(transfer)flows.push({name:'Transfers / Investieren',cents:transfer,color:'#8574B5'});if(cash)flows.push({name:'Bargeld: Zweck unbekannt',cents:cash,color:'#C5AB83'});if(pending)flows.push({name:'Ungeklärte Abgänge',cents:pending,color:'#D79560'});
- const total=flows.reduce((s,x)=>s+x.cents,0);if(!total)return empty('Noch keine Kontenabgänge im gewählten Zeitraum.');
- flows=flows.sort((a,b)=>b.cents-a.cents); const H=440,W=960,sourceX=174,destX=660,upper=38,bottom=38,gap=9,available=H-upper-bottom-(flows.length-1)*gap;
- let left=upper,right=upper;const paths=flows.map((row,i)=>{const height=available*row.cents/total,sy=upper+(left-upper)*(H-upper-bottom)/(available+(flows.length-1)*gap),ey=sy+height*(H-upper-bottom)/(available+(flows.length-1)*gap),dy=right;
-  left+=height+gap;right+=height+gap;
-  return `<g ${select(row.name)} class="fin-sankey-ribbon"><path d="M${sourceX} ${round(sy)} C${sourceX+170} ${round(sy)},${destX-170} ${round(dy)},${destX} ${round(dy)} L${destX} ${round(dy+height)} C${destX-170} ${round(dy+height)},${sourceX+170} ${round(ey)},${sourceX} ${round(ey)} Z" fill="${row.color}" opacity=".55"><title>${h(row.name)} · ${h(euro(row.cents))}</title></path><rect x="${destX}" y="${round(dy)}" width="9" height="${round(height)}" rx="2" fill="${row.color}"/><text x="${destX+18}" y="${round(dy+height/2-2)}" class="fin-svg-label">${h(row.name)}</text><text x="${destX+18}" y="${round(dy+height/2+14)}" class="fin-svg-detail">${h(euro(row.cents))} · ${h(pct(row.cents/total))}</text></g>`;}).join('');
- return `<div class="fin-sankey-scroller fin-sankey-v2"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Geldabflüsse vom Konto zu Konsumkategorien, Transfers, Bargeld und offenen Buchungen"><rect x="${sourceX-12}" y="${upper}" width="12" height="${H-upper-bottom}" rx="4" fill="#266A66"/><text x="${sourceX-24}" y="${H/2-12}" text-anchor="end" class="fin-svg-label">Abgänge</text><text x="${sourceX-24}" y="${H/2+8}" text-anchor="end" class="fin-svg-detail">${h(euro(total))}</text>${paths}</svg></div><p class="fin-art-note">Bankabgänge sind keine durch Einnahmen desselben Zeitraums finanzierten Ausgaben. Transfers und Bargeld werden getrennt angezeigt, damit sie nicht als Konsum doppelt zählen.</p>`;
-}
+/** Three-stage Sankey: actual top categories and their classified subcategories. */
+export function financeOutflowSankey(rows=[]){return hierarchicalSankey(rows);}
 export function financeStackedArea(rows=[]){
  const months=financeMonthlySeries(rows),period=months.slice(-15);if(period.length<2)return empty('Für einen Ausgabenverlauf werden mindestens zwei Monate benötigt.');
  const ranked=new Map();period.forEach(m=>Object.entries(m.categories).forEach(([k,v])=>ranked.set(k,(ranked.get(k)||0)+v)));

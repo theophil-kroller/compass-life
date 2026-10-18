@@ -34,7 +34,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.17';
+const COMPASS_CLIENT_VERSION='0.5.17.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -105,6 +105,7 @@ let importHealthSpan=90,selectedGarminNight='',healthFilePreview=null,healthFile
 let insightWellnessDay='';
 let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',financePane='Überblick';
 let financePeriod='last12',financePreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
+let financeVisualMode='hierarchy',financeCompareMode='month_year';
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
 let financeTripSelected='',financeTripQuery='',financeTripMode='suggested',financeTripPage=0;
 let exploreX='sleepMinutes',exploreY='workMinutes',exploreLag=0;
@@ -761,7 +762,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,visualMode:financeVisualMode,compareMode:financeCompareMode}));}
 function insightsScreen(){
  const tabDef=INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0];
  const today=localDate();
@@ -1350,6 +1351,9 @@ async function runAction(action,id,stepId=null) {
         financeReviewPage=0;financeLedgerPage=0;toast(`${result.changed} Zuordnungen verbessert · ${result.closed} Fälle abgeschlossen · ${result.review} weiter zur Prüfung. Manuelle Bestätigungen bleiben erhalten.`);
       }catch(e){toast('Vorklassifizierung: '+e.message,true);}return;
     }
+    if(action==='finance-viz-mode'){financeVisualMode=id;render();return;}
+    if(action==='finance-subcategory-select'){financePane='Buchungen';financeLedgerQuery=id;financeLedgerFilter='all';financeLedgerPage=0;render();return;}
+    if(action==='finance-day-select'){financePane='Buchungen';financeLedgerQuery=id;financeLedgerFilter='all';financeLedgerPage=0;render();return;}
     if(action==='finance-category-select'){financeCategorySelected=id;financePane='Ausgaben';render();return;}
     if(action==='finance-category-clear'){financeCategorySelected='';render();return;}
     if(action==='finance-go-ledger'){financePane='Buchungen';financeLedgerQuery=financeCategorySelected;financeLedgerFilter='all';financeLedgerPage=0;render();return;}
