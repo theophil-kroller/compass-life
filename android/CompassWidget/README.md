@@ -38,3 +38,10 @@ in D1 werden nur Tageszusammenfassungen gespeichert (nicht Ende-zu-Ende-verschl�
 * Compass-PWA → Erholung → `Gesundheits-Kopplungscode erzeugen`. Auf Samsung Companion-App öffnen, Health Connect freigeben, achtstelligen Code eingeben, verbinden, Daten synchronisieren. In Compass → Erholung auf `Daten aktualisieren` klicken.
 * Code 10 Minuten gültig, niemals öffentlich teilen. Zugriff in der PWA widerrufen; gespeicherte Cloud-Tageswerte dort gesondert löschen.
 * Voraussetzungen: Health Connect verfügbar (Android 14 integriert, darunter ggf. separate Health-Connect-App); Garmin Connect muss die Daten in Health Connect exportieren. Der Build auf realem Android wurde hier **nicht** getestet.
+
+
+## 0.5.4 – Zwei Widgets und optionale Health-Automatik
+
+Nach Worker-Deploy API 10 zeigt **Compass Fokus** nächste geplante Aufgaben sowie Waiting For – keine Gesundheitsdaten. Nur wenn im Companion "Aufgabentitel anzeigen" ausdrücklich aktiviert wurde, sind Titel sichtbar. **Compass Entdecken** ist ein zweites, unabhängiges Widget mit bis zu drei Vorschauen aus den kommenden sieben Tagen; gespeicherte Events stehen oben. Beide verwenden denselben widerrufbaren Leseschlüssel und benötigen keine erneute Google-Anmeldung.
+
+Die Gesundheitsautomatik wird im Companion unter "Täglichen Abgleich aktivieren" eingerichtet. Sie benötigt eine zusätzliche Health-Connect-Berechtigung für Hintergrund-Lesezugriff und einen unterstützten Health-Connect-Stand. WorkManager läuft etwa alle 24 Stunden bei Internetverbindung; Ausführungszeitpunkt kann durch Android verschoben werden. Abschalten beendet den Hintergrundauftrag; manuelle Synchronisation bleibt möglich.

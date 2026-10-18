@@ -1,1 +1,5 @@
-<resources><string name="app_name">Compass 0.5</string><string name="widget_description">Compass – Heute, Erfassen und Erholung</string></resources>
+<resources>
+ <string name="app_name">Compass Companion</string>
+ <string name="widget_description">Compass Fokus – nächste Schritte, Aufgaben und Waiting For</string>
+ <string name="events_widget_description">Compass Entdecken – deine Veranstaltungen der nächsten sieben Tage</string>
+</resources>

@@ -1,20 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="14dp" android:background="@drawable/rounded_bg">
-  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-    <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="COMPASS · HEUTE" android:textSize="12sp" android:textStyle="bold" android:textColor="#356857"/>
-    <TextView android:id="@+id/widget_refresh" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center" android:text="↻" android:textSize="24sp" android:contentDescription="Widget aktualisieren" android:textColor="#356857"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+ android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+ android:background="@drawable/widget_surface" android:padding="14dp">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+  <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+   <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="◈  COMPASS / FOKUS" android:textColor="#2C6654" android:textSize="12sp" android:letterSpacing="0.07" android:textStyle="bold"/>
+   <TextView android:id="@+id/widget_date" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Heute" android:textSize="11sp" android:layout_marginTop="3dp" android:textColor="#71877A"/>
   </LinearLayout>
-  <TextView android:id="@+id/widget_date" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Heute" android:textSize="12sp" android:textColor="#70857A"/>
-  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="7dp">
-     <TextView android:id="@+id/widget_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="–" android:textSize="28sp" android:textStyle="bold" android:textColor="#244C37"/>
-     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="  offene Aufgaben heute" android:textSize="12sp" android:textColor="#3B6A52"/>
+  <TextView android:id="@+id/widget_refresh" android:layout_width="38dp" android:layout_height="38dp" android:gravity="center" android:text="↻" android:textSize="24sp" android:textColor="#376E5D" android:contentDescription="Fokus aktualisieren"/>
+ </LinearLayout>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/widget_primary_panel" android:padding="14dp" android:layout_marginTop="10dp">
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="DEIN NÄCHSTER SCHRITT" android:textSize="10sp" android:letterSpacing="0.08" android:textColor="#C3DECF" android:textStyle="bold"/>
+  <TextView android:id="@+id/widget_next" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="2" android:ellipsize="end" android:layout_marginTop="7dp" android:textSize="18sp" android:textColor="#FFFFFF" android:textStyle="bold" android:text="Widget wird verbunden …"/>
+  <TextView android:id="@+id/widget_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textSize="11sp" android:textColor="#D4E7DA" android:maxLines="1" android:ellipsize="end" android:text="Nächste Action"/>
+ </LinearLayout>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp">
+  <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/widget_secondary_panel" android:padding="11dp">
+   <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="HEUTE" android:textColor="#7A9184" android:textSize="10sp" android:textStyle="bold"/>
+   <TextView android:id="@+id/widget_count" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="–" android:textSize="25sp" android:textColor="#254B3D" android:textStyle="bold"/>
+   <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="offene Aufgaben" android:textColor="#6B8776" android:textSize="10sp"/>
   </LinearLayout>
-  <TextView android:id="@+id/widget_next" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Verbinde das Widget im Companion" android:singleLine="true" android:ellipsize="end" android:layout_marginTop="4dp" android:textSize="12sp" android:textColor="#345E47"/>
-  <TextView android:id="@+id/widget_health" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Keine Daten" android:singleLine="true" android:ellipsize="end" android:layout_marginTop="4dp" android:textSize="11sp" android:textColor="#6C8575"/>
-  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp" android:gravity="center_vertical">
-    <TextView android:id="@+id/widget_today_button" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Heute" android:gravity="center" android:padding="7dp" android:textStyle="bold" android:textSize="11sp" android:textColor="#295F50"/>
-    <TextView android:id="@+id/widget_capture_button" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="+ Erfassen" android:gravity="center" android:padding="7dp" android:textStyle="bold" android:textSize="11sp" android:textColor="#295F50"/>
-    <TextView android:id="@+id/widget_recovery_button" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Erholung" android:gravity="center" android:padding="7dp" android:textStyle="bold" android:textSize="11sp" android:textColor="#295F50"/>
-    <TextView android:id="@+id/widget_setup" android:layout_width="34dp" android:layout_height="wrap_content" android:text="⚙" android:gravity="center" android:padding="7dp" android:textSize="17sp" android:contentDescription="Widget einrichten" android:textColor="#295F50"/>
+  <Space android:layout_width="9dp" android:layout_height="1dp"/>
+  <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/widget_secondary_panel" android:padding="11dp">
+   <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="WAITING FOR" android:textColor="#7A9184" android:textSize="10sp" android:textStyle="bold"/>
+   <TextView android:id="@+id/widget_waiting" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="–" android:textSize="25sp" android:textColor="#254B3D" android:textStyle="bold"/>
+   <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Rückmeldungen" android:textColor="#6B8776" android:textSize="10sp"/>
   </LinearLayout>
+ </LinearLayout>
+ <LinearLayout android:id="@+id/widget_more" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="10dp" android:padding="9dp" android:background="@drawable/widget_secondary_panel">
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="DANACH" android:textSize="9sp" android:letterSpacing="0.07" android:textStyle="bold" android:textColor="#87998C"/>
+  <TextView android:id="@+id/widget_second" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:maxLines="2" android:ellipsize="end" android:textSize="12sp" android:textColor="#365848" android:text="Weitere geplante Schritte"/>
+ </LinearLayout>
+ <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="10dp">
+  <TextView android:id="@+id/widget_capture_button" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp" android:gravity="center" android:text="＋ Erfassen" android:textSize="12sp" android:textStyle="bold" android:textColor="#204E3D" android:background="@drawable/widget_action_panel"/>
+  <Space android:layout_width="7dp" android:layout_height="1dp"/>
+  <TextView android:id="@+id/widget_today_button" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp" android:gravity="center" android:text="▤  Heute" android:textSize="12sp" android:textStyle="bold" android:textColor="#204E3D" android:background="@drawable/widget_action_panel"/>
+  <TextView android:id="@+id/widget_setup" android:layout_width="34dp" android:layout_height="40dp" android:gravity="center" android:text="⚙" android:textSize="19sp" android:textColor="#497464" android:contentDescription="Widget und Datenschutz einstellen"/>
+ </LinearLayout>
 </LinearLayout>

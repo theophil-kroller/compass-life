@@ -33,21 +33,26 @@ import java.net.URL
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** Companion sync runs ONLY after a user tap: no background uploads. */
+/** Companion: manual sync or explicitly enabled, permission-gated daily sync. */
 class HealthCompanionActivity : ComponentActivity() {
     private val endpoint = "https://compass-api.theophil-tiger.workers.dev"
-    private val healthPermissions = setOf(
-        HealthPermission.getReadPermission(StepsRecord::class),
-        HealthPermission.getReadPermission(SleepSessionRecord::class),
-        HealthPermission.getReadPermission(ExerciseSessionRecord::class)
-    )
+    private val healthPermissions=HealthDailySync.reads
+    private var awaitingBackground=false
     private lateinit var feedback: TextView
     private lateinit var code: EditText
     private val permissionsLauncher = registerForActivityResult(
         PermissionController.createRequestPermissionResultContract()
-    ) { granted -> feedback.text = if (granted.containsAll(healthPermissions))
-        "Gesundheitsdaten freigegeben. Jetzt mit Compass verbinden oder synchronisieren."
-        else "Noch nicht alle Berechtigungen erteilt. Du kannst sie jederzeit in Health Connect ändern." }
+    ) { granted ->
+        if(awaitingBackground){
+            awaitingBackground=false
+            if(granted.containsAll(healthPermissions)&&HealthDailySync.backgroundRead in granted){
+                HealthSyncSchedule.enable(this)
+                feedback.text="Tagesabgleich aktiviert: Android plant die Übertragung ungefähr alle 24 Stunden."
+            }else feedback.text="Hintergrundzugriff nicht freigegeben. Automatik bleibt aus."
+        }else feedback.text=if(granted.containsAll(healthPermissions))
+            "Gesundheitsdaten freigegeben. Du kannst nun synchronisieren."
+        else "Noch nicht alle Berechtigungen erteilt."
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,7 +67,7 @@ class HealthCompanionActivity : ComponentActivity() {
         }
         fun button(text:String, handler:()->Unit)=Button(this).apply { this.text=text;setOnClickListener{handler()};root.addView(this) }
         label("Compass · Gesundheitsdaten",true)
-        label("Schritte, Schlaf und Trainingsminuten aus Health Connect. Nur nach deiner Freigabe und einem Tipp auf Synchronisieren werden Tageswerte an deinen privaten Compass-Worker gesendet. Keine Standortdaten.")
+        label("Schritte, Schlaf und Trainingsminuten aus Health Connect. Nur nach Freigabe werden Tageswerte an Compass gesendet. Manuell oder optional täglich im Hintergrund (zusätzliche Berechtigung erforderlich). Keine Standortdaten.")
         button("1 · Health Connect freigeben") {
             if (HealthConnectClient.getSdkStatus(this)!=HealthConnectClient.SDK_AVAILABLE) {
                 feedback.text="Health Connect ist nicht verfügbar. Bitte in den Android-Einstellungen prüfen." }
@@ -84,50 +89,44 @@ class HealthCompanionActivity : ComponentActivity() {
                 }catch(ex:Exception){feedback.text="Kopplung fehlgeschlagen: ${ex.message}"}
             }
         }
-        button("3 · Letzte 7 Tage synchronisieren") {
+        button("3 · Letzte 7 Tage jetzt synchronisieren") {
             lifecycleScope.launch {
-                try {
-                    val token=HealthTokenStore.load(this@HealthCompanionActivity)
-                    if(token==null){feedback.text="Zuerst Gerät koppeln.";return@launch}
-                    if(HealthConnectClient.getSdkStatus(this@HealthCompanionActivity)!=HealthConnectClient.SDK_AVAILABLE){feedback.text="Health Connect fehlt.";return@launch}
-                    val client=HealthConnectClient.getOrCreate(this@HealthCompanionActivity)
-                    val granted=client.permissionController.getGrantedPermissions()
-                    if(!granted.containsAll(healthPermissions)){feedback.text="Bitte zuerst die Health-Connect-Berechtigungen erteilen.";return@launch}
-                    feedback.text="Lese Tageswerte …"
-                    val zone=ZoneId.systemDefault();val today=LocalDate.now();val rows=JSONArray()
-                    for(i in 6 downTo 0){
-                        val day=today.minusDays(i.toLong())
-                        val from=day.atStartOfDay(zone).toInstant()
-                        val until=day.plusDays(1).atStartOfDay(zone).toInstant()
-                        val metrics=client.aggregate(AggregateRequest(
-                            setOf(StepsRecord.COUNT_TOTAL,SleepSessionRecord.SLEEP_DURATION_TOTAL,ExerciseSessionRecord.EXERCISE_DURATION_TOTAL),
-                            TimeRangeFilter.between(from,until)))
-                        val steps=metrics[StepsRecord.COUNT_TOTAL]
-                        val sleep=metrics[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.toMinutes()
-                        val training=metrics[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes()
-                        if(steps!=null||sleep!=null||training!=null){
-                            val item=JSONObject().put("day",day.toString())
-                            if(steps!=null)item.put("steps",steps.coerceIn(0L,100000L))
-                            if(sleep!=null)item.put("sleepMinutes",sleep.coerceIn(0L,1440L))
-                            if(training!=null)item.put("exerciseMinutes",training.coerceIn(0L,1440L))
-                            rows.put(item)
-                        }
-                    }
-                    if(rows.length()==0){feedback.text="Keine Tagesdaten in Health Connect gefunden. Prüfe die Garmin-Connect-Freigabe.";return@launch}
-                    feedback.text="Übertrage ${rows.length()} Tage …"
-                    val payload=JSONObject().put("days",rows)
-                    val result=withContext(Dispatchers.IO){send("/api/health/days",payload,token)}
-                    feedback.text="Erfolgreich: ${result.optInt("count")} Tage in Compass gespeichert. Dashboard öffnen und aktualisieren."
+                try{
+                    feedback.text="Lese und übertrage Tageswerte …"
+                    val count=HealthDailySync.run(this@HealthCompanionActivity,false)
+                    feedback.text=if(count==0)"Keine Tagesdaten in Health Connect gefunden." else "$count Tage erfolgreich in Compass gespeichert."
                 }catch(ex:Exception){feedback.text="Abgleich fehlgeschlagen: ${ex.message}"}
             }
         }
+        label("Automatischer Abgleich · freiwillig",true)
+        label("Mit zusätzlicher Health-Connect-Freigabe synchronisiert Android etwa einmal täglich bei Internetverbindung. Energiesparmodus kann den Zeitpunkt verschieben.")
+        button("Täglichen Abgleich aktivieren"){
+            if(HealthConnectClient.getSdkStatus(this)!=HealthConnectClient.SDK_AVAILABLE){
+                feedback.text="Health Connect fehlt.";return@button
+            }
+            if(HealthTokenStore.load(this)==null){feedback.text="Bitte zuerst das Gesundheitsgerät koppeln.";return@button}
+            val client=HealthConnectClient.getOrCreate(this)
+            if(!HealthDailySync.supportsBackground(client)){
+                feedback.text="Dieses Gerät unterstützt den Hintergrundzugriff auf Health Connect noch nicht. Manuelle Synchronisation bleibt verfügbar.";return@button
+            }
+            awaitingBackground=true
+            permissionsLauncher.launch(healthPermissions+HealthDailySync.backgroundRead)
+        }
+        button("Automatischen Abgleich ausschalten"){
+            HealthSyncSchedule.disable(this)
+            feedback.text="Automatischer Gesundheitsabgleich ist ausgeschaltet."
+        }
+        val healthStatus=getSharedPreferences(HealthSyncSchedule.PREF,MODE_PRIVATE)
+        val last=healthStatus.getLong("lastSuccess",0)
+        label("Automatik: ${if(HealthSyncSchedule.enabled(this))"aktiv" else "aus"} · Letzter erfolgreicher Abgleich: ${if(last>0)java.text.SimpleDateFormat("dd.MM. HH:mm",java.util.Locale.GERMAN).format(java.util.Date(last))else"noch keiner"}. ${healthStatus.getString("lastError","")}")
         button("Compass-Webansicht öffnen") {startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://theophil-kroller.github.io/compass-life/?view=recovery")))}
         button("Lokale Geräteverbindung vergessen"){
+            HealthSyncSchedule.disable(this)
             HealthTokenStore.clear(this)
             feedback.text="Lokales Token entfernt. Für vollständigen Widerruf bitte auch das Gerät in Compass → Erholung trennen."
         }
         label("Android-Widget · Tagesvorschau",true)
-        label("Das Homescreen-Widget zeigt optional offene Aufgaben, den nächsten geplanten Schritt und einen Schlafdurchschnitt. Es benötigt einen eigenen, widerrufbaren Lesecode aus Compass → Erholung. Der lokale Tresor bleibt geschützt.")
+        label("Das Fokus-Widget zeigt Aufgaben und Waiting For, das Entdecken-Widget die nächsten sieben Veranstaltungstage. Keine Gesundheitswerte auf dem Homescreen. Es benötigt einen eigenen, widerrufbaren Lesecode aus Compass → Erholung. Der lokale Tresor bleibt geschützt.")
         val widgetCode=EditText(this).apply{hint="8-stelliger Widget-Code";inputType=InputType.TYPE_CLASS_NUMBER;root.addView(this)}
         button("Widget mit Compass verbinden") {
             val value=widgetCode.text.toString().trim()
@@ -180,6 +179,6 @@ class HealthCompanionActivity : ComponentActivity() {
 /** Health Connect permission usage rationale required by Android 14+. */
 class PermissionUsageActivity: Activity(){
     override fun onCreate(savedInstanceState: Bundle?){super.onCreate(savedInstanceState)
-        setContentView(TextView(this).apply{ text="Compass liest nach deiner Freigabe Schritte, Schlaf- und Sportdauer. Du startest den Upload manuell. Die Tageswerte werden in deinem privaten Compass-Cloudkonto gespeichert. Berechtigungen kannst du in Health Connect jederzeit widerrufen.";textSize=18f;setPadding(32,40,32,32)})
+        setContentView(TextView(this).apply{ text="Compass liest nach deiner Freigabe Schritte, Schlaf- und Sportdauer. Du kannst den Upload manuell starten oder zusätzlich den Hintergrundzugriff aktivieren. Die Tageswerte werden in deinem Compass-Cloudkonto gespeichert. Berechtigungen kannst du in Health Connect jederzeit widerrufen.";textSize=18f;setPadding(32,40,32,32)})
     }
 }

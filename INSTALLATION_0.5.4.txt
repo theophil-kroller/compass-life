@@ -1,0 +1,12 @@
+Compass 0.5.4 – INSTALLATION
+1) Bestehenden Compass-Tresor verschlüsselt sichern.
+2) Dateien aus diesem PATCH-ZIP mit exakten Pfaden nach GitHub theophil-kroller/compass-life main hochladen.
+3) GitHub Actions: Deploy Compass Web UND Build Compass Android Widget müssen grün sein.
+4) Cloudflare Worker separat aus dem neuen Stand deployen: npm run deploy:api.
+5) /api/health prüfen: apiVersion 10, release 0.5.4, schema.ready true.
+6) KEINE neue D1-Migration (0.5.3 migration 0011 muss bereits vorhanden sein).
+7) APK-Artifact Compass-Widgets-0.5.4-debug-apk herunterladen, app-debug.apk installieren.
+8) Samsung Homescreen: Compass Fokus und Compass Entdecken als zwei separate Widgets hinzufügen.
+9) Companion: Health-Synchronisation freiwillig täglich aktivieren; zusätzliche Hintergrund-Berechtigung erforderlich. Automatik jederzeit abschaltbar.
+
+Ausführlich: docs/COMPASS_0.5.4_RELEASE.md

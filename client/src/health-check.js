@@ -1,6 +1,6 @@
 // Keep API readiness independent of database migration diagnostics.
 // Cloud Worker 0.4.10 publishes apiVersion 6.
-export const MIN_WORKER_API_VERSION = 9;
+export const MIN_WORKER_API_VERSION = 10;
 export function assertCompatibleWorker(health) {
   const api = health?.apiVersion;
   if (!Number.isInteger(api) || api < MIN_WORKER_API_VERSION) {

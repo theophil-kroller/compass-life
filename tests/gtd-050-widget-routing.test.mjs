@@ -8,11 +8,12 @@ test('Android widget offers three consistent deep links supported by Compass rou
  const native=read('android/CompassWidget/app/src/main/java/at/compasslife/widget/TodayWidget.java');
  const xml=read('android/CompassWidget/app/src/main/res/layout/widget_today.xml');
  const web=read('client/src/main.js');
- for(const [name,route] of [['widget_today_button','?view=today'],['widget_capture_button','?capture=1'],['widget_recovery_button','?view=recovery']]){
+ for(const [name,route] of [['widget_today_button','?view=today'],['widget_capture_button','?capture=1']]){
    assert.ok(xml.includes(`android:id="@+id/${name}"`));
    assert.ok(native.includes(`R.id.${name}`));
    assert.ok(native.includes(route));
  }
+ assert.match(read('android/CompassWidget/app/src/main/java/at/compasslife/widget/DiscoveryWidget.java'),/\?view=recovery/);
  assert.match(web,/bootCapture=bootSearch\.get\('capture'\)==='1'/);
  assert.match(web,/bootView=bootSearch\.get\('view'\)/);
  assert.match(web,/\['today','inbox'.*'recovery'/);

@@ -3,7 +3,7 @@ import {schemaStatus} from './schema.js';
 import {listDiscoveryEvents,upsertDiscoveryEvents} from './discovery-events.js';
 import {listTasks,putTask} from './tasks.js';
 import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice,purgeWatchSession,watchPlanning} from './watch.js';
-import {startWidgetPair,claimWidgetPair,widgetSummary,listWidgetDevices,revokeWidgetDevice} from './widget-preview.js';
+import {startWidgetPair,claimWidgetPair,widgetSummary,widgetEvents,listWidgetDevices,revokeWidgetDevice} from './widget-preview.js';
 import {startHealthPair,claimHealthPair,uploadHealthDays,listHealthDays,listHealthDevices,revokeHealthDevice,deleteHealthDays} from './health-daily.js';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import {MAX_BATCH, validateMutation, validCursor, cleanMutation} from './validation.js';
@@ -195,13 +195,14 @@ export default {
     const path=new URL(req.url).pathname;
     if (path==='/api/health' && req.method==='GET') {
       const schema=env.DB?await schemaStatus(env.DB):{ready:false,requiredMigration:'0001–0006',missing:[]};
-      return finish(json({ok:true,phase:'GTD',apiVersion:9,release:'0.5.3',planning:true,gtd:true,projects:true,schema}));
+      return finish(json({ok:true,phase:'GTD',apiVersion:10,release:'0.5.4',planning:true,gtd:true,projects:true,schema}));
     }
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));
     try {
       if(path==='/api/widget/pair/claim' && req.method==='POST')return finish(await claimWidgetPair(req,env));
       if(path==='/api/widget/summary' && req.method==='GET')return finish(await widgetSummary(req,env));
+      if(path==='/api/widget/events' && req.method==='GET')return finish(await widgetEvents(req,env));
       if(path==='/api/health/pair/claim' && req.method==='POST')return finish(await claimHealthPair(req,env));
       if(path==='/api/health/days' && req.method==='POST')return finish(await uploadHealthDays(req,env));
       if(path==='/api/watch/pair/claim' && req.method==='POST')return finish(await claimPair(req,env));

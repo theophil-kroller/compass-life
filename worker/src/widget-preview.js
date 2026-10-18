@@ -40,11 +40,37 @@ export async function widgetSummary(req,env){
  const next=await env.DB.prepare(`SELECT title,due_date,planned_date FROM planning_tasks WHERE owner_sub=? AND archived=0 AND completed=0 AND workflow='next' AND (due_date IS NOT NULL OR planned_date IS NOT NULL)
   ORDER BY CASE WHEN due_date IS NOT NULL AND due_date<? THEN 0 ELSE 1 END,
   COALESCE(due_date,planned_date) ASC,title ASC LIMIT 1`).bind(device.owner_sub,day).first();
+ const waiting=await env.DB.prepare("SELECT count(*) AS count FROM planning_tasks WHERE owner_sub=? AND archived=0 AND completed=0 AND workflow='waiting'").bind(device.owner_sub).first();
+ const upcoming=await env.DB.prepare(`SELECT title,COALESCE(due_date,planned_date) AS event_date,estimate_minutes,context_tags_json FROM planning_tasks WHERE owner_sub=? AND archived=0 AND completed=0 AND workflow='next' AND (due_date IS NOT NULL OR planned_date IS NOT NULL) ORDER BY CASE WHEN due_date IS NOT NULL AND due_date<? THEN 0 ELSE 1 END, COALESCE(due_date,planned_date) ASC,title ASC LIMIT 3`).bind(device.owner_sub,day).all();
+ const nextActions=(upcoming.results||[]).map(t=>({title:t.title.slice(0,80),date:t.event_date,minutes:Number.isInteger(t.estimate_minutes)?t.estimate_minutes:null,context:(()=>{try{const tags=JSON.parse(t.context_tags_json||'[]');return Array.isArray(tags)?String(tags[0]||'').slice(0,35):'';}catch{return '';}})()}));
  const health=await env.DB.prepare('SELECT day,steps,sleep_minutes,exercise_minutes FROM health_daily WHERE owner_sub=? AND day<=? ORDER BY day DESC LIMIT 7').bind(device.owner_sub,day).all();
  const sleep=(health.results||[]).map(x=>x.sleep_minutes).filter(Number.isFinite);
  const steps=(health.results||[]).find(x=>x.day===day)?.steps??null;
- return reply({generatedAt:new Date().toISOString(),day,openToday:Math.min(999,today?.count??0),next:next?{title:next.title.slice(0,80),dueDate:next.due_date||next.planned_date}:null,
+ return reply({generatedAt:new Date().toISOString(),day,openToday:Math.min(999,today?.count??0),next:next?{title:next.title.slice(0,80),dueDate:next.due_date||next.planned_date}:null,waitingFor:Math.min(999,waiting?.count??0),nextActions,
   sleepAverageMinutes:sleep.length?Math.round(sleep.reduce((a,b)=>a+b,0)/sleep.length):null,sleepMeasuredDays:sleep.length,stepsToday:steps});
+}
+/** The same revocable cw1_ token can read only the next seven days of public event metadata.
+ * Notes, contacts, location and the encrypted browser vault never enter this endpoint. */
+export async function widgetEvents(req,env){
+ const raw=token(req);if(!/^cw1_[a-f0-9]{64}$/.test(raw))return reply({error:'unauthorized'},401);
+ const device=await env.DB.prepare('SELECT owner_sub FROM widget_devices WHERE token_hash=? AND revoked=0').bind(await sha(raw)).first();
+ if(!device)return reply({error:'unauthorized'},401);
+ const day=new URL(req.url).searchParams.get('day');
+ const realDay=new Date().toISOString().slice(0,10);
+ if(typeof day!=='string'||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(day)||!Number.isFinite(Date.parse(day+'T12:00:00Z'))||new Date(day+'T12:00:00Z').toISOString().slice(0,10)!==day||Math.abs(Date.parse(day+'T12:00:00Z')-Date.parse(realDay+'T12:00:00Z'))>2*86400000)
+  return reply({error:'invalid-day'},400);
+ const end=new Date(Date.parse(day+'T12:00:00Z')+6*86400000).toISOString().slice(0,10);
+ const rows=await env.DB.prepare(`SELECT event_json,status FROM discovery_events WHERE owner_sub=? AND removed=0 AND status IN ('open','saved') AND event_json IS NOT NULL ORDER BY updated_at DESC LIMIT 1500`).bind(device.owner_sub).all();
+ const events=[];
+ for(const row of rows.results||[]){
+  let e;try{e=JSON.parse(row.event_json);}catch{continue;}
+  if(!e||typeof e.title!=='string'||typeof e.date!=='string'||typeof e.city!=='string'||typeof e.category!=='string')continue;
+  const last=(typeof e.endDate==='string'&&e.endDate>=e.date)?e.endDate:e.date;
+  if(e.date>end||last<day)continue;
+  events.push({title:e.title.slice(0,95),date:e.date,city:e.city.slice(0,60),category:e.category.slice(0,32),saved:row.status==='saved'});
+ }
+ events.sort((a,b)=>Number(b.saved)-Number(a.saved)||a.date.localeCompare(b.date)||a.title.localeCompare(b.title,'de'));
+ return reply({from:day,to:end,events:events.slice(0,5),total:events.length,generatedAt:new Date().toISOString()});
 }
 export async function listWidgetDevices(env,identity){const q=await env.DB.prepare('SELECT token_hash,label,created_at FROM widget_devices WHERE owner_sub=? AND revoked=0').bind(identity.sub).all();return reply({devices:(q.results||[]).map(x=>({deviceHash:x.token_hash,label:x.label,createdAt:x.created_at}))});}
 export async function revokeWidgetDevice(req,env,identity){const input=await data(req);if(!/^[a-f0-9]{64}$/.test(input?.deviceHash||''))return reply({error:'invalid-device'},400);

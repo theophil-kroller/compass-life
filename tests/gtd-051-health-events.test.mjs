@@ -58,6 +58,6 @@ test('Event JSON import requires source, deduplicates and avoids HTML code execu
 test('Health migration is additive and Android source requests explicit permissions',()=>{
  const sql=readFileSync(new URL('../worker/migrations/0009_health_daily.sql',import.meta.url),'utf8');
  assert.doesNotMatch(sql,/\b(?:DROP|TRUNCATE)\b/i);
- const app=readFileSync(new URL('../android/CompassWidget/app/src/main/java/at/compasslife/widget/HealthCompanionActivity.kt',import.meta.url),'utf8');
+ const app=readFileSync(new URL('../android/CompassWidget/app/src/main/java/at/compasslife/widget/HealthCompanionActivity.kt',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../android/CompassWidget/app/src/main/java/at/compasslife/widget/HealthDailySync.kt',import.meta.url),'utf8');
  for(const marker of ['getSdkStatus','PermissionController.createRequestPermissionResultContract','StepsRecord.COUNT_TOTAL','SLEEP_DURATION_TOTAL','EXERCISE_DURATION_TOTAL','HealthTokenStore.save','/api/health/days'])assert.ok(app.includes(marker),marker);
 });

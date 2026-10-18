@@ -459,3 +459,22 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .discovery-conflicts{border:1px solid #e6cbb4;background:#fff9f2;border-radius:12px;padding:14px;margin:15px 0}.discovery-conflicts>strong{color:#87532f;font-size:13px}.discovery-conflicts p{font-size:11px;color:#906649}
 .discovery-conflict-row{display:flex;align-items:center;gap:6px;border-top:1px solid #f0e2d4;padding:9px 0;font-size:11px}.discovery-conflict-row span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:560px){.discovery-week-pager{justify-content:center}.discovery-week-pager strong{order:-1;width:100%;text-align:center}.discovery-week-pager .text-link{width:100%;text-align:center}}
+
+/* 0.5.4 · Keep Projects as a three-pane editor at normal desktop widths.
+   The earlier 1330px breakpoint put the inspector below the project contents. */
+@media(min-width:1020px){
+ .projects-layout.omni-projects:not(.is-focused){
+  display:grid;grid-template-columns:minmax(190px,.72fr) minmax(300px,1.48fr) minmax(235px,.89fr);
+  gap:12px;align-items:start;
+ }
+ .projects-layout.omni-projects:not(.is-focused)>.project-navigation{grid-column:1;grid-row:1;min-width:0}
+ .projects-layout.omni-projects:not(.is-focused)>.project-middle{grid-column:2;grid-row:1;min-width:0}
+ .projects-layout.omni-projects:not(.is-focused)>.project-inspector{grid-column:3;grid-row:1;min-width:0;max-height:calc(100dvh - 120px);overflow-y:auto;align-self:start}
+ .projects-layout.omni-projects.is-focused{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(255px,.8fr)}
+ .projects-layout.omni-projects.is-focused>.project-middle{grid-column:1;grid-row:1}
+ .projects-layout.omni-projects.is-focused>.project-inspector{grid-column:2;grid-row:1;min-width:0;max-height:calc(100dvh - 120px);overflow-y:auto}
+}
+@media(min-width:811px) and (max-width:1019px){
+ .projects-layout.omni-projects:not(.is-focused){grid-template-columns:minmax(205px,.7fr) minmax(0,1.4fr)}
+ .projects-layout.omni-projects:not(.is-focused)>.project-inspector{grid-column:1 / -1}
+}
