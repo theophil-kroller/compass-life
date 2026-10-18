@@ -1,5 +1,6 @@
 import {listProjects,putProject} from './projects.js';
 import {schemaStatus} from './schema.js';
+import {listDiscoveryEvents,upsertDiscoveryEvents} from './discovery-events.js';
 import {listTasks,putTask} from './tasks.js';
 import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice,purgeWatchSession,watchPlanning} from './watch.js';
 import {startWidgetPair,claimWidgetPair,widgetSummary,listWidgetDevices,revokeWidgetDevice} from './widget-preview.js';
@@ -136,6 +137,8 @@ async function route(req,env,identity) {
   if(req.method==='POST' && url.pathname==='/api/widget/device/revoke')return revokeWidgetDevice(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/projects')return listProjects(env,identity);
   if(req.method==='POST' && url.pathname==='/api/projects')return putProject(req,env,identity);
+  if(req.method==='GET' && url.pathname==='/api/events')return listDiscoveryEvents(env,identity);
+  if(req.method==='POST' && url.pathname==='/api/events/batch')return upsertDiscoveryEvents(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/tasks')return listTasks(env,identity);
   if(req.method==='POST' && url.pathname==='/api/tasks')return putTask(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/health/days')return listHealthDays(req,env,identity);
@@ -192,7 +195,7 @@ export default {
     const path=new URL(req.url).pathname;
     if (path==='/api/health' && req.method==='GET') {
       const schema=env.DB?await schemaStatus(env.DB):{ready:false,requiredMigration:'0001–0006',missing:[]};
-      return finish(json({ok:true,phase:'GTD',apiVersion:8,release:'0.5.2',planning:true,gtd:true,projects:true,schema}));
+      return finish(json({ok:true,phase:'GTD',apiVersion:9,release:'0.5.3',planning:true,gtd:true,projects:true,schema}));
     }
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));

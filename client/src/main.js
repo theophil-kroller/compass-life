@@ -1,7 +1,8 @@
 import './style.css';
 import {allRecoveryIdeas,scoreRecoveryIdeas,recoveryWeather,validRecoveryIdea} from './recovery-ideas.js';
 import {assertCompatibleWorker} from './health-check.js';
-import {parseEventImport,upcomingImportedEvents,discoveryPrompt,eventKey,eventAppearance as discoveryAppearance,EVENT_CATEGORIES,eventArea,eventCountry} from './event-import.js';
+import {parseEventImport,upcomingImportedEvents,discoveryPromptRegional,discoveryPromptTravel,eventKey,eventAppearance as discoveryAppearance,EVENT_CATEGORIES,eventArea,eventCountry} from './event-import.js';
+import {eventState,queueEvent,queueEventPreference,removeEvents,prunePastEvents,pendingEventBatch,acknowledgeEventBatch,mergeEventSnapshot,resolveEventConflict} from './event-sync.js';
 import {healthViewModel,healthBars,healthTime,healthObservation} from './health-visual.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
@@ -14,7 +15,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.2';
+const COMPASS_CLIENT_VERSION='0.5.3';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -79,7 +80,7 @@ let watchPairCode='', watchPairExpires='', watchSessions=[], watchDevices=[], wa
 let healthDays=[],healthDevices=[],healthPairCode='',healthError='',healthLastUpdated='';
 let widgetPairCode='',widgetDevices=[],widgetConnectError='';
 let healthSpan=7,healthDetailsOpen=false,healthDevicesOpen=false;
-let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryImportOpen=false;
+let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryImportOpen=false,discoveryWeekOffset=0,discoveryImportPreview=null;
 const discoveryExpandedDays=new Set();
 // Calendar OAuth is independent from Compass login; token stays in RAM only.
 let calendarToken='', calendarExpires=0, calendarEvents=[], calendarStatus='Nicht verbunden', calendarBusy=false;
@@ -614,7 +615,7 @@ function reviewScreen(){
 function systemScreen(){
  return chrome(`<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
  <div class="connection-detail"><span class="connection-dot ${configured()?'green':'amber'}"></span><span>${configured()?'Konfiguration hinterlegt':'Google-Anmeldung noch nicht konfiguriert'}</span></div>
- <p class="small-muted">${configured()?'API: '+h(config.apiUrl):'In client/public/runtime-config.json sind noch Konfigurationswerte zu ergänzen.'}</p><p class="small-muted">Frontend: Compass ${COMPASS_CLIENT_VERSION} · kompatibel mit Worker-API 6 oder neuer.</p>
+ <p class="small-muted">${configured()?'API: '+h(config.apiUrl):'In client/public/runtime-config.json sind noch Konfigurationswerte zu ergänzen.'}</p><p class="small-muted">Frontend: Compass ${COMPASS_CLIENT_VERSION} · benötigt Worker-API 9 oder neuer.</p>
  <div id="google-button" class="google-button"></div><p class="small-muted">${authToken?'Compass-Sitzung aktiv: '+h(currentUser)+' · bleibt nach erneutem Tresor-Entsperren erhalten.':'Google-Anmeldung einmalig verknüpfen; danach wird die Compass-Sitzung verschlüsselt im Tresor gespeichert.'}</p><p class="small-muted">Automatisch: 7 Sekunden nach Änderungen und etwa alle 15 Minuten, solange Compass geöffnet und sichtbar ist. Manuell jederzeit über „Jetzt synchronisieren“.</p>
  <div class="system-actions"><button class="primary-btn" data-action="sync" ${!authToken||busy?'disabled':''}>${busy?'Synchronisiere …':'Jetzt synchronisieren'} ${ico('sync',16)}</button><button class="secondary-btn" data-action="logout" ${!authToken?'disabled':''}>Google trennen</button></div>
  <div class="mini-stats"><div><span>Wartende Änderungen</span><strong>${state.pending.length}</strong></div><div><span>Konflikte</span><strong>${state.conflicts.length}</strong></div><div><span>Sync-Cursor</span><strong>${state.cursor}</strong></div></div></section>
@@ -716,14 +717,18 @@ function healthSummaryPanel(){
  <div class="widget-connect-panel"><div><strong>📱 Android-Widget · Heute auf einen Blick</strong><p>Die Widget-Vorschau zeigt auf Wunsch offene Next Actions, die nächste geplante Aufgabe und Gesundheits-Kurzwerte. Dafür ist ein eigener, jederzeit widerrufbarer Lesezugang erforderlich. Keine Tresor-Passphrase im Widget.</p></div><button type="button" class="secondary-btn" data-action="widget-pair" ${!authToken?'disabled':''}>Widget-Kopplungscode erzeugen</button>${widgetPairCode?`<strong class="watch-code">${h(widgetPairCode)}</strong>`:''}${widgetConnectError?`<p class="error">${h(widgetConnectError)}</p>`:''}${widgetDevices.map(d=>`<div class="watch-session"><span>${h(d.label)} · ${h(d.createdAt.slice(0,10))}</span><button type="button" class="secondary-btn" data-action="widget-revoke" data-id="${h(d.deviceHash)}">Widerrufen</button></div>`).join('')}</div>
  <details class="health-details" ${healthDevicesOpen?'open':''} id="health-device-details"><summary>Health Connect & Datenschutz <span>Verbindung verwalten</span></summary><div class="health-pair-panel"><p>Im Android-Companion die Berechtigungen erteilen und einen einmaligen Code eingeben.</p><button type="button" class="secondary-btn" data-action="health-pair" ${!authToken?'disabled':''}>Health-Connect-Kopplungscode erzeugen</button> ${healthPairCode?`<strong class="watch-code">${h(healthPairCode)}</strong>`:''}${healthDevices.map(d=>`<div class="watch-session"><span>${h(d.label)}</span><button class="secondary-btn" data-action="health-revoke" data-id="${h(d.deviceHash)}">Trennen</button></div>`).join('')}<button type="button" class="secondary-btn" data-action="health-delete-all">Gesundheitsdaten aus der Cloud löschen</button><small>Manueller Abgleich. Die Werte sind zugriffsgeschützt in Cloudflare D1 gespeichert, aber nicht Ende-zu-Ende-verschlüsselt. Keine medizinische Bewertung.</small></div></details></section>`;
 }
+function isoWeekNumber(d){const a=new Date(d);a.setUTCDate(a.getUTCDate()+4-(a.getUTCDay()||7));const y=new Date(Date.UTC(a.getUTCFullYear(),0,1));return Math.ceil((((a-y)/86400000)+1)/7);}
 function discoveryPanel(){
  const today=localDate(),all=upcomingImportedEvents(state?.discoveredEvents,today);
+ const monday=new Date(today+'T12:00:00Z');monday.setUTCDate(monday.getUTCDate()-((monday.getUTCDay()+6)%7)+7*discoveryWeekOffset);const mondayStr=monday.toISOString().slice(0,10);const sunday=new Date(monday);sunday.setUTCDate(monday.getUTCDate()+6);const sundayStr=sunday.toISOString().slice(0,10);
+ const fmtWeek=d=>new Intl.DateTimeFormat('de-AT',{day:'numeric',month:'short'}).format(d);
  const preferences=state?.eventPreferences||{},fav=all.filter(e=>preferences[eventKey(e)]==='saved').length,hide=all.filter(e=>preferences[eventKey(e)]==='hidden').length;
  const filter=(e)=>{const status=preferences[eventKey(e)]||'open';if(discoveryRange==='saved'&&status!=='saved')return false;if(discoveryRange==='hidden'&&status!=='hidden')return false;if(!['saved','hidden'].includes(discoveryRange)&&status==='hidden')return false;
   if(discoveryCity!=='all'&&e.city!==discoveryCity)return false;if(discoveryArea!=='all'){const area=eventArea(e);if(discoveryArea==='austria'?!['graz','vienna','austria'].includes(area):discoveryArea==='europe'?!['graz','vienna','austria','europe'].includes(area):area!==discoveryArea)return false;}if(discoveryCategory!=='all'&&e.category!==discoveryCategory)return false;
   const d=new Date(today+'T12:00:00Z'),wd=d.getUTCDay();if(discoveryRange==='today')return e.date===today;
   if(discoveryRange==='week'){d.setUTCDate(d.getUTCDate()+7);return e.date<=d.toISOString().slice(0,10);}
   if(discoveryRange==='weekend'){d.setUTCDate(d.getUTCDate()+(6-wd+7)%7);const sat=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+1);return e.date>=sat&&e.date<=d.toISOString().slice(0,10);}
+  if(discoveryRange==='all')return (e.endDate||e.date)>=mondayStr&&e.date<=sundayStr;
   return true;};
  const events=all.filter(filter).slice(0,100),groups=new Map();for(const e of events){if(!groups.has(e.date))groups.set(e.date,[]);groups.get(e.date).push(e);}
  const eventCard=e=>{const key=eventKey(e),[emoji,tone]=discoveryAppearance(e.category),status=preferences[key]||'open';const desc=e.description||`${e.category} im ${e.venue||e.city}. Genauere Informationen zum Programm stehen auf der Veranstalterseite.`;
@@ -733,8 +738,10 @@ function discoveryPanel(){
  return `<section class="work-card discovery-panel"><div class="work-heading"><span>${ico('calendar',18)} Entdecken · Freizeit in deiner Nähe</span><span class="quiet-tag">${all.length} Veranstaltungen · ${fav} gemerkt</span></div>
  <p class="muted-line">Aus importierten Recherchen – keine Live-Verfügbarkeit. Die Programmbeschreibung wird nur angezeigt, wenn sie im Import enthalten ist.</p>
  <div class="discovery-tabs">${ranges.map(([value,title])=>`<button class="discovery-tab ${discoveryRange===value?'selected':''}" data-action="discovery-range" data-id="${value}" aria-pressed="${discoveryRange===value}">${h(title)}</button>`).join('')}</div>
+ ${discoveryRange==='all'?`<div class="discovery-week-pager"><button type="button" class="secondary-btn" data-action="discovery-week-prev" ${discoveryWeekOffset===0?'disabled':''}>← Zurück</button><strong>${h(fmtWeek(monday))} – ${h(fmtWeek(sunday))} · KW ${isoWeekNumber(monday)}</strong><button type="button" class="secondary-btn" data-action="discovery-week-next">Weiter →</button><button type="button" class="text-link" data-action="discovery-week-today">Diese Woche</button></div>`:''}
  <div class="discovery-filters"><label>Region<select data-discovery-filter="area"><option value="all" ${discoveryArea==='all'?'selected':''}>Überall</option><option value="graz" ${discoveryArea==='graz'?'selected':''}>Graz & Umgebung</option><option value="vienna" ${discoveryArea==='vienna'?'selected':''}>Wien</option><option value="austria" ${discoveryArea==='austria'?'selected':''}>Österreich</option><option value="europe" ${discoveryArea==='europe'?'selected':''}>Europa</option></select></label><label>Stadt<select data-discovery-filter="city"><option value="all">Alle Städte</option>${cities.map(c=>`<option value="${h(c)}" ${discoveryCity===c?'selected':''}>${h(c)}</option>`).join('')}</select></label><label>Interesse<select data-discovery-filter="category"><option value="all">Alle Kategorien</option>${EVENT_CATEGORIES.map(c=>`<option value="${h(c)}" ${discoveryCategory===c?'selected':''}>${h(discoveryAppearance(c)[0])} ${h(c)}</option>`).join('')}</select></label><button class="secondary-btn" type="button" data-action="discovery-import-toggle">${discoveryImportOpen?'Import schließen':'＋ Veranstaltungen importieren'}</button></div>
- ${discoveryImportOpen?`<div class="discovery-import-drawer"><div class="discovery-actions"><button type="button" class="secondary-btn" data-action="discovery-prompt">Rechercheprompt kopieren</button><button type="button" class="secondary-btn" data-action="discovery-clear">Importierte Events entfernen</button></div><form id="discovery-import-form" class="compact-stack"><label>Veranstaltungs-JSON<textarea name="events" rows="5" maxlength="200000" placeholder='{"events":[{"title":"...","date":"2026-11-01","city":"Graz","venue":"...","category":"Theater","description":"...","sourceUrl":"https://...","imageUrl":"https://...","country":"Österreich"}]}' required></textarea></label><button class="primary-btn" type="submit">Prüfen & importieren</button></form><small>JSON mit Markdown-Codeblock und typischen KI-URL-Fehlern wird bereinigt. Bei Fehlern zeigen wir den Eintrag.</small></div>`:''}
+ ${discoveryImportOpen?`<div class="discovery-import-drawer"><div class="discovery-actions"><button type="button" class="secondary-btn" data-action="discovery-prompt-regional">Recherche: Graz, Wien & Österreich</button><button type="button" class="secondary-btn" data-action="discovery-prompt-travel">Recherche: Tanz & Bujinkan Europa</button><button type="button" class="secondary-btn" data-action="discovery-clear">Importierte Events entfernen</button></div><form id="discovery-import-form" class="compact-stack"><label>Veranstaltungs-JSON<textarea name="events" rows="5" maxlength="200000" placeholder='{"events":[{"title":"...","date":"2026-11-01","city":"Graz","venue":"...","category":"Theater","description":"...","sourceUrl":"https://...","imageUrl":"https://...","country":"Österreich"}]}' required></textarea></label><button class="primary-btn" type="submit">Import prüfen</button></form>${discoveryImportPreview?`<div class="discovery-import-preview"><strong>${discoveryImportPreview.total} erkannt · ${discoveryImportPreview.added.length} neu · ${discoveryImportPreview.duplicates} Dubletten</strong><p>Die neuen Veranstaltungen werden erst nach deiner Bestätigung in den lokalen Tresor übernommen und mit deiner Compass-Cloud synchronisiert.</p><button class="primary-btn" type="button" data-action="discovery-import-confirm">${discoveryImportPreview.added.length} importieren</button><button class="secondary-btn" type="button" data-action="discovery-import-cancel">Abbrechen</button></div>`:""}<small>JSON mit Markdown-Codeblock und typischen KI-URL-Fehlern wird bereinigt. Bei Fehlern zeigen wir den Eintrag.</small></div>`:''}
+ ${Object.keys(state?.eventConflicts||{}).length?`<div class="discovery-conflicts"><strong>${Object.keys(state.eventConflicts).length} Event-Konflikte zwischen Geräten</strong><p>Wähle je Veranstaltung die Cloud-Version oder deine lokale Bearbeitung.</p>${Object.entries(state.eventConflicts).slice(0,12).map(([k,c])=>`<div class="discovery-conflict-row"><span>${h(c.remote?.event?.title||k.split("|")[0])}</span><button class="secondary-btn" data-action="discovery-conflict-cloud" data-id="${h(k)}">Cloud</button><button class="secondary-btn" data-action="discovery-conflict-local" data-id="${h(k)}">Lokal</button></div>`).join("")}</div>`:""}
  <div class="discovery-day-groups">${[...groups].map(([date,items])=>{const shown=discoveryExpandedDays.has(date)?items:items.slice(0,3);return `<section class="discovery-day"><div class="discovery-day-head"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(date+'T12:00:00Z')))}</h3><span>${items.length} ${items.length===1?'Idee':'Ideen'}</span></div>${shown.map(eventCard).join('')}${items.length>3?`<button type="button" class="text-link discovery-more" data-action="discovery-more" data-id="${date}">${discoveryExpandedDays.has(date)?'Weniger anzeigen':`Weitere ${items.length-3} anzeigen`}</button>`:''}</section>`;}).join('')||'<p class="discovery-empty">Hier ist gerade nichts vorgemerkt. Ändere den Zeitraum oder die Filter, um andere Vorschläge zu sehen.</p>'}</div>
  </section>`;
 }
@@ -801,7 +808,7 @@ function bind() {
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
-      prepareTasks(state);
+      prepareTasks(state);eventState(state);prunePastEvents(state,localDate());await persist();
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
@@ -924,7 +931,7 @@ function bind() {
   });
   const discoveryForm=app.querySelector('#discovery-import-form');if(discoveryForm)discoveryForm.onsubmit=async ev=>{ev.preventDefault();try{
     const raw=String(new FormData(discoveryForm).get('events')||'');const result=parseEventImport(raw,state?.discoveredEvents||[]);
-    await mutate(st=>{st.discoveredEvents=[...(st.discoveredEvents||[]),...result.added].slice(-250);});discoveryImportOpen=false;toast(`${result.added.length} Veranstaltungen importiert, ${result.duplicates} Dubletten übersprungen.`);
+    discoveryImportPreview=result;render();
    }catch(ex){toast('Import: '+ex.message,true);}};
   for(const key of ['health-day-details','health-device-details']){const el=app.querySelector('#'+key);if(el)el.ontoggle=()=>{if(key==='health-day-details')healthDetailsOpen=el.open;else healthDevicesOpen=el.open;};}
   app.querySelectorAll('[data-discovery-filter]').forEach(el=>el.onchange=()=>{if(el.dataset.discoveryFilter==='city')discoveryCity=el.value;else if(el.dataset.discoveryFilter==='area')discoveryArea=el.value;else discoveryCategory=el.value;render();});
@@ -951,10 +958,16 @@ async function runAction(action,id,stepId=null) {
   lastActivity=Date.now();
   try {
     if(action==='health-range'){healthSpan=id==='30'?30:7;render();return;}
+    if(action==='discovery-week-prev'){discoveryWeekOffset=Math.max(0,discoveryWeekOffset-1);render();return;}
+    if(action==='discovery-week-next'){discoveryWeekOffset=Math.min(80,discoveryWeekOffset+1);render();return;}
+    if(action==='discovery-week-today'){discoveryWeekOffset=0;render();return;}
+    if(action==='discovery-import-cancel'){discoveryImportPreview=null;render();return;}
+    if(action==='discovery-import-confirm'){if(!discoveryImportPreview)return;const preview=discoveryImportPreview;await mutate(st=>{for(const e of preview.added)queueEvent(st,e);});discoveryImportPreview=null;discoveryImportOpen=false;toast(`${preview.added.length} Veranstaltungen übernommen – Cloud-Sync läuft im Hintergrund.`);return;}
+    if(action==='discovery-conflict-cloud'||action==='discovery-conflict-local'){await mutate(st=>resolveEventConflict(st,id,action.endsWith('cloud')?'cloud':'local'));return;}
     if(action==='discovery-range'){if(['today','week','weekend','all','saved','hidden'].includes(id))discoveryRange=id;render();return;}
-    if(action==='discovery-import-toggle'){discoveryImportOpen=!discoveryImportOpen;render();return;}
+    if(action==='discovery-import-toggle'){discoveryImportOpen=!discoveryImportOpen;discoveryImportPreview=null;render();return;}
     if(action==='discovery-more'){if(discoveryExpandedDays.has(id))discoveryExpandedDays.delete(id);else discoveryExpandedDays.add(id);render();return;}
-    if(action==='discovery-save'||action==='discovery-hide'){const entry=state?.discoveredEvents?.find(e=>eventKey(e)===id);if(!entry)return;await mutate(st=>{st.eventPreferences??={};const prev=st.eventPreferences[id]||'open';const next=action==='discovery-save'?(prev==='saved'?'open':'saved'):(prev==='hidden'?'open':'hidden');if(next==='open')delete st.eventPreferences[id];else st.eventPreferences[id]=next;});return;}
+    if(action==='discovery-save'||action==='discovery-hide'){const entry=state?.discoveredEvents?.find(e=>eventKey(e)===id);if(!entry)return;await mutate(st=>{st.eventPreferences??={};const prev=st.eventPreferences[id]||'open';const next=action==='discovery-save'?(prev==='saved'?'open':'saved'):(prev==='hidden'?'open':'hidden');queueEventPreference(st,id,next);});return;}
     if(action==='nav-more'){await mutate(s=>{s.uiPreferences??={};s.uiPreferences.advancedNav=!(s.uiPreferences.advancedNav===true);});return;}
     if(action==='recovery-idea-remove'){if(!String(id).startsWith('idea-'))return;await mutate(s=>{s.recoveryIdeas=(s.recoveryIdeas||[]).filter(i=>i.id!==id);});return;}
     if(action==='recovery-idea-hide'){if(!String(id).startsWith('starter-'))return;await mutate(s=>{s.hiddenStarterIdeas=[...new Set([...(s.hiddenStarterIdeas||[]),id])];});return;}
@@ -1103,12 +1116,12 @@ async function runAction(action,id,stepId=null) {
       if(!confirm('Health-Connect-Gerät wirklich trennen? Bereits gespeicherte Tageswerte bleiben im Dashboard.'))return;
       try{await request(config.apiUrl,authToken,'/api/health/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadHealth();}catch(ex){healthError=ex.message;render();}return;
     }
-    if(action==='discovery-prompt'){
-      try{await navigator.clipboard.writeText(discoveryPrompt);toast('Rechercheprompt kopiert.');}catch{toast('Kopieren nicht möglich.',true);}return;
+    if(action==='discovery-prompt-regional'||action==='discovery-prompt-travel'){
+      try{await navigator.clipboard.writeText(action.endsWith('regional')?discoveryPromptRegional:discoveryPromptTravel);toast('Rechercheprompt kopiert.');}catch{toast('Kopieren nicht möglich.',true);}return;
     }
     if(action==='discovery-clear'){
-      if(!confirm('Alle importierten Veranstaltungen aus diesem lokalen Tresor entfernen?'))return;
-      await mutate(st=>{st.discoveredEvents=[];st.eventPreferences={};});toast('Importierte Veranstaltungen entfernt.');return;
+      if(!confirm('Alle importierten Veranstaltungen geräteübergreifend entfernen? Dies kann nicht rückgängig gemacht werden.'))return;
+      await mutate(st=>removeEvents(st));toast('Löschung wird mit deiner Compass-Cloud synchronisiert.');return;
     }
     if(action==='discovery-capture'){
       const entry=state?.discoveredEvents?.find(e=>eventKey(e)===id);if(!entry)return;
@@ -1240,6 +1253,24 @@ async function syncTasks(){
   const snapshot=await request(config.apiUrl,authToken,'/api/tasks');
   mergeTaskSnapshot(state,snapshot.tasks||[]);await persist();
 }
+async function syncEvents(){
+ eventState(state);
+ // Pull first so a previously imported catalog is not re-uploaded as a duplicate on a second device.
+ const initial=await request(config.apiUrl,authToken,'/api/events');
+ mergeEventSnapshot(state,initial.events||[]);
+ // Existing 0.5.2 event imports are promoted to the new durable sync queue exactly once.
+ for(const e of state.discoveredEvents){const k=eventKey(e);if(state.eventVersions[k]===undefined&&!state.eventPending[k]&&!state.eventConflicts[k])state.eventPending[k]=true;}
+ await persist();
+ let rounds=0;
+ while(Object.keys(state.eventPending).length&&rounds++<100){
+  const batch=pendingEventBatch(state,25);if(!batch.length)break;
+  const result=await request(config.apiUrl,authToken,'/api/events/batch',{method:'POST',body:JSON.stringify({events:batch})});
+  acknowledgeEventBatch(state,batch,result);await persist();
+ }
+ const remote=await request(config.apiUrl,authToken,'/api/events');
+ mergeEventSnapshot(state,remote.events||[]);
+ prunePastEvents(state,localDate());await persist();
+}
 async function syncNow() {
   if(!state||!authToken||busy||!navigator.onLine)return;
   clearTimeout(syncTimer);syncTimer=null;
@@ -1247,6 +1278,7 @@ async function syncNow() {
   try {
     const health=await request(config.apiUrl,authToken,'/api/health');
     assertCompatibleWorker(health);
+    const stale=prunePastEvents(state,localDate());if(stale)await persist();
     // No concurrent writes while in flight: mutations queue before a request starts.
     let rounds=0;
     while(state.pending.length&&rounds++<100) {
@@ -1272,6 +1304,7 @@ async function syncNow() {
     const fixed=pruneIdenticalConflicts(state);if(fixed)await persist();
     await syncProjects();
     await syncTasks();
+    await syncEvents();
     lastSyncAt=Date.now();
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
     error='';
@@ -1281,7 +1314,7 @@ async function syncNow() {
     if(ex.status===401){authToken='';currentUser='';await vault.clearSession().catch(()=>{});}
   }finally{
     busy=false;render();
-    const retry=syncResyncRequested&&Boolean(state?.pending.length||Object.keys(state?.taskPending||{}).length||Object.keys(state?.projectPending||{}).length)&&Boolean(authToken)&&navigator.onLine&&!error;
+    const retry=syncResyncRequested&&Boolean(state?.pending.length||Object.keys(state?.taskPending||{}).length||Object.keys(state?.projectPending||{}).length||Object.keys(state?.eventPending||{}).length)&&Boolean(authToken)&&navigator.onLine&&!error;
     syncResyncRequested=false;
     if(retry)scheduleSync(0);
   }
@@ -1298,7 +1331,7 @@ document.addEventListener('keydown',ev=>{
 window.addEventListener('online',()=>{render();if(authToken)scheduleSync(0);});
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&authToken&&state&&
-    (state.pending.length||Object.keys(state.taskPending||{}).length||Date.now()-lastSyncAt>=SYNC_INTERVAL_MS))scheduleSync(1000);
+    (state.pending.length||Object.keys(state.taskPending||{}).length||Object.keys(state.eventPending||{}).length||Date.now()-lastSyncAt>=SYNC_INTERVAL_MS))scheduleSync(1000);
 });
 setInterval(()=>{
   if(state&&authToken&&navigator.onLine&&document.visibilityState==='visible'&&
