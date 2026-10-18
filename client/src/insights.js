@@ -20,7 +20,7 @@ export const INSIGHT_TABS=[
  {id:'focus',label:'Produktivität',icon:'target',state:'live',subtitle:'Arbeitsphasen, Meetings und Gesundheitsdaten · lokale Zusammenhänge'},
  {id:'body',label:'Körper',icon:'layers',state:'live',subtitle:'Fitdays-Report · Körpergewicht, Körperfett und Segmente'},
  {id:'places',label:'Orte',icon:'compass',state:'live',subtitle:'Weltkarte, Aufenthaltsverlauf und Schlaf nach Ort · lokal im Vault'},
- {id:'explore',label:'Explore',icon:'spark',state:'planned',subtitle:'Eigene statistische Fragen und Konfidenzintervalle · Ausbau 0.5.13'},
+ {id:'explore',label:'Explore',icon:'spark',state:'live',subtitle:'Eigene Zusammenhänge und explorative 95%-Konfidenzbänder'},
  {id:'sources',label:'Datenquellen',icon:'settings',state:'live',subtitle:'Garmin, Fitdays und Health Connect · Import & Verbindungen'}
 ];
 export const INSIGHT_PERIODS=[['7','7 Tage'],['28','4 Wochen'],['90','90 Tage'],['365','1 Jahr'],['all','Alles']];

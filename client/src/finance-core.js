@@ -1,0 +1,142 @@
+/** Compass 0.5.13 · Local-first bank ledger. No bank API, cloud calls, or silent category guesses. */
+export const FINANCE_CATEGORIES=[
+ ['Einnahmen','Gehalt'],['Einnahmen','Honorare'],['Einnahmen','Kapitalerträge'],['Einnahmen','Sonstiges'],
+ ['Wohnen','Miete & Betriebskosten'],['Wohnen','Strom & Heizung'],['Wohnen','Haushalt & Einrichtung'],
+ ['Lebensmittel','Supermarkt'],['Lebensmittel','Drogerie'],
+ ['Essen & Ausgehen','Restaurant & Café'],
+ ['Mobilität','Öffentliche Verkehrsmittel'],['Mobilität','Auto & Tanken'],['Mobilität','Parken & Maut'],
+ ['Familie','Kinder & Unterhalt'],['Familie','Familie & Geschenke'],
+ ['Gesundheit & Sport','Fitness & Sport'],['Gesundheit & Sport','Medizin & Apotheke'],
+ ['Freizeit & Reisen','Reisen & Unterkunft'],['Freizeit & Reisen','Kultur & Freizeit'],
+ ['Bildung & Beruf','Bildung & Fachliteratur'],['Bildung & Beruf','Software & Beruf'],
+ ['Verträge & Abos','Telekommunikation'],['Verträge & Abos','Streaming & Digitales'],['Verträge & Abos','Versicherungen'],
+ ['Finanzen','Bankgebühren'],['Finanzen','Steuern & Abgaben'],
+ ['Shopping','Online-Shopping'],['Shopping','Bekleidung & Sonstiges'],
+ ['Bargeld','Bargeldbehebung'],
+ ['Transfer','Eigene Konten'],['Transfer','Depot & Wertpapiere'],['Transfer','Krypto'],['Transfer','Sparen'],
+ ['Rückerstattung','Rückzahlung'],['Prüfen','Noch ungeklärt']
+];
+const known=new Set(FINANCE_CATEGORIES.map(([a,b])=>a+' / '+b));
+export const categoryLabel=(a,b)=>`${a} / ${b}`;
+export const validCategory=c=>known.has(c);
+const cleaning=s=>String(s??'').normalize('NFKC').trim();
+const upper=s=>cleaning(s).toLocaleUpperCase('de-AT');
+export const escapeFinance=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// RFC-4180-style semicolon CSV with multiline quoted payment references and escaped double-quotes.
+export function splitBankCsv(input){
+ const text=String(input??'').replace(/^\uFEFF/,'');const rows=[];let row=[],field='',quoted=false;
+ for(let i=0;i<text.length;i++){
+  const ch=text[i];if(ch==='"'){if(quoted&&text[i+1]==='"'){field+='"';i++;}else quoted=!quoted;}
+  else if(ch===';'&&!quoted){row.push(field);field='';}
+  else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(field);field='';if(row.some(x=>x.trim()))rows.push(row);row=[];}
+  else field+=ch;
+ }
+ if(quoted)throw new Error('Bank-CSV enthält ein nicht geschlossenes Anführungszeichen.');
+ row.push(field);if(row.some(x=>x.trim()))rows.push(row);
+ return rows;
+}
+const bankDate=s=>{const m=/^(\d\d)\.(\d\d)\.(\d{4})$/.exec(cleaning(s));if(!m)return null;const y=+m[3],month=+m[2],day=+m[1];const d=new Date(Date.UTC(y,month-1,day));return d.getUTCFullYear()===y&&d.getUTCMonth()===month-1&&d.getUTCDate()===day?`${m[3]}-${m[2]}-${m[1]}`:null;};
+export const euroNumber=s=>{const v=cleaning(s).replace(/\s/g,'');if(!/^[+-]?(?:\d{1,3}(?:\.\d{3})*|\d+),\d{2}$/.test(v))return null;const n=Number(v.replace(/\./g,'').replace(',','.'));return Number.isFinite(n)&&Math.abs(n)<1e11?Math.round(n*100):null;};
+// 64-bit FNV-1a over all parsed source fields; deterministic across overlapping exports.
+export function bankIdentity(fields){const bytes=new TextEncoder().encode(fields.map(cleaning).join('\u001f'));let h=0xcbf29ce484222325n;for(const b of bytes){h^=BigInt(b);h=BigInt.asUintN(64,h*0x100000001b3n);}return 'rb-'+h.toString(16).padStart(16,'0');}
+export function bankMerchant(description){
+ const s=cleaning(description);
+ const match=s.match(/(?:Payment recipient|Recipient|Zahlungsempfänger|Empfänger):\s*(.{3,100}?)(?=\s+(?:Purpose of use|Payment reference|Recipient IBAN|Payment recipient IBAN|Recipient BIC|Client reference|Mandate reference|Empfänger IBAN|Zahlungsreferenz):|$)/i);
+ if(match)return match[1].trim().slice(0,90);
+ const pos=s.match(/(?:Payment reference|Purpose of use):\s*([A-Za-zÄÖÜäöüß0-9 '&.\-]{3,55}?)(?=\s{2,}|\s+K\d\s|\s+POS\b|\s+Card sequence|\s+Payment reference|$)/i);
+ if(pos)return pos[1].trim().slice(0,55);
+ const omit=s.replace(/(?:IBAN|BIC|RZSTAT2G|[A-Z]{2}\d{2}[A-Z0-9]{10,30})\S*/gi,'').replace(/\s+/g,' ').trim();return omit.slice(0,70)||'Unbekannter Zahlungspartner';
+}
+export const merchantKey=s=>upper(s).replace(/\s+/g,' ').trim().slice(0,90);
+export const safeMerchantRule=merchant=>!/(?:^|\W)(?:PAYPAL|KLARNA|STRIPE|BUCHUNGEN|ONLINE BANKING|UNBEKANNT)(?:$|\W)/iu.test(merchantKey(merchant));
+const rule=(rx,cat,flow='expense',confidence='high')=>({rx:new RegExp(rx,'iu'),category:cat,flow,confidence});
+// Real-world merchant rules derived from observed generic transaction descriptors; do not include a user's counterparties.
+export const BANK_RULES=[
+ rule('(?:^|\\W)(?:HOFER|BILLA|SPAR|INTERSPAR|LIDL|PENNY|EUROSPAR)(?:\\W|$)','Lebensmittel / Supermarkt'),
+ rule('(?:^|\\W)(?:DM DROGERIE|DM-DROGERIE|BIPA|MÜLLER DROGERIE)(?:\\W|$)','Lebensmittel / Drogerie'),
+ rule('(?:^|\\W)(?:WIENER LINIEN|OEBB|ÖBB|FLIXBUS|FLIXTRAIN|VERKEHRSVERBUND|HOLDING GRAZ LINIEN)(?:\\W|$)','Mobilität / Öffentliche Verkehrsmittel'),
+ rule('(?:^|\\W)(?:OMV|SHELL|JET TANKSTELLE|TANKSTELLE|TURMOEL)(?:\\W|$)','Mobilität / Auto & Tanken'),
+ rule('(?:^|\\W)(?:PARKGARAGE|PARKAUTOMAT|PARKTICKET|PARKHAUS|APCOA)(?:\\W|$)','Mobilität / Parken & Maut'),
+ rule('(?:^|\\W)(?:ANSA FITNESS|FITNESSSTUDIO|FITINN|JOHN HARRIS|HOLMES PLACE|MCFIT)(?:\\W|$)','Gesundheit & Sport / Fitness & Sport'),
+ rule('(?:^|\\W)(?:APOTHEKE|PHARMAZIE)(?:\\W|$)','Gesundheit & Sport / Medizin & Apotheke'),
+ rule('(?:^|\\W)(?:WÜSTENROT|UNIQA|ALLIANZ|GENERALI|VERSICHERUNGS-AG|VERSICHERUNG)(?:\\W|$)','Verträge & Abos / Versicherungen'),
+ rule('(?:^|\\W)(?:MAGENTA|A1 TELEKOM|DREI AT|HUTCHISON DREI|SPUSU)(?:\\W|$)','Verträge & Abos / Telekommunikation'),
+ rule('(?:^|\\W)(?:NETFLIX|SPOTIFY|DISNEY\\+|APPLE.COM/BILL)(?:\\W|$)','Verträge & Abos / Streaming & Digitales'),
+ rule('(?:^|\\W)(?:BETRIEBSKOSTEN|MIETE|HAUSVERWALTUNG)(?:\\W|$)','Wohnen / Miete & Betriebskosten'),
+ rule('(?:^|\\W)(?:ENERGIE STEIERMARK|VERBUND|STROMRECHNUNG|GASRECHNUNG|ENERGIERECHNUNG)(?:\\W|$)','Wohnen / Strom & Heizung'),
+ rule('(?:^|\\W)(?:MCDONALDS|MCDONALD.S|BURGER KING|STARBUCKS|BACKWERK)(?:\\W|$)','Essen & Ausgehen / Restaurant & Café'),
+ rule('(?:^|\\W)(?:BOOKING.COM|AIRBNB|HOTEL|HOSTEL)(?:\\W|$)','Freizeit & Reisen / Reisen & Unterkunft'),
+ rule('(?:^|\\W)(?:AMAZON|AMZN|TEMU)(?:\\W|$)','Shopping / Online-Shopping','expense','medium'),
+ rule('(?:^|\W)(?:PAYPAL|KLARNA|STRIPE)(?:\\W|$)','Prüfen / Noch ungeklärt','expense','low'),
+ rule('(?:^|\\W)(?:BARGELDBEHEBUNG|BARBEHEBUNG|GELDAUTOMAT|ATM WITHDRAWAL)(?:\\W|$)','Bargeld / Bargeldbehebung','cash','high'),
+ rule('(?:^|\\W)(?:RAIFFEISEN.*(?:GEBÜHR|SPESEN)|KONTOFÜHRUNG|KONTOGEBÜHR|KARTENGEBÜHR)(?:\\W|$)','Finanzen / Bankgebühren'),
+ rule('(?:^|\\W)(?:UNTERHALT)(?:\\W|$)','Familie / Kinder & Unterhalt','expense','medium'),
+ rule('(?:^|\\W)(?:KRYPTO|KRAKEN)(?:\\W|$)','Transfer / Krypto','transfer','medium'),
+ rule('(?:^|\\W)(?:FLATEX|DEPOTÜBERTRAG|WERTPAPIERKAUF)(?:\\W|$)','Transfer / Depot & Wertpapiere','transfer','medium'),
+ rule('(?:^|\\W)(?:EIGENÜBERTRAG|EIGENES KONTO)(?:\\W|$)','Transfer / Eigene Konten','transfer','medium'),
+];
+export function classifyBankTransaction(transaction,customRules=[]){
+ const desc=transaction.description||'',m=merchantKey(transaction.merchant||bankMerchant(desc));
+ for(const x of customRules){if(!x||!validCategory(x.category)||!x.merchantKey||!['income','expense','transfer','cash','refund'].includes(x.flow))continue;
+  if(safeMerchantRule(m)&&m===x.merchantKey)return {category:x.category,flow:x.flow,confidence:'confirmed',needsReview:false,source:'own-rule'};
+ }
+ // Never decide an incoming bank transfer is salary based only on the account being credited.
+ if(transaction.amountCents>0){
+  if(/(?:LOHN|GEHALT|SALARY|PAYROLL|BEZUGSABRECHNUNG)/iu.test(desc))return {category:'Einnahmen / Gehalt',flow:'income',confidence:'high',needsReview:false,source:'rule'};
+  if(/(?:RÜCKERSTATTUNG|RUECKERSTATTUNG|RÜCKZAHLUNG|REFUND|STORNO|REToure)/iu.test(desc))return {category:'Rückerstattung / Rückzahlung',flow:'refund',confidence:'medium',needsReview:true,source:'rule'};
+  return {category:'Prüfen / Noch ungeklärt',flow:'income',confidence:'low',needsReview:true,source:'review'};
+ }
+ for(const r of BANK_RULES)if(r.rx.test(desc)){return {category:r.category,flow:r.flow,confidence:r.confidence,needsReview:r.confidence!=='high',source:'rule'};}
+ return {category:'Prüfen / Noch ungeklärt',flow:'expense',confidence:'low',needsReview:true,source:'review'};
+}
+export function parseRaiffeisenCsv(text,{customRules=[],maxRows=10000}={}){
+ const raw=splitBankCsv(text);if(raw.length>maxRows)throw new Error(`Zu viele Buchungen in einer Datei (max. ${maxRows}).`);
+ const rows=[];let skippedHeader=0;
+ for(let i=0;i<raw.length;i++){
+  const r=raw[i];if(r.length===6&&!bankDate(r[0])&&i===0&&/datum|buchung/i.test(r[0])){skippedHeader++;continue;}
+  if(r.length!==6)throw new Error(`Bank-CSV: Zeile ${i+1} enthält ${r.length} statt 6 Felder.`);
+  const day=bankDate(r[0]),valueDay=bankDate(r[2]);const amountCents=euroNumber(r[3]);
+  if(!day||!valueDay||amountCents===null||upper(r[4])!=='EUR')throw new Error(`Bank-CSV: ungültiges Datum, Betrag oder Währung in Zeile ${i+1}.`);
+  const fields=r.map(cleaning);const description=cleaning(r[1]).slice(0,3000);const merchant=bankMerchant(description);
+  const t={id:bankIdentity(fields),day,valueDay,amountCents,description,merchant,currency:'EUR',bankReference:cleaning(r[5]).slice(0,150),source:'Raiffeisen CSV'};
+  Object.assign(t,classifyBankTransaction(t,customRules));rows.push(t);
+ }
+ return {rows,skippedHeader};
+}
+export function previewBankFiles(items,existing=[],customRules=[]){
+ const keys=new Set(existing.map(x=>x.id)),seen=new Set(keys);const fresh=[];let duplicates=0;
+ for(const {text,name} of items){const parsed=parseRaiffeisenCsv(text,{customRules});for(const r of parsed.rows){if(seen.has(r.id)){duplicates++;continue;}seen.add(r.id);fresh.push({...r,sourceFile:String(name).slice(0,120)});}}
+ return {rows:fresh,duplicates,review:fresh.filter(x=>x.needsReview).length,auto:fresh.filter(x=>!x.needsReview).length};
+}
+export function categorizeTransaction(t,category,flow){if(!validCategory(category))throw new Error('Bitte eine gültige Kategorie auswählen.');if(!['income','expense','transfer','refund','cash'].includes(flow))throw new Error('Ungültige Geldfluss-Art.');
+ return {...t,category,flow,needsReview:false,confidence:'confirmed',source:'user'};
+}
+export function financeViewModel(transactions=[],period='all'){
+ const entries=transactions.filter(t=>period==='all'||t.day.startsWith(period));
+ const sum=(list)=>list.reduce((n,x)=>n+Math.abs(x.amountCents),0);
+ const income=entries.filter(x=>x.amountCents>0&&x.flow==='income'&&!x.needsReview);
+ const refunds=entries.filter(x=>x.amountCents>0&&x.flow==='refund'&&!x.needsReview);
+ const spending=entries.filter(x=>x.amountCents<0&&x.flow==='expense'&&!x.needsReview);
+ const transfers=entries.filter(x=>x.amountCents<0&&x.flow==='transfer'&&!x.needsReview);
+ const cash=entries.filter(x=>x.amountCents<0&&x.flow==='cash'&&!x.needsReview);
+ const pending=entries.filter(x=>x.needsReview);
+ const groups=new Map();for(const t of spending){const parent=t.category.split(' / ')[0];groups.set(parent,(groups.get(parent)||0)+Math.abs(t.amountCents));}
+ const categories=[...groups].sort((a,b)=>b[1]-a[1]).map(([name,cents])=>({name,cents}));
+ const months=new Map();for(const t of entries){const key=t.day.slice(0,7);const x=months.get(key)||{month:key,incomeCents:0,expenseCents:0,transferCents:0,pendingCents:0};
+  const v=Math.abs(t.amountCents);if(t.needsReview)x.pendingCents+=v;else if(t.flow==='income')x.incomeCents+=v;else if(t.flow==='expense')x.expenseCents+=v;else if(t.flow==='transfer')x.transferCents+=v;months.set(key,x);}
+ const recurring=new Map();for(const t of spending){const m=merchantKey(t.merchant);if(!m)continue;const v=recurring.get(m)||{merchant:t.merchant,months:new Set(),amounts:[]};v.months.add(t.day.slice(0,7));v.amounts.push(Math.abs(t.amountCents));recurring.set(m,v);}
+ const subscriptions=[...recurring.values()].filter(x=>x.months.size>=3).map(x=>({merchant:x.merchant,months:x.months.size,meanCents:Math.round(sum(x.amounts.map(amountCents=>({amountCents})))/x.amounts.length)})).sort((a,b)=>b.months-a.months).slice(0,18);
+ return {count:entries.length,pending,auto:entries.filter(x=>!x.needsReview).length,incomeCents:sum(income),refundCents:sum(refunds),expenseCents:sum(spending),transferCents:sum(transfers),cashCents:sum(cash),pendingCents:sum(pending),categories,months:[...months.values()].sort((a,b)=>a.month.localeCompare(b.month)),subscriptions,netCents:sum(income)+sum(refunds)-sum(spending)-sum(cash)-sum(transfers)};
+}
+
+/** Batch-review candidates are grouped by exact normalized counterparty and direction.
+ * A group is only a suggestion: never auto-approve other purposes without explicit opt-in. */
+export function financeReviewGroups(transactions=[]){
+ const groups=new Map();
+ for(const t of transactions.filter(x=>x.needsReview)){
+  const key=merchantKey(t.merchant)+(safeMerchantRule(t.merchant)?'':'|'+t.id)+'|'+(t.amountCents>0?'in':'out')+'|'+t.flow;
+  if(!groups.has(key))groups.set(key,{key,merchant:t.merchant,flow:t.flow,entries:[],sumCents:0});
+  const g=groups.get(key);g.entries.push(t);g.sumCents+=Math.abs(t.amountCents);
+ }
+ return [...groups.values()].sort((a,b)=>b.entries.length-a.entries.length||b.sumCents-a.sumCents);
+}
