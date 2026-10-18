@@ -14,8 +14,8 @@ const dayShift=(day,n)=>new Date(dateUTC(day)+n*86400000).toISOString().slice(0,
 const fmtClock=m=>Number.isFinite(m)?`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(Math.round(m%60)).padStart(2,'0')}`:'–';
 export const INSIGHT_TABS=[
  {id:'sleep',label:'Schlaf',icon:'moon',state:'live',subtitle:'Schlafdauer, -konsistenz und nächtliche HRV'},
- {id:'energy',label:'Body Battery',icon:'bolt',state:'planned',subtitle:'Energiereserven und Aufladung · Ausbau 0.5.9'},
- {id:'stress',label:'Stress',icon:'activity',state:'planned',subtitle:'Stresskurven und Belastungskategorien · Ausbau 0.5.9'},
+ {id:'energy',label:'Body Battery',icon:'bolt',state:'live',subtitle:'Energiereserven, Tageskurven und langfristige Verläufe'},
+ {id:'stress',label:'Stress',icon:'activity',state:'live',subtitle:'Garmin-Stress, Belastungszonen und Tagesmuster'},
  {id:'activity',label:'Aktivität',icon:'heart',state:'live',subtitle:'Health-Connect-Schritte und Trainingsminuten · Garmin-Ausbau folgt'},
  {id:'focus',label:'Produktivität',icon:'target',state:'planned',subtitle:'Pomodoros, Kalender und Energie · Ausbau 0.5.11'},
  {id:'body',label:'Körper',icon:'layers',state:'live',subtitle:'Fitdays-Report · Körpergewicht, Körperfett und Segmente'},

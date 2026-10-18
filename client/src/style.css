@@ -636,3 +636,23 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .finance-export-row a{font-size:11px;white-space:nowrap;color:#377D6D;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:950px){.finance-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.insight-reference-metrics{gap:5px}.insight-reference-metrics>span{padding:10px 8px}.insight-reference-metrics strong{font-size:15px}.finance-preview-hero{display:block;padding:17px}.finance-status{display:inline-block;margin-top:12px}.finance-preview-grid{grid-template-columns:1fr}.finance-preview-pane{padding:13px}.finance-export-help{padding:16px}.finance-export-row{align-items:flex-start;flex-direction:column}.finance-export-row a{white-space:normal}}
+
+
+/* 0.5.9 · Garmin wellness analytics: restrained ggplot-style marks and honest gaps */
+.insight-wellness{display:grid;gap:15px;min-width:0}
+.insight-wellness>.insight-kpi-grid{margin:0}
+.insight-wellness .insight-chart-grid{margin:0}
+.insight-wellness .insight-chart-card{min-width:0}
+.insight-wellness .insight-svg{width:100%;min-width:560px;max-width:100%;height:auto}
+.insight-wellness .insight-svg-scroller{overflow-x:auto;scrollbar-width:thin;max-width:100%}
+.insight-zone-stack{display:flex;height:20px;width:100%;overflow:hidden;border-radius:10px;background:#F0F4F1;margin:23px 0 17px}
+.insight-zone-stack>div{min-width:0;transition:width .2s}
+.insight-zone-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.insight-zone-grid>div{display:grid;grid-template-columns:8px 1fr;gap:5px 7px;border:1px solid #E8EFEA;background:#FBFDFC;border-radius:10px;padding:11px 8px;align-items:center;min-width:0}
+.insight-zone-grid i{width:8px;height:8px;border-radius:50%;display:block}
+.insight-zone-grid span{font-size:10px;color:#718779;overflow-wrap:anywhere}
+.insight-zone-grid strong{font:normal 22px Georgia,serif;color:#365B4A;grid-column:1/-1}
+.insight-zone-grid small{font-size:9px;grid-column:1/-1;color:#8FA093}
+.insight-wellness .insight-no-data{margin:15px 0}
+@media(max-width:650px){.insight-zone-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.insight-wellness .insight-svg{min-width:520px}}
+@media(prefers-reduced-motion:reduce){.insight-zone-stack>div{transition:none}}

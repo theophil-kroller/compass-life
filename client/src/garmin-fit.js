@@ -1,5 +1,5 @@
 // FIT binary reader. Only selected wellness records are retained; no GPS, raw samples or device identifiers.
-// Messages: sleep_level(275), sleep_summary(521), hrv_status_summary(370).
+// Messages: sleep_level(275), sleep_summary(521), hrv_status_summary(370), stress_level(227).
 const FIT_EPOCH=Date.UTC(1989,11,31)/1000;
 const time=v=>Number.isInteger(v)&&v>800000000&&v<3000000000?new Date((FIT_EPOCH+v)*1000).toISOString():null;
 function fieldValue(bytes,base,little){
@@ -32,7 +32,7 @@ export function decodeGarminFit(input){
    defs.set(local,{global,little,fields,developer});continue;
   }
   const def=defs.get(local);if(!def)throw Error('FIT-Datensatz ohne Definition');
-  const wanted=[275,521,370].includes(def.global),vals={};
+  const wanted=[275,521,370,227].includes(def.global),vals={};
   for(const f of def.fields){if(offset+f.size>end)throw Error('FIT-Nutzdaten unvollständig');if(wanted&&f.size<=128)vals[f.num]=fieldValue(b.subarray(offset,offset+f.size),f.base,def.little);offset+=f.size;}
   for(const size of def.developer){if(offset+size>end)throw Error('FIT-Entwicklerdaten unvollständig');offset+=size;}
   if(wanted)records.push({type:def.global,fields:vals});
@@ -102,4 +102,31 @@ export function garminSleepJson(input){
   nights.push({day,start:start||stages[0]?.start||null,end:end||stages.at(-1)?.end||null,stages,totals,source:'garmin-account-export'});
  }
  return nights;
+}
+
+/** Garmin stress_level FIT global 227: field 0 stress (negative = invalid / activity),
+ * field 1 Garmin timestamp, field 3 body_energy (Garmin Body Battery, 0–100).
+ * Samples are condensed into 5-minute UTC buckets; never interpolate gaps.
+ * Stress: median of valid samples per bucket. Battery: last valid sample.
+ */
+export function garminStressEnergyFromRecords(records){
+ const buckets=new Map();
+ for(const record of records){
+  if(record.type!==227)continue;
+  const timestamp=time(record.fields?.[1]);if(!timestamp)continue;
+  const stress=record.fields[0],energy=record.fields[3];
+  const validStress=Number.isInteger(stress)&&stress>=0&&stress<=100?stress:null;
+  const validBattery=Number.isInteger(energy)&&energy>=0&&energy<=100?energy:null;
+  if(validStress===null&&validBattery===null)continue;
+  const ms=Date.parse(timestamp),bucket=Math.floor(ms/300000)*300000;
+  let value=buckets.get(bucket);
+  if(!value){value={at:new Date(bucket).toISOString(),stress:[],battery:null,batteryTime:0};buckets.set(bucket,value);}
+  if(validStress!==null)value.stress.push(validStress);
+  if(validBattery!==null&&ms>=value.batteryTime){value.battery=validBattery;value.batteryTime=ms;}
+ }
+ return [...buckets.values()].sort((a,b)=>a.at.localeCompare(b.at)).map(x=>{
+  const values=x.stress.sort((a,b)=>a-b),n=values.length;
+  const stress=n?(n%2?values[(n-1)/2]:(values[n/2-1]+values[n/2])/2):null;
+  return {at:x.at,stress,bodyBattery:x.battery};
+ });
 }
