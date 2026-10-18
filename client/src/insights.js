@@ -17,7 +17,7 @@ export const INSIGHT_TABS=[
  {id:'energy',label:'Body Battery',icon:'bolt',state:'live',subtitle:'Energiereserven, Tageskurven und langfristige Verläufe'},
  {id:'stress',label:'Stress',icon:'activity',state:'live',subtitle:'Garmin-Stress, Belastungszonen und Tagesmuster'},
  {id:'activity',label:'Aktivität',icon:'heart',state:'live',subtitle:'Garmin-Schritte und Aktivitätsdateien sowie Health-Connect-Training'},
- {id:'focus',label:'Produktivität',icon:'target',state:'planned',subtitle:'Pomodoros, Kalender und Energie · Ausbau 0.5.11'},
+ {id:'focus',label:'Produktivität',icon:'target',state:'live',subtitle:'Arbeitsphasen, Meetings und Gesundheitsdaten · lokale Zusammenhänge'},
  {id:'body',label:'Körper',icon:'layers',state:'live',subtitle:'Fitdays-Report · Körpergewicht, Körperfett und Segmente'},
  {id:'places',label:'Orte',icon:'compass',state:'planned',subtitle:'Reiseorte und Schlaf an verschiedenen Orten · Ausbau 0.5.12'},
  {id:'explore',label:'Explore',icon:'spark',state:'planned',subtitle:'Eigene statistische Fragen und Konfidenzintervalle · Ausbau 0.5.13'},

@@ -13,6 +13,7 @@ import {financePreviewView,FINANCE_PANES} from './finance-preview.js';
 import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insightsPlannedView} from './insights.js';
 import {insightsStressView,insightsEnergyView} from './insights-wellness.js';
 import {fitnessInsightsView} from './insights-fitness.js';
+import {buildProductivityInsights,productivityInsightsView} from './insights-productivity.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
@@ -24,7 +25,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.10';
+const COMPASS_CLIENT_VERSION='0.5.11';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -98,7 +99,7 @@ let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCateg
 const discoveryExpandedDays=new Set();
 // Calendar OAuth is independent from Compass login; token stays in RAM only.
 let calendarToken='', calendarExpires=0, calendarEvents=[], calendarStatus='Nicht verbunden', calendarBusy=false;
-let calendarUpdatedAt=0;
+let calendarUpdatedAt=0,calendarCoverage=null;
 const CAL_SCOPE='https://www.googleapis.com/auth/calendar.events.readonly';
 function calendarDate(e){
  const value=e?.start?.dateTime;
@@ -157,8 +158,8 @@ async function fetchCalendar(){
  calendarBusy=true;calendarStatus='Lädt …';render();
  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),18000);
  try{
-   const start=new Date();start.setHours(0,0,0,0);
-   const end=new Date(start);end.setDate(end.getDate()+90);
+   const start=new Date();start.setHours(0,0,0,0);start.setDate(start.getDate()-90);
+   const end=new Date();end.setHours(0,0,0,0);end.setDate(end.getDate()+90);
    const url=new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
    url.searchParams.set('timeMin',start.toISOString());url.searchParams.set('timeMax',end.toISOString());
    url.searchParams.set('singleEvents','true');url.searchParams.set('orderBy','startTime');
@@ -173,7 +174,8 @@ async function fetchCalendar(){
      pageToken=data.nextPageToken||'';if(!pageToken)break;
    }
    calendarEvents=loaded;
-   calendarUpdatedAt=Date.now();calendarStatus=`${calendarEvents.length} Kalendertermine geladen`;
+   calendarCoverage={complete:!pageToken,start:[start.getFullYear(),String(start.getMonth()+1).padStart(2,'0'),String(start.getDate()).padStart(2,'0')].join('-'),end:[end.getFullYear(),String(end.getMonth()+1).padStart(2,'0'),String(end.getDate()).padStart(2,'0')].join('-')};
+   calendarUpdatedAt=Date.now();calendarStatus=`${calendarEvents.length} Kalendertermine geladen${pageToken?' (mehr vorhanden; Zeitraum unvollständig)':''}`;
  }catch(ex){calendarStatus=ex.name==='AbortError'?'Kalenderanfrage hat zu lange gedauert.':ex.message;}
  finally{clearTimeout(timeout);calendarBusy=false;render();}
 }
@@ -751,11 +753,11 @@ function insightsScreen(){
  const tabs=INSIGHT_TABS.map(t=>`<button type="button" class="insights-nav-tab ${t.id===insightTab?'selected':''}" data-action="insights-tab" data-id="${h(t.id)}" aria-pressed="${t.id===insightTab}">${ico(t.icon,19)}<span>${h(t.label)}</span>${t.state==='live'?'<i class="insight-tab-live" aria-label="Bereits verfügbar"></i>':''}</button>`).join('');
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today):insightTab==='sources'?healthSummaryPanel('sources'):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today):insightTab==='sources'?healthSummaryPanel('sources'):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <header class="insight-hero"><div><span class="insight-kicker">COMPASS / PERSONAL ANALYTICS</span><h2>Dein Leben in Daten.</h2><p>Ein gemeinsamer Blick auf Schlaf, Erholung, Aktivität und Fokus. Lokal analysiert – ohne automatisch erzeugte Gesundheitsbewertungen.</p></div><div class="insight-hero-side"><span>${ico('shield',18)} Lokaler Vault</span><strong>${dataCount}</strong><small>Garmin- und Fitdays-Datensätze</small></div></header>
  <nav class="insights-nav" aria-label="Insights-Kategorien">${tabs}</nav>
- <div class="insight-view-header"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${['sleep','body','activity','stress','energy'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
+ <div class="insight-view-header"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${['sleep','body','activity','stress','energy','focus'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
  ${content}
  ${insightTab==='sources'?'':`<div class="insight-import-bridge"><div>${ico('heart',22)}<span><strong>Daten ergänzen</strong><small>Garmin- und Fitdays-Dateien gesammelt unter Datenquellen importieren.</small></span></div><button class="secondary-btn" type="button" data-action="insights-tab" data-id="sources">Datenquellen öffnen →</button></div>`}
  </div>`);
@@ -873,7 +875,7 @@ function render(){
 }
 function bind() {
  if(state)wireSmartTags(app,()=>state);
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;if(tab==='health'){tab='insights';insightTab='sources';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;if(tab==='health'){tab='insights';insightTab='sources';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery'||tab==='insights')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
@@ -1247,7 +1249,7 @@ async function runAction(action,id,stepId=null) {
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
     if(action==='finance-pane'){if(FINANCE_PANES.some(p=>p.title===id)){financePane=id;render();}return;}
-    if(action==='insights-tab'){if(INSIGHT_TABS.some(t=>t.id===id)){insightTab=id;render();}return;}
+    if(action==='insights-tab'){if(INSIGHT_TABS.some(t=>t.id===id)){insightTab=id;render();if(id==='focus'&&authToken){reloadWatchSessions().catch(()=>{});}}return;}
     if(action==='insights-period'){if(INSIGHT_PERIODS.some(([v])=>v===id)){insightPeriod=id;render();}return;}
     if(action==='import-health-range'){importHealthSpan=id==='all'?'all':Number(id)||90;render();return;}
     if(action==='health-import-cancel'){healthFilePreview=null;render();return;}
