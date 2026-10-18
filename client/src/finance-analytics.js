@@ -79,6 +79,7 @@ export function financeSearchTransactions(transactions=[],{query='',period='all'
  const list=transactions.filter(t=>{
   if(period!=='all'&&!String(t.day||'').startsWith(period))return false;
   if(filter==='pending'&&!t.needsReview)return false;
+  if(filter==='broad'&&(t.needsReview||!(t.confidence==='broad'||t.source==='broad-rule')))return false;
   if(filter==='expense'&&(t.needsReview||t.flow!=='expense'||signed(t)>=0))return false;
   if(filter==='transfer'&&(t.needsReview||t.flow!=='transfer'))return false;
   return !q||[t.merchant,t.description,t.category,t.day].some(x=>String(x||'').normalize('NFKC').toLocaleLowerCase('de-AT').includes(q));

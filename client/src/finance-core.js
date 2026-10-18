@@ -1,20 +1,22 @@
-/** Compass 0.5.13 · Local-first bank ledger. No bank API, cloud calls, or silent category guesses. */
+/** Compass 0.5.14.1 · Local-first bank ledger, explainable categories, and explicit coarse buckets. */
+import {detailedFinanceMatch,financeGenericFallback,updateBankSuggestions} from './finance-auto-rules.js';
+export {updateBankSuggestions} from './finance-auto-rules.js';
 export const FINANCE_CATEGORIES=[
  ['Einnahmen','Gehalt'],['Einnahmen','Honorare'],['Einnahmen','Kapitalerträge'],['Einnahmen','Sonstiges'],
- ['Wohnen','Miete & Betriebskosten'],['Wohnen','Strom & Heizung'],['Wohnen','Haushalt & Einrichtung'],
- ['Lebensmittel','Supermarkt'],['Lebensmittel','Drogerie'],
- ['Essen & Ausgehen','Restaurant & Café'],
- ['Mobilität','Öffentliche Verkehrsmittel'],['Mobilität','Auto & Tanken'],['Mobilität','Parken & Maut'],
+ ['Wohnen','Miete & Betriebskosten'],['Wohnen','Strom & Heizung'],['Wohnen','ORF-Beitrag'],['Wohnen','Haushalt & Einrichtung'],
+ ['Lebensmittel','Supermarkt'],['Lebensmittel','Drogerie'],['Lebensmittel','Asia-Supermarkt'],['Lebensmittel','Bio-Lebensmittel'],['Lebensmittel','Bäckerei'],
+ ['Essen & Ausgehen','Restaurant & Café'],['Essen & Ausgehen','Mensa & Kantine'],
+ ['Mobilität','Öffentliche Verkehrsmittel'],['Mobilität','Auto & Tanken'],['Mobilität','Parken & Maut'],['Mobilität','Fahrrad'],
  ['Familie','Kinder & Unterhalt'],['Familie','Familie & Geschenke'],
- ['Gesundheit & Sport','Fitness & Sport'],['Gesundheit & Sport','Medizin & Apotheke'],
- ['Freizeit & Reisen','Reisen & Unterkunft'],['Freizeit & Reisen','Kultur & Freizeit'],
+ ['Gesundheit & Sport','Fitness & Sport'],['Gesundheit & Sport','Medizin & Apotheke'],['Gesundheit & Sport','Tanzen'],['Gesundheit & Sport','Kampfsport'],['Gesundheit & Sport','Sauna & Therme'],['Gesundheit & Sport','Schwimmen & Bäder'],['Gesundheit & Sport','Optik'],
+ ['Freizeit & Reisen','Reisen & Unterkunft'],['Freizeit & Reisen','Flüge'],['Freizeit & Reisen','Kultur & Freizeit'],
  ['Bildung & Beruf','Bildung & Fachliteratur'],['Bildung & Beruf','Software & Beruf'],
  ['Verträge & Abos','Telekommunikation'],['Verträge & Abos','Streaming & Digitales'],['Verträge & Abos','Versicherungen'],
- ['Finanzen','Bankgebühren'],['Finanzen','Steuern & Abgaben'],
- ['Shopping','Online-Shopping'],['Shopping','Bekleidung & Sonstiges'],
+ ['Finanzen','Bankgebühren'],['Finanzen','Steuern & Abgaben'],['Finanzen','Kapitalertragsteuer'],['Finanzen','Sollzinsen'],
+ ['Shopping','Online-Shopping'],['Shopping','Bekleidung & Sonstiges'],['Shopping','Zahlungsdienst (Inhalt unbekannt)'],
  ['Bargeld','Bargeldbehebung'],
- ['Transfer','Eigene Konten'],['Transfer','Depot & Wertpapiere'],['Transfer','Krypto'],['Transfer','Sparen'],
- ['Rückerstattung','Rückzahlung'],['Prüfen','Noch ungeklärt']
+ ['Transfer','Eigene Konten'],['Transfer','Depot & Wertpapiere'],['Transfer','Krypto'],['Transfer','Sparen'],['Transfer','Private Überweisung'],['Transfer','Kreditkartenabrechnung'],
+ ['Rückerstattung','Rückzahlung'],['Rückerstattung','Lebensmittel-Erstattung'],['Rückerstattung','Steuerrückzahlung'],['Einnahmen','Familienleistungen'],['Einnahmen','Eingang ohne klare Herkunft'],['Sonstiges','Überweisung ohne klaren Zweck'],['Sonstiges','Zahlung ohne klaren Zweck'],['Prüfen','Noch ungeklärt']
 ];
 const known=new Set(FINANCE_CATEGORIES.map(([a,b])=>a+' / '+b));
 export const categoryLabel=(a,b)=>`${a} / ${b}`;
@@ -48,7 +50,7 @@ export function bankMerchant(description){
  const omit=s.replace(/(?:IBAN|BIC|RZSTAT2G|[A-Z]{2}\d{2}[A-Z0-9]{10,30})\S*/gi,'').replace(/\s+/g,' ').trim();return omit.slice(0,70)||'Unbekannter Zahlungspartner';
 }
 export const merchantKey=s=>upper(s).replace(/\s+/g,' ').trim().slice(0,90);
-export const safeMerchantRule=merchant=>!/(?:^|\W)(?:PAYPAL|KLARNA|STRIPE|BUCHUNGEN|ONLINE BANKING|UNBEKANNT)(?:$|\W)/iu.test(merchantKey(merchant));
+export const safeMerchantRule=merchant=>!/(?:^|\W)(?:PAYPAL|KLARNA|STRIPE|SUMUP|BUCHUNGEN|ONLINE BANKING|UNBEKANNT|EPAYMENT|POS)(?:$|\W)/iu.test(merchantKey(merchant));
 const rule=(rx,cat,flow='expense',confidence='high')=>({rx:new RegExp(rx,'iu'),category:cat,flow,confidence});
 // Real-world merchant rules derived from observed generic transaction descriptors; do not include a user's counterparties.
 export const BANK_RULES=[
@@ -83,14 +85,16 @@ export function classifyBankTransaction(transaction,customRules=[]){
   const directionOkay=x.flow==='transfer'||((x.flow==='income'||x.flow==='refund')?transaction.amountCents>0:transaction.amountCents<0);
   if(safeMerchantRule(m)&&m===x.merchantKey&&type===x.flow&&directionOkay)return {category:x.category,flow:x.flow,confidence:'confirmed',needsReview:false,source:'own-rule'};
  }
+ // More specific, auditable rules, including known Austrian merchants and tax/ATM cases.
+ const detailed=detailedFinanceMatch(transaction);if(detailed)return detailed;
  // Never decide an incoming bank transfer is salary based only on the account being credited.
  if(transaction.amountCents>0){
   if(/(?:LOHN|GEHALT|SALARY|PAYROLL|BEZUGSABRECHNUNG)/iu.test(desc))return {category:'Einnahmen / Gehalt',flow:'income',confidence:'high',needsReview:false,source:'rule'};
   if(/(?:RÜCKERSTATTUNG|RUECKERSTATTUNG|RÜCKZAHLUNG|REFUND|STORNO|REToure)/iu.test(desc))return {category:'Rückerstattung / Rückzahlung',flow:'refund',confidence:'medium',needsReview:true,source:'rule'};
-  return {category:'Prüfen / Noch ungeklärt',flow:'income',confidence:'low',needsReview:true,source:'review'};
+  return financeGenericFallback(transaction);
  }
- for(const r of BANK_RULES)if(r.rx.test(desc)){return {category:r.category,flow:r.flow,confidence:r.confidence,needsReview:r.confidence!=='high',source:'rule'};}
- return {category:'Prüfen / Noch ungeklärt',flow:'expense',confidence:'low',needsReview:true,source:'review'};
+ for(const r of BANK_RULES)if(r.rx.test(desc)){return {category:r.category,flow:r.flow,confidence:r.confidence,needsReview:r.confidence!=='high',source:'rule',ruleReason:r.confidence==='high'?'Bekannter Händler / bekannter Buchungszweck':'Grobe Händlerkategorie; Details aus Zahlung nicht erkennbar'};}
+ return financeGenericFallback(transaction);
 }
 export function parseRaiffeisenCsv(text,{customRules=[],maxRows=10000}={}){
  const raw=splitBankCsv(text);if(raw.length>maxRows)throw new Error(`Zu viele Buchungen in einer Datei (max. ${maxRows}).`);
@@ -118,7 +122,7 @@ export function categorizeTransaction(t,category,flow){
  if(flow!==expected)throw new Error('Kategorie und Geldfluss-Art passen nicht zusammen.');
  const amount=Number(t.amountCents);
  if(((flow==='expense'||flow==='cash')&&amount>=0)||((flow==='income'||flow==='refund')&&amount<=0))throw new Error('Vorzeichen und Geldfluss-Art passen nicht zusammen.');
- return {...t,category,flow,needsReview:false,confidence:'confirmed',source:'user'};
+ return {...t,category,flow,needsReview:false,confidence:'confirmed',source:'user',ruleReason:'Von dir bestätigt'};
 }
 
 export function financeViewModel(transactions=[],period='all'){

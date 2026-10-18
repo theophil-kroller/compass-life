@@ -9,7 +9,7 @@ import {eventState,queueEvent,queueEventPreference,removeEvents,prunePastEvents,
 import {healthViewModel,healthBars,healthTime,healthObservation} from './health-visual.js';
 import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-import.js';
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
-import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule} from './finance-core.js';
+import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
 import {financeSearchTransactions} from './finance-analytics.js';
 import {exploreDays,exploreView,EXPLORE_FIELDS} from './insights-explorer.js';
@@ -29,7 +29,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.14';
+const COMPASS_CLIENT_VERSION='0.5.14.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -1056,7 +1056,15 @@ function bind() {
   const finPeriod=app.querySelector('#finance-period');if(finPeriod)finPeriod.onchange=()=>{financePeriod=finPeriod.value;financeReviewPage=0;financeLedgerPage=0;render();};
   const finSearch=app.querySelector('#finance-ledger-query');if(finSearch)finSearch.onchange=()=>{financeLedgerQuery=finSearch.value.slice(0,100);financeLedgerPage=0;render();};
   const finFilter=app.querySelector('#finance-ledger-filter');if(finFilter)finFilter.onchange=()=>{financeLedgerFilter=finFilter.value;financeLedgerPage=0;render();};
-  app.querySelectorAll('form[data-finance-edit]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeEdit;const data=new FormData(form),category=String(data.get('category')||''),flow=String(data.get('flow')||'');if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')return toast('Bitte eine konkrete Kategorie auswählen.',true);try{await mutate(s=>{const i=(s.financeTransactions||[]).findIndex(t=>t.id===id);if(i<0)throw Error('Buchung nicht mehr vorhanden.');s.financeTransactions[i]=categorizeTransaction(s.financeTransactions[i],category,flow);});toast('Einzelne Buchung bestätigt beziehungsweise korrigiert.');}catch(e){toast(e.message,true);}});
+  app.querySelectorAll('form[data-finance-edit]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeEdit;const data=new FormData(form),category=String(data.get('category')||''),flow=String(data.get('flow')||'');if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')return toast('Bitte eine konkrete Kategorie auswählen.',true);try{let affected=0;const remember=data.get('remember')==='yes';
+    await mutate(s=>{s.financeTransactions??=[];s.financeRules??=[];const i=s.financeTransactions.findIndex(t=>t.id===id);if(i<0)throw Error('Buchung nicht mehr vorhanden.');
+      const old=s.financeTransactions[i],key=merchantKey(old.merchant);const rule=remember&&safeMerchantRule(old.merchant);
+      if(rule){for(let j=0;j<s.financeTransactions.length;j++){const t=s.financeTransactions[j];if(j===i||(merchantKey(t.merchant)===key&&(t.amountCents>0)===(old.amountCents>0)&&t.source!=='user'&&t.confidence!=='confirmed')){
+        s.financeTransactions[j]=categorizeTransaction(t,category,flow);affected++;}}}
+      else{s.financeTransactions[i]=categorizeTransaction(old,category,flow);affected++;}
+      if(rule){s.financeRules=s.financeRules.filter(r=>r.merchantKey!==key);s.financeRules.push({merchantKey:key,category,flow});}
+    });toast(`${affected} Buchung(en) bestätigt oder korrigiert${remember?' · Händlerregel gespeichert':''}.`);
+  }catch(e){toast(e.message,true);}});
   for(const [id,set] of [['explore-x',v=>exploreX=v],['explore-y',v=>exploreY=v],['explore-lag',v=>exploreLag=Number(v)]]){
     const select=app.querySelector('#'+id);if(select)select.onchange=()=>{set(select.value);render();};
   }
@@ -1306,6 +1314,12 @@ async function runAction(action,id,stepId=null) {
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
+    if(action==='finance-reclassify'){
+      let result={changed:0,closed:0,review:0};
+      try{await mutate(s=>{s.financeTransactions??=[];result=updateBankSuggestions(s.financeTransactions,s.financeRules||[],classifyBankTransaction);s.financeTransactions=result.rows;});
+        financeReviewPage=0;financeLedgerPage=0;toast(`${result.changed} Zuordnungen verbessert · ${result.closed} Fälle abgeschlossen · ${result.review} weiter zur Prüfung. Manuelle Bestätigungen bleiben erhalten.`);
+      }catch(e){toast('Vorklassifizierung: '+e.message,true);}return;
+    }
     if(action==='finance-pane'){if(FINANCE_TABS.some(p=>p.title===id)){financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
 
     if(action==='finance-recurring-fixed'||action==='finance-recurring-clear'||action==='finance-recurring-exclude'){

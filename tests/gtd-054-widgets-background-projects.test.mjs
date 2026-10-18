@@ -75,5 +75,5 @@ test('Projects preserve 3 panes on desktop and Worker is release 0.5.5 API 11',(
  assert.match(css,/\.projects-layout\.omni-projects:not\(\.is-focused\)>\.project-inspector\{grid-column:3/);
  assert.match(worker,/apiVersion:11,release:'0\.5\.5'/);
  assert.match(worker,/widgetEvents\(req,env\)/);
- assert.match(read('client/src/main.js'),/COMPASS_CLIENT_VERSION='0\.5\.14'/);
+ assert.match(read('client/src/main.js'),/COMPASS_CLIENT_VERSION='0\.5\.14\.1'/);
 });

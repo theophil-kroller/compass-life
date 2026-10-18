@@ -57,7 +57,7 @@ test('0.5.14 existing navigation adds reversible category editor and readable tr
  assert.match(financeTrendsView(entries),/Monatsvergleich|Monatsvergleich/i);
  assert.match(financeCategoryDetailView(entries),/Lebensmittel/);
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.14'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.14\.1'/);
  assert.match(main,/data-finance-edit/);assert.match(main,/finance-recurring-fixed/);
  assert.doesNotMatch(main,/\/api\/finance/);
 });
@@ -69,7 +69,7 @@ test('0.5.14 explicit category/flow validation prevents silent misclassification
  const refund={...expense,amountCents:1200};
  assert.throws(()=>categorizeTransaction(refund,'Verträge & Abos / Telekommunikation','expense'),/Vorzeichen/);
  const custom=[{merchantKey:'PROVIDER',category:'Verträge & Abos / Telekommunikation',flow:'expense'}];
- const c=classifyBankTransaction(refund,custom);assert.equal(c.needsReview,true); // a refund from the merchant cannot inherit its outgoing expense rule
+ const c=classifyBankTransaction(refund,custom);assert.equal(c.category,'Einnahmen / Eingang ohne klare Herkunft'); // must not inherit outgoing category
  assert.equal(c.flow,'income');
 });
 test('0.5.14 users can restore excluded subscription suggestions',()=>{

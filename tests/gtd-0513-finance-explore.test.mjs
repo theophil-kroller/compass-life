@@ -21,14 +21,14 @@ test('Raiffeisen: semicolon quotes, BOM, decimal comma, dates and bad rows',()=>
  assert.throws(()=>parseRaiffeisenCsv('01.01.2024;bad;01.01.2024'),/6 Felder/);
 });
 
-test('known merchants high-confidence, Amazon and unknown transfers ask first',()=>{
+test('known merchants auto-assign, marketplace and purpose-unknown are labeled broad',()=>{
  const t=parseRaiffeisenCsv(csv).rows;
  assert.deepEqual([t[0].category,t[0].needsReview],['Lebensmittel / Supermarkt',false]);
- assert.equal(t[1].category,'Shopping / Online-Shopping');assert.equal(t[1].needsReview,true);
- assert.equal(t[2].category,'Prüfen / Noch ungeklärt');assert.equal(t[2].needsReview,true);
+ assert.equal(t[1].category,'Shopping / Online-Shopping');assert.equal(t[1].needsReview,false);assert.equal(t[1].confidence,'broad');
+ assert.equal(t[2].category,'Sonstiges / Überweisung ohne klaren Zweck');assert.equal(t[2].needsReview,false);assert.equal(t[2].confidence,'broad');
  assert.equal(t[3].category,'Einnahmen / Gehalt');assert.equal(t[3].needsReview,false);
  assert.equal(t[4].category,'Verträge & Abos / Versicherungen');assert.equal(t[4].needsReview,false);
- assert.equal(t[5].needsReview,true);
+ assert.equal(t[5].needsReview,false);assert.match(t[5].category,/Zahlungsdienst/);
  assert.equal(validCategory('Fantasiekategorie'),false);
 });
 
@@ -47,12 +47,12 @@ test('category confirmation and learned merchant rule never overwrite confirmed 
 
 test('Sankey and accounting exclude unreviewed, transfers and cash from consumer spending',()=>{
  let rows=parseRaiffeisenCsv(csv).rows;const vm=financeViewModel(rows,'2024-01');
- assert.equal(vm.incomeCents,230000);assert.equal(vm.expenseCents,2345+9000);assert.equal(vm.pending.length,3);
- const html=expenseSankey(vm);assert.match(html,/Sankey|Abflüsse/);assert.match(html,/Prüfung ausstehend/);
- assert.match(financeDashboardView({financeTransactions:rows},'Prüfen','all'),/Zuordnung bestätigen/);
+ assert.equal(vm.incomeCents,230000);assert.equal(vm.expenseCents,2345+3490+30000+9000+4301);assert.equal(vm.pending.length,0);
+ const html=expenseSankey(vm);assert.match(html,/Sankey|Abflüsse/);assert.match(html,/Sonstiges|Shopping/);
+ assert.match(financeDashboardView({financeTransactions:rows},'Prüfen','all'),/Keine zwingende Prüfung mehr offen/);
  const transfer=categorizeTransaction(rows[2],'Transfer / Eigene Konten','transfer');rows=[...rows.slice(0,2),transfer,...rows.slice(3)];
- const v=financeViewModel(rows,'all');assert.equal(v.transferCents,30000);assert.equal(v.expenseCents,11345);
- assert.equal(v.pending.length,2);
+ const v=financeViewModel(rows,'all');assert.equal(v.transferCents,30000);assert.equal(v.expenseCents,2345+3490+9000+4301);
+ assert.equal(v.pending.length,0);
 });
 
 test('statistic explorer pairs by date/lag, not by array index, preserving gaps',()=>{
@@ -74,17 +74,17 @@ test('block bootstrap 95% CI requires enough paired observations and nondegenera
 
 test('0.5.13 keeps bank data local, activates Explorer and avoids worker writes',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.14'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.14\.1'/);
  assert.match(main,/previewBankFiles/);assert.match(main,/financeTransactions/);assert.match(main,/exploreView\(exploreDays/);
  assert.doesNotMatch(main,/\/api\/finance/);
 });
 
 test('review groups prioritize recurring uncertain merchants but need explicit batch opt-in',async()=>{
  const {financeReviewGroups}=await import('../client/src/finance-core.js');
- const text=[row('03.01.2024','Payment reference: AMAZON MARKETPLACE','-34,90','a'),row('06.01.2024','Payment reference: AMAZON MARKETPLACE','-14,90','b'),row('07.01.2024','Payment reference: HOFER SHOP','-7,00','c')].join('\n');
+ const text=[row('03.01.2024','ONLINE BANKING Recipient: Unknown Institution GmbH Payment reference: wire','-1.200,00','a'),row('06.01.2024','ONLINE BANKING Recipient: Unknown Institution GmbH Payment reference: wire','-1.400,00','b'),row('07.01.2024','Payment reference: HOFER SHOP','-7,00','c')].join('\n');
  const ts=parseRaiffeisenCsv(text).rows;const g=financeReviewGroups(ts);
  assert.equal(g.length,1);assert.equal(g[0].entries.length,2);
  const html=financeDashboardView({financeTransactions:ts},'Prüfen','all');
- assert.match(html,/Alle 2 offenen Buchungen/);assert.match(html,/name="applyAll"/);
+ assert.match(html,/Alle 2 offenen Buchungen|Alle 2 Buchungsdetails/);assert.match(html,/name="applyAll"/);
  assert.doesNotMatch(html,/checked[^>]*name="applyAll"/);
 });
