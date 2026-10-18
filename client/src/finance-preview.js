@@ -5,6 +5,7 @@ export const FINANCE_PANES=[
  {title:'Ausgaben',icon:'activity',text:'Kategorien, Monatsvergleich und Geldflüsse'},
  {title:'Fixkosten',icon:'calendar',text:'Regelmäßige Zahlungen, Verträge und Abos'},
  {title:'Sparpotenzial',icon:'target',text:'Veränderungen erkennen und selbst bewerten'},
+ {title:'Reisen',icon:'map',text:'Buchungen zu Reisen zuordnen und Kosten vergleichen'},
  {title:'Portfolio',icon:'folder',text:'Wertpapiere, Kraken, flatex und Anlageerträge'}
 ];
 export const FINANCE_EXPORTS=[

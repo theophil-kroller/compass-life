@@ -783,3 +783,32 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .fin-private-rules p{font-size:12px;line-height:1.6;color:#5c7666;margin:7px 0}
 .fin-private-rules small{font-size:11px;color:#7b9582}
 .fin-private-rules .fin-file-pick{cursor:pointer}
+
+/* Compass 0.5.15 · trip attribution and cost explorer, local-only. */
+.fin-travel-workspace{display:grid;gap:13px}
+.fin-travel-workspace .fin-analysis-head p{color:#788D7C;font-size:12px;line-height:1.65;max-width:720px;margin:5px 0}
+.fin-trip-selector{display:flex;gap:9px;flex-wrap:wrap;margin-top:2px}
+.fin-trip-choice{border:1px solid #D6E5DA;background:#F8FBF8;border-radius:12px;padding:11px 15px;display:grid;gap:4px;text-align:left;max-width:min(100%,250px);cursor:pointer;color:#3E5F4B}
+.fin-trip-choice strong{font-size:12px}.fin-trip-choice small{font-size:10px;color:#87998C}
+.fin-trip-choice.is-selected{border-color:#44836A;background:#E8F4EC;box-shadow:0 0 0 1px #44836A33}
+.fin-trip-new{background:#F6FAF7;border:1px solid #E0EAE1;border-radius:12px;padding:13px 15px}
+.fin-trip-new summary{cursor:pointer;font-size:12px;color:#407059;font-weight:650}
+.fin-trip-form{display:grid;grid-template-columns:minmax(170px,2fr) minmax(120px,1fr) minmax(120px,1fr) auto;gap:10px;align-items:end;margin:15px 0 0}
+.fin-trip-form label,.fin-trip-filter label{display:grid;gap:6px;font-size:11px;color:#627D6B;font-weight:600;min-width:0}
+.fin-trip-form input,.fin-trip-filter input,.fin-trip-filter select{padding:10px;border-radius:10px;border:1px solid #D9E5DD;background:white;min-width:0;color:#304E3B;width:100%;font-size:12px}
+.fin-trip-form .primary-btn{white-space:nowrap}
+.fin-trip-selected{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.fin-trip-selected h3{margin:0;color:#345E49}.fin-trip-selected small{display:block;color:#8D9E92;font-size:11px;margin-top:5px}
+.fin-trip-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-width:0}
+.fin-trip-bars{display:grid;gap:13px}.fin-trip-bar>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;color:#517760;font-size:11px}.fin-trip-bar>div strong{color:#376850;white-space:nowrap}
+.fin-trip-meter{display:block;height:7px;background:#ECF2EC;border-radius:6px;overflow:hidden;margin-top:7px}.fin-trip-meter i{display:block;height:100%;background:#56947D;border-radius:6px}
+.fin-trip-comparison{display:grid;gap:0}.fin-trip-comparison-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 13px;padding:11px 0;border-bottom:1px solid #EEF2EE;color:#4B7058;font-size:12px;align-items:center}.fin-trip-comparison-row span{overflow-wrap:anywhere}.fin-trip-comparison-row strong{color:#31664E}.fin-trip-comparison-row small{font-size:10px;color:#8A9D90}.fin-trip-comparison-row>small{grid-column:1/-1}
+.fin-trip-list-card{border:1px solid #E0EAE2;border-radius:14px;padding:17px;background:#FFF}.fin-trip-list-card h3{font:22px Georgia,serif;color:#315D47;margin:2px 0 10px}.fin-trip-list-card p{font-size:12px;color:#769083;line-height:1.6}
+.fin-trip-transactions{display:grid;gap:8px;max-width:100%;min-width:0}
+.fin-trip-transaction{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;background:#F8FBF9;border:1px solid #E6EEE7;border-radius:10px;padding:12px;min-width:0}
+.fin-trip-transaction>div{flex:1 1 250px;min-width:0}.fin-trip-transaction strong{font-size:12px;color:#3D6A52;overflow-wrap:anywhere}.fin-trip-transaction>strong{white-space:nowrap;color:#4C6857}.fin-trip-transaction small{display:block;font-size:10px;margin-top:5px;line-height:1.5;color:#8A9E91}
+.fin-trip-transaction details{margin-top:7px;min-width:0}.fin-trip-transaction details summary{font-size:10px;color:#668876;cursor:pointer}.fin-trip-transaction .fin-bank-text{font-size:10px;max-width:100%;overflow-wrap:anywhere}
+.fin-trip-transaction .primary-btn,.fin-trip-transaction .secondary-btn{padding:7px 11px;font-size:11px}
+.fin-trip-filter{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;margin:15px 0}
+@media(max-width:1000px){.fin-trip-form{grid-template-columns:1fr 1fr}.fin-trip-form label:first-child{grid-column:1/-1}.fin-trip-form button{justify-self:start}.fin-trip-columns{grid-template-columns:1fr}}
+@media(max-width:580px){.fin-trip-form,.fin-trip-filter{grid-template-columns:1fr}.fin-trip-form label:first-child{grid-column:auto}.fin-trip-list-card{padding:13px}.fin-trip-choice{width:100%;max-width:100%}.fin-trip-transaction{align-items:flex-start}.fin-trip-transaction>div{flex-basis:100%}.fin-trip-transaction>strong{flex:1}.fin-trip-selected{align-items:start}}

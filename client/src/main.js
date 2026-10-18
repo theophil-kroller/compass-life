@@ -11,6 +11,7 @@ import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
+import {createFinanceTrip,tripDelete,tripCandidateRows,travelAttributable} from './finance-travel.js';
 import {validatePrivateFinancePack} from './finance-private-rules.js';
 import {financeSearchTransactions} from './finance-analytics.js';
 import {exploreDays,exploreView,EXPLORE_FIELDS} from './insights-explorer.js';
@@ -30,7 +31,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.14.2';
+const COMPASS_CLIENT_VERSION='0.5.15';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -102,6 +103,7 @@ let insightWellnessDay='';
 let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',financePane='Überblick';
 let financePeriod='all',financePreview=null,financeBusy=false,financeReviewPage=0;
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
+let financeTripSelected='',financeTripQuery='',financeTripMode='suggested',financeTripPage=0;
 let exploreX='sleepMinutes',exploreY='workMinutes',exploreLag=0;
 let placesPreview=null,placesImportBusy=false,selectedPlaceKey='';
 let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryImportOpen=false,discoveryWeekOffset=0,discoveryImportPreview=null;
@@ -755,7 +757,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage}));}
 function insightsScreen(){
  const tabDef=INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0];
  const today=localDate();
@@ -1067,6 +1069,15 @@ function bind() {
       });});financeReviewPage=0;financeLedgerPage=0;toast(`${incoming.length} private Regeln gespeichert; ${changed} Buchungen neu zugeordnet.`);
     }catch(e){toast('Private Regeln: '+e.message,true);}finally{render();}
   };
+  const tripCreate=app.querySelector('#finance-trip-create');if(tripCreate)tripCreate.onsubmit=async ev=>{
+    ev.preventDefault();const data=new FormData(tripCreate);
+    try{const t=createFinanceTrip({id:`trip-${crypto.randomUUID()}`,name:data.get('name'),start:data.get('start'),end:data.get('end')});
+      await mutate(s=>{s.financeTrips??=[];if(s.financeTrips.length>=100)throw new Error('Maximal 100 Reisen in diesem Tresor.');s.financeTrips.push(t);});
+      financeTripSelected=t.id;financeTripPage=0;toast('Reise im verschlüsselten Tresor angelegt. Bitte Buchungen ausdrücklich zuordnen.');
+    }catch(ex){toast(ex.message,true);}
+  };
+  const tripQuery=app.querySelector('#finance-trip-query');if(tripQuery)tripQuery.onchange=()=>{financeTripQuery=tripQuery.value.slice(0,100);financeTripPage=0;render();};
+  const tripMode=app.querySelector('#finance-trip-mode');if(tripMode)tripMode.onchange=()=>{financeTripMode=tripMode.value==='all'?'all':'suggested';financeTripPage=0;render();};
   const finPeriod=app.querySelector('#finance-period');if(finPeriod)finPeriod.onchange=()=>{financePeriod=finPeriod.value;financeReviewPage=0;financeLedgerPage=0;render();};
   const finSearch=app.querySelector('#finance-ledger-query');if(finSearch)finSearch.onchange=()=>{financeLedgerQuery=finSearch.value.slice(0,100);financeLedgerPage=0;render();};
   const finFilter=app.querySelector('#finance-ledger-filter');if(finFilter)finFilter.onchange=()=>{financeLedgerFilter=finFilter.value;financeLedgerPage=0;render();};
@@ -1335,6 +1346,39 @@ async function runAction(action,id,stepId=null) {
       }catch(e){toast('Vorklassifizierung: '+e.message,true);}return;
     }
     if(action==='finance-pane'){if(FINANCE_TABS.some(p=>p.title===id)){financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
+    if(action==='finance-trip-select'){
+      if((state?.financeTrips||[]).some(t=>t.id===id)){financeTripSelected=id;financeTripPage=0;financeTripQuery='';render();}return;
+    }
+    if(action==='finance-trip-add'||action==='finance-trip-unassign'||action==='finance-trip-exclude'){
+      const trip=(state?.financeTrips||[]).find(t=>t.id===financeTripSelected)||(state?.financeTrips||[])[0];
+      const t=(state?.financeTransactions||[]).find(t=>t.id===id);
+      if(!trip||!t||!travelAttributable(t))return;
+      if(action==='finance-trip-add'&&state?.financeTripAssignments?.[id]&&state.financeTripAssignments[id]!==trip.id){toast('Diese Buchung gehört bereits zu einer anderen Reise. Bitte dort zuerst entfernen.',true);return;}
+      await mutate(s=>{s.financeTripAssignments??={};s.financeTripExcluded??={};
+        if(action==='finance-trip-add'){s.financeTripAssignments[id]=trip.id;delete s.financeTripExcluded[`${trip.id}|${id}`];}
+        if(action==='finance-trip-unassign'){if(s.financeTripAssignments[id]===trip.id)delete s.financeTripAssignments[id];}
+        if(action==='finance-trip-exclude')s.financeTripExcluded[`${trip.id}|${id}`]=true;
+      });
+      toast(action==='finance-trip-add'?'Buchung dieser Reise zugeordnet.':action==='finance-trip-exclude'?'Vorschlag für diese Reise ausgeblendet.':'Reisezuordnung aufgehoben.');return;
+    }
+    if(action==='finance-trip-show-excluded'){
+      const trip=(state?.financeTrips||[]).find(t=>t.id===financeTripSelected)||(state?.financeTrips||[])[0];if(!trip)return;
+      await mutate(s=>{s.financeTripExcluded??={};for(const k of Object.keys(s.financeTripExcluded))if(k.startsWith(`${trip.id}|`))delete s.financeTripExcluded[k];});toast('Vorschläge wieder eingeblendet.');return;
+    }
+    if(action==='finance-trip-prev'||action==='finance-trip-next'){
+      const trip=(state?.financeTrips||[]).find(t=>t.id===financeTripSelected)||(state?.financeTrips||[])[0];if(!trip)return;
+      const count=tripCandidateRows(state.financeTransactions||[],trip,state.financeTripAssignments||{},state.financeTripExcluded||{},financeTripQuery,financeTripMode).length;
+      financeTripPage=Math.max(0,Math.min(Math.max(0,Math.ceil(count/20)-1),financeTripPage+(action==='finance-trip-next'?1:-1)));render();return;
+    }
+    if(action==='finance-trip-delete'){
+      const trip=(state?.financeTrips||[]).find(t=>t.id===id);if(!trip)return;
+      if(!confirm(`Reise „${trip.name}“ löschen? Die Bankbuchungen und Kategorien bleiben erhalten. Nur die Reisezuordnungen werden entfernt.`))return;
+      await mutate(s=>{s.financeTrips=(s.financeTrips||[]).filter(t=>t.id!==id);
+        const clean=tripDelete(id,s.financeTripAssignments||{},s.financeTripExcluded||{});
+        s.financeTripAssignments=clean.links;s.financeTripExcluded=clean.exclusions;});
+      financeTripSelected='';financeTripPage=0;toast('Reise gelöscht. Bankbuchungen bleiben unverändert.');return;
+    }
+
 
     if(action==='finance-recurring-fixed'||action==='finance-recurring-clear'||action==='finance-recurring-exclude'){
       if(!id||id.length>90)return;

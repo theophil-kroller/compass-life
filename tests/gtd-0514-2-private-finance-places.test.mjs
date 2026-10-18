@@ -29,7 +29,8 @@ test('0.5.14.2 private rules file is strict, does not allow arbitrary JS or inva
 });
 test('0.5.14.2 user financial names are not present in public source, file import is wired',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8'),core=readFileSync(new URL('../client/src/finance-core.js',import.meta.url),'utf8');
- for(const actualName of ['Ying Kroller','Yiwei Sun','Jingqi Jia'])assert.ok(!main.includes(actualName)&&!core.includes(actualName));
+ // Public repository must not contain a serialized recipient-rule list.
+ assert.ok(!main.includes('recipientContains:')&&!core.includes('recipientContains:'));
  assert.match(main,/finance-private-rules-file/);assert.match(main,/financePrivateRules/);assert.match(main,/open-worldmap/);
  assert.match(main,/insightPeriod='all'/);
  const view=readFileSync(new URL('../client/src/finance-dashboard.js',import.meta.url),'utf8');assert.match(view,/Private JSON-Regeln einlesen/);

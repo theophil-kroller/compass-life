@@ -57,7 +57,7 @@ test('0.5.14 existing navigation adds reversible category editor and readable tr
  assert.match(financeTrendsView(entries),/Monatsvergleich|Monatsvergleich/i);
  assert.match(financeCategoryDetailView(entries),/Lebensmittel/);
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.14\.2'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.15'/);
  assert.match(main,/data-finance-edit/);assert.match(main,/finance-recurring-fixed/);
  assert.doesNotMatch(main,/\/api\/finance/);
 });
