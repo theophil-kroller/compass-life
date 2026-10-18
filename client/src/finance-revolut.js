@@ -9,7 +9,13 @@ export const BANK_ACCOUNTS=[
  {id:'dkb:current:EUR',label:'DKB · Giro EUR',bank:'DKB'}
 ];
 export const accountFor=t=>String(t?.accountId||'raiffeisen:current:EUR');
-export const accountLabel=t=>BANK_ACCOUNTS.find(x=>x.id===accountFor(t))?.label||accountFor(t);
+export const accountLabel=t=>String(t?.accountDisplay||BANK_ACCOUNTS.find(x=>x.id===accountFor(t))?.label||(
+ accountFor(t).startsWith('dkb:visa:')?'DKB · Visa':accountFor(t).startsWith('n26:space:')?'N26 · Space':accountFor(t))).slice(0,100);
+export function accountChoices(transactions=[]){
+ const base=BANK_ACCOUNTS.map(x=>({id:x.id,label:x.label})),seen=new Set(base.map(x=>x.id));
+ for(const t of transactions){const id=accountFor(t);if(!seen.has(id)){base.push({id,label:accountLabel(t)});seen.add(id);}}
+ return base;
+}
 export const accountMatches=(t,selection='all')=>selection==='all'||accountFor(t)===selection;
 
 // RFC 4180 CSV (commas, BOM, multiline quotes, escaped quotes); protects against badly formed exports.
@@ -69,14 +75,26 @@ export function parseRevolutCsv(text,{customRules=[],privateRules=[],classify=nu
  * These are ONLY candidate matches until explicit approval.
  */
 export function transferCandidates(transactions=[],limit=12){
- const likely=t=>t.flow==='transfer'||t.revolutType==='Deposit'||t.revolutType==='Transfer'||/\b(?:TOP.UP|ÜBERTRAG|UEBERTRAG|OWN ACCOUNT|EIGEN(?:ES)? KONTO|N26|REVOLUT)\b/iu.test(String(t.description||''));
- const sorted=transactions.filter(t=>t&&t.amountCents&&Number.isFinite(t.amountCents)&&/^\d{4}-\d\d-\d\d$/.test(t.day||'')&&!String(t.id).endsWith('-fee')&&likely(t)&&!t.linkedTransferId).sort((a,b)=>String(b.day).localeCompare(a.day));
- const used=new Set(),pairs=[];
- for(const a of sorted){if(used.has(a.id))continue;
-  const candidates=sorted.filter(b=>!used.has(b.id)&&b.id!==a.id&&accountFor(a)!==accountFor(b)&&b.amountCents===-a.amountCents&&Math.abs(Date.parse(a.day)-Date.parse(b.day))<=3*86400000);
-  const b=candidates.sort((x,y)=>Math.abs(Date.parse(a.day)-Date.parse(x.day))-Math.abs(Date.parse(a.day)-Date.parse(y.day)))[0];
-  if(b&&a.id<b.id){pairs.push({aId:a.id,bId:b.id,day:a.day,otherDay:b.day,amountCents:Math.abs(a.amountCents),accounts:[accountLabel(a),accountLabel(b)]});used.add(a.id);used.add(b.id);}
-  if(pairs.length>=limit)break;
+ const explicit=t=>t.flow==='transfer'||['Deposit','Transfer'].includes(t.revolutType)||/\b(?:TOP[ .-]?UP|ÜBERTRAG|UEBERTRAG|OWN ACCOUNT|EIGEN(?:ES)? KONTO|N26|REVOLUT|DKB|RAIFFEISEN|VISA(?:-?ABRECHNUNG)?|KREDITKARTENABRECHNUNG)\b/iu.test(String(t.description||''));
+ // An unclassified positive credit can be the receiving leg of a bank transfer.
+ // Ordinary card purchases, salaries and confirmed consumption are NOT transfer evidence.
+ const eligible=(a,b)=>{
+  const ae=explicit(a),be=explicit(b);
+  if(ae&&be)return 2;
+  const receiving=a.amountCents>0?a:b,initiator=receiving===a?b:a;
+  return explicit(initiator)&&receiving.needsReview===true&&receiving.amountCents>0?1:0;
+ };
+ const sorted=transactions.filter(t=>t&&Number.isSafeInteger(t.amountCents)&&t.amountCents!==0&&/^\d{4}-\d\d-\d\d$/.test(t.day||'')&&!String(t.id).endsWith('-fee')&&!t.linkedTransferId).sort((a,b)=>String(b.day).localeCompare(a.day));
+ const byAmount=new Map();for(const r of sorted){const list=byAmount.get(r.amountCents)||[];list.push(r);byAmount.set(r.amountCents,list);}
+ const paired=new Set(),out=[];
+ for(const a of sorted){if(paired.has(a.id))continue;
+  const options=(byAmount.get(-a.amountCents)||[]).filter(b=>b.id!==a.id&&!paired.has(b.id)&&accountFor(a)!==accountFor(b)&&Math.abs(Date.parse(a.day)-Date.parse(b.day))<=3*86400000&&eligible(a,b)>0);
+  if(!options.length)continue;
+  options.sort((x,y)=>eligible(a,y)-eligible(a,x)||Math.abs(Date.parse(a.day)-Date.parse(x.day))-Math.abs(Date.parse(a.day)-Date.parse(y.day))||x.id.localeCompare(y.id));
+  const b=options[0];paired.add(a.id);paired.add(b.id);
+  const [first,second]=[a,b].sort((x,y)=>x.id.localeCompare(y.id));
+  out.push({aId:first.id,bId:second.id,day:first.day,otherDay:second.day,amountCents:Math.abs(first.amountCents),accounts:[accountLabel(first),accountLabel(second)]});
+  if(out.length>=limit)break;
  }
- return pairs;
+ return out;
 }

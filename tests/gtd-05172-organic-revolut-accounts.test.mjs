@@ -39,7 +39,7 @@ test('0.5.17.2 organic sankey has three columns and actual cubic ribbons for sub
 test('0.5.17.2 account filters and pending importers are honestly labelled, private bank numbers never in source',()=>{
  const html=financeDashboardView({financeTransactions:[]},'Überblick','all',null,0,{account:'dkb:current:EUR',today:'2026-10-19'});
  assert.match(html,/DKB/);assert.match(html,/N26/);assert.match(html,/Revolut/);assert.match(html,/finance-account/);
- assert.match(html,/nach Prüfung eines jeweiligen Exports freigeschaltet/);
+ assert.match(html,/DKB Giro und Visa bleiben getrennte Konten/);
  const fs=['../client/src/finance-revolut.js','../client/src/finance-dashboard.js','../client/src/main.js'];
  for(const rel of fs){const s=readFileSync(new URL(rel,import.meta.url),'utf8');assert.doesNotMatch(s,/DE\d{20}/,'no full private IBAN should be embedded');}
 });
