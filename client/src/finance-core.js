@@ -78,7 +78,10 @@ export const BANK_RULES=[
 export function classifyBankTransaction(transaction,customRules=[]){
  const desc=transaction.description||'',m=merchantKey(transaction.merchant||bankMerchant(desc));
  for(const x of customRules){if(!x||!validCategory(x.category)||!x.merchantKey||!['income','expense','transfer','cash','refund'].includes(x.flow))continue;
-  if(safeMerchantRule(m)&&m===x.merchantKey)return {category:x.category,flow:x.flow,confidence:'confirmed',needsReview:false,source:'own-rule'};
+  const family=x.category.split(' / ')[0];
+  const type={Einnahmen:'income',Rückerstattung:'refund',Transfer:'transfer',Bargeld:'cash'}[family]||'expense';
+  const directionOkay=x.flow==='transfer'||((x.flow==='income'||x.flow==='refund')?transaction.amountCents>0:transaction.amountCents<0);
+  if(safeMerchantRule(m)&&m===x.merchantKey&&type===x.flow&&directionOkay)return {category:x.category,flow:x.flow,confidence:'confirmed',needsReview:false,source:'own-rule'};
  }
  // Never decide an incoming bank transfer is salary based only on the account being credited.
  if(transaction.amountCents>0){
@@ -108,9 +111,16 @@ export function previewBankFiles(items,existing=[],customRules=[]){
  for(const {text,name} of items){const parsed=parseRaiffeisenCsv(text,{customRules});for(const r of parsed.rows){if(seen.has(r.id)){duplicates++;continue;}seen.add(r.id);fresh.push({...r,sourceFile:String(name).slice(0,120)});}}
  return {rows:fresh,duplicates,review:fresh.filter(x=>x.needsReview).length,auto:fresh.filter(x=>!x.needsReview).length};
 }
-export function categorizeTransaction(t,category,flow){if(!validCategory(category))throw new Error('Bitte eine gültige Kategorie auswählen.');if(!['income','expense','transfer','refund','cash'].includes(flow))throw new Error('Ungültige Geldfluss-Art.');
+export function categorizeTransaction(t,category,flow){
+ if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')throw new Error('Bitte eine konkrete gültige Kategorie auswählen.');
+ if(!['income','expense','transfer','refund','cash'].includes(flow))throw new Error('Ungültige Geldfluss-Art.');
+ const main=category.split(' / ')[0],expected={Einnahmen:'income',Rückerstattung:'refund',Transfer:'transfer',Bargeld:'cash'}[main]||'expense';
+ if(flow!==expected)throw new Error('Kategorie und Geldfluss-Art passen nicht zusammen.');
+ const amount=Number(t.amountCents);
+ if(((flow==='expense'||flow==='cash')&&amount>=0)||((flow==='income'||flow==='refund')&&amount<=0))throw new Error('Vorzeichen und Geldfluss-Art passen nicht zusammen.');
  return {...t,category,flow,needsReview:false,confidence:'confirmed',source:'user'};
 }
+
 export function financeViewModel(transactions=[],period='all'){
  const entries=transactions.filter(t=>period==='all'||t.day.startsWith(period));
  const sum=(list)=>list.reduce((n,x)=>n+Math.abs(x.amountCents),0);
@@ -122,11 +132,11 @@ export function financeViewModel(transactions=[],period='all'){
  const pending=entries.filter(x=>x.needsReview);
  const groups=new Map();for(const t of spending){const parent=t.category.split(' / ')[0];groups.set(parent,(groups.get(parent)||0)+Math.abs(t.amountCents));}
  const categories=[...groups].sort((a,b)=>b[1]-a[1]).map(([name,cents])=>({name,cents}));
- const months=new Map();for(const t of entries){const key=t.day.slice(0,7);const x=months.get(key)||{month:key,incomeCents:0,expenseCents:0,transferCents:0,pendingCents:0};
-  const v=Math.abs(t.amountCents);if(t.needsReview)x.pendingCents+=v;else if(t.flow==='income')x.incomeCents+=v;else if(t.flow==='expense')x.expenseCents+=v;else if(t.flow==='transfer')x.transferCents+=v;months.set(key,x);}
+ const months=new Map();for(const t of entries){const key=t.day.slice(0,7);const x=months.get(key)||{month:key,incomeCents:0,expenseCents:0,transferCents:0,pendingCents:0,pendingOutCents:0,pendingInCents:0};
+  const v=Math.abs(t.amountCents);if(t.needsReview){x.pendingCents+=v;if(t.amountCents<0)x.pendingOutCents+=v;else x.pendingInCents+=v;}else if(t.flow==='income')x.incomeCents+=v;else if(t.flow==='expense')x.expenseCents+=v;else if(t.flow==='transfer')x.transferCents+=v;months.set(key,x);}
  const recurring=new Map();for(const t of spending){const m=merchantKey(t.merchant);if(!m)continue;const v=recurring.get(m)||{merchant:t.merchant,months:new Set(),amounts:[]};v.months.add(t.day.slice(0,7));v.amounts.push(Math.abs(t.amountCents));recurring.set(m,v);}
  const subscriptions=[...recurring.values()].filter(x=>x.months.size>=3).map(x=>({merchant:x.merchant,months:x.months.size,meanCents:Math.round(sum(x.amounts.map(amountCents=>({amountCents})))/x.amounts.length)})).sort((a,b)=>b.months-a.months).slice(0,18);
- return {count:entries.length,pending,auto:entries.filter(x=>!x.needsReview).length,incomeCents:sum(income),refundCents:sum(refunds),expenseCents:sum(spending),transferCents:sum(transfers),cashCents:sum(cash),pendingCents:sum(pending),categories,months:[...months.values()].sort((a,b)=>a.month.localeCompare(b.month)),subscriptions,netCents:sum(income)+sum(refunds)-sum(spending)-sum(cash)-sum(transfers)};
+ return {count:entries.length,pending,auto:entries.filter(x=>!x.needsReview).length,incomeCents:sum(income),refundCents:sum(refunds),expenseCents:sum(spending),transferCents:sum(transfers),cashCents:sum(cash),pendingCents:sum(pending),pendingOutCents:sum(pending.filter(t=>t.amountCents<0)),pendingInCents:sum(pending.filter(t=>t.amountCents>0)),categories,months:[...months.values()].sort((a,b)=>a.month.localeCompare(b.month)),subscriptions,netCents:sum(income)+sum(refunds)-sum(spending)-sum(cash)-sum(transfers)};
 }
 
 /** Batch-review candidates are grouped by exact normalized counterparty and direction.
