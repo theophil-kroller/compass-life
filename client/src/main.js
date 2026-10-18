@@ -2,6 +2,7 @@ import './style.css';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
+import {DEFAULT_CALENDAR_RULES,CALENDAR_CATEGORIES,effectiveCalendarRules,classifyCalendarEvent,validCalendarRule,validCalendarOverride,visibleCalendarEventsForDay,isRoutineCalendarBlock} from './calendar-rules.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
@@ -18,6 +19,10 @@ let selectedProjectId=null;
 let projectFocus=false;
 const projectCollapsed=new Set();
 let selectedAgendaEventId=null;
+let calendarRulesOpen=false,showHiddenCalendarEvents=false;
+let reviewWorkflow='next';
+const reviewDrafts=new Map();
+function captureReviewDraft(){const form=app?.querySelector('#review-commit-form');if(form?.dataset.id)reviewDrafts.set(form.dataset.id,Object.fromEntries(new FormData(form).entries()));}
 let showCalendarBlocks=false;
 let showCaptureDetails=false;
 let contextFilter='';
@@ -73,27 +78,39 @@ function calendarTime(e){
  if(!t)return 'Ganztägig';
  try{return new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit'}).format(new Date(t));}catch{return 'Termin';}
 }
-function visibleCalendarEvents(day){return dailyCalendar(day).filter(e=>showCalendarBlocks||!isRoutineBlock(e));}
-function isRoutineBlock(e){return /^(work|research blocker)$/i.test(String(e?.summary||'').trim());}
+function visibleCalendarEvents(day){return visibleCalendarEventsForDay(calendarEvents,day,effectiveCalendarRules(state),state?.calendarOverrides||{},showHiddenCalendarEvents,showCalendarBlocks);}
+function isRoutineBlock(e){return isRoutineCalendarBlock(e);}
+function eventAppearance(e){return classifyCalendarEvent(e,effectiveCalendarRules(state),state?.calendarOverrides||{});}
+function recoveryEvents(day){return visibleCalendarEvents(day).filter(e=>eventAppearance(e).category==='Erholung');}
 function agendaEvent(e){const matched=agendaForEvent(state,e);return matched.length?`<span class="agenda-count">${ico('list',13)} ${matched.length} Agenda</span>`:'';}
 function calendarCardRows(day){
  const ev=visibleCalendarEvents(day);
- return ev.length?`<div class="compass-calendar-list">${ev.map(e=>`<button type="button" class="compass-calendar-event calendar-clickable" data-action="agenda-open" data-id="${h(e.id)}"><span class="compass-calendar-hour">${h(calendarTime(e))}</span><strong>${h(e.summary||'Termin')}</strong>${agendaEvent(e)}${ico('arrow',14)}</button>`).join('')}</div>`
+ return ev.length?`<div class="compass-calendar-list">${ev.map(e=>`<button type="button" class="compass-calendar-event calendar-clickable" data-action="agenda-open" data-id="${h(e.id)}"><span class="compass-calendar-hour">${h(calendarTime(e))}</span><span class="event-emoji" aria-hidden="true">${h(eventAppearance(e).emoji)}</span><strong>${h(eventAppearance(e).displayTitle||'Termin')}</strong>${agendaEvent(e)}${ico('arrow',14)}</button>`).join('')}</div>`
   :'<div class="appointments-empty"><span>Keine relevanten Termine für diesen Tag.</span></div>';
 }
-function calendarFilterToggle(){return `<button type="button" class="secondary-btn calendar-filter-toggle" data-action="calendar-toggle-blocks">${ico(showCalendarBlocks?'eye':'eyeOff',15)} ${showCalendarBlocks?'Zeitblöcke ausblenden':'Zeitblöcke einblenden'}</button>`;}
+function calendarFilterToggle(){return `<div class="calendar-controls"><button type="button" class="secondary-btn calendar-filter-toggle" data-action="calendar-toggle-blocks">${ico(showCalendarBlocks?'eye':'eyeOff',15)} ${showCalendarBlocks?'Zeitblöcke ausblenden':'Zeitblöcke einblenden'}</button><button type="button" class="secondary-btn" data-action="calendar-toggle-hidden">${showHiddenCalendarEvents?'Ausgeblendete verbergen':'Ausgeblendete zeigen'}</button><button type="button" class="secondary-btn" data-action="calendar-rules-toggle">${ico('pencil',14)} Kalenderregeln</button></div>${calendarRulesPanel()}`;}
+function categorySelect(name,selected='Neutral'){return `<select name="${name}">${CALENDAR_CATEGORIES.map(c=>`<option value="${h(c)}" ${c===selected?'selected':''}>${h(c)}</option>`).join('')}</select>`;}
+function calendarRulesPanel(){if(!calendarRulesOpen||!state)return '';
+ const rules=effectiveCalendarRules(state);
+ return `<section class="calendar-rules-panel" aria-label="Kalender-Klassifizierungsregeln"><div class="work-heading"><span>Symbole und Erholungskategorien bearbeiten</span><button type="button" class="secondary-btn" data-action="calendar-rules-toggle">Schließen</button></div><p class="muted-line">Regeln werden in dieser Reihenfolge geprüft (erster Treffer gewinnt). Die Begriffe beziehen sich ausschließlich auf den Termintitel. Diese Einstellungen bleiben verschlüsselt in deinem lokalen Compass-Tresor.</p>
+ <div class="calendar-rule-list">${rules.map((r,i)=>`<form class="calendar-rule-form" data-id="${h(r.id)}"><div class="rule-heading"><label><input type="checkbox" name="enabled" ${r.enabled?'checked':''}/> Aktiv</label><strong>${i+1}. ${h(r.label)}</strong><div class="rule-move"><button type="button" class="secondary-btn" data-action="calendar-rule-up" data-id="${h(r.id)}" ${i===0?'disabled':''} aria-label="Priorität erhöhen">↑</button><button type="button" class="secondary-btn" data-action="calendar-rule-down" data-id="${h(r.id)}" ${i===rules.length-1?'disabled':''} aria-label="Priorität senken">↓</button></div></div><div class="rule-fields"><label>Regelname<input name="label" required maxlength="70" value="${h(r.label)}"/></label><label>Symbol<input name="emoji" maxlength="16" required value="${h(r.emoji)}" aria-label="Emoji"/></label><label>Kategorie${categorySelect('category',r.category)}</label><label>Begriffe (Komma getrennt)<input name="terms" maxlength="500" required value="${h(r.terms)}"/></label><label>Ausschlüsse (optional)<input name="exclude" maxlength="300" value="${h(r.exclude||'')}"/></label></div><div class="rule-actions"><button class="primary-btn" type="submit">Regel speichern</button><button type="button" class="secondary-btn" data-action="calendar-rule-delete" data-id="${h(r.id)}">Entfernen</button></div></form>`).join('')}</div><div class="rule-toolbar"><button type="button" class="secondary-btn" data-action="calendar-rule-add">Neue Regel</button><button type="button" class="secondary-btn" data-action="calendar-rules-reset">Standardregeln wiederherstellen</button></div></section>`;
+}
 function eventAgendaPanel(){
  const event=calendarEvents.find(e=>e.id===selectedAgendaEventId);
  if(!event||!state)return '';
  const notes=agendaForEvent(state,event);
  const title=String(event.summary||'');
+ const look=eventAppearance(event),over=state.calendarOverrides?.[event.id]||{};
  const person=title.match(/\b(?:mit|bei)\s+([\p{Lu}][\p{L}-]{2,})/u);
  const suggested=/\buko\b/i.test(title)?'uko':person?person[1].toLocaleLowerCase('de'):(title.match(/[\p{L}\p{N}]{3,}/u)?.[0]?.toLocaleLowerCase('de')||'');
- return `<section id="agenda-details" tabindex="-1" class="work-card agenda-panel" aria-label="Besprechungsagenda"><div class="work-heading"><span>${ico('users',19)} Gesprächsvorbereitung</span><button type="button" class="secondary-btn" data-action="agenda-close">Schließen</button></div>
- <h3>${h(event.summary||'Termin')}</h3><p class="muted-line">${h(calendarDate(event))} · ${h(calendarTime(event))} · Google Calendar (nur lesen)</p>
+ const externalUrl=typeof event.htmlLink==='string'&&/^https:\/\/(?:calendar\.google\.com\/|www\.google\.com\/calendar\/)/.test(event.htmlLink)?event.htmlLink:'';
+ return `<section id="agenda-details" tabindex="-1" class="work-card agenda-panel" aria-label="Kalendertermin und persönliches Overlay"><div class="work-heading"><span>${h(look.emoji)} Kalendertermin</span><button type="button" class="secondary-btn" data-action="agenda-close">Schließen</button></div>
+ <h3>${h(title||'Termin')}</h3><p class="muted-line">${h(calendarDate(event))} · ${h(calendarTime(event))} · Google Calendar (nur lesen) ${externalUrl?`· <a href="${h(externalUrl)}" target="_blank" rel="noopener noreferrer">In Google Calendar bearbeiten ↗</a>`:''}</p>
+ <form id="calendar-overlay-form" data-id="${h(event.id)}" class="calendar-overlay-form"><div class="work-heading"><span>Compass-Overlay (nur lokal)</span></div><label>Eigener Anzeigetitel<input name="title" value="${h(over.title||'')}" maxlength="180" placeholder="Originaltitel beibehalten"/></label><div class="overlay-fields"><label>Kategorie${categorySelect('category',over.category||look.category)}</label><label>Symbol<input name="emoji" aria-label="Terminsymbol" maxlength="16" value="${h(over.emoji||look.emoji)}"/></label></div><label class="flag-check"><input type="checkbox" name="hidden" ${look.hidden?'checked':''}/> In Compass ausblenden</label><div class="rule-actions"><button type="submit" class="primary-btn">Overlay speichern</button><button type="button" class="secondary-btn" data-action="calendar-overlay-reset" data-id="${h(event.id)}">Automatische Zuordnung</button></div><small>Nur Anzeige in Compass; der originale Google-Termin wird nicht verändert. Für alle ähnlichen Termine ändere die Kalenderregeln.</small></form>
+ <div class="work-heading"><span>${ico('users',19)} Gesprächsvorbereitung</span></div>
  ${notes.length?`<div class="agenda-items">${notes.map(x=>`<div class="agenda-item">${ico('checkSquare',16)} <span>${h(x.title)}</span><small>${x.tags?.map(t=>'#'+h(t)).join(' ')||''}</small></div>`).join('')}</div>`:'<p class="muted-line">Noch keine offenen Gesprächspunkte mit passenden Tags.</p>'}
  <form id="agenda-note-form" class="project-form"><input type="hidden" name="tag" value="${h(suggested)}"><label>Neuen Agendapunkt notieren<input name="title" required maxlength="180" placeholder="Was möchte ich besprechen?"/></label><button type="submit" class="primary-btn">${ico('plus',16)} Agendapunkt hinzufügen</button></form>
- <p class="form-hint">Tag-Vorschlag: #${h(suggested)}. Du kannst Tags anschließend im Aufgabeneditor ändern. Keine Kalendereinträge werden verändert.</p></section>`;
+ <p class="form-hint">Tag-Vorschlag: #${h(suggested)}. Keine Kalendereinträge werden verändert.</p></section>`;
 }
 function calendarConnectUI(){
  if(calendarBusy)return '<span class="calendar-connection">Google Calendar wird geladen …</span>';
@@ -338,10 +355,10 @@ function forecastScreen(){
   const ev=calendarToken?visibleCalendarEvents(day):[];
   if(!tasks.length&&!plannedTasks.length&&!ev.length)return '';
   const combined=[...tasks.map(t=>({type:'task',sort:'0',obj:t})),...plannedTasks.map(t=>({type:'planned',sort:'0b',obj:t})),...ev.map(e=>({type:'event',sort:e.start?.dateTime||'1',obj:e}))].sort((a,b)=>a.sort.localeCompare(b.sort));
-  return `<div class="forecast-date-group"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(day+'T12:00:00')))}</h3><div class="timeline-day">${combined.map(x=>x.type==='task'?`<div class="timeline-item deadline-event">${ico('flag',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · harte Deadline · ${h(CATEGORY_LABELS[x.obj.category]||x.obj.category)}</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:x.type==='planned'?`<div class="timeline-item planned-event">${ico('calendar',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · Planned (Wunschtermin, keine Deadline)</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:`<button type="button" class="timeline-item calendar-event" data-action="agenda-open" data-id="${h(x.obj.id)}">${ico('calendar',19)}<div><strong>${h(x.obj.summary||'Kalendertermin')}</strong><small>Google Calendar · ${h(calendarTime(x.obj))}${x.obj.start?.date?' · Ganztagsmarker':''}</small></div>${agendaEvent(x.obj)}${ico('arrow',15)}</button>`).join('')}</div></div>`;
+  return `<div class="forecast-date-group"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(day+'T12:00:00')))}</h3><div class="timeline-day">${combined.map(x=>x.type==='task'?`<div class="timeline-item deadline-event">${ico('flag',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · harte Deadline · ${h(CATEGORY_LABELS[x.obj.category]||x.obj.category)}</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:x.type==='planned'?`<div class="timeline-item planned-event">${ico('calendar',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · Planned (Wunschtermin, keine Deadline)</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:`<button type="button" class="timeline-item calendar-event" data-action="agenda-open" data-id="${h(x.obj.id)}"><span class="forecast-event-emoji">${h(eventAppearance(x.obj).emoji)}</span><div><strong>${h(eventAppearance(x.obj).displayTitle||'Kalendertermin')}</strong><small>Google Calendar · ${h(eventAppearance(x.obj).category)} · ${h(calendarTime(x.obj))}${x.obj.start?.date?' · Ganztagsmarker':''}${eventAppearance(x.obj).hidden?' · ausgeblendet':''}</small></div>${agendaEvent(x.obj)}${ico('arrow',15)}</button>`).join('')}</div></div>`;
  };
  return chrome(`<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Deadlines, Planung & Termine</span><span class="quiet-tag">14 Tage</span></div>
- <div class="forecast-tools">${calendarToken?calendarFilterToggle():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · ${planned.length} geplante Aufgaben · Google Calendar nur lesend</span></div>
+ <div class="forecast-tools">${calendarToken?calendarFilterToggle():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · ${planned.length} geplante Aufgaben · ${days.reduce((sum,d)=>sum+recoveryEvents(d).length,0)} Erholungstermine · Google Calendar nur lesend</span></div>
  ${overdue.length?`<div class="forecast-date-overdue"><strong>Überfällig</strong>${taskList(overdue,'forecast')}</div>`:''}
  ${days.map(dayContent).join('')||'<div class="task-empty">Keine Termine oder Fristen für die kommenden 14 Tage.</div>'}
  <p class="rail-footnote">Ganztägig markierte Fristen blockieren nicht automatisch deinen ganzen Tag. Zeitblöcke können ausgeblendet werden.</p></section><aside class="forecast-inspector">${eventAgendaPanel()}<section class="work-card task-inspector"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabe bearbeiten</span></div>${taskEditor()}</section></aside></div>`);
@@ -527,16 +544,16 @@ function clarifyControls(currentId=null){
  const saved=(currentId&&state?.reviewMeta?.[currentId])||{};
  const energy=[['low','Wenig',1],['medium','Mittel',2],['high','Viel',3]];
  const attentions=[['routine','Routine','sync'],['clarity','Geistige Klarheit','sun'],['deep','Tiefes Denken','book']];
- return `<div class="clarify-options" aria-label="Klärung und Energie"><div class="clarify-choice"><h3>Wohin gehört es?</h3><div class="choice-row">${[['next','Next Action'],['waiting','Waiting For'],['hold','On Hold'],['dreams','Dreams']].map(([value,label])=>`<button type="button" data-action="review-clarify:${value}" data-id="${h(currentId||'')}" class="choice-pill" ${currentId?'':'disabled'}>${label}</button>`).join('')}<span class="muted-line">Weitere Ziele können als Projekte oder Ideen angelegt werden.</span></div></div>
+ return `<div class="clarify-options" aria-label="Klärung und Energie"><div class="clarify-choice"><h3>Wohin gehört es?</h3><div class="choice-row">${[['next','Next Action'],['waiting','Waiting For'],['hold','On Hold'],['dreams','Dreams']].map(([value,label])=>`<button type="button" data-action="review-clarify:${value}" data-id="${h(currentId||'')}" class="choice-pill ${reviewWorkflow===value?'chosen':''}" aria-pressed="${reviewWorkflow===value}" ${currentId?'':'disabled'}>${label}</button>`).join('')}<span class="muted-line">Weitere Ziele können als Projekte oder Ideen angelegt werden.</span></div></div>
  <div class="clarify-choice"><h3>Wie viel Energie braucht es?</h3><div class="choice-row review-energy-choices">${energy.map(([key,label,level])=>`<button type="button" class="review-choice review-energy-${key} ${saved.energy===key?'chosen':''}" aria-pressed="${saved.energy===key}" data-action="review-energy:${key}" data-id="${h(currentId||'')}" ${currentId?'':'disabled'}><span class="mini-battery battery-${level}"><i></i></span>${label}</button>`).join('')}</div></div>
  <div class="clarify-choice"><h3>Welche Art von Aufmerksamkeit?</h3><div class="choice-row">${attentions.map(([key,label,icon])=>`<button type="button" class="review-choice review-attention ${saved.attention===key?'chosen':''}" aria-pressed="${saved.attention===key}" data-action="review-attention:${key}" data-id="${h(currentId||'')}" ${currentId?'':'disabled'}>${ico(icon,15)} ${label}</button>`).join('')}</div></div>
  <small class="review-local-caption">Energie und Aufmerksamkeit werden verschlüsselt in diesem lokalen Tresor gespeichert. Die Synchronisierung dieser Review-Merkmale auf andere Geräte folgt später.</small>
- <div class="clarify-choice"><h3>Wichtigkeit & Dringlichkeit</h3><p class="clarify-tip">Zwei getrennte Dimensionen. Dringlichkeit kann sich ändern, ohne dass ein Ziel wichtiger wird.</p><div class="choice-row">${['Wichtig: hoch / mittel / niedrig','Dringend: ja / nein'].map(x=>`<button type="button" disabled class="choice-pill">${h(x)}</button>`).join('')}</div></div>
- <div class="clarify-choice"><h3>Termine (nur bei Bedarf)</h3><div class="choice-row">${['Frühestens ab','Wunschtermin','Harte Deadline','Wiedervorlage'].map(x=>`<button type="button" disabled class="choice-pill">${h(x)}</button>`).join('')}</div></div>
+ <p class="muted-line">Projekt, Defer, Planned, Due und Duration kannst du direkt unterhalb der Klärung festlegen.</p>
  </div>`;
 }
 function reviewScreen(){
  const list=rows();const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
+ const draft=current?reviewDrafts.get(current.id)||{}:{};
  return chrome(`<div class="guided-review"><div class="review-flow work-card"><div class="work-heading"><span>${ico('sync',20)} Dein Weekly Review</span><span class="quiet-tag">Geführter Ablauf</span></div>
  <p class="review-explainer">Nicht alles muss sofort geklärt werden. Einmal pro Woche bringst du die offenen Schleifen systematisch auf den aktuellen Stand.</p>
  <div class="review-flow-steps">${[
@@ -547,13 +564,13 @@ function reviewScreen(){
  ['5','Dreams & Möglichkeiten','Ideen freiwillig sichten, ohne neue Verpflichtungen.','Nur auf Wunsch']
  ].map(([n,title,desc,tag],i)=>`<div class="review-flow-step ${i===0?'review-step-current':''}"><span class="review-step-number">${ico(['inbox','checkSquare','people','calendar','spark'][i],17)}</span><div><strong>${title}</strong><p>${desc}</p></div><small>${tag}</small></div>`).join('')}</div></div>
  <section class="work-card review-item-pane"><div class="work-heading"><span>${ico('inbox',19)} Inbox klären</span><span class="quiet-tag">${list.length} offen</span></div>
- ${current?`<label class="sr-only" for="review-select">Inbox-Eintrag auswählen</label><select id="review-select" class="review-select">${list.map(r=>`<option value="${h(r.id)}" ${r.id===current.id?'selected':''}>${h(r.title)}</option>`).join('')}</select><p class="review-item-note">${current.note?h(current.note):'Noch keine zusätzliche Notiz hinterlegt.'}</p>`:'<div class="review-none">Deine Inbox ist leer. Erfasse neue Gedanken jederzeit über Quick Capture.</div>'}
- ${clarifyControls(current?.id)}
+ <div class="review-cards-layout"><nav class="review-inbox-list" aria-label="Inbox-Elemente wählen">${list.length?list.map(r=>`<button type="button" class="review-inbox-item ${r.id===current?.id?'selected':''}" aria-current="${r.id===current?.id?'true':'false'}" data-action="review-select" data-id="${h(r.id)}"><strong>${h(r.title)}</strong><small>${h(new Date(r.updatedAt).toLocaleDateString('de-AT'))}</small></button>`).join(''):'<p class="muted-line">Inbox vollständig geklärt.</p>'}</nav>
+ <div class="review-detail">${current?`<strong>${h(current.title)}</strong><p class="review-item-note">${current.note?h(current.note):'Noch keine zusätzliche Notiz hinterlegt.'}</p>${clarifyControls(current.id)}<form id="review-commit-form" data-id="${h(current.id)}"><div class="review-plan-fields"><label>Projekt (optional)<select name="projectId">${projectOptions(draft.projectId)}</select></label><label>Bereich<select name="category">${categoryOptions(draft.category||'Allgemein')}</select></label>${dateControl('deferUntil','Defer · frühestens ab',draft.deferUntil)}${dateControl('plannedDate','Planned · Wunschtermin',draft.plannedDate)}${dateControl('dueDate','Due · harte Deadline',draft.dueDate)}<label>Duration (Min.)<input type="number" name="estimateMinutes" min="5" max="1440" step="5" placeholder="optional" value="${h(draft.estimateMinutes||'')}"/></label></div><button type="submit" class="primary-btn">Als ${h(({next:'Next Action',waiting:'Waiting For',hold:'On Hold',dreams:'Dream'})[reviewWorkflow])} übernehmen</button><small>Nach dem Übernehmen wird das Element aus der Inbox entfernt. Projekt, Dates, Energie und Aufmerksamkeit werden auf die Aufgabe übertragen.</small></form>`:'<div class="review-none">Deine Inbox ist leer. Erfasse neue Gedanken jederzeit über Quick Capture.</div>'}</div></div>
  <section class="review-next-section"><div class="work-heading"><span>${ico('folder',18)} Projekte & nächste Schritte</span><button type="button" class="text-link" data-tab="projects">Projekte prüfen ${ico('arrow',14)}</button></div>
  <div class="review-status-columns"><div><strong>${Object.values(state?.projects||{}).filter(x=>x.status==='active').length}</strong><span>aktive Projekte</span></div><div><strong>${nextActions(state).length}</strong><span>Next Actions</span></div><div><strong>${heldTasks(state).length}</strong><span>On Hold / Waiting</span></div></div>
  <button type="button" class="secondary-btn" data-tab="next">Next Actions ansehen</button> <button type="button" class="secondary-btn" data-tab="hold">Waiting For prüfen</button>
- <div class="project-review-queue"><strong>Projekte zur Durchsicht</strong>${Object.values(state?.projects||{}).filter(p=>projectNeedsReview(p)).length?Object.values(state?.projects||{}).filter(p=>projectNeedsReview(p)).map(p=>`<div class="review-project-row"><span>${h(p.title)} ${nextActions(state).some(t=>t.projectId===p.id)?'':' · keine verfügbare Next Action'}</span><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(p.id)}">Geprüft</button></div>`).join(''):'<p class="muted-line">Alle aktiven Projekte sind im aktuellen Review-Zyklus geprüft.</p>'}</div></section>
- <div class="compass-review-legend"><strong>Energie auf einen Blick</strong><div class="compass-energy-legend"><span class="energy-low">${ico('bolt',15)} Niedrig · ▰▱▱</span><span class="energy-medium">${ico('bolt',15)} Mittel · ▰▰▱</span><span class="energy-high">${ico('bolt',15)} Hoch · ▰▰▰</span></div><small>Visuelle Orientierung; die tatsächliche Zuordnung zur Aufgabe folgt in einem späteren GTD-Schritt.</small></div>
+ <div class="project-review-queue"><strong>Projekte zur Durchsicht</strong>${Object.values(state?.projects||{}).filter(p=>projectNeedsReview(p)).length?Object.values(state?.projects||{}).filter(p=>projectNeedsReview(p)).map(p=>`<div class="review-project-row"><button type="button" class="review-project-open" data-action="review-project-open" data-id="${h(p.id)}">${h(p.title)} ${nextActions(state).some(t=>t.projectId===p.id)?'':' · keine verfügbare Next Action'}</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(p.id)}">Geprüft</button></div>`).join(''):'<p class="muted-line">Alle aktiven Projekte sind im aktuellen Review-Zyklus geprüft.</p>'}</div></section>
+ <div class="compass-review-legend"><strong>Energie auf einen Blick</strong><div class="compass-energy-legend"><span class="energy-low">${ico('bolt',15)} Niedrig · ▰▱▱</span><span class="energy-medium">${ico('bolt',15)} Mittel · ▰▰▱</span><span class="energy-high">${ico('bolt',15)} Hoch · ▰▰▰</span></div><small>Die beim Klären ausgewählte Energie wird als synchronisierbarer Kontext-Tag der Aufgabe gespeichert.</small></div>
  <div class="review-ai-hint">${ico('spark',19)} <div><strong>Später: Lokaler KI-Vorschlag</strong><p>Compass kann bei der Klärung unterstützen, z. B. wenn aus einer wichtigen Aufgabe aufgrund einer näher rückenden harten Deadline auch eine dringliche wird. Die Entscheidung bleibt bei dir.</p></div></div>
  </section></div>`);
 }
@@ -613,7 +630,34 @@ function bind() {
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
-  const reviewSelect=app.querySelector('#review-select');if(reviewSelect)reviewSelect.onchange=ev=>{selectedInboxId=ev.target.value;render();};
+
+  const reviewCommit=app.querySelector('#review-commit-form');if(reviewCommit){reviewCommit.oninput=captureReviewDraft;reviewCommit.onchange=captureReviewDraft;reviewCommit.onsubmit=async ev=>{
+    ev.preventDefault();const id=reviewCommit.dataset.id,r=state?.records?.[id];if(!r||r.deleted)return;
+    const d=new FormData(reviewCommit),workflow=reviewWorkflow;
+    if(workflow==='dreams'){
+      await mutate(s=>{const record=s.records[id];record.tags=parseTags(['dreams','dream-ideen',...(record.tags||[]).filter(t=>t!=='dreams'&&!t.startsWith('dream-'))]);record.updatedAt=stamp();s.pending.push(makeMutation(record));});
+      selectedInboxId=null;selectedDreamId=id;reviewWorkflow='next';reviewDrafts.delete(id);toast('In Dreams übernommen.');return;
+    }
+    if(r.title.length>180){toast('Bitte den Inbox-Titel vor der Übernahme auf maximal 180 Zeichen kürzen.',true);return;}
+    const meta=state.reviewMeta?.[id]||{};
+    const contextTags=parseTags([...(meta.energy?['energy-'+meta.energy]:[]),...(meta.attention?['attention-'+meta.attention]:[])]);
+    const task={id:crypto.randomUUID(),title:r.title,note:(r.note||'').slice(0,3000),plannedDate:d.get('plannedDate')||null,dueDate:d.get('dueDate')||null,deferUntil:d.get('deferUntil')||null,estimateMinutes:d.get('estimateMinutes')?Number(d.get('estimateMinutes')):null,category:d.get('category')||'Allgemein',workflow,flagged:false,completed:false,archived:false,projectId:d.get('projectId')||null,parentTaskId:null,sortOrder:0,tags:parseTags(r.tags||[]),contextTags,updatedAt:stamp()};
+    if(!validLocalTask(task)||task.projectId&&!state.projects?.[task.projectId]){toast('Prüfe das Projekt und die Datumsfelder.',true);return;}
+    await mutate(s=>{s.tasks[task.id]=task;s.taskPending[task.id]=true;s.records[id].deleted=true;s.records[id].updatedAt=stamp();s.pending.push(makeMutation(s.records[id]));delete s.reviewMeta?.[id];});
+    selectedInboxId=null;selectedTaskId=task.id;reviewWorkflow='next';reviewDrafts.delete(id);toast('Inbox-Eintrag geklärt und als Aufgabe gespeichert.');
+  };}
+  const overlayForm=app.querySelector('#calendar-overlay-form');if(overlayForm)overlayForm.onsubmit=async ev=>{
+    ev.preventDefault();const id=overlayForm.dataset.id;const d=new FormData(overlayForm);
+    const next={title:String(d.get('title')||'').trim(),category:String(d.get('category')||''),emoji:String(d.get('emoji')||'').trim(),hidden:d.has('hidden')};
+    if(!validCalendarOverride(next)){toast('Overlay-Felder prüfen.',true);return;}
+    await mutate(s=>{s.calendarOverrides??={};s.calendarOverrides[id]=next;});toast('Compass-Overlay gespeichert. Der Google-Termin bleibt unverändert.');
+  };
+  app.querySelectorAll('.calendar-rule-form').forEach(form=>form.onsubmit=async ev=>{
+    ev.preventDefault();const id=form.dataset.id;const fd=new FormData(form);
+    const rule={id,label:String(fd.get('label')||'').trim(),emoji:String(fd.get('emoji')||'').trim(),category:String(fd.get('category')||'Neutral'),terms:String(fd.get('terms')||'').trim(),exclude:String(fd.get('exclude')||'').trim(),enabled:fd.has('enabled')};
+    if(!validCalendarRule(rule)){toast('Bitte die Regel-Felder prüfen.',true);return;}
+    await mutate(s=>{s.calendarRules=effectiveCalendarRules(s).map(r=>r.id===id?rule:r);});toast('Kalenderregel gespeichert.');
+  });
   const importField=app.querySelector('#encrypted-import');if(importField)importField.onchange=async ev=>{
     try {const obj=JSON.parse(await ev.target.files[0].text());await vault.importEncrypted(obj);hasVault=true;toast('Backup importiert. Jetzt mit der ursprünglichen Passphrase entsperren.');}
     catch(ex){toast(ex.message,true);}
@@ -696,20 +740,18 @@ async function runAction(action,id) {
   lastActivity=Date.now();
   try {
     if(action.startsWith('review-clarify:')){
-      const workflow=action.split(':')[1],r=state?.records?.[id];if(!r||r.deleted||!['next','waiting','hold','dreams'].includes(workflow))return;
-      if(workflow==='dreams'){await mutate(s=>{const record=s.records[id];record.tags=parseTags(['dreams','dream-ideen',...(record.tags||[]).filter(t=>t!=='dreams'&&!t.startsWith('dream-'))]);record.updatedAt=stamp();s.pending.push(makeMutation(record));});selectedDreamId=id;tab='someday';toast('Idee nach Dreams verschoben.');return;}
-      if(r.title.length>180){toast('Bitte den Inbox-Titel zunächst auf 180 Zeichen kürzen.',true);return;}
-      const task={id:crypto.randomUUID(),title:r.title,note:(r.note||'').slice(0,3000),plannedDate:null,dueDate:null,category:'Allgemein',completed:false,archived:false,workflow,flagged:false,projectId:null,tags:r.tags||[],contextTags:[],deferUntil:null,estimateMinutes:null,updatedAt:stamp()};
-      if(!validLocalTask(task)){toast('Eintrag zuerst prüfen.',true);return;}
-      await mutate(s=>{s.tasks[task.id]=task;s.taskPending[task.id]=true;s.records[id].deleted=true;s.records[id].updatedAt=stamp();s.pending.push(makeMutation(s.records[id]));});
-      selectedTaskId=task.id;toast('Aus Inbox übernommen. Lokal gespeichert und Sync vorgemerkt.');return;
+      if(!state?.records?.[id]||state.records[id].deleted)return;
+      const choice=action.split(':')[1];if(!['next','waiting','hold','dreams'].includes(choice))return;
+      captureReviewDraft();reviewWorkflow=choice;render();return;
     }
+    if(action==='review-select'){if(!state?.records?.[id]||state.records[id].deleted)return;captureReviewDraft();selectedInboxId=id;reviewWorkflow='next';render();return;}
+    if(action==='review-project-open'){if(!state?.projects?.[id])return;selectedProjectId=id;tab='projects';render();return;}
     if(action.startsWith('review-energy:') || action.startsWith('review-attention:')){
        const [key,val]=action.split(':');
        if(!state?.records?.[id] || state.records[id].deleted)return;
        const options=key==='review-energy'?['low','medium','high']:['routine','clarity','deep'];
        if(!options.includes(val))return;
-       await mutate(s=>{
+       captureReviewDraft();await mutate(s=>{
          s.reviewMeta=s.reviewMeta||{};
          const old=s.reviewMeta[id]||{};
          s.reviewMeta[id]={...old,[key==='review-energy'?'energy':'attention']:val};
@@ -730,6 +772,19 @@ async function runAction(action,id) {
     }
     if(action==='hold-open-project'){if(!state?.projects?.[id])return;selectedProjectId=id;selectedTaskId=null;tab='projects';render();return;}
     if(action==='calendar-toggle-blocks'){showCalendarBlocks=!showCalendarBlocks;render();return;}
+    if(action==='calendar-toggle-hidden'){showHiddenCalendarEvents=!showHiddenCalendarEvents;render();return;}
+    if(action==='calendar-rules-toggle'){calendarRulesOpen=!calendarRulesOpen;render();return;}
+    if(action==='calendar-overlay-reset'){if(!state?.calendarOverrides?.[id])return;await mutate(s=>{delete s.calendarOverrides[id];});toast('Automatische Zuordnung wiederhergestellt.');return;}
+    if(action==='calendar-rule-add'){
+      const id='custom-'+crypto.randomUUID();const rule={id,label:'Neue Aktivität',emoji:'✨',category:'Erholung',terms:'neuer begriff',exclude:'',enabled:false};
+      await mutate(s=>{s.calendarRules=[...effectiveCalendarRules(s),rule];});return;
+    }
+    if(action==='calendar-rules-reset'){if(!confirm('Alle bearbeiteten Regeln auf die Standardliste zurücksetzen? Persönliche Termin-Overlays bleiben erhalten.'))return;await mutate(s=>{s.calendarRules=DEFAULT_CALENDAR_RULES.map(r=>({...r}));});return;}
+    if(action==='calendar-rule-delete'){if(!confirm('Diese Klassifizierungsregel entfernen?'))return;await mutate(s=>{s.calendarRules=effectiveCalendarRules(s).filter(r=>r.id!==id);});return;}
+    if(action==='calendar-rule-up'||action==='calendar-rule-down'){
+      await mutate(s=>{const rules=effectiveCalendarRules(s).map(r=>({...r}));const i=rules.findIndex(r=>r.id===id),j=i+(action==='calendar-rule-up'?-1:1);if(i>=0&&j>=0&&j<rules.length){[rules[i],rules[j]]=[rules[j],rules[i]];s.calendarRules=rules;}});return;
+    }
+
     if(action==='agenda-open'){selectedAgendaEventId=id;render();requestAnimationFrame(()=>{const panel=app.querySelector('#agenda-details');if(panel){panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest',behavior:'smooth'});}});return;}
     if(action==='agenda-close'){selectedAgendaEventId=null;render();return;}
     if(action==='project-focus-toggle'){projectFocus=!projectFocus;render();return;}

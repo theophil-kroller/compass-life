@@ -325,3 +325,35 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .task-row.is-selected{background:#eaf4ee}
 @media(max-width:1330px){.omni-projects{grid-template-columns:minmax(220px,.8fr) minmax(0,1.5fr)}.omni-projects .project-inspector{grid-column:1 / -1;max-height:none;overflow:visible}.omni-projects.is-focused{grid-template-columns:1fr}.omni-projects.is-focused .project-inspector{grid-column:auto}}
 @media(max-width:810px){.omni-projects,.omni-projects.is-focused{display:flex;flex-direction:column}.omni-projects>.work-card{width:100%}.project-navigation{max-height:none;overflow:visible}.project-inspector{max-height:none;overflow:visible}.omni-projects.is-focused .project-navigation{display:none}.project-create-row{grid-template-columns:1fr 1fr}}
+
+/* Compass 0.4.8 — guided Weekly Review + editable Smart Forecast calendar overlay */
+.review-cards-layout{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(0,1.8fr);gap:15px;align-items:start}
+.review-inbox-list{display:flex;flex-direction:column;gap:6px;max-height:510px;overflow:auto;overscroll-behavior:contain}
+.review-inbox-item{width:100%;display:flex;flex-direction:column;gap:5px;text-align:left;background:#fff;color:#385b46;border:1px solid #e1ebe3;border-radius:9px;padding:11px;cursor:pointer}
+.review-inbox-item.selected{background:#eaf5ed;border-color:#86b89b;box-shadow:inset 3px 0 #65a47e}
+.review-inbox-item strong{font-size:12px;line-height:1.45;overflow-wrap:anywhere}.review-inbox-item small{font-size:10px;color:#819486}
+.review-detail{min-width:0}.review-detail>strong{font-size:15px;line-height:1.45;color:#355f47}
+.review-detail .clarify-options{margin-top:13px}.review-detail .choice-pill.chosen{background:#d9eedf;border-color:#80b593;color:#26563c}
+.review-plan-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+.review-plan-fields label,.calendar-overlay-form label,.rule-fields label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#516f5d;min-width:0}
+.review-plan-fields input,.review-plan-fields select,.calendar-overlay-form input,.calendar-overlay-form select,.rule-fields input,.rule-fields select{width:100%;min-width:0;max-width:100%;box-sizing:border-box;background:#fff;border:1px solid #d9e6dd;border-radius:8px;padding:8px;color:#355a45}
+#review-commit-form{margin-top:14px;border-top:1px solid #e0ebe4;padding-top:12px}
+#review-commit-form>small{display:block;color:#718776;line-height:1.55;margin-top:8px}
+.review-project-open{background:transparent;border:none;cursor:pointer;color:#376f52;text-align:left;line-height:1.6;overflow-wrap:anywhere}
+.review-project-open:hover{text-decoration:underline}
+.calendar-controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.calendar-rules-panel{width:100%;margin-top:13px;background:#f7fbf8;border:1px solid #dceadf;border-radius:12px;padding:15px;box-sizing:border-box}
+.calendar-rules-panel>.work-heading{flex-wrap:wrap}.calendar-rule-list{max-height:520px;overflow:auto;display:grid;gap:10px;margin:14px 0}
+.calendar-rule-form{border:1px solid #dfe9e1;background:white;border-radius:10px;padding:12px;min-width:0}
+.rule-heading,.rule-actions,.rule-toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.rule-heading strong{flex:1;min-width:150px;font-size:12px;color:#365e45}.rule-heading>label{font-size:11px;display:flex;align-items:center;gap:4px}
+.rule-move{display:flex;gap:3px}.rule-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.rule-fields label:nth-child(4),.rule-fields label:nth-child(5){grid-column:1 / -1}
+.rule-fields label:nth-child(2){max-width:95px}.rule-actions button,.rule-toolbar button{flex:none}
+.calendar-overlay-form{display:grid;gap:10px;background:#f9fcfa;border:1px solid #e0eee4;border-radius:12px;padding:12px;margin:12px 0 17px}
+.calendar-overlay-form .work-heading{margin:0}.calendar-overlay-form .flag-check{display:flex;align-items:center;gap:8px;flex-direction:row}
+.calendar-overlay-form .flag-check input{width:auto}.calendar-overlay-form>small{font-size:10px;color:#708673;line-height:1.5}
+.overlay-fields{display:grid;grid-template-columns:minmax(0,1fr) 84px;gap:10px}
+.event-emoji{font-size:18px;line-height:1.4;flex:none}.forecast-event-emoji{font-size:23px;line-height:1.25;flex:none}
+@media(max-width:760px){.review-cards-layout{grid-template-columns:minmax(0,1fr)}.review-inbox-list{max-height:190px}.review-plan-fields{grid-template-columns:minmax(0,1fr)}.calendar-rules-panel{padding:10px}}
+@media(max-width:420px){.rule-fields{grid-template-columns:minmax(0,1fr)}.rule-fields label:nth-child(4),.rule-fields label:nth-child(5){grid-column:auto}}
