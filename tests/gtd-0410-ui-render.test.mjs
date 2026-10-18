@@ -7,6 +7,8 @@ import * as tasks from '../client/src/tasks.js';
 import * as calendar from '../client/src/calendar-rules.js';
 import * as activities from '../client/src/activity-management.js';
 import * as occasions from '../client/src/occasion-planning.js';
+import * as peopleOccasions from '../client/src/people-occasions.js';
+import * as perspectives from '../client/src/context-perspectives.js';
 const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
 const compiled=source.replace(/^import .*;\r?\n/gm,'').replace('registerSW({immediate:true});','').split("document.addEventListener('keydown'")[0]+`
  globalThis.testUI=(current,mode,events=[])=>{state=current;tab=mode;calendarEvents=events;render();return app.innerHTML;};
@@ -18,7 +20,7 @@ function context(){
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const window={addEventListener:()=>{}};
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
- Object.assign(ctx,tasks,calendar,activities,occasions);
+ Object.assign(ctx,tasks,calendar,activities,occasions,peopleOccasions,perspectives);
  ctx.vault={save:async()=>{},lock:()=>{}};
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.
  runInNewContext(compiled,ctx,{filename:'compass-main-browser-smoke.js',timeout:2000});
@@ -26,7 +28,7 @@ function context(){
 }
 test('Every navigation screen renders without missing functions, including previously disabled people/progress/recovery',()=>{
  const ui=context();const state=tasks.prepareTasks({format:1,records:{},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
- for(const [mode,expected] of [['today','Heute'],['overview','Timeline'],['people','Kontakte'],['progress','Projektfortschritt'],['recovery','Erholung'],['activity','Aktivitätsverwaltung'],['review','Weekly Review'],['projects','Projekte'],['next','Next Actions'],['flagged','Flagged'],['hold','Waiting'],['someday','Dreams'],['system','System'],['inbox','Inbox'],['forecast','Forecast']]){
+ for(const [mode,expected] of [['today','Heute'],['overview','Timeline'],['people','Kontakte'],['progress','Projektfortschritt'],['recovery','Erholung'],['activity','Aktivitätsverwaltung'],['review','Inbox klären'],['projects','Projekte'],['next','Next Actions'],['flagged','Flagged'],['hold','Waiting'],['someday','Dreams'],['system','System'],['inbox','Inbox'],['forecast','Forecast']]){
   const html=ui.testUI(state,mode);
   assert.ok(html.includes(expected),`${mode} missing ${expected}`);
   assert.ok(!html.includes('is-disabled'),`${mode}: navigation unexpectedly disabled`);

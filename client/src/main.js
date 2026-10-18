@@ -5,11 +5,13 @@ import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
 import {DEFAULT_CALENDAR_RULES,CALENDAR_CATEGORIES,effectiveCalendarRules,classifyCalendarEvent,validCalendarRule,validCalendarOverride,visibleCalendarEventsForDay,isRoutineCalendarBlock} from './calendar-rules.js';
 import {ACTIVITY_CATEGORIES,isoLocal,validActivityEdit,validManualActivity,projectActivities,activeActivities,activityStats,timelineItems} from './activity-management.js';
-import {OCCASION_STEPS,OCCASION_LEAD_DAYS,upcomingOccasions,daysUntil,occasionStepKey,occasionTaskTag,relatedOccasionTask,occasionTask,validCustomStep} from './occasion-planning.js';
+import {OCCASION_STEPS,OCCASION_LEAD_DAYS,daysUntil,occasionStepKey,occasionTaskTag,relatedOccasionTask,occasionTask,validCustomStep,shiftDay} from './occasion-planning.js';
+import {occasionsWithPeople,validPersonBirthday} from './people-occasions.js';
+import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.4.10.1';
+const COMPASS_CLIENT_VERSION='0.4.11';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -25,7 +27,7 @@ const projectCollapsed=new Set();
 let selectedAgendaEventId=null;
 let calendarRulesOpen=false,showHiddenCalendarEvents=false;
 let reviewWorkflow='next';
-let activitySelectedId=null,activityTrash=false,overviewHorizon=30,selectedPersonId=null,occasionOpen=true;
+let activitySelectedId=null,activityTrash=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,occasionOpen=true;
 const reviewDrafts=new Map();
 function captureReviewDraft(){const form=app?.querySelector('#review-commit-form');if(form?.dataset.id)reviewDrafts.set(form.dataset.id,Object.fromEntries(new FormData(form).entries()));}
 let showCalendarBlocks=false;
@@ -232,6 +234,7 @@ const symbol = {
   search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
   settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.9 4.9l1.5 1.5m11.2 11.2 1.5 1.5M2 12h2m16 0h2M4.9 19.1l1.5-1.5M17.6 6.4l1.5-1.5"/>',
   arrow:'<path d="M5 12h14m-6-6 6 6-6 6"/>',
+  arrowLeft:'<path d="M19 12H5m6-6-6 6 6 6"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   cloud:'<path d="M8 18H6a4 4 0 0 1-.3-8 6.7 6.7 0 0 1 13 .2A4 4 0 0 1 18 18H8z"/>',
@@ -443,8 +446,8 @@ function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)r
 function workflowScreen(which){
  const titles={next:'Next Actions',flagged:'Flagged',hold:'On Hold & Waiting For'};
  const tasks=which==='next'?nextActions(state):which==='flagged'?flaggedTasks(state):heldTasks(state);
- const shown=which==='next'&&contextFilter?contextsFor(state,contextFilter):tasks;
- const availableContexts=[...new Set(nextActions(state).flatMap(t=>t.contextTags||[]))].sort((a,b)=>a.localeCompare(b,'de'));
+ const shown=which==='next'?filterContextTasks(tasks,contextFilter):tasks;
+ const availableContexts=contextChoices(tasks);
  const waiting=which==='hold'?shown.filter(t=>t.workflow==='waiting'):[];
  const paused=which==='hold'?shown.filter(t=>t.workflow==='hold'):[];
  const blocked=which==='hold'?blockedByProject(state):[];
@@ -453,7 +456,7 @@ function workflowScreen(which){
  if(!perspectiveItems.some(t=>t.id===selectedTaskId))selectedTaskId=null;
  const noActions=which==='next'&&!shown.length?`<div class="task-empty perspective-empty"><strong>${contextFilter?'Für diesen Kontext ist gerade nichts verfügbar.':'Keine verfügbaren Next Actions.'}</strong><p>Prüfe die Inbox, kläre deine nächsten Schritte im Review oder lege eine konkrete Aufgabe an. Verschobene und pausierte Aufgaben erscheinen hier nicht.</p><button type="button" class="secondary-btn" data-tab="review">Inbox im Review klären</button> <button type="button" class="secondary-btn" data-tab="inbox">Inbox öffnen</button></div>`:'';
  return chrome(`<div class="workflow-layout"><section class="work-card"><div class="work-heading"><span>${ico(which==='flagged'?'flag':which==='hold'?'pause':'target',20)} ${titles[which]}</span><span class="quiet-tag">${perspectiveItems.length} offen</span></div>
- ${which==='next'?`<div class="context-filter"><label>Aktueller Kontext <select id="context-filter"><option value="">Alle verfügbaren Next Actions</option>${availableContexts.map(c=>`<option value="${h(c)}" ${contextFilter===c?'selected':''}>@${h(c)}</option>`).join('')}</select></label></div>`:''}
+ ${which==='next'?`<div class="context-filter"><label>Aktueller Kontext <select id="context-filter"><option value="">Alle verfügbaren Next Actions</option>${availableContexts.map(c=>`<option value="${h(c.value)}" ${contextFilter===c.value?'selected':''}>${c.group?'▸ ':''}${h(c.label)}</option>`).join('')}</select></label></div>`:''}
  ${which==='flagged'?'<p class="muted-line">Hier erscheinen nur Aufgaben, die du ausdrücklich mit der Flagge markiert hast. Über das Fahnensymbol kannst du die Markierung sofort entfernen.</p>':''}
  ${which==='hold'?`<div class="held-sections"><h3>Waiting For · ${waiting.length}</h3>${taskList(waiting,'waiting')}<h3>On Hold · ${paused.length}</h3>${taskList(paused,'paused')}<h3>Durch pausierte Projekte zurückgestellt · ${blocked.length}</h3>${taskList(blocked,'project-hold')}<h3>Pausierte Projekte · ${pausedProjects.length}</h3>${pausedProjects.length?pausedProjects.map(p=>`<button type="button" class="held-project-link" data-action="hold-open-project" data-id="${h(p.id)}">${ico('folder',15)} ${h(p.title)} ${ico('arrow',13)}</button>`).join(''):'<p class="muted-line">Keine Projekte pausiert.</p>'}</div>`:`${taskCreateForm('')}${taskList(shown,which,which==='next')}${noActions}`}
  </section><aside class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Aufgabendetails</span></div>${taskEditor()}</aside></div>`);
@@ -565,14 +568,15 @@ function clarifyControls(currentId=null){
 function reviewScreen(){
  const list=rows();const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
  const draft=current?reviewDrafts.get(current.id)||{}:{};
- return chrome(`<div class="guided-review"><div class="review-flow work-card"><div class="work-heading"><span>${ico('sync',20)} Dein Weekly Review</span></div>
- <div class="review-flow-steps">${[
- ['1','Eingang leeren','Jeden erfassten Gedanken klären oder bewusst parken.',String(list.length)+' offene Einträge'],
- ['2','Nächste Schritte','Projekte, Next Actions und offene Entscheidungen prüfen.',nextActions(state).length+' Next Actions · '+Object.values(state?.projects||{}).filter(p=>p.status==='active'&&!nextActions(state).some(t=>t.projectId===p.id)).length+' Projekte ohne nächste Aktion'],
- ['3','Waiting For & Agendas','Worauf wartest du? Mit wem gibt es Gesprächsbedarf?',heldTasks(state).length+' offene Vorgänge'],
- ['4','Termine & Fristen','Vergangene und kommende Termine und Deadlines ansehen.',calendarToken?calendarStatus:'Google Calendar optional'],
- ['5','Dreams & Möglichkeiten','Ideen freiwillig sichten, ohne neue Verpflichtungen.','Nur auf Wunsch']
- ].map(([n,title,desc,tag],i)=>`<div class="review-flow-step ${i===0?'review-step-current':''}"><span class="review-step-number">${ico(['inbox','checkSquare','people','calendar','spark'][i],17)}</span><div><strong>${title}</strong><p>${desc}</p></div><small>${tag}</small></div>`).join('')}</div></div>
+ return chrome(`<div class="guided-review">
+ <nav class="review-shortcuts" aria-label="Review-Perspektiven">
+  <button type="button" data-tab="inbox">${ico('inbox',16)} Eingang <strong>${list.length}</strong></button>
+  <button type="button" data-tab="projects">${ico('folder',16)} Projekte <strong>${Object.values(state?.projects||{}).filter(p=>p.status==='active').length}</strong></button>
+  <button type="button" data-tab="next">${ico('checkSquare',16)} Nächste Schritte <strong>${nextActions(state).length}</strong></button>
+  <button type="button" data-tab="hold">${ico('people',16)} Waiting & Agendas <strong>${heldTasks(state).length}</strong></button>
+  <button type="button" data-tab="forecast">${ico('calendar',16)} Termine</button>
+  <button type="button" data-tab="someday">${ico('spark',16)} Dreams</button>
+ </nav>
  <section class="work-card review-item-pane"><div class="work-heading"><span>${ico('inbox',19)} Inbox klären</span><span class="quiet-tag">${list.length} offen</span></div>
  <div class="review-cards-layout"><nav class="review-inbox-list" aria-label="Inbox-Elemente wählen">${list.length?list.map(r=>`<button type="button" class="review-inbox-item ${r.id===current?.id?'selected':''}" aria-current="${r.id===current?.id?'true':'false'}" data-action="review-select" data-id="${h(r.id)}"><strong>${h(r.title)}</strong><small>${h(new Date(r.updatedAt).toLocaleDateString('de-AT'))}</small></button>`).join(''):'<p class="muted-line">Inbox vollständig geklärt.</p>'}</nav>
  <div class="review-detail">${current?`<strong>${h(current.title)}</strong><p class="review-item-note">${current.note?h(current.note):'Noch keine zusätzliche Notiz hinterlegt.'}</p>${clarifyControls(current.id)}<form id="review-commit-form" data-id="${h(current.id)}"><div class="review-plan-fields"><label>Projekt (optional)<select name="projectId">${projectOptions(draft.projectId)}</select></label><label>Bereich<select name="category">${categoryOptions(draft.category||'Allgemein')}</select></label>${dateControl('deferUntil','Defer · frühestens ab',draft.deferUntil)}${dateControl('plannedDate','Planned · Wunschtermin',draft.plannedDate)}${dateControl('dueDate','Due · harte Deadline',draft.dueDate)}<label>Duration (Min.)<input type="number" name="estimateMinutes" min="5" max="1440" step="5" placeholder="optional" value="${h(draft.estimateMinutes||'')}"/></label></div><button type="submit" class="primary-btn">Als ${h(({next:'Next Action',waiting:'Waiting For',hold:'On Hold',dreams:'Dream'})[reviewWorkflow])} übernehmen</button><small>Nach dem Übernehmen wird das Element aus der Inbox entfernt. Projekt, Dates, Energie und Aufmerksamkeit werden auf die Aufgabe übertragen.</small></form>`:'<div class="review-none">Deine Inbox ist leer. Erfasse neue Gedanken jederzeit über Quick Capture.</div>'}</div></div>
@@ -599,6 +603,7 @@ function systemScreen(){
 }
 function projectLabel(projectId){return state?.projects?.[projectId]?.title||'Ohne Projekt';}
 function personTag(name){return String(name||'').normalize('NFKC').toLocaleLowerCase('de').trim().replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,32);}
+function allOccasions(){return occasionsWithPeople(calendarEvents,eventAppearance,state?.people||{},localDate(),OCCASION_LEAD_DAYS);}
 function occasionStatus(occasion,step){
  const existing=relatedOccasionTask(state,occasion,step);
  if(existing)return {kind:'accepted',task:existing};
@@ -606,7 +611,7 @@ function occasionStatus(occasion,step){
  return {kind:state?.occasionChoices?.[key]==='dismissed'?'dismissed':'pending'};
 }
 function occasionPanel(){
- const occasions=upcomingOccasions(calendarEvents,eventAppearance,localDate(),OCCASION_LEAD_DAYS);
+ const occasions=allOccasions();
  if(!occasions.length)return '';
  const visible=occasions.filter(o=>{
   const steps=[...OCCASION_STEPS[o.kind],...(state?.customOccasionSteps?.[o.id]||[]).filter(validCustomStep)];
@@ -618,21 +623,35 @@ function occasionPanel(){
  ${occasionOpen?`${first.map(o=>{
   const distance=daysUntil(localDate(),o.date);
   const steps=[...OCCASION_STEPS[o.kind],...(state?.customOccasionSteps?.[o.id]||[]).filter(validCustomStep)];
-  return `<div class="occasion-entry"><div class="occasion-entry-head"><span class="occasion-emoji">${h(o.emoji)}</span><div><strong>${h(o.title)}</strong><small>${h(o.date)} · ${distance===0?'Heute':`in ${distance} Tagen`} ${o.source==='calendar'?'· Google Kalender':'· jährlich'}</small></div><button type="button" class="secondary-btn" data-action="occasion-custom" data-id="${h(o.id)}">+ Eigener Schritt</button></div>
+  return `<div class="occasion-entry"><div class="occasion-entry-head"><span class="occasion-emoji">${h(o.emoji)}</span><div><strong>${h(o.title)}</strong><small>${h(o.date)} · ${distance===0?'Heute':`in ${distance} Tagen`} ${o.source==='calendar'?'· Google Kalender':o.source==='people'?'· Menschen':'· jährlich'}</small></div><button type="button" class="secondary-btn" data-action="occasion-custom" data-id="${h(o.id)}">+ Eigener Schritt</button></div>
   <div class="occasion-suggestions">${steps.map(st=>{const status=occasionStatus(o,st),active=distance<=st.daysBefore;
    if(status.kind==='pending'&&!active)return '';
    return `<div class="occasion-suggestion ${status.kind!=='pending'?'occasion-quiet':''}"><span>${h(st.label)}<small>${status.kind==='accepted'?'Als Aufgabe übernommen':status.kind==='dismissed'?'Für diesen Anlass ausgeblendet':`Sinnvoll bis ${h((()=>{const d=new Date(o.date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-st.deadlineBefore);return d.toISOString().slice(0,10)})())}`}</small></span><div>${status.kind==='pending'?`<button type="button" class="primary-btn" data-action="occasion-accept" data-id="${h(o.id)}" data-step="${h(st.id)}">Übernehmen</button><button type="button" class="secondary-btn" data-action="occasion-dismiss" data-id="${h(o.id)}" data-step="${h(st.id)}">Nicht nötig</button>`:status.kind==='dismissed'?`<button type="button" class="secondary-btn" data-action="occasion-reset" data-id="${h(o.id)}" data-step="${h(st.id)}">Wieder anzeigen</button>`:`<button type="button" class="secondary-btn" data-action="task-view" data-id="${h(status.task.id)}">Aufgabe ansehen</button>`}</div></div>`;
   }).join('')}</div></div>`;
- }).join('')}<small class="occasion-footnote">Vorschläge erzeugen keine Aufgaben ohne deine Zustimmung. Feiertage werden jährlich berechnet, Geburtstage bei verbundenem Google Kalender erkannt. Keine Push-Benachrichtigung bei geschlossener App.</small>`:`<p class="muted-line">${visible.length} Anlässe mit offenen Vorbereitungen</p>`}</section>`;
+ }).join('')}<small class="occasion-footnote">Vorschläge erzeugen keine Aufgaben ohne deine Zustimmung. Feiertage werden jährlich berechnet, Geburtstage aus „Menschen“ oder Google Kalender erkannt. Keine Push-Benachrichtigung bei geschlossener App.</small>`:`<p class="muted-line">${visible.length} Anlässe mit offenen Vorbereitungen</p>`}</section>`;
 }
 function timelinePanel(){
- const today=localDate();const until=new Date(today+'T12:00:00');until.setDate(until.getDate()+overviewHorizon);
- const end=localDate(until),entries=timelineItems(state,calendarEvents,today,end,eventAppearance);
- const grouped=new Map();for(const x of entries){if(!grouped.has(x.date))grouped.set(x.date,[]);grouped.get(x.date).push(x);}
- const labels={due:'Deadline',planned:'Geplant',milestone:'Projekt-Meilenstein',calendar:'Kalender'};
+ const today=localDate();const windowEnd=shiftDay(today,overviewHorizon-1);
+ const maxWeek=Math.max(0,Math.ceil(overviewHorizon/7)-1);
+ overviewWeek=Math.min(overviewWeek,maxWeek);
+ const first=shiftDay(today,overviewWeek*7);
+ const count=Math.min(7,overviewHorizon-overviewWeek*7);
+ const days=Array.from({length:count},(_,i)=>shiftDay(first,i));
+ const entries=timelineItems(state,calendarEvents,first,days[days.length-1],eventAppearance).filter(x=>x.date>=first&&x.date<=days[days.length-1]);
+ const grouped=new Map(days.map(d=>[d,[]]));for(const x of entries)grouped.get(x.date)?.push(x);
+ const selected=days.includes(selectedTimelineDay)?selectedTimelineDay:(entries[0]?.date||days[0]);
+ const list=grouped.get(selected)||[],labels={due:'Deadline',planned:'Geplant',milestone:'Meilenstein',calendar:'Kalender'};
+ const period=d=>new Intl.DateTimeFormat('de-AT',{day:'2-digit',month:'short'}).format(new Date(`${d}T12:00:00`));
+ const dayName=d=>new Intl.DateTimeFormat('de-AT',{weekday:'short'}).format(new Date(`${d}T12:00:00`));
  return `<section class="work-card overview-timeline"><div class="work-heading"><span>${ico('layers',19)} Timeline · Projekte, Meilensteine & Termine</span><div class="timeline-horizon">${[14,30,90].map(n=>`<button type="button" data-action="timeline-horizon" data-id="${n}" class="secondary-btn ${overviewHorizon===n?'is-chosen':''}">${n} Tage</button>`).join('')}</div></div>
- ${entries.length?`<div class="timeline-branch">${[...grouped].map(([d,items])=>`<div class="timeline-branch-day"><span class="timeline-stem"></span><div class="timeline-branch-date">${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'2-digit',month:'2-digit'}).format(new Date(d+'T12:00:00')))}</div><div class="timeline-branch-items">${items.map(x=>`<button type="button" class="timeline-branch-item type-${h(x.type)}" ${x.type==='calendar'?`data-action="agenda-open" data-id="${h(x.id)}"`:`data-action="${x.type==='milestone'?'timeline-project':'task-view'}" data-id="${h(x.id)}"`}><span class="branch-icon">${h(x.icon||(x.type==='milestone'?'◆':x.type==='due'?'⚑':'•'))}</span><span><strong>${h(x.title)}</strong><small>${h(labels[x.type]||x.type)}${x.projectId&&state?.projects?.[x.projectId]?` · ${h(projectLabel(x.projectId))}`:''}</small></span></button>`).join('')}</div></div>`).join('')}</div>`:'<p class="muted-line">Keine Termine oder Fristen im gewählten Zeitraum. Du kannst die Vorschau auf 90 Tage erweitern.</p>'}
- <small class="occasion-footnote">Google Calendar ist lesend und zeigt nur Termine nach dem Verbinden. Projekt-Meilensteine nutzen die Projekt-Deadline.</small></section>`;
+ <div class="timeline-week-nav"><div><strong>Woche ${overviewWeek+1}</strong><span> · ${h(period(first))}–${h(period(days[days.length-1]))}</span></div><div class="timeline-week-arrows"><button type="button" class="secondary-btn" data-action="timeline-week-prev" aria-label="Vorherige Woche" ${overviewWeek===0?'disabled':''}>${ico('arrowLeft',16)} Vorherige</button><button type="button" class="secondary-btn" data-action="timeline-week-next" aria-label="Nächste Woche" ${overviewWeek>=maxWeek?'disabled':''}>Nächste ${ico('arrow',16)}</button></div></div>
+ <div class="timeline-axis" role="group" aria-label="Zeitstrahl, Woche ${overviewWeek+1}">
+ ${days.map(d=>{const items=grouped.get(d)||[];return `<button type="button" class="timeline-axis-day ${d===selected?'selected':''} ${d===today?'is-today':''}" data-action="timeline-day" data-id="${h(d)}" aria-pressed="${d===selected}" aria-label="${h(dayName(d))} ${h(period(d))}, ${items.length} Ereignisse"><span class="timeline-axis-date">${h(dayName(d))} <strong>${h(period(d))}</strong></span><span class="timeline-axis-dot ${items.length?'has-events':''}"></span><span class="timeline-axis-count">${items.length?`${items.length} ${items.length===1?'Eintrag':'Einträge'}`:'–'}</span></button>`;}).join('')}
+ </div>
+ <div class="timeline-selected-detail"><div class="work-heading"><span>${ico('calendar',17)} ${h(dayName(selected))}, ${h(period(selected))}</span><span class="quiet-tag">${list.length} Einträge</span></div>
+ ${list.length?`<div class="timeline-detail-grid">${list.map(x=>`<button type="button" class="timeline-detail-card type-${h(x.type)}" ${x.type==='calendar'?`data-action="agenda-open" data-id="${h(x.id)}"`:`data-action="${x.type==='milestone'?'timeline-project':'task-view'}" data-id="${h(x.id)}"`}><span class="branch-icon">${h(x.icon||(x.type==='milestone'?'◆':x.type==='due'?'⚑':'•'))}</span><span><strong>${h(x.title)}</strong><small>${h(labels[x.type]||x.type)}${x.projectId&&state?.projects?.[x.projectId]?` · ${h(projectLabel(x.projectId))}`:''}</small></span></button>`).join('')}</div>`:'<p class="timeline-day-empty">An diesem Tag gibt es im gewählten Zeitraum keine Einträge. Wähle einen anderen Punkt auf dem Zeitstrahl.</p>'}
+ </div>
+ <small class="occasion-footnote">${h(period(today))} bis ${h(period(windowEnd))} · Google Calendar nur lesend. Projekt-Meilensteine nutzen die Projekt-Deadline.</small></section>`;
 }
 function peopleScreen(){
  const people=Object.values(state?.people||{}).sort((a,b)=>a.name.localeCompare(b.name,'de'));
@@ -640,8 +659,13 @@ function peopleScreen(){
  const taskListFor=p=>Object.values(state?.tasks||{}).filter(t=>!t.archived&&!t.completed&&[...(t.tags||[]),...(t.contextTags||[])].includes(p.tag));
  const related=selected?taskListFor(selected):[];
  const waiting=related.filter(t=>t.workflow==='waiting').length;
- return chrome(`<div class="people-grid"><section class="work-card"><div class="work-heading"><span>${ico('people',18)} Kontakte & Gesprächspunkte</span><span class="quiet-tag">${people.length}</span></div><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Person hinzufügen</button></form><div class="people-list">${people.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} offene Punkte</small></button>`).join('')||'<p class="muted-line">Noch keine Kontakte. Personen und Notizen bleiben in deinem verschlüsselten lokalen Tresor.</p>'}</div></section>
- <section class="work-card"><div class="work-heading"><span>${ico('list',18)} ${selected?h(selected.name):'Gesprächsvorbereitung'}</span>${selected?`<button class="secondary-btn" type="button" data-action="person-remove" data-id="${h(selected.id)}">Entfernen</button>`:''}</div>${selected?`<p class="muted-line">${related.length} offene Schritte · ${waiting} Waiting For</p><form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
+ return chrome(`<div class="people-grid"><section class="work-card"><div class="work-heading"><span>${ico('people',18)} Kontakte & Gesprächspunkte</span><span class="quiet-tag">${people.length}</span></div><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Person hinzufügen</button></form><div class="people-list">${people.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} offene Punkte${p.birthdayMonthDay?` · 🎂 ${h(p.birthdayMonthDay.slice(3))}.${h(p.birthdayMonthDay.slice(0,2))}.`:""}</small></button>`).join('')||'<p class="muted-line">Noch keine Kontakte. Personen und Notizen bleiben in deinem verschlüsselten lokalen Tresor.</p>'}</div></section>
+ <section class="work-card"><div class="work-heading"><span>${ico('list',18)} ${selected?h(selected.name):'Gesprächsvorbereitung'}</span>${selected?`<button class="secondary-btn" type="button" data-action="person-remove" data-id="${h(selected.id)}">Entfernen</button>`:''}</div>${selected?`<p class="muted-line">${related.length} offene Schritte · ${waiting} Waiting For</p>
+ <form id="person-birthday-form" data-id="${h(selected.id)}" class="compact-stack person-birthday-form"><div class="work-heading"><span>${ico('calendar',16)} Geburtstag</span><span class="quiet-tag">${selected.birthdayMonthDay?`${h(selected.birthdayMonthDay.slice(3))}.${h(selected.birthdayMonthDay.slice(0,2))}.${selected.birthdayYear||''}`:'Nicht eingetragen'}</span></div>
+ <div class="birthday-fields"><label>Tag<select name="day"><option value="">–</option>${Array.from({length:31},(_,i)=>i+1).map(n=>`<option value="${n}" ${Number(selected.birthdayMonthDay?.slice(3))===n?'selected':''}>${n}</option>`).join('')}</select></label><label>Monat<select name="month"><option value="">–</option>${Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}" ${Number(selected.birthdayMonthDay?.slice(0,2))===n?'selected':''}>${new Intl.DateTimeFormat('de-AT',{month:'long'}).format(new Date(2000,n-1,1))}</option>`).join('')}</select></label><label>Geburtsjahr (optional)<input type="number" name="year" min="1850" max="${new Date().getFullYear()}" placeholder="Unbekannt" value="${h(selected.birthdayYear??'')}"/></label></div>
+ <div class="birthday-actions"><button type="submit" class="secondary-btn">Geburtstag speichern</button><button type="button" class="secondary-btn" data-action="person-birthday-clear" data-id="${h(selected.id)}" ${selected.birthdayMonthDay?'':'disabled'}>Entfernen</button></div>
+ <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
+ <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
 function progressScreen(){
  const projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&p.status==='active');
@@ -721,6 +745,14 @@ function bind() {
     await mutate(s=>{if(id.startsWith('manual-')){s.manualActivities[id]={...s.manualActivities[id],...data};}else{s.activityEdits??={};s.activityEdits[id]={...(s.activityEdits[id]||{}),...data};}});toast('Änderungen im verschlüsselten Tresor gespeichert.');
   };
   const personForm=app.querySelector('#person-create-form');if(personForm)personForm.onsubmit=async ev=>{ev.preventDefault();const name=String(new FormData(personForm).get('name')||'').trim(),tag=personTag(name);if(!name||!tag){toast('Bitte einen gültigen Namen eingeben.',true);return;}if(Object.values(state.people||{}).some(p=>p.tag===tag)){toast('Kontakt bereits vorhanden.',true);return;}const id=crypto.randomUUID();await mutate(s=>{s.people??={};s.people[id]={id,name,tag,note:''};});selectedPersonId=id;render();};
+  const personBirthday=app.querySelector('#person-birthday-form');if(personBirthday)personBirthday.onsubmit=async ev=>{
+    ev.preventDefault();const id=personBirthday.dataset.id;if(!state?.people?.[id])return;
+    const fd=new FormData(personBirthday),day=Number(fd.get('day')||0),month=Number(fd.get('month')||0);
+    const md=day&&month?`${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`:'';
+    const raw=String(fd.get('year')||'').trim(),year=raw===''?null:Number(raw);
+    if((day&&!month)||(month&&!day)||!validPersonBirthday(md,year)){toast('Bitte ein gültiges Datum und optional ein Geburtsjahr angeben.',true);return;}
+    await mutate(s=>{s.people[id].birthdayMonthDay=md;s.people[id].birthdayYear=year;});toast('Geburtstag im lokalen Tresor gespeichert.');
+  };
   const personNote=app.querySelector('#person-note-form');if(personNote)personNote.onsubmit=async ev=>{ev.preventDefault();const id=personNote.dataset.id, note=String(new FormData(personNote).get('note')||'');if(!state?.people?.[id])return;await mutate(s=>{s.people[id].note=note;});toast('Persönliche Notiz gespeichert.');};
   const personAgenda=app.querySelector('#person-agenda-form');if(personAgenda)personAgenda.onsubmit=async ev=>{ev.preventDefault();const person=state?.people?.[personAgenda.dataset.id];if(!person)return;const title=String(new FormData(personAgenda).get('title')||'').trim();if(!title||title.length>180){toast('Bitte einen kurzen Agendapunkt eingeben.',true);return;}const t={id:crypto.randomUUID(),title,note:'Gesprächsthema mit '+person.name,category:'Allgemein',workflow:'next',completed:false,archived:false,flagged:false,plannedDate:null,dueDate:null,deferUntil:null,estimateMinutes:null,projectId:null,parentTaskId:null,sortOrder:0,tags:parseTags([person.tag]),contextTags:[],updatedAt:stamp()};await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;});toast('Agenda-Schritt als Next Action angelegt.');};
   const importField=app.querySelector('#encrypted-import');if(importField)importField.onchange=async ev=>{
@@ -836,9 +868,12 @@ async function runAction(action,id,stepId=null) {
       await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;const dream=s.records[id];dream.deleted=true;dream.updatedAt=stamp();s.pending.push(makeMutation(dream));});selectedDreamId=null;selectedTaskId=t.id;tab='next';toast('Dream als Next Action aktiviert.');return;
     }
     if(action==='task-view'){const t=state?.tasks?.[id];if(!t)return;selectedTaskId=id;selectedDay=t.dueDate||t.plannedDate||localDate();tab='today';render();return;}
-    if(action==='timeline-horizon'){const n=Number(id);if([14,30,90].includes(n)){overviewHorizon=n;render();}return;}
+    if(action==='timeline-horizon'){const n=Number(id);if([14,30,90].includes(n)){overviewHorizon=n;overviewWeek=0;selectedTimelineDay='';render();}return;}
+    if(action==='timeline-week-next'||action==='timeline-week-prev'){overviewWeek=Math.max(0,Math.min(Math.ceil(overviewHorizon/7)-1,overviewWeek+(action==='timeline-week-next'?1:-1)));selectedTimelineDay='';render();return;}
+    if(action==='timeline-day'){const today=localDate(),first=shiftDay(today,overviewWeek*7),last=shiftDay(first,Math.min(7,overviewHorizon-overviewWeek*7)-1);if(id>=first&&id<=last){selectedTimelineDay=id;render();}return;}
     if(action==='timeline-project'){if(state?.projects?.[id]){selectedProjectId=id;tab='projects';render();}return;}
     if(action==='person-select'){selectedPersonId=id;render();return;}
+    if(action==='person-birthday-clear'){if(!state?.people?.[id])return;await mutate(s=>{s.people[id].birthdayMonthDay='';s.people[id].birthdayYear=null;});toast('Geburtstag aus dem Kontakt entfernt.');return;}
     if(action==='person-remove'){if(!state?.people?.[id]||!confirm('Kontakt und lokale Notiz entfernen? Bereits angelegte Aufgaben bleiben erhalten.'))return;await mutate(s=>{delete s.people[id];});selectedPersonId=null;return;}
     if(action==='person-task-open'){if(state?.tasks?.[id]){selectedTaskId=id;tab='next';render();}return;}
     if(action==='activity-new'){
@@ -865,7 +900,7 @@ async function runAction(action,id,stepId=null) {
     }
     if(action==='occasion-toggle'){occasionOpen=!occasionOpen;render();return;}
     if(['occasion-accept','occasion-dismiss','occasion-reset','occasion-custom'].includes(action)){
-      const occasion=upcomingOccasions(calendarEvents,eventAppearance,localDate(),OCCASION_LEAD_DAYS).find(o=>o.id===id);if(!occasion)return;
+      const occasion=allOccasions().find(o=>o.id===id);if(!occasion)return;
       if(action==='occasion-custom'){
         const title=prompt(`Zusätzliche Vorbereitung für ${occasion.title}:`);if(title===null)return;
         if(!title.trim()||title.trim().length>100){toast('Bitte 1–100 Zeichen eingeben.',true);return;}

@@ -370,3 +370,36 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .overview-timeline{margin-bottom:17px}.timeline-horizon .secondary-btn{font-size:11px;padding:5px 10px}.timeline-branch{display:grid;gap:0;margin:14px 0 8px 7px}.timeline-branch-day{display:grid;grid-template-columns:12px 84px minmax(0,1fr);gap:9px;position:relative;padding:4px 0 15px}.timeline-stem{border-left:2px solid #c9dfd0;position:absolute;left:5px;top:8px;bottom:-2px}.timeline-branch-day:last-child .timeline-stem{bottom:15px}.timeline-branch-date{font-size:11px;color:#5b806a;font-weight:650;padding-top:7px}.timeline-branch-items{display:flex;flex-wrap:wrap;gap:7px;min-width:0}.timeline-branch-item{min-width:175px;max-width:100%;flex:1 1 210px;border:1px solid #e3ebe4;border-radius:10px;text-align:left;background:#fff;display:flex;align-items:flex-start;gap:8px;padding:10px;color:#365b43;cursor:pointer}.timeline-branch-item.type-due{border-left:3px solid #bc7764}.timeline-branch-item.type-milestone{border-left:3px solid #5f9c7b}.timeline-branch-item strong{display:block;font-size:12px;overflow-wrap:anywhere}.timeline-branch-item small{display:block;color:#839186;font-size:10px;margin-top:4px}.branch-icon{font-size:18px;line-height:1.15}
 .occasion-panel{margin:16px 0}.occasion-entry{border-top:1px solid #e2ece6;padding:14px 0 3px}.occasion-entry-head{display:flex;gap:10px;align-items:center}.occasion-emoji{font-size:27px}.occasion-entry-head>div{min-width:0;flex:1}.occasion-entry-head strong{display:block;color:#31573e;font-size:14px}.occasion-entry-head small{display:block;color:#778979;font-size:11px;margin-top:3px}.occasion-suggestions{display:grid;gap:5px;margin:12px 0 5px 36px}.occasion-suggestion{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#f8fbf8;border-radius:9px;padding:9px 11px}.occasion-suggestion>span{font-size:12px;color:#41634c;min-width:0;overflow-wrap:anywhere}.occasion-suggestion small{display:block;color:#899789;font-size:10px;margin-top:4px}.occasion-suggestion>div{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.occasion-suggestion button{font-size:11px;padding:6px 9px}.occasion-quiet{opacity:.68}.occasion-footnote{display:block;color:#819184;line-height:1.6;font-size:11px;margin-top:12px}
 @media(max-width:890px){.activity-layout,.people-grid,.recovery-view,.progress-view{grid-template-columns:1fr}.timeline-branch-day{grid-template-columns:9px 70px minmax(0,1fr)}.occasion-suggestion{align-items:flex-start;flex-direction:column}.occasion-suggestions{margin-left:0}}
+
+
+/* Compass 0.4.11 – compact review, full-width horizontal weekly time axis, birthdays */
+.guided-review{display:flex;flex-direction:column;max-width:none;gap:14px;align-items:stretch}
+.review-shortcuts{display:flex;gap:7px;flex-wrap:wrap;padding:0;align-items:center}
+.review-shortcuts button{display:flex;align-items:center;gap:6px;border:1px solid #dfebe3;background:#fff;border-radius:10px;padding:9px 12px;color:#466650;font-size:11px;cursor:pointer;min-height:37px}
+.review-shortcuts button:hover,.review-shortcuts button:focus-visible{background:#e9f3ec;border-color:#a7cdb5}
+.review-shortcuts button strong{background:#eff5f0;border-radius:12px;min-width:18px;text-align:center;padding:2px 5px;color:#416c50}
+.guided-review .review-item-pane{width:100%;min-width:0;box-sizing:border-box}
+.guided-review .review-cards-layout{grid-template-columns:minmax(200px,.32fr) minmax(0,1fr)}
+.guided-review .review-detail{min-width:0}
+.timeline-week-nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:21px 0 14px;color:#3c634e;font-size:13px}
+.timeline-week-nav span{color:#819384;font-weight:400}.timeline-week-arrows{display:flex;gap:7px;flex-wrap:wrap}
+.timeline-week-arrows button{display:inline-flex;align-items:center;gap:6px}.timeline-week-arrows button:disabled{opacity:.42;cursor:default}
+.timeline-axis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));width:100%;align-items:stretch;position:relative;gap:0;padding:11px 0 16px}
+.timeline-axis::before{content:"";position:absolute;top:61px;height:3px;background:#b9d9c3;left:7%;right:7%;border-radius:12px;pointer-events:none}
+.timeline-axis-day{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:9px;min-width:0;color:#799280;cursor:pointer;padding:7px 3px 10px;position:relative;z-index:1;min-height:96px;border-radius:10px}
+.timeline-axis-day:hover,.timeline-axis-day:focus-visible{background:#f3f8f3}.timeline-axis-day.selected{background:#e8f4eb}
+.timeline-axis-date{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px}.timeline-axis-date strong{font-size:12px;color:#3e6250;white-space:nowrap}
+.timeline-axis-dot{width:14px;height:14px;display:block;box-shadow:0 0 0 4px #fff;background:#d5e4d9;border:2px solid #b9d9c3;border-radius:50%;margin:2px 0}
+.timeline-axis-dot.has-events{background:#4c9774;border-color:#4c9774}.timeline-axis-day.selected .timeline-axis-dot{background:#275e43;box-shadow:0 0 0 5px #e8f4eb;border-color:#275e43}
+.timeline-axis-count{font-size:10px;color:#8a9d90;white-space:nowrap}.timeline-axis-day.selected .timeline-axis-count{color:#376b4f}
+.timeline-selected-detail{padding:16px 0 4px;border-top:1px solid #e8eee9;min-height:140px}
+.timeline-detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:10px;align-items:stretch}
+.timeline-detail-card{border:1px solid #e1eae3;border-left:3px solid #8bb09a;border-radius:11px;background:#fff;color:#345a44;min-width:0;padding:13px;display:flex;align-items:flex-start;gap:10px;text-align:left;cursor:pointer}
+.timeline-detail-card:hover{background:#f4f9f5}.timeline-detail-card.type-due{border-left-color:#c07663}.timeline-detail-card.type-milestone{border-left-color:#569c77}
+.timeline-detail-card strong{font-size:12px;line-height:1.5;overflow-wrap:anywhere;display:block}.timeline-detail-card small{display:block;color:#809187;margin-top:5px;font-size:11px}
+.timeline-day-empty{border:1px dashed #e4eae5;background:#f9fbf9;border-radius:12px;padding:20px;color:#829488;font-size:12px;margin:0}
+.person-birthday-form{background:#f7faf8;border:1px solid #e3ebe6;border-radius:12px;padding:13px;margin-top:18px}
+.person-birthday-form .work-heading{margin:0}.birthday-fields{display:grid;grid-template-columns:minmax(75px,.65fr) minmax(115px,1.2fr) minmax(130px,1.1fr);gap:9px;align-items:end}
+.birthday-actions{display:flex;gap:9px;flex-wrap:wrap}.person-birthday-form small{font-size:10px;color:#788d7e;line-height:1.5}
+@media(max-width:790px){.guided-review .review-cards-layout{grid-template-columns:1fr}.timeline-axis-date strong{font-size:10px}.timeline-axis-count{font-size:9px}.birthday-fields{grid-template-columns:1fr 1fr}.birthday-fields label:last-child{grid-column:1/-1}}
+@media(max-width:470px){.timeline-week-nav{align-items:flex-start;flex-direction:column}.timeline-axis-date strong{font-size:9px}.timeline-axis-count{font-size:8px}.timeline-axis-day{padding:6px 0}.timeline-axis{overflow-x:auto}.timeline-axis::before{top:59px}.timeline-axis-dot{width:11px;height:11px}}
