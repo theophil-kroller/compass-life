@@ -17,7 +17,7 @@ const fixture={
 };
 test('nine icon tabs include sleep, body and data sources as active',()=>{
  assert.deepEqual(INSIGHT_TABS.map(x=>x.id),['sleep','energy','stress','activity','focus','body','places','explore','sources']);
- assert.equal(INSIGHT_TABS.filter(x=>x.state==='live').length,7);
+ assert.equal(INSIGHT_TABS.filter(x=>x.state==='live').length,8);
 });
 test('sleep minutes exclude awake time, missing data are null, invalid zero is not fabricated',()=>{
  assert.equal(sleepMinutes(fixture.garminNights[0]),400);
@@ -64,13 +64,13 @@ test('consistency plot and weekly aggregates follow actual nights and sample cou
  assert.ok(grouped.every(w=>w.mean>0));
 });
 test('planned panes remain clearly nonfunctional and now open consolidated sources',()=>{
- assert.match(insightsPlannedView('places',fixture,[],[]),/IN VORBEREITUNG/);
- assert.match(insightsPlannedView('places',fixture,[],[]),/GPS-Tracks/);
- assert.match(insightsPlannedView('places',fixture,[],[]),/Datenquellen öffnen/);
+ assert.match(insightsPlannedView('explore',fixture,[],[]),/IN VORBEREITUNG/);
+ assert.match(insightsPlannedView('explore',fixture,[],[]),/Explore|statistisch|Daten/);
+ assert.match(insightsPlannedView('explore',fixture,[],[]),/Datenquellen öffnen/);
 });
 test('navigation and 0.5.8 actions are wired into actual client, without cloud migration',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.11'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.12'/);
  assert.match(main,/navItem\('insights','Insights · Gesundheit'/);
  assert.match(main,/insightTab==='sleep'\?insightsSleepView/);
  assert.match(main,/action==='insights-period'/);

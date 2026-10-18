@@ -14,6 +14,7 @@ import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insigh
 import {insightsStressView,insightsEnergyView} from './insights-wellness.js';
 import {fitnessInsightsView} from './insights-fitness.js';
 import {buildProductivityInsights,productivityInsightsView} from './insights-productivity.js';
+import {inspectTimelineFiles,manualPlaceVisit,mergePlaces,placesInsightsView} from './insights-places.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
@@ -25,7 +26,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.11';
+const COMPASS_CLIENT_VERSION='0.5.12';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -95,6 +96,7 @@ let healthSpan=7,healthDetailsOpen=false,healthDevicesOpen=false;
 let importHealthSpan=90,selectedGarminNight='',healthFilePreview=null,healthFileReading=false;
 let insightWellnessDay='';
 let insightTab=bootView==='health'?'sources':'sleep',insightPeriod='28',insightNight='',financePane='Überblick';
+let placesPreview=null,placesImportBusy=false,selectedPlaceKey='';
 let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryImportOpen=false,discoveryWeekOffset=0,discoveryImportPreview=null;
 const discoveryExpandedDays=new Set();
 // Calendar OAuth is independent from Compass login; token stays in RAM only.
@@ -753,11 +755,11 @@ function insightsScreen(){
  const tabs=INSIGHT_TABS.map(t=>`<button type="button" class="insights-nav-tab ${t.id===insightTab?'selected':''}" data-action="insights-tab" data-id="${h(t.id)}" aria-pressed="${t.id===insightTab}">${ico(t.icon,19)}<span>${h(t.label)}</span>${t.state==='live'?'<i class="insight-tab-live" aria-label="Bereits verfügbar"></i>':''}</button>`).join('');
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today):insightTab==='sources'?healthSummaryPanel('sources'):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <header class="insight-hero"><div><span class="insight-kicker">COMPASS / PERSONAL ANALYTICS</span><h2>Dein Leben in Daten.</h2><p>Ein gemeinsamer Blick auf Schlaf, Erholung, Aktivität und Fokus. Lokal analysiert – ohne automatisch erzeugte Gesundheitsbewertungen.</p></div><div class="insight-hero-side"><span>${ico('shield',18)} Lokaler Vault</span><strong>${dataCount}</strong><small>Garmin- und Fitdays-Datensätze</small></div></header>
  <nav class="insights-nav" aria-label="Insights-Kategorien">${tabs}</nav>
- <div class="insight-view-header"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${['sleep','body','activity','stress','energy','focus'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
+ <div class="insight-view-header"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${['sleep','body','activity','stress','energy','focus','places'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
  ${content}
  ${insightTab==='sources'?'':`<div class="insight-import-bridge"><div>${ico('heart',22)}<span><strong>Daten ergänzen</strong><small>Garmin- und Fitdays-Dateien gesammelt unter Datenquellen importieren.</small></span></div><button class="secondary-btn" type="button" data-action="insights-tab" data-id="sources">Datenquellen öffnen →</button></div>`}
  </div>`);
@@ -1047,6 +1049,24 @@ function bind() {
     finally{healthFileReading=false;}
   };
   const selectedNight=app.querySelector('#health-night-select');if(selectedNight)selectedNight.onchange=()=>{selectedGarminNight=selectedNight.value;render();};
+  const placesInput=app.querySelector('#places-import-input');if(placesInput)placesInput.onchange=async()=>{
+    if(!placesInput.files?.length||placesImportBusy)return;
+    placesImportBusy=true;placesPreview=null;
+    try{placesPreview=await inspectTimelineFiles([...placesInput.files]);toast(`${placesPreview.visits.length} Standort-Aufenthalte erkannt. Vorschau prüfen.`);}
+    catch(ex){toast('Timeline-Import: '+ex.message,true);}
+    finally{placesImportBusy=false;render();}
+  };
+  const placeForm=app.querySelector('#place-label-form');if(placeForm)placeForm.onsubmit=async ev=>{
+    ev.preventDefault();const key=placeForm.dataset.key,title=String(new FormData(placeForm).get('name')||'').trim();
+    if(title.length>100)return toast('Ortsname zu lang.',true);
+    await mutate(s=>{s.placesLabels??={};if(title)s.placesLabels[key]=title;else delete s.placesLabels[key];});toast('Ortsbezeichnung lokal gespeichert.');
+  };
+  const placeManual=app.querySelector('#places-manual-form');if(placeManual)placeManual.onsubmit=async ev=>{
+    ev.preventDefault();try{const fd=new FormData(placeManual);const row=manualPlaceVisit(Object.fromEntries(fd.entries()));
+      await mutate(s=>{const m=mergePlaces(s.placesVisits||[],[row]);s.placesVisits=m.visits;});
+      selectedPlaceKey='';toast('Aufenthalt im lokalen Tresor gespeichert.');
+    }catch(ex){toast(ex.message,true);}
+  };
   const insightSelect=app.querySelector('#insights-night-select');if(insightSelect)insightSelect.onchange=()=>{insightNight=insightSelect.value;render();};
   const wellnessSelect=app.querySelector('#insights-wellness-select');if(wellnessSelect)wellnessSelect.onchange=()=>{insightWellnessDay=wellnessSelect.value;render();};
   app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
@@ -1249,6 +1269,20 @@ async function runAction(action,id,stepId=null) {
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
     if(action==='finance-pane'){if(FINANCE_PANES.some(p=>p.title===id)){financePane=id;render();}return;}
+    if(action==='places-select'){selectedPlaceKey=id;render();return;}
+    if(action==='places-import-cancel'){placesPreview=null;render();return;}
+    if(action==='places-import-confirm'){
+      if(!placesPreview?.visits.length)return;
+      try{const incoming=placesPreview.visits;let count=0;
+        await mutate(s=>{const m=mergePlaces(s.placesVisits||[],incoming);s.placesVisits=m.visits;count=m.added;});
+        placesPreview=null;selectedPlaceKey='';toast(`${count} neue Aufenthalte lokal gespeichert. Bestehende Einträge wurden nicht verdoppelt.`);
+      }catch(ex){toast('Standortimport: '+ex.message,true);}return;
+    }
+    if(action==='places-clear'){
+      if(!confirm('Alle lokalen Aufenthalte und Ortsbezeichnungen unwiderruflich aus diesem Tresor entfernen? Andere Daten bleiben erhalten.'))return;
+      await mutate(s=>{delete s.placesVisits;delete s.placesLabels;});
+      placesPreview=null;selectedPlaceKey='';toast('Alle lokalen Standortdaten gelöscht.');return;
+    }
     if(action==='insights-tab'){if(INSIGHT_TABS.some(t=>t.id===id)){insightTab=id;render();if(id==='focus'&&authToken){reloadWatchSessions().catch(()=>{});}}return;}
     if(action==='insights-period'){if(INSIGHT_PERIODS.some(([v])=>v===id)){insightPeriod=id;render();}return;}
     if(action==='import-health-range'){importHealthSpan=id==='all'?'all':Number(id)||90;render();return;}

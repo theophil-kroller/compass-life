@@ -688,3 +688,47 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .insight-productivity-tools small{font-size:10px;color:#879D8A}
 .insight-productivity-tools>div:last-child{display:flex;gap:7px;flex-wrap:wrap}
 .insight-productivity-tools .secondary-btn{font-size:10px;padding:8px}
+
+/* Compass 0.5.12 — Places & Trips: local-only, map + provenance + sleep matching */
+.places-insights{display:flex;flex-direction:column;gap:17px;min-width:0}
+.places-insights .insight-chart-card{min-width:0;overflow:hidden}
+.places-main-grid{grid-template-columns:minmax(0,1.7fr) minmax(270px,.8fr)}
+.places-world-svg{display:block;width:100%;height:auto;min-height:160px;aspect-ratio:2/1;background:#F3F8F7;border:1px solid #E6EEE8;border-radius:14px}
+.places-world-svg circle[data-action]{cursor:pointer;transition:fill .18s,opacity .18s}
+.places-world-svg circle[data-action]:hover,.places-world-svg circle[data-action]:focus{fill:#A65F4D;outline:none;stroke:#244F44;stroke-width:2.4}
+.places-map-shell{width:100%;overflow:hidden;padding:4px 0 9px}
+.places-result-list{display:flex;flex-direction:column;gap:5px;max-height:430px;overflow:auto;scrollbar-width:thin}
+.places-result{width:100%;min-width:0;display:grid;grid-template-columns:12px minmax(0,1fr) 16px;align-items:center;gap:12px;text-align:left;border:1px solid transparent;border-radius:10px;background:#FAFCFA;padding:11px 10px;color:#567565;cursor:pointer}
+.places-result:hover,.places-result.selected{background:#EFF6F0;border-color:#CFDFD4}
+.places-result strong{display:block;font-size:12px;color:#315843;overflow-wrap:anywhere}
+.places-result small{display:block;margin-top:4px;font-size:10px;color:#8B9C90;line-height:1.4}
+.places-location-dot{display:block;height:10px;width:10px;border-radius:50%;background:#498E7A}
+.places-result.selected .places-location-dot{background:#BA765D}
+.places-label-form{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:12px 0 2px}
+.places-label-form label,.places-manual-form label{display:flex;flex-direction:column;gap:6px;color:#5F7D6D;font-size:11px;font-weight:650;min-width:0}
+.places-label-form label{flex:1 1 240px}
+.places-label-form input,.places-manual-form input{height:39px;border:1px solid #DCE8E0;border-radius:9px;padding:9px 10px;background:white;color:#304D3B;font-size:12px;width:100%;max-width:100%}
+.places-sleep-list{display:flex;flex-direction:column;gap:13px;margin:17px 0}
+.places-sleep-list>div{display:grid;grid-template-columns:minmax(105px,1fr) minmax(40px,.8fr) 63px;gap:10px;align-items:center;color:#497362}
+.places-sleep-list strong{display:block;font-size:11px;overflow-wrap:anywhere}
+.places-sleep-list small{display:block;font-size:9px;line-height:1.4;color:#8FA498;margin-top:3px}
+.places-sleep-list b{font-size:11px;text-align:right;white-space:nowrap}
+.places-upload-btn{display:inline-flex;align-items:center;gap:6px;position:relative;margin:12px 0;cursor:pointer}
+.places-upload-btn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.places-import-preview{background:#F0F7F2;border-radius:12px;border:1px solid #DAE9DF;padding:14px;display:flex;flex-direction:column;align-items:start;gap:8px;margin:12px 0}
+.places-import-preview strong{font-size:12px;color:#366A54}.places-import-preview p{font-size:10px;color:#738B78;line-height:1.6;margin:0;overflow-wrap:anywhere}
+.places-manual{margin:15px 0;padding:10px 0;border-top:1px solid #E9EEE9;border-bottom:1px solid #E9EEE9}
+.places-manual summary{cursor:pointer;font-weight:650;color:#4E7966;font-size:11px}
+.places-manual-form{display:flex;flex-direction:column;gap:12px;padding:14px 3px 5px}
+.places-manual-form>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.places-manual-form button{align-self:flex-start}
+.places-clear{font-size:11px!important;color:#A66955!important;margin:7px 0}
+@media(max-width:1100px){.places-main-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.places-main-grid{display:flex;flex-direction:column}.places-result-list{max-height:260px}.places-sleep-list>div{grid-template-columns:115px minmax(35px,1fr) 55px;gap:6px}.places-sleep-list b{font-size:10px}.places-label-form{flex-direction:column;align-items:stretch}.places-label-form .secondary-btn{align-self:start}}
+
+/* Compass 0.5.12 · chronological stays without inferred travel routes */
+.places-timeline-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:7px 14px;margin:14px 0}
+.places-timeline-entry{display:flex;gap:11px;align-items:flex-start;padding:10px 9px;border:1px solid #E8EEE9;background:#FAFCFA;border-radius:11px;min-width:0}
+.places-timeline-dot{width:9px;height:9px;background:#458F78;border-radius:50%;flex:none;margin-top:4px}
+.places-timeline-entry strong{display:block;color:#375E4A;font-size:12px;overflow-wrap:anywhere}
+.places-timeline-entry small{display:block;margin-top:5px;color:#869D8D;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
