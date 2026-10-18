@@ -6,14 +6,14 @@ export const ACTIVITY_CATEGORIES=['Arbeit','Erholung','Freizeit','Soziales','Son
 const isoFromEpoch=seconds=>{const date=new Date(seconds*1000);const p=n=>String(n).padStart(2,'0');return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;};
 export const isoLocal=isoFromEpoch;
 export const isValidLocalDateTime=value=>typeof value==='string'&&ISO_LOCAL.test(value)&&Number.isFinite(new Date(value).getTime())&&isoFromEpoch(new Date(value).getTime()/1000)===value;
-export function validActivityEdit(e){return Boolean(e&&typeof e.title==='string'&&e.title.trim().length>=1&&e.title.length<=100&&ACTIVITY_CATEGORIES.includes(e.category)&&isValidLocalDateTime(e.startedAt)&&Number.isSafeInteger(e.durationMinutes)&&e.durationMinutes>=1&&e.durationMinutes<=1440&&typeof e.note==='string'&&e.note.length<=1000&&(e.projectId==null||typeof e.projectId==='string'&&e.projectId.length<=60));}
+export function validActivityEdit(e){return Boolean(e&&typeof e.title==='string'&&e.title.trim().length>=1&&e.title.length<=100&&ACTIVITY_CATEGORIES.includes(e.category)&&isValidLocalDateTime(e.startedAt)&&Number.isSafeInteger(e.durationMinutes)&&e.durationMinutes>=1&&e.durationMinutes<=1440&&(e.distanceKm==null||Number.isFinite(e.distanceKm)&&e.distanceKm>=0&&e.distanceKm<=999.99)&&typeof e.note==='string'&&e.note.length<=1000&&(e.projectId==null||typeof e.projectId==='string'&&e.projectId.length<=60));}
 export function validManualActivity(e){return validActivityEdit(e)&&/^manual-[a-z0-9-]{36}$/i.test(e.id||'')&&typeof e.deleted==='boolean';}
 export const projectActivities=(watchSessions=[],state={})=>{
  const edits=state?.activityEdits||{};
  const watch=(watchSessions||[]).filter(s=>s&&typeof s.id==='string').map(s=>{
    const o=edits[s.id]||{};
    if(o.purged)return null;
-   return {id:s.id,title:o.title??s.activity,category:o.category??(s.activity==='Familie'?'Soziales':'Arbeit'),startedAt:o.startedAt??isoFromEpoch(s.startedAt),durationMinutes:o.durationMinutes??Math.max(1,Math.round((s.durationSec||60)/60)),note:o.note??'',projectId:o.projectId??'',deleted:o.deleted===true,source:'Garmin',pomodoros:s.pomodoros||0,hrSamples:s.hrSamples||[],bbStart:s.bbStart,bbEnd:s.bbEnd};
+   return {id:s.id,title:o.title??s.activity,category:o.category??(s.activity==='Familie'?'Soziales':'Arbeit'),startedAt:o.startedAt??isoFromEpoch(s.startedAt),durationMinutes:o.durationMinutes??Math.max(1,Math.round((s.durationSec||60)/60)),note:o.note??'',distanceKm:o.distanceKm??null,projectId:o.projectId??'',deleted:o.deleted===true,source:'Garmin',pomodoros:s.pomodoros||0,hrSamples:s.hrSamples||[],bbStart:s.bbStart,bbEnd:s.bbEnd};
  }).filter(Boolean);
  const manual=Object.values(state?.manualActivities||{}).filter(validManualActivity).map(x=>({...x,source:'Manuell',pomodoros:0}));
  return [...watch,...manual].sort((a,b)=>b.startedAt.localeCompare(a.startedAt)||a.id.localeCompare(b.id));

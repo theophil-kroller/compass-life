@@ -3,6 +3,7 @@
  * Session summaries only where Garmin activity exports actually contain global 18.
  */
 import {insightsRange} from './insights.js';
+import {sportsInsightsView} from './sports-insights.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(x,d=0)=>Number.isFinite(x)?x.toLocaleString('de-AT',{maximumFractionDigits:d}):'–';
 const dayLabel=x=>new Date(x+'T12:00:00Z').toLocaleDateString('de-AT',{day:'2-digit',month:'short'});
@@ -40,7 +41,7 @@ function lineChart(rows,key,color,unit,label,period){
 }
 const mean=values=>values.length?values.reduce((a,b)=>a+b,0)/values.length:null;
 const kpi=(name,value,detail)=>`<article class="insight-kpi"><span>${esc(name)}</span><strong>${esc(value)}</strong><small>${esc(detail)}</small></article>`;
-export function fitnessInsightsView(imported={},healthDays=[],period='28',today=new Date().toLocaleDateString('sv-SE')){
+export function fitnessInsightsView(imported={},healthDays=[],period='28',today=new Date().toLocaleDateString('sv-SE'),personalActivities=[]){
  const rows=joinedFitnessDays(imported,healthDays,today,period);
  const withSteps=rows.filter(x=>finite(x.steps)),distance=rows.filter(x=>finite(x.distanceKm)),exercise=rows.filter(x=>finite(x.exerciseMinutes)),active=rows.filter(x=>finite(x.activeMinutes));
  const range=insightsRange(today,period);
@@ -56,5 +57,6 @@ export function fitnessInsightsView(imported={},healthDays=[],period='28',today=
  <article class="insight-chart-card"><div class="insight-figure-title"><div><small>05 · SPORT SESSIONS</small><h3>Importierte Trainingsaktivitäten</h3></div></div>
  ${sessions.length?`<div class="insight-fitness-sessions">${sessions.slice(0,24).map(s=>`<div class="insight-session-row"><div><strong>${esc(sportNames[s.sport]||'Sportaktivität')}</strong><small>${esc(dayLabel(s.day))} · ${esc(s.start.slice(11,16))} UTC</small></div><span>${finite(s.durationMinutes)?esc(num(s.durationMinutes,1))+' min':'–'}</span><span>${finite(s.distanceKm)?esc(num(s.distanceKm,2))+' km':'–'}</span><span>${finite(s.avgHr)?esc(num(s.avgHr))+' bpm':'–'}</span></div>`).join('')}</div>`:'<p class="insight-no-data">Noch keine Garmin-Trainingsdateien mit einer FIT-Session importiert. Die Tages-Wellness-ZIPs enthalten oft nur Monitoring-Werte. Einzelne Trainings-FITs können zusätzlich importiert werden.</p>'}
  <p class="insight-figure-note">Nur tatsächlich im Export enthaltene Sessions, keine künstlich erzeugten Aktivitäten. Keine Karten- oder Positionsdaten gespeichert.</p></article>
+ ${sportsInsightsView(imported?.garminSessions||[],personalActivities,range)}
  <div class="insight-footnote">Die dargestellten Schritte, Aktivitätszeiten und Distanzen sind Gerätewerte und können aufgrund unvollständiger FIT-Tagesdateien unter den Garmin-Connect-Werten liegen. Für genaue Tageswerte benötigst du vollständig exportierte Monitoring-Dateien.</div></section>`;
 }
