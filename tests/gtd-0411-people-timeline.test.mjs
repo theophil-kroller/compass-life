@@ -6,6 +6,9 @@ import {webcrypto} from 'node:crypto';
 import * as people from '../client/src/people-occasions.js';
 import * as perspectives from '../client/src/context-perspectives.js';
 import * as tasks from '../client/src/tasks.js';
+import * as review from '../client/src/guided-review.js';
+import * as tags from '../client/src/smart-tags.js';
+import * as personMatching from '../client/src/people-matching.js';
 import * as calendar from '../client/src/calendar-rules.js';
 import * as occasions from '../client/src/occasion-planning.js';
 import * as activities from '../client/src/activity-management.js';
@@ -20,7 +23,7 @@ function setup(){
  const app={innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null};
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const ctx={document,window:{addEventListener:()=>{}},location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(Error('offline')),setTimeout,clearTimeout};
- Object.assign(ctx,tasks,calendar,occasions,activities,people,perspectives);
+ Object.assign(ctx,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching);
  ctx.vault={save:async()=>{},lock:()=>{}};
  runInNewContext(compiled,ctx,{filename:'browser-ui-smoke.js',timeout:2000});
  return ctx;
@@ -71,7 +74,7 @@ test('New dashboard is a full-width horizontal timeline with working week and da
 test('Weekly Review has no duplicate big explanation and has a full-width practical work pane',()=>{
  const html=setup().testUI(base(),'review');
  assert.doesNotMatch(html,/Dein Weekly Review/);
- assert.match(html,/review-shortcuts/);assert.match(html,/review-item-pane/);assert.match(styles,/\.guided-review\{display:flex/);
+ assert.match(html,/assistant-review/);assert.match(html,/assistant-current/);assert.match(styles,/\.assistant-review-grid/);
 });
 test('People page displays birthday editor; contact birthday is included in suggestion panel without Google Calendar',async()=>{
  const ui=setup(),state=base();const date=occasions.shiftDay(tasks.localDate(),4),md=date.slice(5);

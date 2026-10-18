@@ -1,4 +1,5 @@
 import {listProjects,putProject} from './projects.js';
+import {readWeeklyReview,writeWeeklyReview} from './weekly-review.js';
 import {schemaStatus} from './schema.js';
 import {listDiscoveryEvents,upsertDiscoveryEvents} from './discovery-events.js';
 import {listTasks,putTask} from './tasks.js';
@@ -135,6 +136,8 @@ async function route(req,env,identity) {
   if(req.method==='POST' && url.pathname==='/api/widget/pair/start')return startWidgetPair(env,identity);
   if(req.method==='GET' && url.pathname==='/api/widget/devices')return listWidgetDevices(env,identity);
   if(req.method==='POST' && url.pathname==='/api/widget/device/revoke')return revokeWidgetDevice(req,env,identity);
+  if(req.method==='GET' && url.pathname==='/api/review')return readWeeklyReview(env,identity);
+  if(req.method==='POST' && url.pathname==='/api/review')return writeWeeklyReview(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/projects')return listProjects(env,identity);
   if(req.method==='POST' && url.pathname==='/api/projects')return putProject(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/events')return listDiscoveryEvents(env,identity);
@@ -195,7 +198,7 @@ export default {
     const path=new URL(req.url).pathname;
     if (path==='/api/health' && req.method==='GET') {
       const schema=env.DB?await schemaStatus(env.DB):{ready:false,requiredMigration:'0001–0006',missing:[]};
-      return finish(json({ok:true,phase:'GTD',apiVersion:10,release:'0.5.4',planning:true,gtd:true,projects:true,schema}));
+      return finish(json({ok:true,phase:'GTD',apiVersion:11,release:'0.5.5',planning:true,gtd:true,projects:true,schema}));
     }
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));

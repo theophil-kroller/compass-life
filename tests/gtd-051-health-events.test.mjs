@@ -11,7 +11,7 @@ import {schemaStatus} from '../worker/src/schema.js';
 const dir=fileURLToPath(new URL('../worker/migrations/',import.meta.url));
 function createDB(){
  const db=new DatabaseSync(':memory:');
- for(const name of ['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql','0009_health_daily.sql','0010_widget_preview.sql','0011_discovery_events.sql'])db.exec(readFileSync(join(dir,name),'utf8'));
+ for(const name of ['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql','0009_health_daily.sql','0010_widget_preview.sql','0011_discovery_events.sql','0012_weekly_review.sql'])db.exec(readFileSync(join(dir,name),'utf8'));
  const wrap={prepare(sql){return {bind(...values){return {first:async()=>db.prepare(sql).get(...values)||null,all:async()=>({results:db.prepare(sql).all(...values)}),run:async()=>{const out=db.prepare(sql).run(...values);return {meta:{changes:Number(out.changes)}}}}},all:async()=>({results:db.prepare(sql).all()})}},batch:async list=>{for(const q of list)await q.run();}};
  return {db,env:{DB:wrap}};
 }

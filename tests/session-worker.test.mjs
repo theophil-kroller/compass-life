@@ -12,6 +12,7 @@ source=source.replace("import { createRemoteJWKSet, jwtVerify } from 'jose';", `
 source=source.replace("import {MAX_BATCH, validateMutation, validCursor, cleanMutation} from './validation.js';",'const MAX_BATCH=25;const validateMutation=()=>null;const validCursor=()=>0;const cleanMutation=x=>x;');
 source=source.replace("import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice,purgeWatchSession,watchPlanning} from './watch.js';", `const createPair=()=>{};const claimPair=()=>{};const acceptWatchSession=()=>{};const listWatchSessions=()=>{};const listWatchDevices=()=>{};const revokeWatchDevice=()=>{};const purgeWatchSession=()=>{};const watchPlanning=()=>{};`);
 source=source.replace("import {listProjects,putProject} from './projects.js';", "const listProjects=()=>{};const putProject=()=>{};");
+source=source.replace("import {readWeeklyReview,writeWeeklyReview} from './weekly-review.js';", "const readWeeklyReview=()=>{};const writeWeeklyReview=()=>{};");
 source=source.replace("import {listDiscoveryEvents,upsertDiscoveryEvents} from './discovery-events.js';", "const listDiscoveryEvents=()=>{};const upsertDiscoveryEvents=()=>{};");
 source=source.replace("import {schemaStatus} from './schema.js';", "const schemaStatus=async()=>({ready:true,requiredMigration:null,missing:[]});");
 source=source.replace("import {listTasks,putTask} from './tasks.js';", "const listTasks=()=>{};const putTask=()=>{};");

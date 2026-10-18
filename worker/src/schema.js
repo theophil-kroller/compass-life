@@ -11,6 +11,7 @@ const REQUIRED = {
   discovery_events: ['owner_sub','event_key','event_json','status','removed','version'],
   widget_pair_codes: ['code_hash','owner_sub','expires_at'],
   widget_devices: ['token_hash','owner_sub','revoked'],
+  weekly_review_progress: ['owner_sub','progress_json','version'],
   planning_projects: ['id', 'review_interval_days', 'reviewed_at', 'kind', 'project_type', 'parent_id', 'sort_order'],
 };
 export async function schemaStatus(db) {
@@ -30,10 +31,11 @@ export async function schemaStatus(db) {
       else if(missing.some(x=>x.startsWith('health_')))requiredMigration = '0009';
       else if(missing.some(x=>x.startsWith('widget_')))requiredMigration = '0010';
       else if(missing.some(x=>x.startsWith('discovery_events.')))requiredMigration = '0011';
+      else if(missing.some(x=>x.startsWith('weekly_review_progress.')))requiredMigration = '0012';
       else requiredMigration = '0007';
     }
     return {ready: missing.length===0, requiredMigration, missing};
   } catch {
-    return {ready:false, requiredMigration:'0001–0011', missing:[]};
+    return {ready:false, requiredMigration:'0001–0012', missing:[]};
   }
 }

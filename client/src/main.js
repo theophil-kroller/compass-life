@@ -1,3 +1,6 @@
+import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
+import {wireSmartTags,rememberTag} from './smart-tags.js';
+import {personCalendarEvents} from './people-matching.js';
 import './style.css';
 import {allRecoveryIdeas,scoreRecoveryIdeas,recoveryWeather,validRecoveryIdea} from './recovery-ideas.js';
 import {assertCompatibleWorker} from './health-check.js';
@@ -15,7 +18,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.4';
+const COMPASS_CLIENT_VERSION='0.5.5';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -31,6 +34,7 @@ const projectCollapsed=new Set();
 let selectedAgendaEventId=null;
 let calendarRulesOpen=false,showHiddenCalendarEvents=false;
 let reviewWorkflow='next';
+let reviewEditingTaskId=null,reviewProjectId=null;
 let activitySelectedId=null,activityTrash=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,occasionOpen=true;
 const reviewDrafts=new Map();
 function captureReviewDraft(){const form=app?.querySelector('#review-commit-form');if(form?.dataset.id)reviewDrafts.set(form.dataset.id,Object.fromEntries(new FormData(form).entries()));}
@@ -451,8 +455,8 @@ function taskCreateForm(defaultDay='',defaultProject=''){
  <label>Duration · Minuten<input name="estimateMinutes" type="number" min="5" max="1440" step="5" placeholder="optional"/></label>
  <label>Bereich<select name="category">${categoryOptions()}</select></label><label>GTD-Status<select name="workflow">${workflowOptions()}</select></label>
  <label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label>${defaultProject?`<label>Unteraufgabe von<select name="parentTaskId">${taskParentOptions(defaultProject)}</select></label>`:''}
- <label>Agenda-Tags<input name="tags" placeholder="UKO, Martin" maxlength="300"/></label>
- <label>Kontext-Tags<input name="contextTags" placeholder="büro, laptop" maxlength="300"/></label>
+ <label>Agenda-Tags<input name="tags" data-smart-tags placeholder="UKO, Martin" maxlength="300"/></label>
+ <label>Kontext-Tags<input name="contextTags" data-smart-tags placeholder="büro, laptop" maxlength="300"/></label>
  <label class="flag-check"><input type="checkbox" name="flagged"/> Flagged</label><button class="primary-btn" type="submit">${ico('plus',16)} Hinzufügen</button></div></form>`;
 }
 function taskList(items,scope,hideEmpty=false){return items.length?`<div class="task-list" data-scope="${h(scope)}">${items.map(t=>`<div class="task-row ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}" ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`: ''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small>${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</button>${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;}
@@ -462,7 +466,7 @@ function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)r
  <label>Duration · geschätzter Aufwand (Min.)<input name="estimateMinutes" type="number" min="5" max="1440" step="5" value="${t.estimateMinutes??''}"/></label>
  <label>Bereich<select name="category">${categoryOptions(t.category)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label>
  ${t.projectId?`<label>Hierarchie · Unteraufgabe von<select name="parentTaskId">${taskParentOptions(t.projectId,t.parentTaskId,t.id)}</select></label>`:''}
- <label>Agenda-Tags<input name="tags" value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label><label>Kontexte<input name="contextTags" value="${h((t.contextTags||[]).join(', '))}" placeholder="büro, laptop"/></label>
+ <label>Agenda-Tags<input name="tags" data-smart-tags value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label><label>Kontexte<input name="contextTags" data-smart-tags value="${h((t.contextTags||[]).join(', '))}" placeholder="büro, laptop"/></label>
  <label class="flag-check"><input type="checkbox" name="flagged" ${t.flagged?'checked':''}/> Flagged</label>
  <div class="task-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button></div></form>${state.taskConflicts[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Die Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
 }
@@ -573,7 +577,7 @@ function inboxScreen(){
  `<div class="inbox-mvp-empty">${ico(query?'search':'inbox',32)}<strong>${query?'Keine passenden Einträge':'Dein Kopf darf leerer werden.'}</strong><span>${query?'Versuche einen anderen Suchbegriff.':'Halte hier alles fest, was dir im Alltag begegnet.'}</span></div>`}
  </div><div class="inbox-mvp-bottom"><span>${state.pending.length} ausstehende Änderungen</span><button type="button" class="review-link" data-tab="review">Wochenreview ${ico('arrow',14)}</button></div></section>
  <aside class="module-card module-active inbox-mvp-detail">${current?
- `<div class="inbox-detail-top"><span class="capture-eyebrow">EINTRAG · INBOX</span><span class="inbox-detail-date">${date(current.updatedAt)}</span></div><form id="inbox-edit-form" data-id="${h(current.id)}"><label for="inbox-edit-title">Gedanke</label><textarea id="inbox-edit-title" name="title" maxlength="1000" rows="3" required>${h(current.title)}</textarea><label for="inbox-edit-note">Notizen, Links, Kontext</label><textarea id="inbox-edit-note" name="note" maxlength="10000" rows="7" placeholder="Optional – für den späteren Review">${h(current.note||'')}</textarea><label for="inbox-edit-tags">Agenda-Tags (Komma getrennt)</label><input id="inbox-edit-tags" name="tags" value="${h((current.tags||[]).join(', '))}" placeholder="UKO, Martin"/><div class="inbox-detail-actions"><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="remove" data-id="${h(current.id)}">Archivieren</button></div></form><div class="inbox-detail-next">${ico('target',18)}<div><strong>Später klären</strong><p>Im Wochenreview wird daraus eine Next Action, ein Projekt, eine Agenda oder Dreams. Bis dahin bleibt dieser Gedanke zuverlässig in der Inbox.</p><button type="button" class="review-link" data-tab="review">Zum Review ${ico('arrow',14)}</button></div></div>`:
+ `<div class="inbox-detail-top"><span class="capture-eyebrow">EINTRAG · INBOX</span><span class="inbox-detail-date">${date(current.updatedAt)}</span></div><form id="inbox-edit-form" data-id="${h(current.id)}"><label for="inbox-edit-title">Gedanke</label><textarea id="inbox-edit-title" name="title" maxlength="1000" rows="3" required>${h(current.title)}</textarea><label for="inbox-edit-note">Notizen, Links, Kontext</label><textarea id="inbox-edit-note" name="note" maxlength="10000" rows="7" placeholder="Optional – für den späteren Review">${h(current.note||'')}</textarea><label for="inbox-edit-tags">Agenda-Tags (Komma getrennt)</label><input id="inbox-edit-tags" name="tags" data-smart-tags value="${h((current.tags||[]).join(', '))}" placeholder="UKO, Martin"/><div class="inbox-detail-actions"><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="remove" data-id="${h(current.id)}">Archivieren</button></div></form><div class="inbox-detail-next">${ico('target',18)}<div><strong>Später klären</strong><p>Im Wochenreview wird daraus eine Next Action, ein Projekt, eine Agenda oder Dreams. Bis dahin bleibt dieser Gedanke zuverlässig in der Inbox.</p><button type="button" class="review-link" data-tab="review">Zum Review ${ico('arrow',14)}</button></div></div>`:
  `<div class="inbox-mvp-empty detail-empty">${ico('pencil',32)}<strong>Ein Gedanke genügt.</strong><span>Öffne die Schnellerfassung und halte fest, was dich beschäftigt.</span></div>`}</aside></div>`);
 }
 
@@ -588,34 +592,59 @@ function clarifyControls(currentId=null){
  <p class="muted-line">Projekt, Defer, Planned, Due und Duration kannst du direkt unterhalb der Klärung festlegen.</p>
  </div>`;
 }
-function reviewScreen(){
- const list=rows();const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
- const draft=current?reviewDrafts.get(current.id)||{}:{};
- return chrome(`<div class="guided-review">
- <nav class="review-shortcuts" aria-label="Review-Perspektiven">
-  <button type="button" data-tab="inbox">${ico('inbox',16)} Eingang <strong>${list.length}</strong></button>
-  <button type="button" data-tab="projects">${ico('folder',16)} Projekte <strong>${Object.values(state?.projects||{}).filter(p=>p.status==='active').length}</strong></button>
-  <button type="button" data-tab="next">${ico('checkSquare',16)} Nächste Schritte <strong>${nextActions(state).length}</strong></button>
-  <button type="button" data-tab="hold">${ico('people',16)} Waiting & Agendas <strong>${heldTasks(state).length}</strong></button>
-  <button type="button" data-tab="forecast">${ico('calendar',16)} Termine</button>
-  <button type="button" data-tab="someday">${ico('spark',16)} Dreams</button>
- </nav>
- <section class="work-card review-item-pane"><div class="work-heading"><span>${ico('inbox',19)} Inbox klären</span><span class="quiet-tag">${list.length} offen</span></div>
- <div class="review-cards-layout"><nav class="review-inbox-list" aria-label="Inbox-Elemente wählen">${list.length?list.map(r=>`<button type="button" class="review-inbox-item ${r.id===current?.id?'selected':''}" aria-current="${r.id===current?.id?'true':'false'}" data-action="review-select" data-id="${h(r.id)}"><strong>${h(r.title)}</strong><small>${h(new Date(r.updatedAt).toLocaleDateString('de-AT'))}</small></button>`).join(''):'<p class="muted-line">Inbox vollständig geklärt.</p>'}</nav>
- <div class="review-detail">${current?`<strong>${h(current.title)}</strong><p class="review-item-note">${current.note?h(current.note):'Noch keine zusätzliche Notiz hinterlegt.'}</p>${clarifyControls(current.id)}<form id="review-commit-form" data-id="${h(current.id)}"><div class="review-plan-fields"><label>Projekt (optional)<select name="projectId">${projectOptions(draft.projectId)}</select></label><label>Bereich<select name="category">${categoryOptions(draft.category||'Allgemein')}</select></label>${dateControl('deferUntil','Defer · frühestens ab',draft.deferUntil)}${dateControl('plannedDate','Planned · Wunschtermin',draft.plannedDate)}${dateControl('dueDate','Due · harte Deadline',draft.dueDate)}<label>Duration (Min.)<input type="number" name="estimateMinutes" min="5" max="1440" step="5" placeholder="optional" value="${h(draft.estimateMinutes||'')}"/></label></div><button type="submit" class="primary-btn">Als ${h(({next:'Next Action',waiting:'Waiting For',hold:'On Hold',dreams:'Dream'})[reviewWorkflow])} übernehmen</button><small>Nach dem Übernehmen wird das Element aus der Inbox entfernt. Projekt, Dates, Energie und Aufmerksamkeit werden auf die Aufgabe übertragen.</small></form>`:'<div class="review-none">Deine Inbox ist leer. Erfasse neue Gedanken jederzeit über Quick Capture.</div>'}</div></div>
- <section class="review-next-section"><div class="work-heading"><span>${ico('folder',18)} Projekte & nächste Schritte</span><button type="button" class="text-link" data-tab="projects">Projekte prüfen ${ico('arrow',14)}</button></div>
- <div class="review-status-columns"><div><strong>${Object.values(state?.projects||{}).filter(x=>x.status==='active').length}</strong><span>aktive Projekte</span></div><div><strong>${nextActions(state).length}</strong><span>Next Actions</span></div><div><strong>${heldTasks(state).length}</strong><span>On Hold / Waiting</span></div></div>
- <button type="button" class="secondary-btn" data-tab="next">Next Actions ansehen</button> <button type="button" class="secondary-btn" data-tab="hold">Waiting For prüfen</button>
- <div class="project-review-queue"><strong>Projekte zur Durchsicht</strong>${Object.values(state?.projects||{}).filter(p=>projectNeedsReview(p)).length?Object.values(state?.projects||{}).filter(p=>projectNeedsReview(p)).map(p=>`<div class="review-project-row"><button type="button" class="review-project-open" data-action="review-project-open" data-id="${h(p.id)}">${h(p.title)} ${nextActions(state).some(t=>t.projectId===p.id)?'':' · keine verfügbare Next Action'}</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(p.id)}">Geprüft</button></div>`).join(''):'<p class="muted-line">Alle aktiven Projekte sind im aktuellen Review-Zyklus geprüft.</p>'}</div></section>
- <div class="compass-review-legend"><strong>Energie auf einen Blick</strong><div class="compass-energy-legend"><span class="energy-low">${ico('bolt',15)} Niedrig · ▰▱▱</span><span class="energy-medium">${ico('bolt',15)} Mittel · ▰▰▱</span><span class="energy-high">${ico('bolt',15)} Hoch · ▰▰▰</span></div><small>Die beim Klären ausgewählte Energie wird als synchronisierbarer Kontext-Tag der Aufgabe gespeichert.</small></div>
- <div class="review-ai-hint">${ico('spark',19)} <div><strong>Später: Lokaler KI-Vorschlag</strong><p>Compass kann bei der Klärung unterstützen, z. B. wenn aus einer wichtigen Aufgabe aufgrund einer näher rückenden harten Deadline auch eine dringliche wird. Die Entscheidung bleibt bei dir.</p></div></div>
- </section></div>`);
+function reviewTaskRow(t,mode='next'){
+ return `<div class="assistant-task"><div><strong>${h(t.title)}</strong><small>${h(t.projectId?projectLabel(t.projectId):'Einzelaktion')}${t.dueDate?' · Due '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':''}</small></div><div class="assistant-actions"><button type="button" class="secondary-btn" data-action="assistant-task-edit" data-id="${h(t.id)}">Bearbeiten</button><button type="button" class="secondary-btn" data-action="assistant-task-done" data-id="${h(t.id)}">Erledigt</button></div></div>`;
 }
-
+function reviewInlineEditor(){
+ const t=state?.tasks?.[reviewEditingTaskId];if(!t||t.archived)return '';
+ return `<form id="review-inline-task" data-id="${h(t.id)}" class="assistant-inline-form"><div class="work-heading"><span>${ico('pencil',16)} Aufgabe bearbeiten</span><button type="button" class="secondary-btn" data-action="assistant-task-cancel">Schließen</button></div><label>Titel<input name="title" required maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="2">${h(t.note||'')}</textarea></label><div class="assistant-form-grid"><label>Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>Geplant<input name="plannedDate" type="date" value="${h(t.plannedDate||'')}"/></label><label>Defer (keine Deadline)<input name="deferUntil" type="date" value="${h(t.deferUntil||'')}"/></label><label>Due (harte Frist)<input name="dueDate" type="date" value="${h(t.dueDate||'')}"/></label><label>Agenda-Tags<input data-smart-tags name="tags" maxlength="300" value="${h((t.tags||[]).join(', '))}"/></label></div><button type="submit" class="primary-btn">Aufgabe speichern</button></form>`;
+}
+function reviewQuickAction(defaultProject=null){
+ return `<form id="review-quick-action" class="assistant-quick-action"><label>Nächste Aktion direkt hier erfassen<input name="title" required maxlength="180" placeholder="Konkreter, ausführbarer nächster Schritt …"/></label><div class="assistant-form-grid"><label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label><label>Status<select name="workflow">${workflowOptions('next')}</select></label><label>Personen- / Agenda-Tags<input name="tags" data-smart-tags maxlength="300" placeholder="Tag eingeben …"/></label></div><button class="secondary-btn" type="submit">${ico('plus',14)} Aktion anlegen</button></form>`;
+}
+function reviewCalendarEntries(events,kind){
+ if(!calendarToken)return `<p class="muted-line">Google Kalender ist noch nicht verbunden. Du kannst diesen Schritt trotzdem bewusst abschließen oder später erneut prüfen. Kalender-Zugriff bleibt nur lesend.</p>${reviewQuickAction()}`;
+ return `${events.length?events.slice(0,35).map(e=>`<div class="assistant-task"><div><strong>${h(e.summary||'Kalendertermin')}</strong><small>${h(String(e.reviewDay))} · ${h(calendarTime(e))}${e.status==='tentative'?' · vorläufig':''}</small></div><span class="quiet-tag">${kind==='past'?'Vergangen':'Geplant'}</span></div>`).join(''):'<p class="muted-line">Keine passenden Kalendertermine in diesem Zeitfenster.</p>'}<p class="muted-line">Vergangene Termine sind keine bestätigten Treffen. Bei Nachbereitung oder Vorbereitung direkt eine Aktion anlegen.</p>${reviewQuickAction()}`;
+}
+function reviewStepBody(step,queue){
+ if(step==='collect')return `<div class="assistant-help"><strong>Was ist noch im Kopf?</strong><p>Erfasse einzelne Gedanken schnell, bevor du die Inbox klärst. Auch Papiernotizen und Nachrichten-Postfächer bewusst berücksichtigen.</p></div><form id="review-capture" class="assistant-quick-action"><label>Gedanke, Erinnerung oder Zusage<input name="title" maxlength="1000" required placeholder="Was beschäftigt dich gerade?"/></label><button class="primary-btn" type="submit">Zur Inbox hinzufügen</button></form>`;
+ if(step==='inbox'){
+  const list=queue.inbox,current=list.find(r=>r.id===selectedInboxId)||list[0]||null;const draft=current?reviewDrafts.get(current.id)||{}:{};
+  return `<div class="assistant-kpi">${list.length} ungeklärte Einträge</div><div class="review-cards-layout"><nav class="review-inbox-list">${list.map(r=>`<button type="button" class="review-inbox-item ${r.id===current?.id?'selected':''}" data-action="review-select" data-id="${h(r.id)}"><strong>${h(r.title)}</strong></button>`).join('')||'<p class="muted-line">Inbox leer – dieser Teil ist abgeschlossen.</p>'}</nav><div class="review-detail">${current?`<strong>${h(current.title)}</strong><p class="review-item-note">${h(current.note||'')}</p>${clarifyControls(current.id)}<form id="review-commit-form" data-id="${h(current.id)}"><div class="review-plan-fields"><label>Projekt<select name="projectId">${projectOptions(draft.projectId)}</select></label><label>Bereich<select name="category">${categoryOptions(draft.category||'Allgemein')}</select></label>${dateControl('deferUntil','Defer',draft.deferUntil)}${dateControl('plannedDate','Planned',draft.plannedDate)}${dateControl('dueDate','Due',draft.dueDate)}<label>Aufwand in Minuten<input type="number" name="estimateMinutes" min="5" max="1440" step="5" value="${h(draft.estimateMinutes||'')}"/></label></div><button class="primary-btn" type="submit">Als ${h(({next:'Next Action',waiting:'Waiting For',hold:'On Hold',dreams:'Dream'})[reviewWorkflow])} übernehmen</button></form><button type="button" class="secondary-btn assistant-remove" data-action="assistant-inbox-remove" data-id="${h(current.id)}">Eintrag archivieren</button>`:'<p class="muted-line">Die Inbox ist vollständig geklärt.</p>'}</div></div>`;
+ }
+ if(step==='calendar-past')return reviewCalendarEntries(queue.calendarPast,'past');
+ if(step==='calendar-future')return reviewCalendarEntries(queue.calendarFuture,'future');
+ if(step==='next')return `<div class="assistant-kpi">${queue.next.length} ausführbare Next Actions</div><p class="muted-line">Prüfe konkrete nächste Schritte. Aufgaben lassen sich hier bearbeiten oder als erledigt markieren.</p>${queue.next.slice(0,35).map(t=>reviewTaskRow(t)).join('')||'<p class="muted-line">Keine verfügbaren Next Actions.</p>'}${reviewInlineEditor()}${reviewQuickAction()}`;
+ if(step==='waiting')return `<div class="assistant-kpi">${queue.waiting.length} offene Waiting For</div><p class="muted-line">Welcher Rückmeldung möchtest du nachgehen? Personentags verknüpfen Agenda-Punkte mit „Menschen“.</p>${queue.waiting.map(t=>reviewTaskRow(t,'waiting')).join('')||'<p class="muted-line">Keine offenen Waiting For.</p>'}${reviewInlineEditor()}${reviewQuickAction()}`;
+ if(step==='projects'){
+  const review=state.weeklyReview,project=queue.projects.find(p=>p.id===reviewProjectId)||queue.due.find(p=>!review.inspectedProjects.includes(p.id))||queue.projects.find(p=>!review.inspectedProjects.includes(p.id))||queue.projects[0];
+  const sum=project?projectReviewSummary(project,state):null;
+  const remaining=queue.due.filter(p=>!review.inspectedProjects.includes(p.id));
+  return `<div class="assistant-project-stats"><strong>${queue.projects.length} aktive Projekte</strong><span>${queue.due.length} fällig · ${remaining.length} noch unbestätigt</span></div>
+   <div class="assistant-project-layout"><div class="assistant-project-queue">${queue.projects.map(p=>`<button type="button" data-action="assistant-project-select" data-id="${h(p.id)}" class="assistant-project-entry ${project?.id===p.id?'selected':''}"><span>${h(p.title)}</span><small>${projectNeedsReview(p)?'Review fällig':`Intervall ${p.reviewIntervalDays||7} Tage`}${review.inspectedProjects.includes(p.id)?' · ✓ geprüft':''}</small></button>`).join('')||'<p class="muted-line">Keine aktiven Projekte.</p>'}</div>
+   <div class="assistant-project-focus">${project?`<h3>${h(project.title)}</h3><p class="muted-line">${h(project.outcome||'Noch kein gewünschtes Ergebnis hinterlegt.')}</p><div class="assistant-project-kpis"><span>${sum.tasks.length} offene Schritte</span><span>${sum.available.length} verfügbar</span><span>Review alle ${sum.interval} Tage</span></div>${!sum.available.length?'<p class="project-warning">Keine ausführbare Next Action – solltest du einen nächsten Schritt definieren?</p>':''}
+   ${sum.tasks.slice(0,25).map(t=>reviewTaskRow(t)).join('')||'<p class="muted-line">Noch keine Aufgaben.</p>'}${reviewInlineEditor()}${reviewQuickAction(project.id)}<div class="assistant-project-footer"><button type="button" class="primary-btn" data-action="assistant-project-reviewed" data-id="${h(project.id)}">${ico('check',16)} Projekt geprüft</button><small>Das tatsächliche Reviewdatum wird im Projekt gespeichert und synchronisiert.</small></div>`:''}</div></div>`;
+ }
+ if(step==='unassigned')return `<div class="assistant-kpi">${queue.unassigned.length} offene projektlose Aufgaben</div><p class="muted-line">Einzelaktionen dürfen ohne Projekt bleiben. Prüfe nur, ob etwas tatsächlich mehrere Schritte erfordert.</p>${queue.unassigned.slice(0,60).map(t=>reviewTaskRow(t)).join('')||'<p class="muted-line">Keine offenen Einzelaktionen.</p>'}${reviewInlineEditor()}${reviewQuickAction()}`;
+ if(step==='someday')return `<p class="muted-line">Was davon möchtest du weiter aufheben? Was kann aktiv werden?</p>${queue.dreams.slice(0,50).map(r=>`<div class="assistant-task"><strong>${h(r.title)}</strong><button type="button" class="secondary-btn" data-action="assistant-dream-activate" data-id="${h(r.id)}">In Inbox</button></div>`).join('')||'<p class="muted-line">Keine Someday-Ideen vorhanden.</p>'}<form id="review-capture" class="assistant-quick-action"><label>Neue Möglichkeit festhalten<input name="title" maxlength="1000" required placeholder="Was wäre interessant?"/></label><button type="submit" class="secondary-btn">In Inbox erfassen</button></form>`;
+ return `<div class="assistant-finish"><h3>Was ist jetzt noch offen?</h3><div class="assistant-finish-grid"><span><strong>${queue.inbox.length}</strong> Inbox</span><span><strong>${queue.due.length}</strong> fällige Projekte</span><span><strong>${queue.waiting.length}</strong> Waiting For</span><span><strong>${queue.unassigned.length}</strong> Einzelaktionen</span></div><label>Gedanken zum Abschluss<textarea id="review-end-notes" maxlength="1200" rows="3" placeholder="Was ist jetzt klarer? Was soll beim nächsten Review wieder auftauchen?">${h(state.weeklyReview?.notes||'')}</textarea></label><p class="muted-line">Du kannst den Review vollständig oder bewusst teilweise abschließen. Ein vollständiger Schritt bedeutet „durchgesehen“, nicht zwingend „alles erledigt“.</p></div>`;
+}
+function reviewScreen(){
+ if(!validReview(state.weeklyReview)){state.weeklyReview=newReview();state.reviewVersion=state.reviewVersion||0;}
+ const q=reviewQueue(state,calendarEvents,localDate()),r=state.weeklyReview;
+ const index=r.step,step=REVIEW_STEPS[index],done=r.done.length,progress=Math.round(100*done/REVIEW_STEPS.length);
+ return chrome(`<div class="assistant-review">
+  <header class="assistant-review-head work-card"><div><span class="page-overline">GTD · WEEKLY REVIEW</span><h2>Dein System durchsehen.</h2><p class="muted-line">Ein Bereich nach dem anderen – ohne Reiterwechsel. Fortschritt wird gespeichert.</p></div><div><strong>${done} / ${REVIEW_STEPS.length}</strong><small> Bereiche geprüft</small><div class="assistant-progress"><span style="width:${progress}%"></span></div><button type="button" class="secondary-btn" data-action="assistant-new">Neuen Review starten</button></div></header>
+  ${state.reviewConflict?`<div class="project-warning"><strong>Review-Konflikt auf anderem Gerät.</strong><p>Wähle bewusst, welche Version gilt.</p><button type="button" class="secondary-btn" data-action="assistant-resolve-remote">Cloud übernehmen</button><button type="button" class="secondary-btn" data-action="assistant-resolve-local">Meine Version behalten</button></div>`:''}
+  ${r.completedAt?`<div class="assistant-completed work-card"><strong>Letzter Review abgeschlossen: ${h(new Date(r.completedAt).toLocaleDateString('de-AT'))}</strong><p>Du kannst die Schritte nachsehen oder einen neuen Durchgang beginnen.</p></div>`:''}
+  <div class="assistant-review-grid"><nav class="work-card assistant-steps" aria-label="Review-Bereiche">${REVIEW_STEPS.map((s,i)=>`<button type="button" class="assistant-step ${i===index?'is-selected':''}" data-action="assistant-step" data-id="${i}" aria-current="${i===index?'step':'false'}"><span>${r.done.includes(s.id)?'✓':i+1}</span><span><strong>${h(s.title)}</strong><small>${h(s.phase)}</small></span></button>`).join('')}</nav>
+  <section class="work-card assistant-current"><div class="assistant-stage-header"><small>${h(step.phase)} · Schritt ${index+1} / ${REVIEW_STEPS.length}</small><h2>${h(step.title)}</h2><p>${h(step.help)}</p></div>${reviewStepBody(step.id,q)}<div class="assistant-review-footer"><button type="button" class="secondary-btn" data-action="assistant-back" ${index===0?'disabled':''}>← Zurück</button><button type="button" class="secondary-btn" data-action="assistant-next" ${index===REVIEW_STEPS.length-1?'disabled':''}>Überspringen</button><button type="button" class="primary-btn" data-action="assistant-complete-step">${index===REVIEW_STEPS.length-1?'Review abschließen':'Diesen Bereich geprüft →'}</button></div></section></div>
+ </div>`);
+}
 function systemScreen(){
  return chrome(`<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
  <div class="connection-detail"><span class="connection-dot ${configured()?'green':'amber'}"></span><span>${configured()?'Konfiguration hinterlegt':'Google-Anmeldung noch nicht konfiguriert'}</span></div>
- <p class="small-muted">${configured()?'API: '+h(config.apiUrl):'In client/public/runtime-config.json sind noch Konfigurationswerte zu ergänzen.'}</p><p class="small-muted">Frontend: Compass ${COMPASS_CLIENT_VERSION} · benötigt Worker-API 9 oder neuer.</p>
+ <p class="small-muted">${configured()?'API: '+h(config.apiUrl):'In client/public/runtime-config.json sind noch Konfigurationswerte zu ergänzen.'}</p><p class="small-muted">Frontend: Compass ${COMPASS_CLIENT_VERSION} · benötigt Worker-API 11 oder neuer.</p>
  <div id="google-button" class="google-button"></div><p class="small-muted">${authToken?'Compass-Sitzung aktiv: '+h(currentUser)+' · bleibt nach erneutem Tresor-Entsperren erhalten.':'Google-Anmeldung einmalig verknüpfen; danach wird die Compass-Sitzung verschlüsselt im Tresor gespeichert.'}</p><p class="small-muted">Automatisch: 7 Sekunden nach Änderungen und etwa alle 15 Minuten, solange Compass geöffnet und sichtbar ist. Manuell jederzeit über „Jetzt synchronisieren“.</p>
  <div class="system-actions"><button class="primary-btn" data-action="sync" ${!authToken||busy?'disabled':''}>${busy?'Synchronisiere …':'Jetzt synchronisieren'} ${ico('sync',16)}</button><button class="secondary-btn" data-action="logout" ${!authToken?'disabled':''}>Google trennen</button></div>
  <div class="mini-stats"><div><span>Wartende Änderungen</span><strong>${state.pending.length}</strong></div><div><span>Konflikte</span><strong>${state.conflicts.length}</strong></div><div><span>Sync-Cursor</span><strong>${state.cursor}</strong></div></div></section>
@@ -687,8 +716,11 @@ function peopleScreen(){
  const taskListFor=p=>Object.values(state?.tasks||{}).filter(t=>!t.archived&&!t.completed&&[...(t.tags||[]),...(t.contextTags||[])].includes(p.tag));
  const related=selected?taskListFor(selected):[];
  const waiting=related.filter(t=>t.workflow==='waiting').length;
+ const personEvents=selected?personCalendarEvents(calendarEvents,selected,localDate()):{upcoming:[],past:[]};
  return chrome(`<div class="people-grid"><section class="work-card"><div class="work-heading"><span>${ico('people',18)} Kontakte & Gesprächspunkte</span><span class="quiet-tag">${people.length}</span></div><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Person hinzufügen</button></form><div class="people-list">${people.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} offene Punkte${p.birthdayMonthDay?` · 🎂 ${h(p.birthdayMonthDay.slice(3))}.${h(p.birthdayMonthDay.slice(0,2))}.`:""}</small></button>`).join('')||'<p class="muted-line">Noch keine Kontakte. Personen und Notizen bleiben in deinem verschlüsselten lokalen Tresor.</p>'}</div></section>
  <section class="work-card"><div class="work-heading"><span>${ico('list',18)} ${selected?h(selected.name):'Gesprächsvorbereitung'}</span>${selected?`<button class="secondary-btn" type="button" data-action="person-remove" data-id="${h(selected.id)}">Entfernen</button>`:''}</div>${selected?`<p class="muted-line">${related.length} offene Schritte · ${waiting} Waiting For</p>
+ <form id="person-tag-form" class="compact-stack" data-id="${h(selected.id)}"><label>Personen-Tag<input name="tag" data-smart-tags maxlength="50" value="${h(selected.tag)}" required/></label><label>Namensvarianten für Kalender (optional)<input name="aliases" maxlength="200" value="${h(selected.aliases||'')}" placeholder="Spitzname, Kurzform …"/></label><button class="secondary-btn" type="submit">Zuordnung speichern</button><small>Das Tag verbindet offene Aufgaben mit dieser Person. Kalendertermine werden anhand des Namens oder der angegebenen Varianten erkannt.</small></form>
+ <div class="people-calendar"><div class="work-heading"><span>${ico('calendar',16)} Gemeinsame Google-Termine</span><span class="quiet-tag">${personEvents.upcoming.length} kommende</span></div>${personEvents.upcoming.slice(0,5).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · geplant</small></div>`).join('')||'<p class="muted-line">Keine zugeordneten künftigen Kalendertermine.</p>'}${personEvents.past.length?`<details><summary>${personEvents.past.length} vergangene Termine</summary>${personEvents.past.slice(0,6).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · Durchführung nicht bestätigt</small></div>`).join('')}</details>`:''}<small class="muted-line">Google Kalender wird nur im angemeldeten Browser gelesen. Vergangene Termine sind kein bestätigter Kontakt.</small></div>
  <form id="person-birthday-form" data-id="${h(selected.id)}" class="compact-stack person-birthday-form"><div class="work-heading"><span>${ico('calendar',16)} Geburtstag</span><span class="quiet-tag">${selected.birthdayMonthDay?`${h(selected.birthdayMonthDay.slice(3))}.${h(selected.birthdayMonthDay.slice(0,2))}.${selected.birthdayYear||''}`:'Nicht eingetragen'}</span></div>
  <div class="birthday-fields"><label>Tag<select name="day"><option value="">–</option>${Array.from({length:31},(_,i)=>i+1).map(n=>`<option value="${n}" ${Number(selected.birthdayMonthDay?.slice(3))===n?'selected':''}>${n}</option>`).join('')}</select></label><label>Monat<select name="month"><option value="">–</option>${Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}" ${Number(selected.birthdayMonthDay?.slice(0,2))===n?'selected':''}>${new Intl.DateTimeFormat('de-AT',{month:'long'}).format(new Date(2000,n-1,1))}</option>`).join('')}</select></label><label>Geburtsjahr (optional)<input type="number" name="year" min="1850" max="${new Date().getFullYear()}" placeholder="Unbekannt" value="${h(selected.birthdayYear??'')}"/></label></div>
  <div class="birthday-actions"><button type="submit" class="secondary-btn">Geburtstag speichern</button><button type="button" class="secondary-btn" data-action="person-birthday-clear" data-id="${h(selected.id)}" ${selected.birthdayMonthDay?'':'disabled'}>Entfernen</button></div>
@@ -804,6 +836,7 @@ function render(){
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
+ if(state)wireSmartTags(app,()=>state);
   app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
@@ -813,6 +846,22 @@ function bind() {
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
 
+  // All Review actions operate inside the assistant; no navigation to other tabs.
+  const reviewCapture=app.querySelector('#review-capture');if(reviewCapture)reviewCapture.onsubmit=async ev=>{ev.preventDefault();const title=String(new FormData(reviewCapture).get('title')||'').trim();if(!title)return;await addCapture(title,'');toast('In die Inbox aufgenommen.');};
+  const reviewQuick=app.querySelector('#review-quick-action');if(reviewQuick)reviewQuick.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(reviewQuick),title=String(fd.get('title')||'').trim(),projectId=fd.get('projectId')||null,workflow=fd.get('workflow')||'next';
+    const t={id:crypto.randomUUID(),title,note:'',category:'Allgemein',workflow,completed:false,archived:false,flagged:false,plannedDate:null,dueDate:null,deferUntil:null,estimateMinutes:null,projectId,parentTaskId:null,sortOrder:0,tags:parseTags(fd.get('tags')),contextTags:[],updatedAt:stamp()};
+    if(!validLocalTask(t)||projectId&&!state.projects?.[projectId]){toast('Aktion prüfen.',true);return;}
+    await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;for(const tag of t.tags)rememberTag(s,tag);});toast('Aktion gespeichert – Review bleibt geöffnet.');
+  };
+  const reviewInline=app.querySelector('#review-inline-task');if(reviewInline)reviewInline.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(reviewInline),id=reviewInline.dataset.id,original=state?.tasks?.[id];if(!original)return;
+    const projectId=fd.get('projectId')||null;
+    const t={...original,title:String(fd.get('title')||'').trim(),note:String(fd.get('note')||'').trim(),workflow:fd.get('workflow')||'next',projectId,parentTaskId:projectId===original.projectId?original.parentTaskId:null,plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,deferUntil:fd.get('deferUntil')||null,tags:parseTags(fd.get('tags')),updatedAt:stamp()};
+    if(!validLocalTask(t)||!validTaskParent(state,id,t.projectId,t.parentTaskId)||projectId&&!state.projects?.[projectId]){toast('Aufgabenfelder oder Hierarchie prüfen.',true);return;}
+    if(projectId!==original.projectId&&Object.values(state.tasks).some(child=>!child.archived&&child.parentTaskId===id)){toast('Unteraufgaben zuerst umziehen, bevor du das Projekt änderst.',true);return;}
+    await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;for(const tag of t.tags)rememberTag(s,tag);});reviewEditingTaskId=null;toast('Aufgabe im Review aktualisiert.');
+  };
   const reviewCommit=app.querySelector('#review-commit-form');if(reviewCommit){reviewCommit.oninput=captureReviewDraft;reviewCommit.onchange=captureReviewDraft;reviewCommit.onsubmit=async ev=>{
     ev.preventDefault();const id=reviewCommit.dataset.id,r=state?.records?.[id];if(!r||r.deleted)return;
     const d=new FormData(reviewCommit),workflow=reviewWorkflow;
@@ -847,6 +896,13 @@ function bind() {
     await mutate(s=>{if(id.startsWith('manual-')){s.manualActivities[id]={...s.manualActivities[id],...data};}else{s.activityEdits??={};s.activityEdits[id]={...(s.activityEdits[id]||{}),...data};}});toast('Änderungen im verschlüsselten Tresor gespeichert.');
   };
   const personForm=app.querySelector('#person-create-form');if(personForm)personForm.onsubmit=async ev=>{ev.preventDefault();const name=String(new FormData(personForm).get('name')||'').trim(),tag=personTag(name);if(!name||!tag){toast('Bitte einen gültigen Namen eingeben.',true);return;}if(Object.values(state.people||{}).some(p=>p.tag===tag)){toast('Kontakt bereits vorhanden.',true);return;}const id=crypto.randomUUID();await mutate(s=>{s.people??={};s.people[id]={id,name,tag,note:''};});selectedPersonId=id;render();};
+  const personTagForm=app.querySelector('#person-tag-form');if(personTagForm)personTagForm.onsubmit=async ev=>{
+    ev.preventDefault();const id=personTagForm.dataset.id,p=state?.people?.[id];if(!p)return;
+    const data=new FormData(personTagForm),tag=parseTags([String(data.get('tag')||'').replace(/^#/, '')])[0],aliases=String(data.get('aliases')||'').trim();
+    if(!tag||tag.length>50||aliases.length>200){toast('Bitte gültiges Personen-Tag verwenden.',true);return;}
+    if(Object.values(state.people).some(x=>x.id!==id&&x.tag===tag)){toast('Tag wird bereits von einer anderen Person verwendet.',true);return;}
+    await mutate(s=>{s.people[id].tag=tag;s.people[id].aliases=aliases;rememberTag(s,tag);});toast('Zuordnung gespeichert. Bestehende Aufgaben-Tags werden nicht verändert.');
+  };
   const personBirthday=app.querySelector('#person-birthday-form');if(personBirthday)personBirthday.onsubmit=async ev=>{
     ev.preventDefault();const id=personBirthday.dataset.id;if(!state?.people?.[id])return;
     const fd=new FormData(personBirthday),day=Number(fd.get('day')||0),month=Number(fd.get('month')||0);
@@ -856,7 +912,7 @@ function bind() {
     await mutate(s=>{s.people[id].birthdayMonthDay=md;s.people[id].birthdayYear=year;});toast('Geburtstag im lokalen Tresor gespeichert.');
   };
   const personNote=app.querySelector('#person-note-form');if(personNote)personNote.onsubmit=async ev=>{ev.preventDefault();const id=personNote.dataset.id, note=String(new FormData(personNote).get('note')||'');if(!state?.people?.[id])return;await mutate(s=>{s.people[id].note=note;});toast('Persönliche Notiz gespeichert.');};
-  const personAgenda=app.querySelector('#person-agenda-form');if(personAgenda)personAgenda.onsubmit=async ev=>{ev.preventDefault();const person=state?.people?.[personAgenda.dataset.id];if(!person)return;const title=String(new FormData(personAgenda).get('title')||'').trim();if(!title||title.length>180){toast('Bitte einen kurzen Agendapunkt eingeben.',true);return;}const t={id:crypto.randomUUID(),title,note:'Gesprächsthema mit '+person.name,category:'Allgemein',workflow:'next',completed:false,archived:false,flagged:false,plannedDate:null,dueDate:null,deferUntil:null,estimateMinutes:null,projectId:null,parentTaskId:null,sortOrder:0,tags:parseTags([person.tag]),contextTags:[],updatedAt:stamp()};await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;});toast('Agenda-Schritt als Next Action angelegt.');};
+  const personAgenda=app.querySelector('#person-agenda-form');if(personAgenda)personAgenda.onsubmit=async ev=>{ev.preventDefault();const person=state?.people?.[personAgenda.dataset.id];if(!person)return;const title=String(new FormData(personAgenda).get('title')||'').trim();if(!title||title.length>180){toast('Bitte einen kurzen Agendapunkt eingeben.',true);return;}const t={id:crypto.randomUUID(),title,note:'Gesprächsthema mit '+person.name,category:'Allgemein',workflow:'next',completed:false,archived:false,flagged:false,plannedDate:null,dueDate:null,deferUntil:null,estimateMinutes:null,projectId:null,parentTaskId:null,sortOrder:0,tags:parseTags([person.tag]),contextTags:[],updatedAt:stamp()};await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;rememberTag(s,person.tag);});toast('Agenda-Schritt als Next Action angelegt.');};
   const importField=app.querySelector('#encrypted-import');if(importField)importField.onchange=async ev=>{
     try {const obj=JSON.parse(await ev.target.files[0].text());await vault.importEncrypted(obj);hasVault=true;toast('Backup importiert. Jetzt mit der ursprünglichen Passphrase entsperren.');}
     catch(ex){toast(ex.message,true);}
@@ -873,14 +929,14 @@ function bind() {
     const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:fd.get('parentTaskId')||null,sortOrder:0,tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,updatedAt:stamp()};
     if(!validLocalTask(t)||!validTaskParent(state,t.id,t.projectId,t.parentTaskId)){toast('Aufgabenfelder bzw. Hierarchie prüfen.',true);return;}
     t.sortOrder=Math.min(1000000,100+Math.max(0,...taskChildren(state,t.projectId,t.parentTaskId).map(x=>x.sortOrder||0)));
-    await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;});selectedTaskId=t.id;toast('Aufgabe lokal gespeichert.');
+    await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);});selectedTaskId=t.id;toast('Aufgabe lokal gespeichert.');
   };
   const taskEditForm=app.querySelector('#task-edit-form');if(taskEditForm)taskEditForm.onsubmit=async ev=>{
     ev.preventDefault();const id=taskEditForm.dataset.id,fd=new FormData(taskEditForm);const existing=state.tasks[id];if(!existing)return;
     const t={...existing,title:String(fd.get('title')||'').trim(),note:String(fd.get('note')||'').trim(),plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:(fd.get('projectId')===existing.projectId?fd.get('parentTaskId')||null:null),tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,updatedAt:stamp()};
     if(!validLocalTask(t)||!validTaskParent(state,id,t.projectId,t.parentTaskId)){toast('Aufgabenfelder bzw. Hierarchie prüfen.',true);return;}
     if(t.projectId!==existing.projectId&&Object.values(state.tasks).some(child=>!child.archived&&child.parentTaskId===id)){toast('Unteraufgaben zuerst einzeln verschieben, bevor du das Projekt dieser Aufgabe wechselst.',true);return;}
-    await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;});toast('Aufgabe aktualisiert.');
+    await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);});toast('Aufgabe aktualisiert.');
   };
   const projectCreate=app.querySelector('#project-create-form');if(projectCreate)projectCreate.onsubmit=async ev=>{
     ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),reviewedAt:null,kind:d.get('kind')||'project',projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null,sortOrder:0};
@@ -957,6 +1013,44 @@ function bind() {
 async function runAction(action,id,stepId=null) {
   lastActivity=Date.now();
   try {
+    if(action==='assistant-new'){
+      if(!confirm('Neuen Wochenreview starten? Der bisherige Durchgang wird als Fortschrittsstand ersetzt; die geprüften Projekte behalten ihre Reviewdaten.'))return;
+      reviewEditingTaskId=null;reviewProjectId=null;await mutate(s=>{s.weeklyReview=newReview();s.reviewPending=true;});return;
+    }
+    if(action==='assistant-step'||action==='assistant-back'||action==='assistant-next'){
+      captureReviewDraft();const index=action==='assistant-step'?Number(id):action==='assistant-back'?Math.max(0,state.weeklyReview.step-1):Math.min(REVIEW_STEPS.length-1,state.weeklyReview.step+1);
+      if(!Number.isInteger(index)||index<0||index>=REVIEW_STEPS.length)return;
+      reviewEditingTaskId=null;await mutate(s=>{s.weeklyReview=nextReviewStep(s.weeklyReview,index);s.reviewPending=true;});return;
+    }
+    if(action==='assistant-complete-step'){
+      const current=REVIEW_STEPS[state.weeklyReview.step];if(!current)return;
+      const queue=reviewQueue(state,calendarEvents,localDate());
+      if(current.id==='inbox'&&queue.inbox.length&&!confirm(`${queue.inbox.length} Inbox-Einträge sind noch offen. Diesen Bereich trotzdem als durchgesehen markieren?`))return;
+      if(current.id==='projects'&&queue.due.some(p=>!state.weeklyReview.inspectedProjects.includes(p.id))&&!confirm('Nicht alle fälligen Projekte wurden geprüft. Trotzdem fortfahren?'))return;
+      const notes=String(app.querySelector('#review-end-notes')?.value||'').slice(0,1200);
+      await mutate(s=>{s.weeklyReview=reviewedStep(s.weeklyReview,current.id);if(current.id==='finish'){s.weeklyReview.completedAt=stamp();s.weeklyReview.notes=notes;}s.reviewPending=true;});return;
+    }
+    if(action==='assistant-project-select'){if(!state.projects?.[id])return;reviewProjectId=id;reviewEditingTaskId=null;render();return;}
+    if(action==='assistant-project-reviewed'){
+      if(!state.projects?.[id])return;
+      await mutate(s=>{s.projects[id].reviewedAt=stamp();s.projectPending[id]=true;s.weeklyReview.inspectedProjects=[...new Set([...s.weeklyReview.inspectedProjects,id])];s.weeklyReview.updatedAt=stamp();s.reviewPending=true;});reviewProjectId=null;toast('Projekt geprüft. Nächstes Projekt direkt hier.');return;
+    }
+    if(action==='assistant-task-edit'){if(!state.tasks?.[id])return;reviewEditingTaskId=id;render();return;}
+    if(action==='assistant-task-cancel'){reviewEditingTaskId=null;render();return;}
+    if(action==='assistant-task-done'){
+      if(!state.tasks?.[id])return;await mutate(s=>{s.tasks[id].completed=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});reviewEditingTaskId=null;return;
+    }
+    if(action==='assistant-inbox-remove'){
+      if(!state.records?.[id]||!confirm('Inbox-Eintrag archivieren?'))return;
+      await mutate(s=>{s.records[id].deleted=true;s.records[id].updatedAt=stamp();s.pending.push(makeMutation(s.records[id]));});return;
+    }
+    if(action==='assistant-dream-activate'){
+      if(!state.records?.[id])return;await mutate(s=>{const r=s.records[id];r.tags=parseTags((r.tags||[]).filter(t=>t!=='dreams'&&!t.startsWith('dream-')));r.updatedAt=stamp();s.pending.push(makeMutation(r));});toast('Idee für die Inbox aktiviert.');return;
+    }
+    if(action==='assistant-resolve-remote'||action==='assistant-resolve-local'){
+      const c=state.reviewConflict;if(!c)return;
+      await mutate(s=>{if(action.endsWith('remote')){s.weeklyReview=c.progress;s.reviewVersion=c.version;s.reviewPending=false;}else{s.reviewVersion=c.version;s.reviewPending=true;}s.reviewConflict=null;});return;
+    }
     if(action==='health-range'){healthSpan=id==='30'?30:7;render();return;}
     if(action==='discovery-week-prev'){discoveryWeekOffset=Math.max(0,discoveryWeekOffset-1);render();return;}
     if(action==='discovery-week-next'){discoveryWeekOffset=Math.min(80,discoveryWeekOffset+1);render();return;}
@@ -983,7 +1077,7 @@ async function runAction(action,id,stepId=null) {
       captureReviewDraft();reviewWorkflow=choice;render();return;
     }
     if(action==='review-select'){if(!state?.records?.[id]||state.records[id].deleted)return;captureReviewDraft();selectedInboxId=id;reviewWorkflow='next';render();return;}
-    if(action==='review-project-open'){if(!state?.projects?.[id])return;selectedProjectId=id;tab='projects';render();return;}
+    if(action==='review-project-open'){if(!state?.projects?.[id])return;reviewProjectId=id;render();return;}
     if(action.startsWith('review-energy:') || action.startsWith('review-attention:')){
        const [key,val]=action.split(':');
        if(!state?.records?.[id] || state.records[id].deleted)return;
@@ -1271,6 +1365,31 @@ async function syncEvents(){
  mergeEventSnapshot(state,remote.events||[]);
  prunePastEvents(state,localDate());await persist();
 }
+async function syncReview(){
+  const remote=await request(config.apiUrl,authToken,'/api/review');
+  // On a new device, load the existing cloud review instead of creating a competing copy.
+  const local=state.weeklyReview;
+  if(!validReview(local)||(!state.reviewPending&&!state.reviewVersion&&local.done.length===0&&!local.completedAt&&remote.progress)){
+    if(remote.progress&&validReview(remote.progress)){state.weeklyReview=remote.progress;state.reviewVersion=remote.version;state.reviewPending=false;state.reviewConflict=null;await persist();render();}
+    return;
+  }
+  if(!state.reviewPending){
+    if(remote.version>(state.reviewVersion||0)&&remote.progress&&validReview(remote.progress)){
+      state.weeklyReview=remote.progress;state.reviewVersion=remote.version;state.reviewConflict=null;await persist();render();
+    }return;
+  }
+  if(state.reviewConflict)return;
+  if(remote.version!==(state.reviewVersion||0)){
+    state.reviewConflict={progress:remote.progress,version:remote.version};await persist();render();return;
+  }
+  const before=JSON.stringify(local);
+  try{
+    const saved=await request(config.apiUrl,authToken,'/api/review',{method:'POST',body:JSON.stringify({progress:local,baseVersion:state.reviewVersion||0})});
+    state.reviewVersion=saved.version;
+    if(JSON.stringify(state.weeklyReview)===before)state.reviewPending=false;
+    await persist();
+  }catch(ex){if(ex.status===409){const latest=await request(config.apiUrl,authToken,'/api/review');state.reviewConflict={progress:latest.progress,version:latest.version};await persist();render();return;}throw ex;}
+}
 async function syncNow() {
   if(!state||!authToken||busy||!navigator.onLine)return;
   clearTimeout(syncTimer);syncTimer=null;
@@ -1305,6 +1424,7 @@ async function syncNow() {
     await syncProjects();
     await syncTasks();
     await syncEvents();
+    await syncReview();
     lastSyncAt=Date.now();
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
     error='';
@@ -1314,7 +1434,7 @@ async function syncNow() {
     if(ex.status===401){authToken='';currentUser='';await vault.clearSession().catch(()=>{});}
   }finally{
     busy=false;render();
-    const retry=syncResyncRequested&&Boolean(state?.pending.length||Object.keys(state?.taskPending||{}).length||Object.keys(state?.projectPending||{}).length||Object.keys(state?.eventPending||{}).length)&&Boolean(authToken)&&navigator.onLine&&!error;
+    const retry=syncResyncRequested&&Boolean(state?.pending.length||Object.keys(state?.taskPending||{}).length||Object.keys(state?.projectPending||{}).length||Object.keys(state?.eventPending||{}).length||state?.reviewPending)&&Boolean(authToken)&&navigator.onLine&&!error;
     syncResyncRequested=false;
     if(retry)scheduleSync(0);
   }
@@ -1331,7 +1451,7 @@ document.addEventListener('keydown',ev=>{
 window.addEventListener('online',()=>{render();if(authToken)scheduleSync(0);});
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&authToken&&state&&
-    (state.pending.length||Object.keys(state.taskPending||{}).length||Object.keys(state.eventPending||{}).length||Date.now()-lastSyncAt>=SYNC_INTERVAL_MS))scheduleSync(1000);
+    (state.pending.length||Object.keys(state.taskPending||{}).length||Object.keys(state.eventPending||{}).length||state.reviewPending||Date.now()-lastSyncAt>=SYNC_INTERVAL_MS))scheduleSync(1000);
 });
 setInterval(()=>{
   if(state&&authToken&&navigator.onLine&&document.visibilityState==='visible'&&

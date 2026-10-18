@@ -1,0 +1,10 @@
+Compass 0.5.5 – GITHUB-PATCH
+1) Bestehenden verschlüsselten Compass-Tresor sichern (NICHT Browserdaten löschen).
+2) Migration 0012 (worker/migrations/0012_weekly_review.sql) NUR auf Remote D1 compass-db ausführen.
+3) PATCH-Dateien exakt pfadgleich in GitHub theophil-kroller/compass-life / main hochladen.
+4) GitHub Actions: Deploy Compass Web muss grün werden. Keine Android-Dateien geändert; keine neue APK nötig.
+5) Wrangler: npm run deploy:api aus dem aktualisierten Repository.
+6) Worker /api/health: apiVersion 11, release 0.5.5, schema.ready true.
+7) PC-PWA und Samsung-PWA entsperren und syncen, Review-Fortschritt prüfen.
+
+Details: docs/COMPASS_0.5.5_RELEASE.md
