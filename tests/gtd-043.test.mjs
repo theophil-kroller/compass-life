@@ -65,5 +65,5 @@ test('SQL of 0.4.3 is strictly additive; review conversion, context UI and healt
   assert.match(ui,/review-clarify:/);
   assert.match(ui,/project-reviewed/);
   assert.match(ui,/context-filter/);
-  assert.match(ui,/health\.schema\?\.ready!==true/);
+  assert.match(ui,/assertCompatibleWorker\(health\)/);
 });
