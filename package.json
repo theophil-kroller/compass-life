@@ -1,9 +1,12 @@
 {
   "name": "compass-personal-life-manager",
   "private": true,
-  "version": "0.5.14.1",
+  "version": "0.5.14.2",
   "type": "module",
-  "workspaces": ["client", "worker"],
+  "workspaces": [
+    "client",
+    "worker"
+  ],
   "scripts": {
     "dev:web": "npm run dev -w client",
     "dev:api": "npm run dev -w worker",
@@ -14,5 +17,7 @@
     "db:local": "npm run db:local -w worker",
     "db:remote": "npm run db:remote -w worker"
   },
-  "engines": {"node": ">=20"}
+  "engines": {
+    "node": ">=20"
+  }
 }

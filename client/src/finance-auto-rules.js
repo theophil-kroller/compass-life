@@ -63,6 +63,8 @@ export function detailedFinanceMatch(transaction){
   if(value>=100000)return {category:'Prüfen / Noch ungeklärt',flow:'income',confidence:'low',needsReview:true,source:'review',ruleReason:'Größerer Zahlungseingang: Gehalt, Rückzahlung oder Übertrag? Bitte einmal prüfen'};
   return null;
  }
+ // Precise child-related purposes are known even when the receiver is not in a private pack.
+ if(pattern(s,/\b(?:NACHHILFE|SCHULKOSTEN|SCHULGELD)\b/iu)&&pattern(s,/\b(?:KIND|TOCHTER|SOHN|KURS|SCHULE)\b/iu))return auto({category:'Familie / Schul- & Kurskosten',flow:'expense',confidence:'high',ruleReason:'Nachhilfe oder Schulkosten laut Verwendungszweck'});
  // Cash withdrawals have an unknown use, but they are not pending classification.
  if(pattern(s,/\b(?:BANKOMAT|BARGELD(?:BE|AB)HEBUNG|GELDAUTOMAT|CASH\\s+WITHDRAWAL)\b|\bATM\\s+(?:S[0-9A-Z]{5,}|\d{4,})/iu))return auto({category:'Bargeld / Bargeldbehebung',flow:'cash',confidence:'high',ruleReason:'Bargeldabhebung; spätere Verwendung lässt sich aus Bankumsatz nicht feststellen'});
  // Explicit purpose in payment reference supersedes the payment recipient.

@@ -772,3 +772,14 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .fin-bank-text{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;line-height:1.5;font-family:ui-monospace,Consolas,monospace;font-size:.8rem;padding:12px;background:rgba(70,110,90,.06);border-radius:9px;margin:8px 0}
 .fin-rule-reason{font-size:.82rem;color:var(--muted,#64746c);margin:6px 0}
 .fin-commands{flex-wrap:wrap}
+
+/* Compass 0.5.14.2: discoverable places and private bank classification */
+.places-start-here{border:1px solid #d7e8dc;background:#f5f9f6;border-radius:15px;padding:18px 21px;color:#355f4b;line-height:1.65}
+.places-start-here strong{display:block;font-weight:700;margin-bottom:8px;font-size:15px}
+.places-start-here p{margin:5px 0 9px;font-size:12px;max-width:960px}
+.fin-private-rules{display:flex;justify-content:space-between;gap:22px;align-items:center;flex-wrap:wrap;border:1px solid #d8e5da;border-radius:15px;padding:20px;margin:15px 0;background:#f6faf7}
+.fin-private-rules>div{flex:1 1 400px}
+.fin-private-rules strong{display:block;color:#2f6753;font-size:16px}
+.fin-private-rules p{font-size:12px;line-height:1.6;color:#5c7666;margin:7px 0}
+.fin-private-rules small{font-size:11px;color:#7b9582}
+.fin-private-rules .fin-file-pick{cursor:pointer}

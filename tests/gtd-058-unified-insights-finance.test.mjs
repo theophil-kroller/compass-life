@@ -36,11 +36,11 @@ test('empirical HRV ribbon is explicitly NOT Garmin baseline, status or 95%-CI',
 });
 test('consolidated Insights retains actual Garmin sleep, Fitdays body and Health Connect activity',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.14\.1'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.14\.2'/);
  assert.match(main,/navItem\('insights','Insights · Gesundheit'/);
  assert.doesNotMatch(main,/navItem\('health'/);
- assert.match(main,/if\(bootView==='health'\)tab='insights'/);
- assert.match(main,/insightTab=bootView==='health'\?'sources':'sleep'/);
+ assert.match(main,/if\(bootView==='health'\|\|bootView==='places'\)tab='insights'/);
+ assert.match(main,/insightTab=bootView==='places'\?'places':bootView==='health'\?'sources':'sleep'/);
  assert.match(main,/healthSourcesView/);assert.match(main,/healthBodyView/);assert.match(main,/healthConnectActivityView/);
  assert.ok(['sleep','body','sources','activity'].every(id=>INSIGHT_TABS.find(t=>t.id===id)?.state==='live'));
  const model=buildSleepInsights({garminNights:sleep.map(n=>({...n})),garminHrv:hr},'2026-10-18','28','UTC');

@@ -1,5 +1,6 @@
 /** Compass 0.5.14.1 · Local-first bank ledger, explainable categories, and explicit coarse buckets. */
 import {detailedFinanceMatch,financeGenericFallback,updateBankSuggestions} from './finance-auto-rules.js';
+import {matchPrivateFinanceRule} from './finance-private-rules.js';
 export {updateBankSuggestions} from './finance-auto-rules.js';
 export const FINANCE_CATEGORIES=[
  ['Einnahmen','Gehalt'],['Einnahmen','Honorare'],['Einnahmen','Kapitalerträge'],['Einnahmen','Sonstiges'],
@@ -7,7 +8,7 @@ export const FINANCE_CATEGORIES=[
  ['Lebensmittel','Supermarkt'],['Lebensmittel','Drogerie'],['Lebensmittel','Asia-Supermarkt'],['Lebensmittel','Bio-Lebensmittel'],['Lebensmittel','Bäckerei'],
  ['Essen & Ausgehen','Restaurant & Café'],['Essen & Ausgehen','Mensa & Kantine'],
  ['Mobilität','Öffentliche Verkehrsmittel'],['Mobilität','Auto & Tanken'],['Mobilität','Parken & Maut'],['Mobilität','Fahrrad'],
- ['Familie','Kinder & Unterhalt'],['Familie','Familie & Geschenke'],
+ ['Familie','Kinder & Unterhalt'],['Familie','Kinderreisen'],['Familie','Schul- & Kurskosten'],['Familie','Familie & Geschenke'],
  ['Gesundheit & Sport','Fitness & Sport'],['Gesundheit & Sport','Medizin & Apotheke'],['Gesundheit & Sport','Tanzen'],['Gesundheit & Sport','Kampfsport'],['Gesundheit & Sport','Sauna & Therme'],['Gesundheit & Sport','Schwimmen & Bäder'],['Gesundheit & Sport','Optik'],
  ['Freizeit & Reisen','Reisen & Unterkunft'],['Freizeit & Reisen','Flüge'],['Freizeit & Reisen','Kultur & Freizeit'],
  ['Bildung & Beruf','Bildung & Fachliteratur'],['Bildung & Beruf','Software & Beruf'],
@@ -77,7 +78,7 @@ export const BANK_RULES=[
  rule('(?:^|\\W)(?:FLATEX|DEPOTÜBERTRAG|WERTPAPIERKAUF)(?:\\W|$)','Transfer / Depot & Wertpapiere','transfer','medium'),
  rule('(?:^|\\W)(?:EIGENÜBERTRAG|EIGENES KONTO)(?:\\W|$)','Transfer / Eigene Konten','transfer','medium'),
 ];
-export function classifyBankTransaction(transaction,customRules=[]){
+export function classifyBankTransaction(transaction,customRules=[],privateRules=[]){
  const desc=transaction.description||'',m=merchantKey(transaction.merchant||bankMerchant(desc));
  for(const x of customRules){if(!x||!validCategory(x.category)||!x.merchantKey||!['income','expense','transfer','cash','refund'].includes(x.flow))continue;
   const family=x.category.split(' / ')[0];
@@ -85,6 +86,7 @@ export function classifyBankTransaction(transaction,customRules=[]){
   const directionOkay=x.flow==='transfer'||((x.flow==='income'||x.flow==='refund')?transaction.amountCents>0:transaction.amountCents<0);
   if(safeMerchantRule(m)&&m===x.merchantKey&&type===x.flow&&directionOkay)return {category:x.category,flow:x.flow,confidence:'confirmed',needsReview:false,source:'own-rule'};
  }
+ const personal=matchPrivateFinanceRule(transaction,privateRules);if(personal)return personal;
  // More specific, auditable rules, including known Austrian merchants and tax/ATM cases.
  const detailed=detailedFinanceMatch(transaction);if(detailed)return detailed;
  // Never decide an incoming bank transfer is salary based only on the account being credited.
@@ -96,7 +98,7 @@ export function classifyBankTransaction(transaction,customRules=[]){
  for(const r of BANK_RULES)if(r.rx.test(desc)){return {category:r.category,flow:r.flow,confidence:r.confidence,needsReview:r.confidence!=='high',source:'rule',ruleReason:r.confidence==='high'?'Bekannter Händler / bekannter Buchungszweck':'Grobe Händlerkategorie; Details aus Zahlung nicht erkennbar'};}
  return financeGenericFallback(transaction);
 }
-export function parseRaiffeisenCsv(text,{customRules=[],maxRows=10000}={}){
+export function parseRaiffeisenCsv(text,{customRules=[],privateRules=[],maxRows=10000}={}){
  const raw=splitBankCsv(text);if(raw.length>maxRows)throw new Error(`Zu viele Buchungen in einer Datei (max. ${maxRows}).`);
  const rows=[];let skippedHeader=0;
  for(let i=0;i<raw.length;i++){
@@ -106,13 +108,13 @@ export function parseRaiffeisenCsv(text,{customRules=[],maxRows=10000}={}){
   if(!day||!valueDay||amountCents===null||upper(r[4])!=='EUR')throw new Error(`Bank-CSV: ungültiges Datum, Betrag oder Währung in Zeile ${i+1}.`);
   const fields=r.map(cleaning);const description=cleaning(r[1]).slice(0,3000);const merchant=bankMerchant(description);
   const t={id:bankIdentity(fields),day,valueDay,amountCents,description,merchant,currency:'EUR',bankReference:cleaning(r[5]).slice(0,150),source:'Raiffeisen CSV'};
-  Object.assign(t,classifyBankTransaction(t,customRules));rows.push(t);
+  Object.assign(t,classifyBankTransaction(t,customRules,privateRules));rows.push(t);
  }
  return {rows,skippedHeader};
 }
-export function previewBankFiles(items,existing=[],customRules=[]){
+export function previewBankFiles(items,existing=[],customRules=[],privateRules=[]){
  const keys=new Set(existing.map(x=>x.id)),seen=new Set(keys);const fresh=[];let duplicates=0;
- for(const {text,name} of items){const parsed=parseRaiffeisenCsv(text,{customRules});for(const r of parsed.rows){if(seen.has(r.id)){duplicates++;continue;}seen.add(r.id);fresh.push({...r,sourceFile:String(name).slice(0,120)});}}
+ for(const {text,name} of items){const parsed=parseRaiffeisenCsv(text,{customRules,privateRules});for(const r of parsed.rows){if(seen.has(r.id)){duplicates++;continue;}seen.add(r.id);fresh.push({...r,sourceFile:String(name).slice(0,120)});}}
  return {rows:fresh,duplicates,review:fresh.filter(x=>x.needsReview).length,auto:fresh.filter(x=>!x.needsReview).length};
 }
 export function categorizeTransaction(t,category,flow){
