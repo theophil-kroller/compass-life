@@ -13,7 +13,7 @@ export const FINANCE_PANES=[
 export const FINANCE_EXPORTS=[
  {label:'Bank / Kreditkarte',description:'Im Online-Banking Umsätze als CSV, CAMT oder MT940 exportieren. Das genaue Format hängt von deiner Bank ab.',href:null},
  {label:'N26 / DKB',description:'Exportiere Giro- und Kartenumsätze als CSV. Compass erkennt N26, DKB Giro und DKB Visa automatisch anhand ihrer Spalten.',href:null},
- {label:'Kraken',description:'Kraken Pro → Profil → Statements → Export Statement; Trades, Ledgers und Balances als CSV auswählen.',href:'https://support.kraken.com/de/articles/14320306955668-how-to-export-your-account-history'},
+ {label:'Kraken',description:'Kraken Pro → Einstellungen → API: Nur-Lese-Schlüssel für Balance, Ledger und Trade-Historie erzeugen; lokaler API-Exporthelfer unter tools/kraken.',href:'https://support.kraken.com/de/articles/14320306955668-how-to-export-your-account-history'},
  {label:'flatex Österreich',description:'flatex classic → Konto & Depot → Konto-/Depotumsätze; Zeitraum wählen. Exportformat im eigenen Depot prüfen.',href:'https://www.flatex.at/produkte-handel/plattformen/flatex-classic/'}
 ];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

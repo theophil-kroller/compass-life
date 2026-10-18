@@ -11,6 +11,7 @@ import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
+import {validateKrakenSnapshot,mergeKrakenSnapshot} from './finance-kraken.js';
 import {createFinanceTrip,tripDelete,tripCandidateRows,travelAttributable} from './finance-travel.js';
 import {validatePrivateFinancePack} from './finance-private-rules.js';
 import {financeSearchTransactions} from './finance-analytics.js';
@@ -35,7 +36,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.17.3';
+const COMPASS_CLIENT_VERSION='0.5.17.4';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -105,7 +106,7 @@ let healthSpan=7,healthDetailsOpen=false,healthDevicesOpen=false;
 let importHealthSpan=90,selectedGarminNight='',healthFilePreview=null,healthFileReading=false;
 let insightWellnessDay='';let insightStressGranularity='week',insightBodyComposition='composition';
 let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',financePane='Überblick';
-let financePeriod='last12',financeAccount='all',financePreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
+let financePeriod='last12',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
 let financeVisualMode='hierarchy',financeCompareMode='month_year';
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
 let financeTripSelected='',financeTripQuery='',financeTripMode='suggested',financeTripPage=0;
@@ -763,7 +764,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,krakenPreview}));}
 function insightsScreen(){
  const tabDef=INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0];
  const today=localDate();
@@ -1063,6 +1064,14 @@ function bind() {
       toast(`Bankimport: ${financePreview.rows.length} neue Buchungen · ${financePreview.duplicates} Duplikate · ${financePreview.review} zur Prüfung.`);
     }catch(e){toast('Bankimport: '+e.message,true);}finally{financeBusy=false;}
   };
+  const krakenInput=app.querySelector('#finance-kraken-file');if(krakenInput)krakenInput.onchange=async()=>{
+    const file=krakenInput.files?.[0];if(!file)return;
+    try{
+      if(file.size>12_000_000)throw Error('Kraken-Export zu groß (maximal 12 MB).');
+      krakenPreview=validateKrakenSnapshot(JSON.parse(await file.text()));
+      toast(`Kraken-API-Export erkannt: ${krakenPreview.ledgers.length} Ledger-Einträge, ${krakenPreview.trades.length} Trades. Bitte Vorschau bestätigen.`);render();
+    }catch(e){krakenPreview=null;toast('Kraken-Import: '+e.message,true);render();}
+  };
   const privateRulesInput=app.querySelector('#finance-private-rules-file');if(privateRulesInput)privateRulesInput.onchange=async()=>{
     try{const f=privateRulesInput.files?.[0];if(!f)return;if(f.size>200_000)throw Error('Private Regeldatei ist zu groß.');
       const incoming=validatePrivateFinancePack(JSON.parse(await f.text()),validCategory);if(!incoming.length)throw Error('Keine Regeln in der Datei.');
@@ -1166,7 +1175,7 @@ async function runAction(action,id,stepId=null) {
     if(action==='insights-wellness-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;const items=(state?.healthImports?.garminWellness||[]);if(items.some(x=>String(x.at||'').slice(0,10)===id)){insightWellnessDay=id;render();}return;}
     if(action==='insights-stress-granularity'){if(['day','week'].includes(id)){insightStressGranularity=id;render();}return;}
     if(action==='insights-body-composition'){if(['composition','water'].includes(id)){insightBodyComposition=id;render();}return;}
-    if(action==='review-import-open'){if(id==='health'){tab='insights';insightTab='sources';}else if(id==='places'){tab='insights';insightTab='places';insightPeriod='all';}else if(id==='finance'){tab='finance';financePane='Buchungen';}render();return;}
+    if(action==='review-import-open'){if(id==='health'){tab='insights';insightTab='sources';}else if(id==='places'){tab='insights';insightTab='places';insightPeriod='all';}else if(id==='finance'){tab='finance';financePane='Buchungen';}else if(id==='kraken'){tab='finance';financePane='Portfolio';}render();return;}
      if(action==='assistant-new'){
       if(!confirm('Neuen Wochenreview starten? Der bisherige Durchgang wird als Fortschrittsstand ersetzt; die geprüften Projekte behalten ihre Reviewdaten.'))return;
       reviewEditingTaskId=null;reviewProjectId=null;await mutate(s=>{s.weeklyReview=newReview();s.reviewPending=true;});return;
@@ -1418,6 +1427,16 @@ async function runAction(action,id,stepId=null) {
        if(!a||!b||a.linkedTransferId||b.linkedTransferId||a.amountCents!==-b.amountCents)throw Error('Transferpaar hat sich verändert.');
        for(const [entry,other] of [[a,b],[b,a]])Object.assign(entry,{category:'Transfer / Eigene Konten',flow:'transfer',needsReview:false,confidence:'confirmed',source:'user',linkedTransferId:other.id,ruleReason:'Von dir bestätigter interner Transfer'});
       });toast('Interner Transfer bestätigt – keine doppelten Ausgaben.');return;
+    }
+    if(action==='finance-kraken-cancel'){krakenPreview=null;render();return;}
+    if(action==='finance-kraken-confirm'){
+      if(!krakenPreview)return;
+      try{const incoming=krakenPreview;await mutate(s=>{s.krakenPortfolio=mergeKrakenSnapshot(s.krakenPortfolio,incoming);});krakenPreview=null;toast('Kraken-Daten verschlüsselt im lokalen Tresor gespeichert. Bitte die unverschlüsselte JSON-Datei entfernen.');}
+      catch(e){toast(e.message,true);}return;
+    }
+    if(action==='finance-kraken-delete'){
+      if(!confirm('Alle lokal importierten Kraken-Bestände und Kraken-Historieneinträge aus dem Compass-Tresor löschen? Bankbuchungen bleiben erhalten.'))return;
+      await mutate(s=>{delete s.krakenPortfolio;});krakenPreview=null;toast('Kraken-Importdaten lokal entfernt.');return;
     }
     if(action==='finance-import-cancel'){financePreview=null;render();return;}
     if(action==='finance-import-confirm'){
