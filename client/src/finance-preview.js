@@ -2,7 +2,9 @@
 export const FINANCE_PANES=[
  {title:'Überblick',icon:'layers',text:'Cashflow und Vermögensentwicklung auf einen Blick'},
  {title:'Cashflow',icon:'sync',text:'Einnahmen, Ausgaben und Umbuchungen'},
+ {title:'Einnahmen',icon:'trendingUp',text:'Geldquellen und Eingangstrends'},
  {title:'Ausgaben',icon:'activity',text:'Kategorien, Monatsvergleich und Geldflüsse'},
+ {title:'Prognose',icon:'chart',text:'Muster, Szenarien und Prognosen'},
  {title:'Fixkosten',icon:'calendar',text:'Regelmäßige Zahlungen, Verträge und Abos'},
  {title:'Sparpotenzial',icon:'target',text:'Veränderungen erkennen und selbst bewerten'},
  {title:'Reisen',icon:'map',text:'Buchungen zu Reisen zuordnen und Kosten vergleichen'},

@@ -14,6 +14,7 @@ import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
 import {createFinanceTrip,tripDelete,tripCandidateRows,travelAttributable} from './finance-travel.js';
 import {validatePrivateFinancePack} from './finance-private-rules.js';
 import {financeSearchTransactions} from './finance-analytics.js';
+import {financePeriodInfo} from './finance-visual-model.js';
 import {exploreDays,exploreView,EXPLORE_FIELDS} from './insights-explorer.js';
 import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insightsPlannedView} from './insights.js';
 import {insightsStressView,insightsEnergyView} from './insights-wellness.js';
@@ -33,7 +34,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.16';
+const COMPASS_CLIENT_VERSION='0.5.17';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -103,7 +104,7 @@ let healthSpan=7,healthDetailsOpen=false,healthDevicesOpen=false;
 let importHealthSpan=90,selectedGarminNight='',healthFilePreview=null,healthFileReading=false;
 let insightWellnessDay='';
 let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',financePane='Überblick';
-let financePeriod='all',financePreview=null,financeBusy=false,financeReviewPage=0;
+let financePeriod='last12',financePreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
 let financeTripSelected='',financeTripQuery='',financeTripMode='suggested',financeTripPage=0;
 let exploreX='sleepMinutes',exploreY='workMinutes',exploreLag=0;
@@ -760,7 +761,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected}));}
 function insightsScreen(){
  const tabDef=INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0];
  const today=localDate();
@@ -1349,6 +1350,9 @@ async function runAction(action,id,stepId=null) {
         financeReviewPage=0;financeLedgerPage=0;toast(`${result.changed} Zuordnungen verbessert · ${result.closed} Fälle abgeschlossen · ${result.review} weiter zur Prüfung. Manuelle Bestätigungen bleiben erhalten.`);
       }catch(e){toast('Vorklassifizierung: '+e.message,true);}return;
     }
+    if(action==='finance-category-select'){financeCategorySelected=id;financePane='Ausgaben';render();return;}
+    if(action==='finance-category-clear'){financeCategorySelected='';render();return;}
+    if(action==='finance-go-ledger'){financePane='Buchungen';financeLedgerQuery=financeCategorySelected;financeLedgerFilter='all';financeLedgerPage=0;render();return;}
     if(action==='finance-pane'){if(FINANCE_TABS.some(p=>p.title===id)){financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='finance-trip-select'){
       if((state?.financeTrips||[]).some(t=>t.id===id)){financeTripSelected=id;financeTripPage=0;financeTripQuery='';render();}return;
@@ -1391,7 +1395,7 @@ async function runAction(action,id,stepId=null) {
       toast(value==='fixed'?'Als wiederkehrende Kosten bestätigt.':value==='exclude'?'Von Fixkostenvorschlägen ausgeschlossen.':'Bestätigung aufgehoben.');return;
     }
     if(action==='finance-ledger-prev'||action==='finance-ledger-next'){
-      const result=financeSearchTransactions(state?.financeTransactions||[],{query:financeLedgerQuery,filter:financeLedgerFilter,period:financePeriod,page:financeLedgerPage});
+      const result=financeSearchTransactions(financePeriodInfo(state?.financeTransactions||[],financePeriod).rows,{query:financeLedgerQuery,filter:financeLedgerFilter,period:'all',page:financeLedgerPage});
       financeLedgerPage=Math.max(0,Math.min(result.pages-1,financeLedgerPage+(action==='finance-ledger-next'?1:-1)));render();return;
     }
     if(action==='finance-import-cancel'){financePreview=null;render();return;}

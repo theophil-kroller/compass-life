@@ -36,7 +36,7 @@ test('empirical HRV ribbon is explicitly NOT Garmin baseline, status or 95%-CI',
 });
 test('consolidated Insights retains actual Garmin sleep, Fitdays body and Health Connect activity',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.16'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.17'/);
  assert.match(main,/navItem\('insights','Insights · Gesundheit'/);
  assert.doesNotMatch(main,/navItem\('health'/);
  assert.match(main,/if\(bootView==='health'\|\|bootView==='places'\)tab='insights'/);
@@ -59,7 +59,7 @@ test('Health Connect steps and exercise remain in the integrated activity pane, 
  assert.match(html,/2 tatsächlich erfassten Tagen/);assert.match(html,/1 tatsächlich erfassten Tagen/);
 });
 test('Finance scaffold is informative but has no bank access, upload control, or fictional transactions',()=>{
- assert.equal(FINANCE_PANES.length,7);
+ assert.equal(FINANCE_PANES.length,9);
  const kraken=FINANCE_EXPORTS.find(x=>x.label==='Kraken');assert.match(kraken.href,/support\.kraken\.com/);
  const flatex=FINANCE_EXPORTS.find(x=>x.label.includes('flatex'));assert.match(flatex.href,/flatex\.at/);
  const html=financePreviewView(()=>'<svg/>');assert.match(html,/noch kein Import/);
