@@ -1,3 +1,5 @@
+**Neu: Compass 0.5.8 – Insights Schlaf/HRV + eine gemeinsame Gesundheitsnavigation; Finanzen vorerst als Export-Roadmap.** Anleitung: [`docs/COMPASS_0.5.8_RELEASE.md`](docs/COMPASS_0.5.8_RELEASE.md). Keine neue Migration, Worker-Änderung oder Android-APK nötig.
+
 **Neu: Compass 0.5.7 – Personal Analytics (Insights).** GitHub-/PWA-Installationshinweise und Ausbauphasen: [`docs/COMPASS_0.5.7_RELEASE.md`](docs/COMPASS_0.5.7_RELEASE.md). Keine neue Cloudflare-Migration oder Android-APK nötig.
 
 **Aktueller Stand: Compass 0.5.3 – Event-Sync / Wochenansicht.** Installationshinweise unter `docs/COMPASS_0.5.3_RELEASE.md`.

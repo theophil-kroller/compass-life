@@ -15,9 +15,9 @@ const fixture={
  ],
  fitdays:[{day:'2026-09-25',at:'2026-09-25T06:56:00',weightKg:86.9}]
 };
-test('eight icon tabs identify sleep as available and future sections as planned',()=>{
- assert.deepEqual(INSIGHT_TABS.map(x=>x.id),['sleep','energy','stress','activity','focus','body','places','explore']);
- assert.equal(INSIGHT_TABS.filter(x=>x.state==='live').length,1);
+test('nine icon tabs include sleep, body and data sources as active',()=>{
+ assert.deepEqual(INSIGHT_TABS.map(x=>x.id),['sleep','energy','stress','activity','focus','body','places','explore','sources']);
+ assert.equal(INSIGHT_TABS.filter(x=>x.state==='live').length,4);
 });
 test('sleep minutes exclude awake time, missing data are null, invalid zero is not fabricated',()=>{
  assert.equal(sleepMinutes(fixture.garminNights[0]),400);
@@ -63,20 +63,20 @@ test('consistency plot and weekly aggregates follow actual nights and sample cou
  assert.equal(grouped.reduce((n,x)=>n+x.count,0),2);
  assert.ok(grouped.every(w=>w.mean>0));
 });
-test('planned panes are clearly nonfunctional and body references the existing health report',()=>{
- assert.match(insightsPlannedView('body',fixture,[],[]),/IN VORBEREITUNG/);
+test('planned panes remain clearly nonfunctional and now open consolidated sources',()=>{
+ assert.match(insightsPlannedView('places',fixture,[],[]),/IN VORBEREITUNG/);
  assert.match(insightsPlannedView('places',fixture,[],[]),/GPS-Tracks/);
- assert.match(insightsPlannedView('body',fixture,[],[]),/Bereits importierte Gesundheitsdaten ansehen/);
+ assert.match(insightsPlannedView('places',fixture,[],[]),/Datenquellen öffnen/);
 });
-test('navigation and 0.5.7 actions are wired into actual client, without cloud migration',()=>{
+test('navigation and 0.5.8 actions are wired into actual client, without cloud migration',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.7'/);
- assert.match(main,/navItem\('insights','Insights'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.8'/);
+ assert.match(main,/navItem\('insights','Insights · Gesundheit'/);
  assert.match(main,/insightTab==='sleep'\?insightsSleepView/);
  assert.match(main,/action==='insights-period'/);
  assert.match(main,/action==='insights-tab'/);
  assert.match(main,/insights-night-select/);
- assert.match(main,/data-tab="health"/);
+ assert.match(main,/healthSourcesView/);assert.doesNotMatch(main,/navItem\('health'/);
 });
 test('health import gives direct Garmin export access and an inline Fitdays walkthrough',()=>{
  const source=readFileSync(new URL('../client/src/health-dashboard.js',import.meta.url),'utf8');
