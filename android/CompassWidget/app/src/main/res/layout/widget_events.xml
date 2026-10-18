@@ -1,28 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
- android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/widget_surface" android:padding="14dp">
- <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-  <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
-   <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="✦  COMPASS / ENTDECKEN" android:textSize="12sp" android:letterSpacing="0.05" android:textColor="#2C6654" android:textStyle="bold"/>
-   <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Deine nächsten 7 Tage" android:textSize="11sp" android:layout_marginTop="3dp" android:textColor="#71877A"/>
-  </LinearLayout>
-  <TextView android:id="@+id/events_refresh" android:layout_width="38dp" android:layout_height="38dp" android:text="↻" android:textSize="24sp" android:gravity="center" android:textColor="#376E5D" android:contentDescription="Veranstaltungen aktualisieren"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+ android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+ android:padding="11dp" android:background="@drawable/widget_surface">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+  <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="✦  COMPASS · ENTDECKEN" android:textSize="11sp" android:textColor="#2E7058" android:textStyle="bold"/>
+  <TextView android:id="@+id/events_refresh" android:layout_width="34dp" android:layout_height="34dp" android:gravity="center" android:text="↻" android:textSize="20sp" android:textColor="#397C62" android:contentDescription="Veranstaltungen aktualisieren"/>
  </LinearLayout>
- <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/widget_primary_panel" android:padding="14dp" android:layout_marginTop="10dp">
-  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="DIESE WOCHE" android:textColor="#C3DECF" android:textStyle="bold" android:textSize="10sp" android:letterSpacing="0.07"/>
-  <TextView android:id="@+id/events_summary" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Events werden geladen …" android:textSize="18sp" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginTop="6dp"/>
-  <TextView android:id="@+id/events_subheading" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Deine Merkliste zuerst" android:layout_marginTop="5dp" android:textSize="11sp" android:textColor="#D4E7DA"/>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/widget_primary_panel" android:padding="11dp" android:layout_marginTop="5dp">
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="DEINE NÄCHSTEN SIEBEN TAGE" android:textColor="#C2DFCF" android:textSize="9sp" android:textStyle="bold"/>
+  <TextView android:id="@+id/events_summary" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Lade Veranstaltungen …" android:textSize="17sp" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginTop="5dp"/>
+  <TextView android:id="@+id/events_subheading" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Merkliste zuerst" android:layout_marginTop="3dp" android:textSize="10sp" android:textColor="#D2E5D8"/>
  </LinearLayout>
- <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="10dp" android:background="@drawable/widget_secondary_panel" android:padding="10dp">
-  <TextView android:id="@+id/events_row1" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:text="–" android:textColor="#2C5242" android:textSize="12sp" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" android:paddingTop="5dp" android:paddingBottom="8dp"/>
-  <View android:id="@+id/events_divider1" android:layout_width="match_parent" android:layout_height="1dp" android:background="#E5EEE8"/>
-  <TextView android:id="@+id/events_row2" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="–" android:textColor="#2C5242" android:textSize="12sp" android:maxLines="2" android:ellipsize="end" android:paddingTop="8dp" android:paddingBottom="8dp"/>
-  <View android:id="@+id/events_divider2" android:layout_width="match_parent" android:layout_height="1dp" android:background="#E5EEE8"/>
-  <TextView android:id="@+id/events_row3" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="–" android:textColor="#2C5242" android:textSize="12sp" android:maxLines="2" android:ellipsize="end" android:paddingTop="8dp" android:paddingBottom="6dp"/>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="6dp" android:background="@drawable/widget_secondary_panel" android:padding="8dp">
+  <TextView android:id="@+id/events_row1" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="–" android:visibility="gone" android:textColor="#2C5242" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" android:paddingTop="3dp" android:paddingBottom="3dp"/>
+  <TextView android:id="@+id/events_row2" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="–" android:visibility="gone" android:textColor="#2C5242" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" android:paddingTop="3dp" android:paddingBottom="3dp"/>
+  <TextView android:id="@+id/events_row3" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="–" android:visibility="gone" android:textColor="#2C5242" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" android:paddingTop="3dp" android:paddingBottom="3dp"/>
  </LinearLayout>
- <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
- <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp" android:gravity="center_vertical">
-  <TextView android:id="@+id/events_open" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp" android:background="@drawable/widget_action_panel" android:gravity="center" android:text="Alle Veranstaltungen  ↗" android:textStyle="bold" android:textColor="#204E3D" android:textSize="12sp"/>
-  <TextView android:id="@+id/events_setup" android:layout_width="36dp" android:layout_height="40dp" android:gravity="center" android:text="⚙" android:textSize="19sp" android:textColor="#497464" android:contentDescription="Widget verbinden"/>
- </LinearLayout>
+ <TextView android:id="@+id/events_open" android:layout_width="match_parent" android:layout_height="34dp" android:text="Veranstaltungen öffnen  ↗" android:textSize="11sp" android:textColor="#204E3D" android:textStyle="bold" android:layout_marginTop="7dp" android:gravity="center" android:background="@drawable/widget_action_panel"/>
 </LinearLayout>

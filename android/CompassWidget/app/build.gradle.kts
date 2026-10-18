@@ -2,7 +2,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
 android {
     namespace = "at.compasslife.widget"
     compileSdk = 36
-    defaultConfig { applicationId = "at.compasslife.widget"; minSdk = 26; targetSdk = 35; versionCode = 5; versionName = "0.5.4-focus-events-beta" }
+    defaultConfig { applicationId = "at.compasslife.widget"; minSdk = 26; targetSdk = 35; versionCode = 6; versionName = "0.5.6-widgets-stable" }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 }

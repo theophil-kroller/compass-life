@@ -7,6 +7,8 @@ import {assertCompatibleWorker} from './health-check.js';
 import {parseEventImport,upcomingImportedEvents,discoveryPromptRegional,discoveryPromptTravel,eventKey,eventAppearance as discoveryAppearance,EVENT_CATEGORIES,eventArea,eventCountry} from './event-import.js';
 import {eventState,queueEvent,queueEventPreference,removeEvents,prunePastEvents,pendingEventBatch,acknowledgeEventBatch,mergeEventSnapshot,resolveEventConflict} from './event-sync.js';
 import {healthViewModel,healthBars,healthTime,healthObservation} from './health-visual.js';
+import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-import.js';
+import {importedHealthDashboard} from './health-dashboard.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
@@ -18,7 +20,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.5';
+const COMPASS_CLIENT_VERSION='0.5.6';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -77,13 +79,14 @@ let inboxQuery='';
 const bootSearch=new URLSearchParams(location.search);
 const bootCapture=bootSearch.get('capture')==='1';
 const bootView=bootSearch.get('view');
-if(['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','projects','next','flagged','hold'].includes(bootView))tab=bootView;
+if(['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','health','projects','next','flagged','hold'].includes(bootView))tab=bootView;
 if(bootCapture){captureAfterUnlock=true;tab='inbox';}
 
 let watchPairCode='', watchPairExpires='', watchSessions=[], watchDevices=[], watchError='';
 let healthDays=[],healthDevices=[],healthPairCode='',healthError='',healthLastUpdated='';
 let widgetPairCode='',widgetDevices=[],widgetConnectError='';
 let healthSpan=7,healthDetailsOpen=false,healthDevicesOpen=false;
+let importHealthSpan=90,selectedGarminNight='',healthFilePreview=null,healthFileReading=false;
 let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryImportOpen=false,discoveryWeekOffset=0,discoveryImportPreview=null;
 const discoveryExpandedDays=new Set();
 // Calendar OAuth is independent from Compass login; token stays in RAM only.
@@ -279,8 +282,8 @@ function navItem(id,label,iconName,{disabled=false,count=null}={}) {
 function chrome(content){
  const num=rows().length;
  const today=new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
- const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',projects:'Projekte',next:'Next Actions',flagged:'Flagged',hold:'On Hold',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten',people:'Menschen',progress:'Fortschritt',recovery:'Erholung'})[tab]||'Heute');
- const sub=({activity:'Sessions bearbeiten, zuordnen und verwalten.',people:'Gespräche, offene Punkte und Kontakte.',progress:'Fortschritt bei Projekten und Tätigkeiten.',recovery:'Aktive Erholung und freie Zeit im Blick.',today:'Was heute wirklich zählt.',forecast:'Termine, Fristen und Agenden auf einer Zeitachse.',projects:'Ergebnisse verfolgen, nächste Schritte verbinden.',next:'Alle ausführbaren nächsten Schritte, auch ohne Datum.',flagged:'Bewusst hervorgehobene Aufgaben.',hold:'Bewusst pausiert oder auf Rückmeldung wartend.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
+ const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',projects:'Projekte',next:'Next Actions',flagged:'Flagged',hold:'On Hold',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten',people:'Menschen',progress:'Fortschritt',recovery:'Erholung',health:'Gesundheit'})[tab]||'Heute');
+ const sub=({activity:'Sessions bearbeiten, zuordnen und verwalten.',people:'Gespräche, offene Punkte und Kontakte.',progress:'Fortschritt bei Projekten und Tätigkeiten.',recovery:'Aktive Erholung und freie Zeit im Blick.',health:'Schlaf, HRV und Körperzusammensetzung – Garmin und Fitdays an einem Ort.',today:'Was heute wirklich zählt.',forecast:'Termine, Fristen und Agenden auf einer Zeitachse.',projects:'Ergebnisse verfolgen, nächste Schritte verbinden.',next:'Alle ausführbaren nächsten Schritte, auch ohne Datum.',flagged:'Bewusst hervorgehobene Aufgaben.',hold:'Bewusst pausiert oder auf Rückmeldung wartend.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
  return `<div class="shell"><aside class="sidebar" aria-label="Navigation">
  <div class="brand"><span class="brand-icon">${ico('compass',24)}</span><span class="brand-name">Compass<small>Personal Life Manager · ${COMPASS_CLIENT_VERSION}</small></span></div>
  <nav class="side-nav" aria-label="Hauptnavigation">
@@ -295,6 +298,7 @@ function chrome(content){
  ${navItem('projects','Projekte','folder')}
  ${navItem('people','Menschen','people')}
  ${navItem('recovery','Erholung','heart')}
+ ${navItem('health','Gesundheit','activity')}
  ${navItem('progress','Fortschritt','activity')}
  <button type="button" class="nav-group-toggle" data-action="nav-more" aria-expanded="${state?.uiPreferences?.advancedNav===true||['flagged','hold','someday','activity'].includes(tab)?'true':'false'}">${ico('list',16)} Weitere Ansichten ${ico('arrow',14)}</button>
  ${state?.uiPreferences?.advancedNav===true||['flagged','hold','someday','activity'].includes(tab)?`<div class="nav-subgroup">
@@ -627,7 +631,11 @@ function reviewStepBody(step,queue){
  }
  if(step==='unassigned')return `<div class="assistant-kpi">${queue.unassigned.length} offene projektlose Aufgaben</div><p class="muted-line">Einzelaktionen dürfen ohne Projekt bleiben. Prüfe nur, ob etwas tatsächlich mehrere Schritte erfordert.</p>${queue.unassigned.slice(0,60).map(t=>reviewTaskRow(t)).join('')||'<p class="muted-line">Keine offenen Einzelaktionen.</p>'}${reviewInlineEditor()}${reviewQuickAction()}`;
  if(step==='someday')return `<p class="muted-line">Was davon möchtest du weiter aufheben? Was kann aktiv werden?</p>${queue.dreams.slice(0,50).map(r=>`<div class="assistant-task"><strong>${h(r.title)}</strong><button type="button" class="secondary-btn" data-action="assistant-dream-activate" data-id="${h(r.id)}">In Inbox</button></div>`).join('')||'<p class="muted-line">Keine Someday-Ideen vorhanden.</p>'}<form id="review-capture" class="assistant-quick-action"><label>Neue Möglichkeit festhalten<input name="title" maxlength="1000" required placeholder="Was wäre interessant?"/></label><button type="submit" class="secondary-btn">In Inbox erfassen</button></form>`;
- return `<div class="assistant-finish"><h3>Was ist jetzt noch offen?</h3><div class="assistant-finish-grid"><span><strong>${queue.inbox.length}</strong> Inbox</span><span><strong>${queue.due.length}</strong> fällige Projekte</span><span><strong>${queue.waiting.length}</strong> Waiting For</span><span><strong>${queue.unassigned.length}</strong> Einzelaktionen</span></div><label>Gedanken zum Abschluss<textarea id="review-end-notes" maxlength="1200" rows="3" placeholder="Was ist jetzt klarer? Was soll beim nächsten Review wieder auftauchen?">${h(state.weeklyReview?.notes||'')}</textarea></label><p class="muted-line">Du kannst den Review vollständig oder bewusst teilweise abschließen. Ein vollständiger Schritt bedeutet „durchgesehen“, nicht zwingend „alles erledigt“.</p></div>`;
+ const health=state?.healthImports||{},healthDates=[...(health.garminNights||[]),...(health.garminHrv||[])];
+ const missing=missingGarminDays(healthDates,localDate());
+ const healthText=!healthDates.length?'Noch keine Garmin-Daten importiert.':missing.length?`${missing.length} Tage nach dem letzten Garmin-Import vorgeschlagen (${missing[0]} bis ${missing.at(-1)}).`:'Keine offenen Tage nach dem letzten Garmin-Import erkannt.';
+ const healthReview=`<section class="assistant-health-review"><div class="work-heading"><span>${ico('activity',16)} Optional: Gesundheitsdaten aktualisieren</span><span class="quiet-tag">Garmin + Fitdays</span></div><p class="muted-line">${h(healthText)} Die Daten werden nur in deinem verschlüsselten lokalen Tresor verarbeitet.</p><label class="secondary-btn health-upload-btn">Gesammelte Dateien auswählen<input id="health-import-input" type="file" multiple accept=".zip,.fit,.csv,.xls,.xlsx,.json"/></label>${healthFilePreview?`<p>${healthFilePreview.processed} Datei(en) geprüft · ${healthFilePreview.fitdays.length} Fitdays-Werte · ${healthFilePreview.garminNights.length} Nächte · ${healthFilePreview.garminHrv.length} HRV-Tage.</p>${healthFilePreview.errors.length?`<p class="error">${healthFilePreview.errors.map(h).join(' · ')}</p>`:''}<button type="button" class="primary-btn" data-action="health-import-confirm">Import übernehmen</button> <button type="button" class="secondary-btn" data-action="health-import-cancel">Verwerfen</button>`:''}<p class="small-muted">Dieser Schritt ist freiwillig und blockiert den GTD-Review nicht.</p></section>`;
+ return `<div class="assistant-finish"><h3>Was ist jetzt noch offen?</h3><div class="assistant-finish-grid"><span><strong>${queue.inbox.length}</strong> Inbox</span><span><strong>${queue.due.length}</strong> fällige Projekte</span><span><strong>${queue.waiting.length}</strong> Waiting For</span><span><strong>${queue.unassigned.length}</strong> Einzelaktionen</span></div><label>Gedanken zum Abschluss<textarea id="review-end-notes" maxlength="1200" rows="3" placeholder="Was ist jetzt klarer? Was soll beim nächsten Review wieder auftauchen?">${h(state.weeklyReview?.notes||'')}</textarea></label><p class="muted-line">Du kannst den Review vollständig oder bewusst teilweise abschließen. Ein vollständiger Schritt bedeutet „durchgesehen“, nicht zwingend „alles erledigt“.</p>${healthReview}</div>`;
 }
 function reviewScreen(){
  if(!validReview(state.weeklyReview)){state.weeklyReview=newReview();state.reviewVersion=state.reviewVersion||0;}
@@ -727,11 +735,12 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
+function healthScreen(){return chrome(healthSummaryPanel());}
 function progressScreen(){
  const projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&p.status==='active');
  const today=localDate(),earlier=new Date(today+'T12:00:00');earlier.setDate(earlier.getDate()-6);const begin=localDate(earlier);
  const stats=activityStats(activeActivities(watchSessions,state),begin,today);
- return chrome(`${healthSummaryPanel()}<div class="progress-view"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitäten der letzten 7 Tage</span></div><div class="metrics-row"><div><strong>${stats.count}</strong><small>Sessions</small></div><div><strong>${(stats.minutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>erfasste Zeit</small></div><div><strong>${stats.pomodoros}</strong><small>Pomodoros</small></div></div><button type="button" class="text-link" data-tab="activity">Sessions verwalten ${ico('arrow',14)}</button></section><section class="work-card"><div class="work-heading"><span>${ico('folder',18)} Projektfortschritt</span><span class="quiet-tag">${projects.length} aktiv</span></div>${projects.length?projects.map(p=>{const tasks=projectTasks(state,p.id);const completed=tasks.filter(x=>x.completed).length;return `<button type="button" class="progress-project" data-action="timeline-project" data-id="${h(p.id)}"><span><strong>${h(p.title)}</strong><small>${completed} / ${tasks.length} Schritte erledigt</small></span><div class="progress-track"><span style="width:${tasks.length?Math.round(completed/tasks.length*100):0}%"></span></div></button>`;}).join(''):'<p class="muted-line">Noch keine aktiven Projekte.</p>'}</section></div>`);
+ return chrome(`<div class="progress-view"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitäten der letzten 7 Tage</span></div><div class="metrics-row"><div><strong>${stats.count}</strong><small>Sessions</small></div><div><strong>${(stats.minutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>erfasste Zeit</small></div><div><strong>${stats.pomodoros}</strong><small>Pomodoros</small></div></div><button type="button" class="text-link" data-tab="activity">Sessions verwalten ${ico('arrow',14)}</button></section><section class="work-card"><div class="work-heading"><span>${ico('folder',18)} Projektfortschritt</span><span class="quiet-tag">${projects.length} aktiv</span></div>${projects.length?projects.map(p=>{const tasks=projectTasks(state,p.id);const completed=tasks.filter(x=>x.completed).length;return `<button type="button" class="progress-project" data-action="timeline-project" data-id="${h(p.id)}"><span><strong>${h(p.title)}</strong><small>${completed} / ${tasks.length} Schritte erledigt</small></span><div class="progress-track"><span style="width:${tasks.length?Math.round(completed/tasks.length*100):0}%"></span></div></button>`;}).join(''):'<p class="muted-line">Noch keine aktiven Projekte.</p>'}</section></div>`);
 }
 function healthSummaryPanel(){
  const today=localDate(),vm=healthViewModel(healthDays,today,healthSpan);const s=vm.stats;
@@ -740,14 +749,16 @@ function healthSummaryPanel(){
  const chart=(key,cls)=>{const bars=healthBars(vm.points,key);return `<div class="health-chart health-chart-${cls}" role="img" aria-label="${label(key)} in den letzten ${healthSpan} Tagen">${bars.map((b,i)=>`<div class="health-chart-slot" title="${h(b.day)}: ${h(b.label)}"><div class="health-chart-rail">${b.value===null?'<span class="health-chart-unknown" aria-hidden="true">·</span>':`<span class="health-chart-bar" style="height:${b.height}%"></span>`}</div><span class="health-chart-date">${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric'}).format(new Date(b.day+'T12:00:00Z')))}</span></div>`).join('')}</div>`;};
  const cards=[['steps','steps','🚶','Bewegung'],['sleepMinutes','sleep','🌙','Schlaf'],['exerciseMinutes','exercise','🏃','Training']].map(([key,cls,emoji,title])=>`<article class="health-visual-card"><div class="health-card-title"><span class="health-card-icon" aria-hidden="true">${emoji}</span><strong>${title}</strong></div><span class="health-card-number">${fmt(key,s[key].average)}</span><span class="health-card-sub">Ø je erfasstem Tag · ${s[key].count}/${healthSpan} Messwerte</span>${chart(key,cls)}</article>`).join('');
  const rows=[...healthDays].sort((a,b)=>b.day.localeCompare(a.day)).slice(0,30);
- return `<section class="work-card health-panel" aria-label="Gesundheitsüberblick"><div class="work-heading"><span>${ico('activity',18)} Gesundheit · Dein Überblick</span><button class="secondary-btn" data-action="health-refresh" ${!authToken?'disabled':''}>${ico('refresh',14)} Aktualisieren</button></div>
+ return `${importedHealthDashboard(state?.healthImports,importHealthSpan,selectedGarminNight)}
+ ${healthFilePreview?`<section class="health-import-preview"><strong>Importvorschau</strong><p>${healthFilePreview.processed} Datei(en) gelesen · ${healthFilePreview.fitdays.length} Fitdays-Messungen · ${healthFilePreview.garminNights.length} Garmin-Nächte · ${healthFilePreview.garminHrv.length} HRV-Tage.</p>${healthFilePreview.errors.length?`<p class="error">${healthFilePreview.errors.map(h).join('<br>')}</p>`:''}<div class="health-import-preview-actions"><button type="button" class="primary-btn" data-action="health-import-confirm">Import übernehmen</button><button type="button" class="secondary-btn" data-action="health-import-cancel">Verwerfen</button></div><small>Originaldateien werden weder gespeichert noch zur Cloud übertragen.</small></section>`:''}
+ <section class="work-card health-panel" aria-label="Gesundheitsüberblick"><div class="work-heading"><span>${ico('activity',18)} Gesundheit · Dein Überblick</span><button class="secondary-btn" data-action="health-refresh" ${!authToken?'disabled':''}>${ico('refresh',14)} Aktualisieren</button></div>
  <div class="health-hero"><div><span class="eyebrow">LETZTE ${healthSpan} TAGE</span><h3>Bewegung, Schlaf und Training</h3><p>Deine tatsächlichen Health-Connect-Messwerte. Fehlende Daten bleiben als Lücken sichtbar.</p></div><div class="health-span"><button class="secondary-btn ${healthSpan===7?'is-chosen':''}" data-action="health-range" data-id="7" aria-pressed="${healthSpan===7}">7 Tage</button><button class="secondary-btn ${healthSpan===30?'is-chosen':''}" data-action="health-range" data-id="30" aria-pressed="${healthSpan===30}">30 Tage</button></div></div>
  <div class="health-visual-grid">${cards}</div>
  <div class="health-observation"><span aria-hidden="true">✦</span><div><strong>Was die Daten zeigen</strong><p>${h(healthObservation(vm))}</p></div></div>
  ${healthError?`<p class="error">${h(healthError)}</p>`:''}
  <details class="health-details" ${healthDetailsOpen?'open':''} id="health-day-details"><summary>Tageswerte ansehen <span>${rows.length} gespeicherte Tage</span></summary><div class="health-days-list">${rows.map(d=>`<div class="health-day"><strong>${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'2-digit',month:'short'}).format(new Date(d.day+'T12:00:00Z')))}</strong><span>${d.steps===null?'–':Number(d.steps).toLocaleString('de-AT')} Schritte</span><span>${healthTime(d.sleepMinutes)} Schlaf</span><span>${d.exerciseMinutes??'–'} min Sport</span></div>`).join('')}</div></details>
- <div class="widget-connect-panel"><div><strong>📱 Android-Widget · Heute auf einen Blick</strong><p>Die Widget-Vorschau zeigt auf Wunsch offene Next Actions, die nächste geplante Aufgabe und Gesundheits-Kurzwerte. Dafür ist ein eigener, jederzeit widerrufbarer Lesezugang erforderlich. Keine Tresor-Passphrase im Widget.</p></div><button type="button" class="secondary-btn" data-action="widget-pair" ${!authToken?'disabled':''}>Widget-Kopplungscode erzeugen</button>${widgetPairCode?`<strong class="watch-code">${h(widgetPairCode)}</strong>`:''}${widgetConnectError?`<p class="error">${h(widgetConnectError)}</p>`:''}${widgetDevices.map(d=>`<div class="watch-session"><span>${h(d.label)} · ${h(d.createdAt.slice(0,10))}</span><button type="button" class="secondary-btn" data-action="widget-revoke" data-id="${h(d.deviceHash)}">Widerrufen</button></div>`).join('')}</div>
- <details class="health-details" ${healthDevicesOpen?'open':''} id="health-device-details"><summary>Health Connect & Datenschutz <span>Verbindung verwalten</span></summary><div class="health-pair-panel"><p>Im Android-Companion die Berechtigungen erteilen und einen einmaligen Code eingeben.</p><button type="button" class="secondary-btn" data-action="health-pair" ${!authToken?'disabled':''}>Health-Connect-Kopplungscode erzeugen</button> ${healthPairCode?`<strong class="watch-code">${h(healthPairCode)}</strong>`:''}${healthDevices.map(d=>`<div class="watch-session"><span>${h(d.label)}</span><button class="secondary-btn" data-action="health-revoke" data-id="${h(d.deviceHash)}">Trennen</button></div>`).join('')}<button type="button" class="secondary-btn" data-action="health-delete-all">Gesundheitsdaten aus der Cloud löschen</button><small>Manueller Abgleich. Die Werte sind zugriffsgeschützt in Cloudflare D1 gespeichert, aber nicht Ende-zu-Ende-verschlüsselt. Keine medizinische Bewertung.</small></div></details></section>`;
+ <div class="widget-connect-panel"><div><strong>📱 Android-Widget · Heute auf einen Blick</strong><p>Die Widgets zeigen Fokus-Aufgaben oder die Veranstaltungen der nächsten sieben Tage. Keine Gesundheitsdaten im Homescreen. Dafür ist ein eigener, jederzeit widerrufbarer Lesezugang erforderlich. Keine Tresor-Passphrase im Widget.</p></div><button type="button" class="secondary-btn" data-action="widget-pair" ${!authToken?'disabled':''}>Widget-Kopplungscode erzeugen</button>${widgetPairCode?`<strong class="watch-code">${h(widgetPairCode)}</strong>`:''}${widgetConnectError?`<p class="error">${h(widgetConnectError)}</p>`:''}${widgetDevices.map(d=>`<div class="watch-session"><span>${h(d.label)} · ${h(d.createdAt.slice(0,10))}</span><button type="button" class="secondary-btn" data-action="widget-revoke" data-id="${h(d.deviceHash)}">Widerrufen</button></div>`).join('')}</div>
+ <details class="health-details" ${healthDevicesOpen?'open':''} id="health-device-details"><summary>Health Connect & Datenschutz <span>Verbindung verwalten</span></summary><div class="health-pair-panel"><p>Im Android-Companion die Berechtigungen erteilen und einen einmaligen Code eingeben.</p><button type="button" class="secondary-btn" data-action="health-pair" ${!authToken?'disabled':''}>Health-Connect-Kopplungscode erzeugen</button> ${healthPairCode?`<strong class="watch-code">${h(healthPairCode)}</strong>`:''}${healthDevices.map(d=>`<div class="watch-session"><span>${h(d.label)}</span><button class="secondary-btn" data-action="health-revoke" data-id="${h(d.deviceHash)}">Trennen</button></div>`).join('')}<button type="button" class="secondary-btn" data-action="health-delete-all">Gesundheitsdaten aus der Cloud löschen</button><small>Der freiwillige tägliche automatische Abgleich wird im Android-Companion aktiviert. Die Werte sind zugriffsgeschützt in Cloudflare D1 gespeichert, aber nicht Ende-zu-Ende-verschlüsselt. Keine medizinische Bewertung.</small></div></details></section>`;
 }
 function isoWeekNumber(d){const a=new Date(d);a.setUTCDate(a.getUTCDate()+4-(a.getUTCDay()||7));const y=new Date(Date.UTC(a.getUTCFullYear(),0,1));return Math.ceil((((a-y)/86400000)+1)/7);}
 function discoveryPanel(){
@@ -787,7 +798,7 @@ function recoveryScreen(){
  const currentWeather=weather.status==='loaded'?recoveryWeather(weather.label):'unknown';
  const ideas=scoreRecoveryIdeas(allRecoveryIdeas(state),{weather:currentWeather,minutes:recoveryIdeaMinutes,energy:recoveryIdeaEnergy,range:recoveryIdeaRange});
  const weatherText=weather.status==='loaded'?`${weather.city}: ${weather.temperature} °C · ${weather.label}`:'Wetter noch nicht geladen';
- return chrome(`${healthSummaryPanel()}${discoveryPanel()}<section class="work-card recovery-idea-hub" aria-label="Freizeit bewusst planen">
+ return chrome(`${discoveryPanel()}<section class="work-card recovery-idea-hub" aria-label="Freizeit bewusst planen">
  <div class="work-heading"><span>${ico('heart',20)} Zeit für dich</span><button class="secondary-btn" type="button" data-action="weather-load">${weather.status==='loaded'?'Wetter aktualisieren':'Wetter abrufen'}</button></div>
  <div class="recovery-glance"><div><span>Erfasste Arbeit · 7 Tage</span><strong>${(work/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong></div><div><span>Erfasste Erholung · 7 Tage</span><strong>${(week.recoveryMinutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong></div><div><span>Wetter · aktuell</span><strong>${h(weather.status==='loaded'?weather.label:'Nicht geladen')}</strong></div></div>
  <p class="muted-line">${work>0?'Die Erfassung zeigt nur protokollierte Zeiten, keine vollständige Arbeitsbelastung.':''} Diese Ideen sind freiwillige Inspirationen – keine Bewertung deiner Gesundheit. ${h(weatherText)}. Der Wetterfilter verwendet derzeit das aktuelle Stadtwetter, keine Wochenendprognose.</p>
@@ -831,13 +842,13 @@ async function reloadWatchSessions(){
 }
 function render(){
  if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
- app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='projects'?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();bind();
+ app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='health'?healthScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='projects'?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();bind();
  if(captureOverlayOpen)requestAnimationFrame(()=>app.querySelector('#capture-modal-input')?.focus());
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
  if(state)wireSmartTags(app,()=>state);
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='health')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
@@ -998,6 +1009,17 @@ function bind() {
     if(!validRecoveryIdea(i)){toast('Bitte Idee, Symbol, Dauer und Kategorien prüfen.',true);return;}
     await mutate(s=>{s.recoveryIdeas??=[];s.recoveryIdeas.push(i);});toast('Freizeitidee im lokalen Tresor gespeichert.');
   };
+  const healthUpload=app.querySelector('#health-import-input');
+  if(healthUpload)healthUpload.onchange=async()=>{
+    if(!healthUpload.files?.length||healthFileReading)return;
+    healthFileReading=true;healthFilePreview=null;
+    try{const preview=await inspectHealthFiles([...healthUpload.files]);
+      if(!preview.processed)throw Error(preview.errors.join('\n')||'Keine unterstützten Dateien.');
+      healthFilePreview=preview;toast(`Importvorschau: ${preview.fitdays.length} Fitdays-Messungen und ${preview.garminNights.length} Garmin-Nächte gefunden.`);
+    }catch(ex){toast('Import konnte nicht gelesen werden: '+ex.message,true);}
+    finally{healthFileReading=false;}
+  };
+  const selectedNight=app.querySelector('#health-night-select');if(selectedNight)selectedNight.onchange=()=>{selectedGarminNight=selectedNight.value;render();};
   app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
     if(el.dataset.action==='capture-close-backdrop'&&ev.target!==el)return;
     if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
@@ -1197,7 +1219,19 @@ async function runAction(action,id,stepId=null) {
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
-    if(action==='lock'){clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='import-health-range'){importHealthSpan=id==='all'?'all':Number(id)||90;render();return;}
+    if(action==='health-import-cancel'){healthFilePreview=null;render();return;}
+    if(action==='health-import-confirm'){
+      if(!healthFilePreview)return;
+      const staged=healthFilePreview;
+      try{await mutate(s=>{commitHealthImport(s,staged);});healthFilePreview=null;toast('Garmin- und Fitdays-Messwerte im verschlüsselten Tresor gespeichert.');}
+      catch(ex){toast(ex.message,true);}return;
+    }
+    if(action==='health-import-clear'){
+      if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
+      await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
+    }
+    if(action==='lock'){healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){

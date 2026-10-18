@@ -66,7 +66,7 @@ public class TodayWidget extends AppWidgetProvider {
         v.setOnClickPendingIntent(R.id.widget_capture_button,link(c,"?capture=1",102));
         v.setOnClickPendingIntent(R.id.widget_refresh,refreshLink(c));
         v.setOnClickPendingIntent(R.id.widget_setup,setup(c,104));
-        Bundle size=m.getAppWidgetOptions(id);boolean compact=size.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,240)<355;
+        Bundle size=m.getAppWidgetOptions(id);boolean compact=size==null||size.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,240)<355;
         v.setViewVisibility(R.id.widget_more,compact?View.GONE:View.VISIBLE);
         boolean showTitles=c.getSharedPreferences("compass-widget-options",0).getBoolean("showTitles",false);
         if(data==null){

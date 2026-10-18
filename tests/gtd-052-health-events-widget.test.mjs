@@ -58,7 +58,7 @@ test('Android widget preview has a separate private token and user-controlled ti
  const android=fileURLToPath(new URL('../android/CompassWidget/app/src/main/java/at/compasslife/widget/',import.meta.url));
  const widget=readFileSync(join(android,'TodayWidget.java'),'utf8'),companion=readFileSync(join(android,'HealthCompanionActivity.kt'),'utf8');
  for(const term of ['/api/widget/summary','WidgetTokenStore','showTitles','WidgetOpenActivity'])assert.ok(widget.includes(term)||companion.includes(term),term);
- assert.match(companion,/\/api\/widget\/pair\/claim/);assert.match(widget,/getBoolean\("showTitles",false\)/);
+ assert.match(readFileSync(join(android,'MainActivity.java'),'utf8'),/\/api\/widget\/pair\/claim/);assert.match(widget,/getBoolean\("showTitles",false\)/);
  assert.doesNotMatch(widget,/localStorage|auth_session|cs1_/);
  const sql=readFileSync(join(dir,'0010_widget_preview.sql'),'utf8');assert.doesNotMatch(sql,/\b(?:DROP|TRUNCATE)\b/i);
 });

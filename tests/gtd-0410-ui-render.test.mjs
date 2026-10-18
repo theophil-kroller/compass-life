@@ -15,6 +15,7 @@ import * as perspectives from '../client/src/context-perspectives.js';
 import * as recovery from '../client/src/recovery-ideas.js';
 import * as eventsImport from '../client/src/event-import.js';
 import * as healthVisual from '../client/src/health-visual.js';
+import * as healthDashboard from '../client/src/health-dashboard.js';
 const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
 const compiled=source.replace(/^import .*;\r?\n/gm,'').replace('registerSW({immediate:true});','').split("document.addEventListener('keydown'")[0]+`
  globalThis.testUI=(current,mode,events=[])=>{state=current;tab=mode;calendarEvents=events;render();return app.innerHTML;};
@@ -26,7 +27,7 @@ function context(){
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const window={addEventListener:()=>{}};
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
- Object.assign(ctx,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual);
+ Object.assign(ctx,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,review,tags,personMatching);
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};

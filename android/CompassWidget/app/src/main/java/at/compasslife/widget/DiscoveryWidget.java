@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.view.View;
+import android.os.Bundle;
 import android.widget.RemoteViews;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -32,7 +33,7 @@ public class DiscoveryWidget extends AppWidgetProvider {
     private static void render(Context c,AppWidgetManager m,int id,JSONObject data,String error){
         RemoteViews v=new RemoteViews(c.getPackageName(),R.layout.widget_events);
         v.setOnClickPendingIntent(R.id.events_open,TodayWidget.link(c,"?view=recovery",201));
-        v.setOnClickPendingIntent(R.id.events_setup,TodayWidget.setup(c,204));
+        
         v.setOnClickPendingIntent(R.id.events_refresh,PendingIntent.getBroadcast(c,206,new Intent(c,DiscoveryWidget.class).setAction(REFRESH),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE));
         int[] fields={R.id.events_row1,R.id.events_row2,R.id.events_row3};
         for(int i=0;i<fields.length;i++){
@@ -40,8 +41,7 @@ public class DiscoveryWidget extends AppWidgetProvider {
             v.setTextViewText(fields[i],"");
             v.setOnClickPendingIntent(fields[i],TodayWidget.link(c,"?view=recovery",210+i));
         }
-        v.setViewVisibility(R.id.events_divider1,View.GONE);
-        v.setViewVisibility(R.id.events_divider2,View.GONE);
+
         if(data==null){
             v.setTextViewText(R.id.events_summary,error==null?"Events werden geladen …":error);
             v.setTextViewText(R.id.events_subheading,"Deine nächsten sieben Tage");
@@ -49,7 +49,8 @@ public class DiscoveryWidget extends AppWidgetProvider {
             int total=data.optInt("total",0);
             v.setTextViewText(R.id.events_summary,total==0?"Freiraum diese Woche":total+(total==1?" Veranstaltung":" Veranstaltungen"));
             JSONArray events=data.optJSONArray("events");
-            int shown=events==null?0:Math.min(fields.length,events.length());
+            Bundle options=m.getAppWidgetOptions(id);int max=options!=null&&options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,220)>=280?3:2;
+            int shown=events==null?0:Math.min(max,events.length());
             v.setTextViewText(R.id.events_subheading,shown==0?"Keine kommenden Termine importiert":shown<total?"Deine Merkliste zuerst · weitere in Compass":"Für dich entdeckt · Merkliste zuerst");
             for(int i=0;i<shown;i++){
                 JSONObject e=events.optJSONObject(i);if(e==null)continue;
@@ -58,7 +59,7 @@ public class DiscoveryWidget extends AppWidgetProvider {
                 String line=(e.optBoolean("saved",false)?"★  ":"")+symbol(e.optString("category",""))+"  "+shortDay+"  "+e.optString("title","");
                 v.setTextViewText(fields[i],line);
                 v.setViewVisibility(fields[i],View.VISIBLE);
-                if(i>0)v.setViewVisibility(i==1?R.id.events_divider1:R.id.events_divider2,View.VISIBLE);
+
             }
         }
         m.updateAppWidget(id,v);

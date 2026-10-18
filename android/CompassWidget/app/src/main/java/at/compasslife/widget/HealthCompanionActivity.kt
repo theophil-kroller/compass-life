@@ -68,12 +68,12 @@ class HealthCompanionActivity : ComponentActivity() {
         fun button(text:String, handler:()->Unit)=Button(this).apply { this.text=text;setOnClickListener{handler()};root.addView(this) }
         label("Compass · Gesundheitsdaten",true)
         label("Schritte, Schlaf und Trainingsminuten aus Health Connect. Nur nach Freigabe werden Tageswerte an Compass gesendet. Manuell oder optional täglich im Hintergrund (zusätzliche Berechtigung erforderlich). Keine Standortdaten.")
-        button("1 · Health Connect freigeben") {
+        button("Health Connect freigeben") {
             if (HealthConnectClient.getSdkStatus(this)!=HealthConnectClient.SDK_AVAILABLE) {
                 feedback.text="Health Connect ist nicht verfügbar. Bitte in den Android-Einstellungen prüfen." }
             else permissionsLauncher.launch(healthPermissions)
         }
-        label("2 · In Compass → Erholung → Gesundheits-Kopplungscode erzeugen und hier eingeben.")
+        label("Kopplungscode aus Compass → Gesundheit hier eingeben.")
         code=EditText(this).apply { hint="8-stelliger Code";inputType=InputType.TYPE_CLASS_NUMBER;root.addView(this) }
         button("Gerät mit Compass verbinden") {
             val value=code.text.toString().trim()
@@ -89,7 +89,7 @@ class HealthCompanionActivity : ComponentActivity() {
                 }catch(ex:Exception){feedback.text="Kopplung fehlgeschlagen: ${ex.message}"}
             }
         }
-        button("3 · Letzte 7 Tage jetzt synchronisieren") {
+        button("Jetzt synchronisieren") {
             lifecycleScope.launch {
                 try{
                     feedback.text="Lese und übertrage Tageswerte …"
@@ -119,45 +119,17 @@ class HealthCompanionActivity : ComponentActivity() {
         val healthStatus=getSharedPreferences(HealthSyncSchedule.PREF,MODE_PRIVATE)
         val last=healthStatus.getLong("lastSuccess",0)
         label("Automatik: ${if(HealthSyncSchedule.enabled(this))"aktiv" else "aus"} · Letzter erfolgreicher Abgleich: ${if(last>0)java.text.SimpleDateFormat("dd.MM. HH:mm",java.util.Locale.GERMAN).format(java.util.Date(last))else"noch keiner"}. ${healthStatus.getString("lastError","")}")
-        button("Compass-Webansicht öffnen") {startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://theophil-kroller.github.io/compass-life/?view=recovery")))}
-        button("Lokale Geräteverbindung vergessen"){
-            HealthSyncSchedule.disable(this)
-            HealthTokenStore.clear(this)
-            feedback.text="Lokales Token entfernt. Für vollständigen Widerruf bitte auch das Gerät in Compass → Erholung trennen."
-        }
-        label("Android-Widget · Tagesvorschau",true)
-        label("Das Fokus-Widget zeigt Aufgaben und Waiting For, das Entdecken-Widget die nächsten sieben Veranstaltungstage. Keine Gesundheitswerte auf dem Homescreen. Es benötigt einen eigenen, widerrufbaren Lesecode aus Compass → Erholung. Der lokale Tresor bleibt geschützt.")
-        val widgetCode=EditText(this).apply{hint="8-stelliger Widget-Code";inputType=InputType.TYPE_CLASS_NUMBER;root.addView(this)}
-        button("Widget mit Compass verbinden") {
-            val value=widgetCode.text.toString().trim()
-            if(!value.matches(Regex("[0-9]{8}"))){feedback.text="Bitte acht Ziffern für das Widget eingeben.";return@button}
-            lifecycleScope.launch {
-                try {
-                    feedback.text="Widget wird gekoppelt …"
-                    val result=withContext(Dispatchers.IO){send("/api/widget/pair/claim",JSONObject().put("code",value),null)}
-                    val token=result.getString("token")
-                    if(!token.matches(Regex("cw1_[0-9a-f]{64}")))throw IllegalStateException("Ungültiges Widget-Token")
-                    WidgetTokenStore.save(this@HealthCompanionActivity,token)
-                    widgetCode.setText("")
-                    TodayWidget.refreshAll(this@HealthCompanionActivity)
-                    feedback.text="Widget verbunden. Die Tagesvorschau wird jetzt aktualisiert."
-                }catch(ex:Exception){feedback.text="Widget-Kopplung fehlgeschlagen: ${ex.message}"}
-            }
-        }
-        button("Widget jetzt aktualisieren") { TodayWidget.refreshAll(this);feedback.text="Widget-Abfrage gestartet." }
-        val settings=getSharedPreferences("compass-widget-options",MODE_PRIVATE)
-        button(if(settings.getBoolean("showTitles",false))"Aufgabentitel im Widget VERBERGEN" else "Aufgabentitel im Widget ANZEIGEN (privat)") {
-            val enabled=!settings.getBoolean("showTitles",false)
-            settings.edit().putBoolean("showTitles",enabled).apply()
-            TodayWidget.refreshAll(this)
-            feedback.text=if(enabled)"Aufgabentitel sichtbar. Beachte, dass sie damit auf deinem Homescreen erscheinen." else "Aufgabentitel werden verborgen."
-        }
-        button("Widget-Ziel-App auswählen") {
-            startActivity(Intent(this,WidgetOpenActivity::class.java).putExtra("choose",true).putExtra("path","?view=today"))
-        }
-        button("Widget-Verbindung auf diesem Gerät vergessen") {
-            WidgetTokenStore.clear(this);TodayWidget.refreshAll(this)
-            feedback.text="Lokalen Widget-Schlüssel gelöscht. Bitte zusätzlich das Gerät in Compass → Erholung widerrufen."
+        val more=label("Weitere Einstellungen · Verbindung entfernen")
+        more.setOnClickListener {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Gesundheits-Verbindung entfernen?")
+                .setMessage("Die tägliche Synchronisation wird ausgeschaltet und der lokale Schlüssel gelöscht. Bitte widerrufe zusätzlich den Zugang unter Compass → Gesundheit.")
+                .setNegativeButton("Abbrechen",null)
+                .setPositiveButton("Trennen") { _, _ ->
+                    HealthSyncSchedule.disable(this)
+                    HealthTokenStore.clear(this)
+                    feedback.text="Gesundheits-Verbindung auf diesem Gerät entfernt."
+                }.show()
         }
         feedback=label("Bereit. Verbindungen und Berechtigungen sind freiwillig.")
     }
