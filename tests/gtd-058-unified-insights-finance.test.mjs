@@ -28,15 +28,17 @@ test('sleep and HRV are joined by actual night, not independent sort position',(
  assert.doesNotMatch(sleepHrvScatter(sleep,hr),/Konfidenzintervall/);
  assert.match(sleepHrvScatter(sleep,[]),/mindestens drei Nächte/);
 });
-test('empirical HRV ribbon is explicitly NOT Garmin baseline, status or 95%-CI',()=>{
- let called=false;
- const html=hrvReferenceView(hr,(rows,series,title,opts)=>{called=true;assert.deepEqual(opts.baselineBand,[hrvObservedBand(hr).low,hrvObservedBand(hr).high]);return '<svg/>';});
- assert.equal(called,true);assert.match(html,/Garmin-HRV-Baseline/);assert.match(html,/95%-KI/);
- assert.match(hrvReferenceView(hr.slice(0,4),()=>{throw Error('must not call chart');}),/mindestens 14 Nächte/);
+test('HRV now uses dynamic trailing band rather than static full-range rectangle or fake baseline',()=>{
+ const html=hrvReferenceView(hr);
+ assert.match(html,/Rollendes 20.–80. Perzentil/);
+ assert.match(html,/mitlaufende/);
+ assert.match(html,/95%-KI/);
+ assert.doesNotMatch(html,/baselineBand=/);
+ assert.match(hrvReferenceView(hr.slice(0,4)),/mindestens 14 Nächte/);
 });
 test('consolidated Insights retains actual Garmin sleep, Fitdays body and Health Connect activity',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.17\.1'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.4\.17\.5'/);
  assert.match(main,/navItem\('insights','Insights · Gesundheit'/);
  assert.doesNotMatch(main,/navItem\('health'/);
  assert.match(main,/if\(bootView==='health'\|\|bootView==='places'\)tab='insights'/);

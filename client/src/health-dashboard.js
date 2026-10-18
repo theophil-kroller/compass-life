@@ -1,3 +1,4 @@
+import {fitdaysCompositionChart,rollingEnvelopeChart} from './health-rolling.js';
 import {fitdaysFigureReport} from './fitdays-figure.js';
 import {missingGarminDays} from './health-import.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -94,13 +95,14 @@ export function healthSourcesView(data={}){
  <div class="health-import-bottom"><span>Letzter Dateiimport: ${data.lastImportAt?esc(new Date(data.lastImportAt).toLocaleString('de-AT')):'noch keiner'}</span><button type="button" class="secondary-btn" data-action="health-import-clear" ${!fit.length&&!nights.length&&!hrvs.length&&!wellness.length&&!fitness.length&&!sessions.length?'disabled':''}>Lokale Importdaten löschen</button></div>
  <p class="health-chart-disclaimer">Garmin-/Fitdays-Dateien werden lokal verarbeitet und im verschlüsselten Tresor gespeichert. Health-Connect-Tageswerte sind ein gesonderter Cloud-Sync und derzeit nicht Ende-zu-Ende-verschlüsselt.</p></section>`;
 }
-export function healthBodyView(data={},span=90){
+export function healthBodyView(data={},span=90,selection='composition'){
  const fit=data?.fitdays||[];const today=new Date().toLocaleDateString('sv-SE'),threshold=daysBefore(today,(span==='all'?20000:Number(span)||90)-1);
  const rows=fit.filter(x=>x.day>=threshold).sort((a,b)=>a.at.localeCompare(b.at));const byDay=[...new Map(rows.map(x=>[x.day,x])).values()];
  const latest=rows.at(-1)||null;
  const m=[['Gewicht',latest?.weightKg,'kg'],['Körperfett',latest?.bodyFatPct,'%'],['Muskelmasse',latest?.muscleKg,'kg'],['Körperwasser',latest?.waterPct,'%'],['Viszeralfett',latest?.visceralFat,'']];
  return `<section class="insight-body-view" aria-label="Fitdays Körperreport"><div class="insight-data-note">${rows.length} echte Fitdays-Messungen im ausgewählten Zeitraum · Körperfett und Muskelwerte sind Schätzungen der Bioimpedanzwaage.</div>
  <div class="health-report-metrics">${m.map(([label,value,u])=>`<div class="health-report-metric"><span>${esc(label)}</span><strong>${fmt(value,u)}</strong></div>`).join('')}</div>
+ <article class="health-report-card health-composition-card"><div class="health-report-title"><div><small>FITDAYS · KÖRPERZUSAMMENSETZUNG</small><h4>Gewicht, Fett, Muskeln und Wasser</h4></div></div><div class="health-mode-toggle" role="group" aria-label="Körperzusammensetzung wählen"><button type="button" data-action="insights-body-composition" data-id="composition" class="${selection==='composition'?'is-chosen':''}">Gewicht · Fett · Muskeln</button><button type="button" data-action="insights-body-composition" data-id="water" class="${selection==='water'?'is-chosen':''}">Gewicht · Körperwasser</button></div>${fitdaysCompositionChart(byDay,selection)}<h4 class="health-rolling-title">Gewicht · 14-Tage-Streubereich</h4>${rollingEnvelopeChart(byDay,'weightKg',{title:'Gewicht',unit:'kg',windowDays:14,color:'#2D806D'})}</article>
  <div class="health-trend-grid"><article class="health-report-card"><div class="health-report-title"><div><small>FITDAYS · VERLAUF</small><h4>Körpergewicht</h4></div><b>${fmt(latest?.weightKg,'kg')}</b></div>${healthTrendSvg(byDay,'weightKg','Körpergewicht','kg','#327E70')}</article>
  <article class="health-report-card"><div class="health-report-title"><div><small>FITDAYS · VERLAUF</small><h4>Körperfett</h4></div><b>${fmt(latest?.bodyFatPct,'%')}</b></div>${healthTrendSvg(byDay,'bodyFatPct','Körperfett','%','#B77E52')}</article></div>
  ${fitdaysFigureReport(latest)}<details class="fitdays-legacy-details"><summary>Segmentwerte auch als Balken anzeigen</summary>${bodySegmentsReport(latest)}</details><p class="insight-footnote">Segment-Prozentwerte bedeuten Fitdays-Referenzprozente, nicht Körperfettanteile der Regionen. Bei fehlenden Messungen keine Interpolation.</p></section>`;

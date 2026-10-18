@@ -49,13 +49,14 @@ test('stress and energy show charts built from measured values, no synthetic con
  assert.match(stress,/Belastungsstufen/);assert.match(stress,/Mein Stress im Tagesverlauf/);
  assert.match(stress,/Stress-Messpunkte/);assert.match(energy,/Tageshoch und Tagestief/);
  assert.match(energy,/Aufgeladen/);assert.match(energy,/Verbraucht/);
- assert.match(stress,/insights-wellness-select/);assert.match(energy,/insights-wellness-select/);assert.match(energy,/Stress im Hintergrund/);
- assert.doesNotMatch(stress+energy,/95%-Konfidenzintervall|Garmin-HRV-Baseline|Diagnose: /);
+ assert.match(stress,/insights-wellness-day/);assert.match(energy,/insights-wellness-day/);assert.match(energy,/Stress im Hintergrund/);
+ assert.match(stress,/Kein 95%-Konfidenzintervall/);
+ assert.doesNotMatch(stress+energy,/Garmin-HRV-Baseline|Diagnose: /);
 });
 test('stress and energy tabs integrated into actual Insights and current version, no worker migration',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.17\.1'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.4\.17\.5'/);
  assert.match(main,/insightsStressView/);assert.match(main,/insightsEnergyView/);
- assert.match(main,/insights-wellness-select/);
+ assert.match(main,/insights-wellness-day/);
  for(const id of ['stress','energy'])assert.equal(INSIGHT_TABS.find(x=>x.id===id).state,'live');
 });

@@ -1,3 +1,4 @@
+import {rollingEnvelopeChart} from './health-rolling.js';
 /** Personal, descriptive statistics from measured nights. No fake Garmin baseline or medical status. */
 const finite=x=>Number.isFinite(x);
 export function percentile(values,p){
@@ -40,7 +41,7 @@ export function hrvReferenceView(hrv,chart){
  const label=x=>x==null?'–':x.toLocaleString('de-AT',{maximumFractionDigits:1});
  const rows=(hrv||[]).filter(x=>finite(x.nightAverageMs)&&x.nightAverageMs>0);
  return `<div class="insight-reference-card"><div class="insight-reference-metrics"><span><small>20. Perzentil</small><strong>${label(band.low)}${band.low==null?'':' ms'}</strong></span><span><small>Median</small><strong>${label(band.median)}${band.median==null?'':' ms'}</strong></span><span><small>80. Perzentil</small><strong>${label(band.high)}${band.high==null?'':' ms'}</strong></span></div>
- ${band.low===null?`<p class="insight-figure-note">${band.count} gemessene HRV-Nächte · für einen eigenen beobachteten Referenzbereich benötigen wir mindestens 14 Nächte im gewählten Zeitraum.</p>`:`${chart(rows,[{key:'nightAverageMs',label:'Nächtliche HRV',color:'#8065A9'}],'Nächtliche HRV mit beobachtetem Streubereich',{unit:' ms',baselineBand:[band.low,band.high]})}<p class="insight-figure-note">Der farbige Bereich umfasst das 20.–80. Perzentil deiner <strong>gemessenen</strong> HRV-Nächte (${band.count} Werte). Das ist weder eine Garmin-HRV-Baseline noch ein medizinischer Normbereich oder ein 95%-KI.</p>`}</div>`;
+ ${band.low===null?`<p class="insight-figure-note">${band.count} gemessene HRV-Nächte · für einen beobachteten Referenzbereich benötigen wir mindestens 14 Nächte.</p>`:rollingEnvelopeChart(rows,'nightAverageMs',{title:'Nächtliche HRV',unit:'ms',windowDays:14,color:'#8065A9',minPoints:5})+`<p class="insight-figure-note">Die Werte oben zeigen das 20.–80. Perzentil im gewählten Gesamtzeitraum (${band.count} Nächte). Das <strong>mitlaufende</strong> Band verwendet hingegen ein trailing 14-Tage-Fenster. Kein 95%-KI, keine medizinische Norm.</p>`}</div>`;
 }
 export function sleepHrvScatter(nights,hrv){
  const rows=joinedSleepHrv(nights,hrv);

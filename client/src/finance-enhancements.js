@@ -10,6 +10,46 @@ const options=(value)=>`${value==='Prüfen / Noch ungeklärt'?'<option value="" 
 const types=(value)=>[['expense','Ausgabe'],['income','Einnahme'],['refund','Erstattung'],['transfer','Transfer/Investment'],['cash','Bargeld']].map(([id,label])=>`<option value="${id}" ${value===id?'selected':''}>${label}</option>`).join('');
 const empty=message=>`<p class="insight-no-data">${h(message)}</p>`;
 
+/** Purpose-category pictograms are purely local, deterministic and never infer a purchase from merchant name. */
+export function financeLedgerIcon(transaction={}){
+ const parent=String(transaction.category||'').split(' / ')[0];
+ const child=String(transaction.category||'').split(' / ')[1]||'';
+ let name='receipt';
+ if(transaction.needsReview)name='help';
+ else if(transaction.flow==='income')name='banknote';
+ else if(transaction.flow==='refund')name='refund';
+ else if(transaction.flow==='transfer')name='transfer';
+ else if(transaction.flow==='cash')name='wallet';
+ else if(parent==='Lebensmittel')name=/Bäckerei/i.test(child)?'bread':'cart';
+ else name=({
+  'Wohnen':'home','Essen & Ausgehen':'utensils','Mobilität':'bike','Familie':'users',
+  'Gesundheit & Sport':'heart','Freizeit & Reisen':'plane','Bildung & Beruf':'book',
+  'Verträge & Abos':'repeat','Finanzen':'bank','Shopping':'bag','Sonstiges':'receipt'
+ })[parent]||'receipt';
+ const paths={
+  banknote:'<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M5 9h.01M19 15h.01"/>',
+  cart:'<circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M2 3h2l2.4 11.4a2 2 0 0 0 2 1.6H19a2 2 0 0 0 2-1.6L22 8H5"/>',
+  bread:'<path d="M4 12a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v7H4z"/><path d="M8 8V5m8 3V5"/>',
+  refund:'<path d="M3 11a9 9 0 1 0 4-7"/><path d="M3 3v8h8"/>',
+  transfer:'<path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/>',
+  wallet:'<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M15 14h2"/>',
+  home:'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',
+  utensils:'<path d="M4 3v8a3 3 0 0 0 6 0V3M7 3v18M17 21V4c3 3 3 8 0 11"/>',
+  bike:'<circle cx="5" cy="17" r="4"/><circle cx="19" cy="17" r="4"/><path d="m5 17 5-10 5 10h4M10 7h4"/>',
+  users:'<circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2"/><path d="M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 4 5"/>',
+  heart:'<path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1L12 21l8.8-8.3a5 5 0 0 0 0-7.1Z"/>',
+  plane:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+  book:'<path d="M4 4h7a3 3 0 0 1 3 3v14H7a3 3 0 0 0-3 1zM20 4h-3a3 3 0 0 0-3 3v14h3a3 3 0 0 1 3 1z"/>',
+  repeat:'<path d="M4 7h14l-3-3m3 3-3 3M20 17H6l3-3m-3 3 3 3"/>',
+  bank:'<path d="M3 10h18M5 10v9m5-9v9m4-9v9m5-9v9M2 21h20L12 3 2 9z"/>',
+  bag:'<rect x="4" y="7" width="16" height="14" rx="2"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/>',
+  receipt:'<path d="M5 3h14v18l-3-2-3 2-3-2-3 2-2-2zM8 8h8M8 12h8"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4.5 1.5c-1 1-2 1.5-2 3M12 17h.01"/>'
+ };
+ return `<span class="fin-ledger-icon fin-ledger-icon--${name}" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg></span>`;
+}
+
+
 export function financeTrendsView(transactions=[],period='all'){
  const info=financeExpenseOverview(transactions,period),series=info.months.slice(-18);
  if(!series.length)return empty('Noch keine Buchungen. Importiere zuerst deine Raiffeisen-Umsätze.');
@@ -42,7 +82,7 @@ export function financeLedgerView(transactions=[],period='all',query='',filter='
  return `<section class="fin-analysis-section"><span class="insight-kicker">KATEGORIEN PRÜFEN UND KORRIGIEREN</span><h3>Alle Buchungen</h3><p class="fin-disclaimer">Auch automatisch eingeordnete Umsätze lassen sich hier einzeln korrigieren. Eine Einzelkorrektur verändert keine anderen Buchungen und erzeugt keine Händlerregel.</p>
  <div class="fin-ledger-filters"><label>Suche nach Händler oder Kategorie <input type="search" id="finance-ledger-query" maxlength="100" value="${h(query)}" placeholder="Händler, Text, Kategorie …" /></label><label>Art <select id="finance-ledger-filter">${[['all','Alle'],['pending','Noch ungeklärt'],['expense','Kategorisierte Ausgaben'],['transfer','Transfers'],['broad','Grobe Kategorien (nachbearbeitbar)']].map(([value,label])=>`<option value="${value}" ${filter===value?'selected':''}>${label}</option>`).join('')}</select></label></div>
  <div class="fin-ledger-count">${data.count.toLocaleString('de-AT')} passende Buchung(en)</div>
- <div class="fin-ledger-list">${data.rows.map(t=>`<details class="fin-ledger-item"><summary><time>${h(t.day)}</time><span class="fin-ledger-merchant">${h(t.merchant)} <small>${h(t.category)}${t.needsReview?' · bitte prüfen':''}</small></span><strong class="${t.amountCents<0?'is-out':''}">${t.amountCents<0?'−':'+'}${h(finEuro(Math.abs(t.amountCents)))}</strong></summary><form data-finance-edit="${h(t.id)}" class="fin-ledger-edit"><p class="fin-rule-reason">${h(t.ruleReason|| (t.needsReview?'Kategorie prüfen': 'Automatische oder manuell bestätigte Kategorie'))} · ${t.confidence==='broad'?'Grobe Zuordnung: genauer Zweck unbekannt':t.source==='user'?'Von dir bestätigt':'Regelbasierte Zuordnung'}</p><div class="fin-bank-text">${h(t.description||'')}</div><div class="fin-review-fields"><label>Kategorie <select name="category">${options(t.category)}</select></label><label>Geldfluss <select name="flow">${types(t.flow)}</select></label></div>${safeMerchantRule(t.merchant)?`<label class="fin-rule-check"><input type="checkbox" name="remember" value="yes" /> Diese Kategorie für diesen Zahlungspartner merken und auf andere noch nicht bestätigte Buchungen übernehmen</label>`:'<small>Für Zahlungsdienste und unklare Sammelhändler werden keine Sammelregeln gespeichert.</small>'}<button type="submit" class="primary-btn">Korrektur speichern</button></form></details>`).join('')||empty('Für diese Auswahl gibt es keine Buchungen.')}</div>
+ <div class="fin-ledger-list">${data.rows.map(t=>`<details class="fin-ledger-item"><summary><time>${h(t.day)}</time>${financeLedgerIcon(t)}<span class="fin-ledger-merchant">${h(t.merchant)} <small>${h(t.category)}${t.needsReview?' · bitte prüfen':''}</small></span><strong class="${t.amountCents<0?'is-out':''}">${t.amountCents<0?'−':'+'}${h(finEuro(Math.abs(t.amountCents)))}</strong></summary><form data-finance-edit="${h(t.id)}" class="fin-ledger-edit"><p class="fin-rule-reason">${h(t.ruleReason|| (t.needsReview?'Kategorie prüfen': 'Automatische oder manuell bestätigte Kategorie'))} · ${t.confidence==='broad'?'Grobe Zuordnung: genauer Zweck unbekannt':t.source==='user'?'Von dir bestätigt':'Regelbasierte Zuordnung'}</p><div class="fin-bank-text">${h(t.description||'')}</div><div class="fin-review-fields"><label>Kategorie <select name="category">${options(t.category)}</select></label><label>Geldfluss <select name="flow">${types(t.flow)}</select></label></div>${safeMerchantRule(t.merchant)?`<label class="fin-rule-check"><input type="checkbox" name="remember" value="yes" /> Diese Kategorie für diesen Zahlungspartner merken und auf andere noch nicht bestätigte Buchungen übernehmen</label>`:'<small>Für Zahlungsdienste und unklare Sammelhändler werden keine Sammelregeln gespeichert.</small>'}<button type="submit" class="primary-btn">Korrektur speichern</button></form></details>`).join('')||empty('Für diese Auswahl gibt es keine Buchungen.')}</div>
  <div class="fin-paging"><button type="button" data-action="finance-ledger-prev" ${data.page===0?'disabled':''}>← Zurück</button><span>${data.page+1} / ${data.pages}</span><button type="button" data-action="finance-ledger-next" ${data.page>=data.pages-1?'disabled':''}>Weiter →</button></div>
  </section>`;
 }

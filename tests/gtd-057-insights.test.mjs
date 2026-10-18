@@ -70,12 +70,12 @@ test('planned panes remain clearly nonfunctional and now open consolidated sourc
 });
 test('navigation and 0.5.8 actions are wired into actual client, without cloud migration',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.17\.1'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.4\.17\.5'/);
  assert.match(main,/navItem\('insights','Insights · Gesundheit'/);
  assert.match(main,/insightTab==='sleep'\?insightsSleepView/);
  assert.match(main,/action==='insights-period'/);
  assert.match(main,/action==='insights-tab'/);
- assert.match(main,/insights-night-select/);
+ assert.match(main,/insights-night-day/);
  assert.match(main,/healthSourcesView/);assert.doesNotMatch(main,/navItem\('health'/);
 });
 test('health import gives direct Garmin export access and an inline Fitdays walkthrough',()=>{

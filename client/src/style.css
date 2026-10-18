@@ -899,3 +899,39 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .fin-sankey-detail-group>button,.fin-sankey-detail-group>span{background:transparent;border:0;text-align:left;color:#536C5F;padding:5px 1px;display:flex;justify-content:space-between;gap:7px;font-size:11px;cursor:pointer}
 .fin-sankey-detail-group>button:hover{color:#2A7A66;background:#EFF7F1}
 .fin-sankey-detail-group b{font-weight:600;white-space:nowrap}
+
+
+/* Compass 0.4.17.5 · Health & Body Insight UX; scoped to health, no finance effects. */
+.health-day-switch{display:flex;align-items:center;gap:12px;margin:14px 0 22px;justify-content:flex-start;color:#365B4B}
+.health-day-switch strong{font-size:13px;min-width:180px;text-align:center;font-weight:600}
+.health-day-switch button{appearance:none;border:1px solid #D6E6DC;background:#F7FBF8;color:#326C58;border-radius:13px;min-width:43px;height:40px;font-size:20px;cursor:pointer;transition:background .15s ease}
+.health-day-switch button:hover:not(:disabled){background:#DDEEE3}.health-day-switch button:disabled{opacity:.28;cursor:default}
+.health-day-switch button:focus-visible,.health-mode-toggle button:focus-visible{outline:3px solid #609984;outline-offset:2px}
+.health-mode-toggle{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:8px 0 18px}
+.health-mode-toggle button{cursor:pointer;border-radius:20px;padding:7px 13px;border:1px solid #D8E7DE;background:#F9FBF9;color:#4C6D5B;font-size:11px;font-weight:650}
+.health-mode-toggle button.is-chosen{background:#275E50;border-color:#275E50;color:white}
+.insight-wellness .health-rolling-svg,.insight-sleep-content .health-rolling-svg,.insight-body-view .health-rolling-svg{min-width:0;max-height:none;min-height:150px}
+.health-composition-card{grid-column:1/-1}.health-composition-card .health-composition-svg{max-height:none;min-height:180px;width:100%}
+.health-composition-card .health-rolling-title{font-size:14px;color:#365D4B;margin:25px 0 8px}
+.insight-night-detail.health-night-dark{background:#131E29;border:1px solid #273544;box-shadow:0 14px 35px #101E2826}
+.health-night-dark .insight-figure-title h3{color:#F2F5FB}.health-night-dark .insight-figure-title small{color:#B2C7D9}
+.health-night-dark .insight-figure-title svg{color:#C6D6E3}.health-night-dark .health-day-switch strong{color:#F3F5F9}
+.health-night-dark .health-day-switch button{background:#263545;color:#F6F9FE;border-color:#445769}
+.health-night-dark .health-day-switch button:hover:not(:disabled){background:#36516A}
+.health-night-dark .sleep-stage-labels span,.health-night-dark .sleep-time-axis,.health-night-dark .insight-night-totals{color:#D6E3EE}
+.health-night-dark .sleep-stage-content svg rect[fill="#F4F7F5"]{fill:#243342}
+.health-night-dark .insight-night-totals span{color:#E0EAF3}
+.health-night-dark .insight-figure-note{color:#CEDAE6;border-color:#34485C}
+@media(max-width:600px){.health-day-switch{gap:7px}.health-day-switch strong{min-width:0;flex:1;font-size:11px}.health-day-switch button{min-width:39px}.health-composition-card{padding:14px}}
+@media(prefers-reduced-motion:reduce){.health-day-switch button{transition:none}}
+
+/* Compass 0.4.17.5: semantic icons in the editable finance ledger */
+.fin-ledger-item summary{grid-template-columns:84px 38px minmax(0,1fr) auto}
+.fin-ledger-icon{width:36px;height:36px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#4A7C73;background:#EAF3EE;flex-shrink:0}
+.fin-ledger-icon--banknote{background:#DCF4E7;color:#21765A}.fin-ledger-icon--cart,.fin-ledger-icon--bread{background:#E8F2E5;color:#51804A}
+.fin-ledger-icon--heart{background:#F6E9EC;color:#A45E71}.fin-ledger-icon--home{background:#E5EFF6;color:#486D91}
+.fin-ledger-icon--plane,.fin-ledger-icon--bike{background:#E6F3F3;color:#438687}.fin-ledger-icon--users{background:#F3EAF3;color:#8B618C}
+.fin-ledger-icon--bag,.fin-ledger-icon--utensils{background:#F8F0E5;color:#A17745}.fin-ledger-icon--transfer,.fin-ledger-icon--wallet{background:#ECECF6;color:#6769A2}
+.fin-ledger-icon--help{background:#FFF4E3;color:#A87635}
+@media(max-width:750px){.fin-ledger-item summary{grid-template-columns:70px 30px minmax(0,1fr) auto}.fin-ledger-icon{width:29px;height:29px;border-radius:9px}.fin-ledger-icon svg{width:17px;height:17px}}
+@media(max-width:460px){.fin-ledger-item summary{grid-template-columns:54px 26px minmax(0,1fr) auto;gap:5px}.fin-ledger-item time{font-size:9px}}
