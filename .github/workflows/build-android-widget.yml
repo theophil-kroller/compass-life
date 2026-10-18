@@ -20,16 +20,16 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v4
       - name: Install Android SDK platform
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.10.2'
+          gradle-version: '8.11.1'
       - name: Assemble debug APK
         run: gradle -p android/CompassWidget :app:assembleDebug --no-daemon
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Compass-Widget-0.5.0-debug-apk
+          name: Compass-Widget-0.5.1-debug-apk
           path: android/CompassWidget/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
