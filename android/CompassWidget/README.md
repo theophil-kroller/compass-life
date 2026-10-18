@@ -22,3 +22,19 @@ Android Studio, Java 17, Android SDK 35, AGP 8.7.3. Projekt öffnen, Gradle sync
 
 ## Datenschutz und Einschränkungen
 Das Widget ist eine kleine native Android-Hülle, kein vollwertiger Offline-Sync. Keine Hintergrundaktualisierung von sensiblen Daten und keine Health Connect Berechtigungen im 0.5.0 Widget. Der native Sicherheits- und Datenzugriff wird in der Health-Connect-Ausbaustufe gesondert geprüft. Die GitHub Actions Debug-APK muss auf dem echten Samsung getestet werden; in dieser Umgebung gab es keinen Android SDK/Gradle-Build.
+
+
+## Compass 0.5.1: Health Connect Companion (TEST)
+Die Android-App ist jetzt zusätzlich zur Widget-Funktion eine eigenständige Oberfläche, die Schrittzahl,
+Schlaf- und Trainingsminuten der letzten 7 Tage **nach ausdrücklicher Freigabe** aus Health Connect liest.
+Daten werden nur durch Klick auf „Letzte 7 Tage synchronisieren“ übertragen. Eine verschlüsselte
+Gerätekennung liegt im Android Keystore, nur ihr Hash in D1. Die Rohdaten bleiben im Health Connect;
+in D1 werden nur Tageszusammenfassungen gespeichert (nicht Ende-zu-Ende-verschlüsselt).
+
+### Android nach GitHub-Actions-Build installieren
+* In GitHub Actions `Build Compass Android Widget` erfolgreichen Lauf öffnen, unter Artifacts Debug-APK ZIP herunterladen, entpacken und auf Samsung `app-debug.apk` installieren.
+* ACHTUNG: GitHub signiert Debug-APKs mit je nach Runner neuem Debug-Schlüssel. Bei `APP_NOT_INSTALLED` / Signaturkonflikt **nur die alte Companion-App deinstallieren** (Widget verschwindet, ggf. später neu hinzufügen), die PWA/die Compass-Vault-Daten **nicht** löschen. Langfristig festen Signierschlüssel verwenden.
+* In Garmin Connect nachsehen, ob die gewünschten Messwerte in Health Connect zugelassen sind. Nicht alle Garmin-Messwerte werden übermittelt; Body Battery ist kein Standard-Health-Connect-Wert.
+* Compass-PWA → Erholung → `Gesundheits-Kopplungscode erzeugen`. Auf Samsung Companion-App öffnen, Health Connect freigeben, achtstelligen Code eingeben, verbinden, Daten synchronisieren. In Compass → Erholung auf `Daten aktualisieren` klicken.
+* Code 10 Minuten gültig, niemals öffentlich teilen. Zugriff in der PWA widerrufen; gespeicherte Cloud-Tageswerte dort gesondert löschen.
+* Voraussetzungen: Health Connect verfügbar (Android 14 integriert, darunter ggf. separate Health-Connect-App); Garmin Connect muss die Daten in Health Connect exportieren. Der Build auf realem Android wurde hier **nicht** getestet.

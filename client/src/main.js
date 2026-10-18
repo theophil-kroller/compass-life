@@ -1,6 +1,7 @@
 import './style.css';
 import {allRecoveryIdeas,scoreRecoveryIdeas,recoveryWeather,validRecoveryIdea} from './recovery-ideas.js';
 import {assertCompatibleWorker} from './health-check.js';
+import {parseEventImport,upcomingImportedEvents,discoveryPrompt,eventKey} from './event-import.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
@@ -12,7 +13,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.0';
+const COMPASS_CLIENT_VERSION='0.5.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -52,6 +53,7 @@ async function resumeSession(){
     authToken=session.token;currentUser=session.email;
     render();
     reloadWatchSessions().catch(()=>{});
+    reloadHealth().catch(()=>{});
     if(!navigator.onLine)return;
     const who=await request(config.apiUrl,authToken,'/api/me');
     currentUser=who.email;render();
@@ -72,6 +74,7 @@ if(['today','inbox','review','forecast','overview','someday','activity','people'
 if(bootCapture){captureAfterUnlock=true;tab='inbox';}
 
 let watchPairCode='', watchPairExpires='', watchSessions=[], watchDevices=[], watchError='';
+let healthDays=[],healthDevices=[],healthPairCode='',healthError='',healthLastUpdated='';
 // Calendar OAuth is independent from Compass login; token stays in RAM only.
 let calendarToken='', calendarExpires=0, calendarEvents=[], calendarStatus='Nicht verbunden', calendarBusy=false;
 let calendarUpdatedAt=0;
@@ -689,7 +692,28 @@ function progressScreen(){
  const projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&p.status==='active');
  const today=localDate(),earlier=new Date(today+'T12:00:00');earlier.setDate(earlier.getDate()-6);const begin=localDate(earlier);
  const stats=activityStats(activeActivities(watchSessions,state),begin,today);
- return chrome(`<div class="progress-view"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitäten der letzten 7 Tage</span></div><div class="metrics-row"><div><strong>${stats.count}</strong><small>Sessions</small></div><div><strong>${(stats.minutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>erfasste Zeit</small></div><div><strong>${stats.pomodoros}</strong><small>Pomodoros</small></div></div><button type="button" class="text-link" data-tab="activity">Sessions verwalten ${ico('arrow',14)}</button></section><section class="work-card"><div class="work-heading"><span>${ico('folder',18)} Projektfortschritt</span><span class="quiet-tag">${projects.length} aktiv</span></div>${projects.length?projects.map(p=>{const tasks=projectTasks(state,p.id);const completed=tasks.filter(x=>x.completed).length;return `<button type="button" class="progress-project" data-action="timeline-project" data-id="${h(p.id)}"><span><strong>${h(p.title)}</strong><small>${completed} / ${tasks.length} Schritte erledigt</small></span><div class="progress-track"><span style="width:${tasks.length?Math.round(completed/tasks.length*100):0}%"></span></div></button>`;}).join(''):'<p class="muted-line">Noch keine aktiven Projekte.</p>'}</section></div>`);
+ return chrome(`${healthSummaryPanel()}<div class="progress-view"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitäten der letzten 7 Tage</span></div><div class="metrics-row"><div><strong>${stats.count}</strong><small>Sessions</small></div><div><strong>${(stats.minutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>erfasste Zeit</small></div><div><strong>${stats.pomodoros}</strong><small>Pomodoros</small></div></div><button type="button" class="text-link" data-tab="activity">Sessions verwalten ${ico('arrow',14)}</button></section><section class="work-card"><div class="work-heading"><span>${ico('folder',18)} Projektfortschritt</span><span class="quiet-tag">${projects.length} aktiv</span></div>${projects.length?projects.map(p=>{const tasks=projectTasks(state,p.id);const completed=tasks.filter(x=>x.completed).length;return `<button type="button" class="progress-project" data-action="timeline-project" data-id="${h(p.id)}"><span><strong>${h(p.title)}</strong><small>${completed} / ${tasks.length} Schritte erledigt</small></span><div class="progress-track"><span style="width:${tasks.length?Math.round(completed/tasks.length*100):0}%"></span></div></button>`;}).join(''):'<p class="muted-line">Noch keine aktiven Projekte.</p>'}</section></div>`);
+}
+function healthSummaryPanel(){
+ const sorted=[...healthDays].sort((a,b)=>b.day.localeCompare(a.day));
+ const last=sorted.slice(0,7),avg=(key)=>{const a=last.map(x=>x[key]).filter(Number.isFinite);return a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null;};
+ const steps=avg('steps'),sleep=avg('sleepMinutes'),exercise=avg('exerciseMinutes');
+ return `<section class="work-card health-panel"><div class="work-heading"><span>${ico('activity',18)} Gesundheit · Health Connect</span><button class="secondary-btn" data-action="health-refresh" ${!authToken?'disabled':''}>Daten aktualisieren</button></div>
+ <div class="recovery-glance"><div><span>Ø Schritte · letzte 7 Einträge</span><strong>${steps??'–'}</strong></div><div><span>Ø Schlaf</span><strong>${sleep===null?'–':`${Math.floor(sleep/60)} h ${sleep%60} m`}</strong></div><div><span>Ø Training</span><strong>${exercise===null?'–':`${exercise} min`}</strong></div></div>
+ <p class="muted-line">${healthDays.length?`${healthDays.length} Tageswerte in Cloudflare D1 gespeichert. Durchschnitt über die letzten bis zu sieben gelieferten Tage, keine medizinische Bewertung.`:'Noch keine Gesundheitsdaten vorhanden. Android-Companion-App öffnen, Health Connect freigeben und synchronisieren.'} ${healthError?h(healthError):''}</p>
+ <div class="health-days-list">${sorted.slice(0,14).map(d=>`<div class="health-day"><strong>${h(d.day)}</strong><span>${d.steps??'–'} Schritte</span><span>${d.sleepMinutes===null?'–':Math.round(d.sleepMinutes/60*10)/10+' h'} Schlaf</span><span>${d.exerciseMinutes??'–'} min Sport</span></div>`).join('')}</div>
+ <div class="health-pair-panel"><h3>Samsung mit Health Connect verbinden</h3><p>Im Android-Companion zuerst die Gesundheitsberechtigungen erteilen, dann einen einmaligen Code eingeben.</p>
+ <button type="button" class="secondary-btn" data-action="health-pair" ${!authToken?'disabled':''}>Gesundheits-Kopplungscode erzeugen</button> ${healthPairCode?`<strong class="watch-code">${h(healthPairCode)}</strong>`:''}
+ ${healthDevices.map(d=>`<div class="watch-session"><span>${h(d.label)}</span><button class="secondary-btn" data-action="health-revoke" data-id="${h(d.deviceHash)}">Trennen</button></div>`).join('')}
+ <button type="button" class="secondary-btn" data-action="health-delete-all">Gespeicherten Gesundheitsverlauf löschen</button><small>Manueller Abgleich, keine automatische Hintergrundübertragung. Nur aggregierte Schritte, Schlaf- und Trainingsminuten werden übertragen. Zugriff jederzeit widerrufbar.</small></div></section>`;
+}
+function discoveryPanel(){
+ const events=upcomingImportedEvents(state?.discoveredEvents,localDate()).slice(0,60);
+ return `<section class="work-card discovery-panel"><div class="work-heading"><span>${ico('calendar',18)} Entdecken · Veranstaltungen</span><span class="quiet-tag">${events.length} importierte Termine</span></div>
+ <p class="muted-line">Rechercheergebnisse aus offiziellen Quellen als JSON importieren. Jede Veranstaltung benötigt einen Quellenlink; Termine vor Besuch beim Veranstalter prüfen. Noch kein automatischer Live-Abruf.</p>
+ <div class="discovery-actions"><button type="button" class="secondary-btn" data-action="discovery-prompt">Rechercheprompt kopieren</button><button type="button" class="secondary-btn" data-action="discovery-clear">Importierte Events entfernen</button></div>
+ <form id="discovery-import-form" class="compact-stack"><label>Veranstaltungs-JSON<textarea name="events" rows="4" maxlength="200000" placeholder='{"events":[{"title":"...","date":"2026-11-01","city":"Graz","venue":"...","category":"Theater","sourceUrl":"https://..."}]}' required></textarea></label><button class="primary-btn" type="submit">Quellen prüfen & importieren</button></form>
+ <div class="discovery-list">${events.map(e=>`<div class="discovery-event"><div><strong>${h(e.title)}</strong><small>${h(e.date)} · ${h(e.venue)} · ${h(e.city)} · ${h(e.category)}</small></div><div><a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">Quelle ansehen</a><button type="button" class="secondary-btn" data-action="discovery-capture" data-id="${h(eventKey(e))}">Merken</button></div></div>`).join('')||'<p class="muted-line">Noch keine Veranstaltungen importiert. Kopiere den Rechercheprompt und füge anschließend das JSON hier ein.</p>'}</div></section>`;
 }
 function recoveryScreen(){
  const today=localDate(),endDate=new Date(today+'T12:00:00');endDate.setDate(endDate.getDate()+30);const end=localDate(endDate);
@@ -700,7 +724,7 @@ function recoveryScreen(){
  const currentWeather=weather.status==='loaded'?recoveryWeather(weather.label):'unknown';
  const ideas=scoreRecoveryIdeas(allRecoveryIdeas(state),{weather:currentWeather,minutes:recoveryIdeaMinutes,energy:recoveryIdeaEnergy,range:recoveryIdeaRange});
  const weatherText=weather.status==='loaded'?`${weather.city}: ${weather.temperature} °C · ${weather.label}`:'Wetter noch nicht geladen';
- return chrome(`<section class="work-card recovery-idea-hub" aria-label="Freizeit bewusst planen">
+ return chrome(`${healthSummaryPanel()}${discoveryPanel()}<section class="work-card recovery-idea-hub" aria-label="Freizeit bewusst planen">
  <div class="work-heading"><span>${ico('heart',20)} Zeit für dich</span><button class="secondary-btn" type="button" data-action="weather-load">${weather.status==='loaded'?'Wetter aktualisieren':'Wetter abrufen'}</button></div>
  <div class="recovery-glance"><div><span>Erfasste Arbeit · 7 Tage</span><strong>${(work/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong></div><div><span>Erfasste Erholung · 7 Tage</span><strong>${(week.recoveryMinutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong></div><div><span>Wetter · aktuell</span><strong>${h(weather.status==='loaded'?weather.label:'Nicht geladen')}</strong></div></div>
  <p class="muted-line">${work>0?'Die Erfassung zeigt nur protokollierte Zeiten, keine vollständige Arbeitsbelastung.':''} Diese Ideen sind freiwillige Inspirationen – keine Bewertung deiner Gesundheit. ${h(weatherText)}. Der Wetterfilter verwendet derzeit das aktuelle Stadtwetter, keine Wochenendprognose.</p>
@@ -727,6 +751,11 @@ function activityScreen(){
  <section class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Session-Inspector</span></div>${chosen?`<form id="activity-edit-form" data-id="${h(chosen.id)}" class="compact-stack"><label>Titel<input name="title" required maxlength="100" value="${h(chosen.title)}"/></label><label>Art<select name="category">${choices}</select></label><label>Datum und Uhrzeit<input name="startedAt" type="datetime-local" required value="${h(chosen.startedAt)}"/></label><label>Dauer in Minuten<input name="durationMinutes" type="number" required min="1" max="1440" value="${chosen.durationMinutes}"/></label><label>Projekt<select name="projectId">${projectOpts}</select></label><label>Notiz<textarea name="note" maxlength="1000" rows="3">${h(chosen.note||'')}</textarea></label><p class="muted-line">Quelle: ${h(chosen.source)}${chosen.source==='Garmin'?' · Messwerte bleiben erhalten':''}</p><div class="activity-actions"><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="${chosen.deleted?'activity-restore':'activity-trash'}" data-id="${h(chosen.id)}">${chosen.deleted?'Wiederherstellen':'In Papierkorb'}</button>${chosen.deleted?`<button type="button" class="danger-btn" data-action="activity-purge" data-id="${h(chosen.id)}">Endgültig löschen</button>`:''}</div></form>`:'<p class="muted-line">Wähle eine Session oder lege eine manuelle Aktivität an.</p>'}
  <div class="watch-pair-block"><h3>Garmin fēnix 7S</h3><p class="muted-line">Kopplung und Geräteverwaltung bleiben getrennt von der Session-Bearbeitung.</p>${watchPairCode?`<strong class="watch-code">${h(watchPairCode)}</strong>`:''}<button type="button" class="secondary-btn" data-action="watch-pair" ${!authToken?'disabled':''}>Kopplungscode erstellen</button>${watchDevices.map(d=>`<div class="watch-session"><span>${h(d.label)}</span><button type="button" class="secondary-btn" data-action="watch-revoke" data-id="${h(d.deviceHash)}">Trennen</button></div>`).join('')}${watchError?`<p class="watch-error">${h(watchError)}</p>`:''}</div></section></div>`);
 }
+async function reloadHealth(){
+ if(!authToken||!config.apiUrl)return;
+ try{const [values,devices]=await Promise.all([request(config.apiUrl,authToken,'/api/health/days?days=90'),request(config.apiUrl,authToken,'/api/health/devices')]);healthDays=values.days||[];healthDevices=devices.devices||[];healthError='';healthLastUpdated=Date.now();render();}
+ catch(ex){healthError=ex.status===404?'Health-Worker 0.5.1 noch nicht veröffentlicht.':ex.message;render();}
+}
 async function reloadWatchSessions(){
  if(!authToken)return;
  try{const [data,dev]=await Promise.all([request(config.apiUrl,authToken,'/api/watch/sessions'),request(config.apiUrl,authToken,'/api/watch/devices')]);watchSessions=data.sessions||[];watchDevices=dev.devices||[];watchError='';render();}
@@ -739,7 +768,7 @@ function render(){
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});});
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery')&&authToken)reloadHealth().catch(()=>{});});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
@@ -864,6 +893,10 @@ function bind() {
     if(el.dataset.recoveryFilter==='range')recoveryIdeaRange=el.value;
     render();
   });
+  const discoveryForm=app.querySelector('#discovery-import-form');if(discoveryForm)discoveryForm.onsubmit=async ev=>{ev.preventDefault();try{
+    const raw=String(new FormData(discoveryForm).get('events')||'');const result=parseEventImport(raw,state?.discoveredEvents||[]);
+    await mutate(st=>{st.discoveredEvents=[...(st.discoveredEvents||[]),...result.added].slice(-250);});toast(`${result.added.length} Veranstaltungen importiert, ${result.duplicates} Dubletten übersprungen.`);
+   }catch(ex){toast('Import: '+ex.message,true);}};
   const recoveryForm=app.querySelector('#recovery-idea-form');if(recoveryForm)recoveryForm.onsubmit=async ev=>{
     ev.preventDefault();const data=new FormData(recoveryForm);
     const i={id:'idea-'+crypto.randomUUID(),title:String(data.get('title')||'').trim(),emoji:String(data.get('emoji')||'🌿').trim()||'🌿',minutes:Number(data.get('minutes')),weather:String(data.get('weather')||'any'),energy:String(data.get('energy')||'medium'),range:String(data.get('range')||'near')};
@@ -1020,7 +1053,28 @@ async function runAction(action,id,stepId=null) {
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
-    if(action==='lock'){clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='health-pair'){
+      try{const result=await request(config.apiUrl,authToken,'/api/health/pair/start',{method:'POST'});healthPairCode=result.code;healthError='';render();}
+      catch(ex){healthError=ex.message;render();}return;
+    }
+    if(action==='health-refresh'){await reloadHealth();return;}
+    if(action==='health-delete-all'){if(!authToken||!confirm('Alle in Cloudflare gespeicherten Gesundheits-Tageswerte unwiderruflich löschen? Auf dem Samsung bleiben die ursprünglichen Health-Connect-Daten erhalten.'))return;try{await request(config.apiUrl,authToken,'/api/health/data/delete',{method:'POST'});await reloadHealth();toast('Gespeicherte Gesundheitsdaten gelöscht.');}catch(ex){toast(ex.message,true);}return;}
+    if(action==='health-revoke'){
+      if(!confirm('Health-Connect-Gerät wirklich trennen? Bereits gespeicherte Tageswerte bleiben im Dashboard.'))return;
+      try{await request(config.apiUrl,authToken,'/api/health/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadHealth();}catch(ex){healthError=ex.message;render();}return;
+    }
+    if(action==='discovery-prompt'){
+      try{await navigator.clipboard.writeText(discoveryPrompt);toast('Rechercheprompt kopiert.');}catch{toast('Kopieren nicht möglich.',true);}return;
+    }
+    if(action==='discovery-clear'){
+      if(!confirm('Alle importierten Veranstaltungen aus diesem lokalen Tresor entfernen?'))return;
+      await mutate(st=>{st.discoveredEvents=[];});toast('Importierte Veranstaltungen entfernt.');return;
+    }
+    if(action==='discovery-capture'){
+      const entry=state?.discoveredEvents?.find(e=>eventKey(e)===id);if(!entry)return;
+      await addCapture(entry.title,`${entry.date} · ${entry.venue}, ${entry.city}\nQuelle: ${entry.sourceUrl}`);toast('Veranstaltung in der Inbox vorgemerkt.');return;
+    }
     if(action==='watch-pair'){
       try{const d=await request(config.apiUrl,authToken,'/api/watch/pair/start',{method:'POST'});watchPairCode=d.code;watchPairExpires=d.expiresAt;watchError='';render();}
       catch(ex){watchError='Kopplung derzeit nicht bereit: '+ex.message;render();}return;
@@ -1033,7 +1087,7 @@ async function runAction(action,id,stepId=null) {
     }
     if(action==='sync'){await syncNow();return;}
     if(action==='logout'){
-      const previous=authToken;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;clearTimeout(syncTimer);
+      const previous=authToken;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';clearTimeout(syncTimer);
       await vault.clearSession();
       try {if(previous)await request(config.apiUrl,previous,'/api/session',{method:'DELETE'});
         toast('Compass-Sitzung auf diesem Gerät beendet. Lokale Daten bleiben geschützt.');}

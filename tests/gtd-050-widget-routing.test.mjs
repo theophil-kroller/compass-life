@@ -23,5 +23,8 @@ test('GitHub can produce test APK; native widget has no health/token permissions
  assert.match(flow,/assembleDebug/);
  assert.match(flow,/upload-artifact@v4/);
  assert.match(flow,/app-debug\.apk/);
- assert.ok(!/READ_HEALTH_DATA|READ_HEART_RATE|INTERNET/.test(manifest));
+ assert.match(manifest,/READ_SLEEP/);
+ assert.match(manifest,/READ_STEPS/);
+ assert.match(manifest,/READ_EXERCISE/);
+ assert.match(read('android/CompassWidget/app/src/main/java/at/compasslife/widget/HealthTokenStore.kt'),/AndroidKeyStore/);
 });

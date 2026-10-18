@@ -2,6 +2,7 @@ import {listProjects,putProject} from './projects.js';
 import {schemaStatus} from './schema.js';
 import {listTasks,putTask} from './tasks.js';
 import {createPair,claimPair,acceptWatchSession,listWatchSessions,listWatchDevices,revokeWatchDevice,purgeWatchSession,watchPlanning} from './watch.js';
+import {startHealthPair,claimHealthPair,uploadHealthDays,listHealthDays,listHealthDevices,revokeHealthDevice,deleteHealthDays} from './health-daily.js';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import {MAX_BATCH, validateMutation, validCursor, cleanMutation} from './validation.js';
 
@@ -133,6 +134,11 @@ async function route(req,env,identity) {
   if(req.method==='POST' && url.pathname==='/api/projects')return putProject(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/tasks')return listTasks(env,identity);
   if(req.method==='POST' && url.pathname==='/api/tasks')return putTask(req,env,identity);
+  if(req.method==='GET' && url.pathname==='/api/health/days')return listHealthDays(req,env,identity);
+  if(req.method==='POST' && url.pathname==='/api/health/data/delete')return deleteHealthDays(env,identity);
+  if(req.method==='GET' && url.pathname==='/api/health/devices')return listHealthDevices(env,identity);
+  if(req.method==='POST' && url.pathname==='/api/health/pair/start')return startHealthPair(env,identity);
+  if(req.method==='POST' && url.pathname==='/api/health/device/revoke')return revokeHealthDevice(req,env,identity);
   if(req.method==='POST' && url.pathname==='/api/watch/pair/start')return createPair(env,identity);
   if(req.method==='GET' && url.pathname==='/api/watch/sessions')return listWatchSessions(env,identity);
   if(req.method==='POST' && url.pathname==='/api/watch/sessions/purge')return purgeWatchSession(req,env,identity);
@@ -182,11 +188,13 @@ export default {
     const path=new URL(req.url).pathname;
     if (path==='/api/health' && req.method==='GET') {
       const schema=env.DB?await schemaStatus(env.DB):{ready:false,requiredMigration:'0001–0006',missing:[]};
-      return finish(json({ok:true,phase:'GTD',apiVersion:6,release:'0.4.10',planning:true,gtd:true,projects:true,schema}));
+      return finish(json({ok:true,phase:'GTD',apiVersion:7,release:'0.5.1',planning:true,gtd:true,projects:true,schema}));
     }
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));
     try {
+      if(path==='/api/health/pair/claim' && req.method==='POST')return finish(await claimHealthPair(req,env));
+      if(path==='/api/health/days' && req.method==='POST')return finish(await uploadHealthDays(req,env));
       if(path==='/api/watch/pair/claim' && req.method==='POST')return finish(await claimPair(req,env));
       if(path==='/api/watch/planning' && req.method==='GET')return finish(await watchPlanning(req,env));
       if(path==='/api/watch/sessions' && req.method==='POST')return finish(await acceptWatchSession(req,env));
