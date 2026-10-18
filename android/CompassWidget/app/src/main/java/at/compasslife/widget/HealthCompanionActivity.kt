@@ -126,7 +126,41 @@ class HealthCompanionActivity : ComponentActivity() {
             HealthTokenStore.clear(this)
             feedback.text="Lokales Token entfernt. Für vollständigen Widerruf bitte auch das Gerät in Compass → Erholung trennen."
         }
-        feedback=label("Bereit. Verbindung und Health-Connect-Berechtigungen sind freiwillig.")
+        label("Android-Widget · Tagesvorschau",true)
+        label("Das Homescreen-Widget zeigt optional offene Aufgaben, den nächsten geplanten Schritt und einen Schlafdurchschnitt. Es benötigt einen eigenen, widerrufbaren Lesecode aus Compass → Erholung. Der lokale Tresor bleibt geschützt.")
+        val widgetCode=EditText(this).apply{hint="8-stelliger Widget-Code";inputType=InputType.TYPE_CLASS_NUMBER;root.addView(this)}
+        button("Widget mit Compass verbinden") {
+            val value=widgetCode.text.toString().trim()
+            if(!value.matches(Regex("[0-9]{8}"))){feedback.text="Bitte acht Ziffern für das Widget eingeben.";return@button}
+            lifecycleScope.launch {
+                try {
+                    feedback.text="Widget wird gekoppelt …"
+                    val result=withContext(Dispatchers.IO){send("/api/widget/pair/claim",JSONObject().put("code",value),null)}
+                    val token=result.getString("token")
+                    if(!token.matches(Regex("cw1_[0-9a-f]{64}")))throw IllegalStateException("Ungültiges Widget-Token")
+                    WidgetTokenStore.save(this@HealthCompanionActivity,token)
+                    widgetCode.setText("")
+                    TodayWidget.refreshAll(this@HealthCompanionActivity)
+                    feedback.text="Widget verbunden. Die Tagesvorschau wird jetzt aktualisiert."
+                }catch(ex:Exception){feedback.text="Widget-Kopplung fehlgeschlagen: ${ex.message}"}
+            }
+        }
+        button("Widget jetzt aktualisieren") { TodayWidget.refreshAll(this);feedback.text="Widget-Abfrage gestartet." }
+        val settings=getSharedPreferences("compass-widget-options",MODE_PRIVATE)
+        button(if(settings.getBoolean("showTitles",false))"Aufgabentitel im Widget VERBERGEN" else "Aufgabentitel im Widget ANZEIGEN (privat)") {
+            val enabled=!settings.getBoolean("showTitles",false)
+            settings.edit().putBoolean("showTitles",enabled).apply()
+            TodayWidget.refreshAll(this)
+            feedback.text=if(enabled)"Aufgabentitel sichtbar. Beachte, dass sie damit auf deinem Homescreen erscheinen." else "Aufgabentitel werden verborgen."
+        }
+        button("Widget-Ziel-App auswählen") {
+            startActivity(Intent(this,WidgetOpenActivity::class.java).putExtra("choose",true).putExtra("path","?view=today"))
+        }
+        button("Widget-Verbindung auf diesem Gerät vergessen") {
+            WidgetTokenStore.clear(this);TodayWidget.refreshAll(this)
+            feedback.text="Lokalen Widget-Schlüssel gelöscht. Bitte zusätzlich das Gerät in Compass → Erholung widerrufen."
+        }
+        feedback=label("Bereit. Verbindungen und Berechtigungen sind freiwillig.")
     }
     private fun send(path:String,payload:JSONObject,token:String?):JSONObject {
         val conn=URL(endpoint+path).openConnection() as HttpURLConnection

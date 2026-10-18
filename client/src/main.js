@@ -1,7 +1,8 @@
 import './style.css';
 import {allRecoveryIdeas,scoreRecoveryIdeas,recoveryWeather,validRecoveryIdea} from './recovery-ideas.js';
 import {assertCompatibleWorker} from './health-check.js';
-import {parseEventImport,upcomingImportedEvents,discoveryPrompt,eventKey} from './event-import.js';
+import {parseEventImport,upcomingImportedEvents,discoveryPrompt,eventKey,eventAppearance as discoveryAppearance,EVENT_CATEGORIES,eventArea,eventCountry} from './event-import.js';
+import {healthViewModel,healthBars,healthTime,healthObservation} from './health-visual.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
@@ -13,7 +14,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.1';
+const COMPASS_CLIENT_VERSION='0.5.2';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -54,6 +55,7 @@ async function resumeSession(){
     render();
     reloadWatchSessions().catch(()=>{});
     reloadHealth().catch(()=>{});
+    reloadWidgetDevices().catch(()=>{});
     if(!navigator.onLine)return;
     const who=await request(config.apiUrl,authToken,'/api/me');
     currentUser=who.email;render();
@@ -75,6 +77,10 @@ if(bootCapture){captureAfterUnlock=true;tab='inbox';}
 
 let watchPairCode='', watchPairExpires='', watchSessions=[], watchDevices=[], watchError='';
 let healthDays=[],healthDevices=[],healthPairCode='',healthError='',healthLastUpdated='';
+let widgetPairCode='',widgetDevices=[],widgetConnectError='';
+let healthSpan=7,healthDetailsOpen=false,healthDevicesOpen=false;
+let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryImportOpen=false;
+const discoveryExpandedDays=new Set();
 // Calendar OAuth is independent from Compass login; token stays in RAM only.
 let calendarToken='', calendarExpires=0, calendarEvents=[], calendarStatus='Nicht verbunden', calendarBusy=false;
 let calendarUpdatedAt=0;
@@ -695,26 +701,44 @@ function progressScreen(){
  return chrome(`${healthSummaryPanel()}<div class="progress-view"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitäten der letzten 7 Tage</span></div><div class="metrics-row"><div><strong>${stats.count}</strong><small>Sessions</small></div><div><strong>${(stats.minutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>erfasste Zeit</small></div><div><strong>${stats.pomodoros}</strong><small>Pomodoros</small></div></div><button type="button" class="text-link" data-tab="activity">Sessions verwalten ${ico('arrow',14)}</button></section><section class="work-card"><div class="work-heading"><span>${ico('folder',18)} Projektfortschritt</span><span class="quiet-tag">${projects.length} aktiv</span></div>${projects.length?projects.map(p=>{const tasks=projectTasks(state,p.id);const completed=tasks.filter(x=>x.completed).length;return `<button type="button" class="progress-project" data-action="timeline-project" data-id="${h(p.id)}"><span><strong>${h(p.title)}</strong><small>${completed} / ${tasks.length} Schritte erledigt</small></span><div class="progress-track"><span style="width:${tasks.length?Math.round(completed/tasks.length*100):0}%"></span></div></button>`;}).join(''):'<p class="muted-line">Noch keine aktiven Projekte.</p>'}</section></div>`);
 }
 function healthSummaryPanel(){
- const sorted=[...healthDays].sort((a,b)=>b.day.localeCompare(a.day));
- const last=sorted.slice(0,7),avg=(key)=>{const a=last.map(x=>x[key]).filter(Number.isFinite);return a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null;};
- const steps=avg('steps'),sleep=avg('sleepMinutes'),exercise=avg('exerciseMinutes');
- return `<section class="work-card health-panel"><div class="work-heading"><span>${ico('activity',18)} Gesundheit · Health Connect</span><button class="secondary-btn" data-action="health-refresh" ${!authToken?'disabled':''}>Daten aktualisieren</button></div>
- <div class="recovery-glance"><div><span>Ø Schritte · letzte 7 Einträge</span><strong>${steps??'–'}</strong></div><div><span>Ø Schlaf</span><strong>${sleep===null?'–':`${Math.floor(sleep/60)} h ${sleep%60} m`}</strong></div><div><span>Ø Training</span><strong>${exercise===null?'–':`${exercise} min`}</strong></div></div>
- <p class="muted-line">${healthDays.length?`${healthDays.length} Tageswerte in Cloudflare D1 gespeichert. Durchschnitt über die letzten bis zu sieben gelieferten Tage, keine medizinische Bewertung.`:'Noch keine Gesundheitsdaten vorhanden. Android-Companion-App öffnen, Health Connect freigeben und synchronisieren.'} ${healthError?h(healthError):''}</p>
- <div class="health-days-list">${sorted.slice(0,14).map(d=>`<div class="health-day"><strong>${h(d.day)}</strong><span>${d.steps??'–'} Schritte</span><span>${d.sleepMinutes===null?'–':Math.round(d.sleepMinutes/60*10)/10+' h'} Schlaf</span><span>${d.exerciseMinutes??'–'} min Sport</span></div>`).join('')}</div>
- <div class="health-pair-panel"><h3>Samsung mit Health Connect verbinden</h3><p>Im Android-Companion zuerst die Gesundheitsberechtigungen erteilen, dann einen einmaligen Code eingeben.</p>
- <button type="button" class="secondary-btn" data-action="health-pair" ${!authToken?'disabled':''}>Gesundheits-Kopplungscode erzeugen</button> ${healthPairCode?`<strong class="watch-code">${h(healthPairCode)}</strong>`:''}
- ${healthDevices.map(d=>`<div class="watch-session"><span>${h(d.label)}</span><button class="secondary-btn" data-action="health-revoke" data-id="${h(d.deviceHash)}">Trennen</button></div>`).join('')}
- <button type="button" class="secondary-btn" data-action="health-delete-all">Gespeicherten Gesundheitsverlauf löschen</button><small>Manueller Abgleich, keine automatische Hintergrundübertragung. Nur aggregierte Schritte, Schlaf- und Trainingsminuten werden übertragen. Zugriff jederzeit widerrufbar.</small></div></section>`;
+ const today=localDate(),vm=healthViewModel(healthDays,today,healthSpan);const s=vm.stats;
+ const label=(key)=>key==='steps'?'Schritte':key==='sleepMinutes'?'Schlaf':'Training';
+ const fmt=(key,v)=>v===null?'–':key==='steps'?Number(v).toLocaleString('de-AT'):key==='sleepMinutes'?healthTime(v):`${v} min`;
+ const chart=(key,cls)=>{const bars=healthBars(vm.points,key);return `<div class="health-chart health-chart-${cls}" role="img" aria-label="${label(key)} in den letzten ${healthSpan} Tagen">${bars.map((b,i)=>`<div class="health-chart-slot" title="${h(b.day)}: ${h(b.label)}"><div class="health-chart-rail">${b.value===null?'<span class="health-chart-unknown" aria-hidden="true">·</span>':`<span class="health-chart-bar" style="height:${b.height}%"></span>`}</div><span class="health-chart-date">${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric'}).format(new Date(b.day+'T12:00:00Z')))}</span></div>`).join('')}</div>`;};
+ const cards=[['steps','steps','🚶','Bewegung'],['sleepMinutes','sleep','🌙','Schlaf'],['exerciseMinutes','exercise','🏃','Training']].map(([key,cls,emoji,title])=>`<article class="health-visual-card"><div class="health-card-title"><span class="health-card-icon" aria-hidden="true">${emoji}</span><strong>${title}</strong></div><span class="health-card-number">${fmt(key,s[key].average)}</span><span class="health-card-sub">Ø je erfasstem Tag · ${s[key].count}/${healthSpan} Messwerte</span>${chart(key,cls)}</article>`).join('');
+ const rows=[...healthDays].sort((a,b)=>b.day.localeCompare(a.day)).slice(0,30);
+ return `<section class="work-card health-panel" aria-label="Gesundheitsüberblick"><div class="work-heading"><span>${ico('activity',18)} Gesundheit · Dein Überblick</span><button class="secondary-btn" data-action="health-refresh" ${!authToken?'disabled':''}>${ico('refresh',14)} Aktualisieren</button></div>
+ <div class="health-hero"><div><span class="eyebrow">LETZTE ${healthSpan} TAGE</span><h3>Bewegung, Schlaf und Training</h3><p>Deine tatsächlichen Health-Connect-Messwerte. Fehlende Daten bleiben als Lücken sichtbar.</p></div><div class="health-span"><button class="secondary-btn ${healthSpan===7?'is-chosen':''}" data-action="health-range" data-id="7" aria-pressed="${healthSpan===7}">7 Tage</button><button class="secondary-btn ${healthSpan===30?'is-chosen':''}" data-action="health-range" data-id="30" aria-pressed="${healthSpan===30}">30 Tage</button></div></div>
+ <div class="health-visual-grid">${cards}</div>
+ <div class="health-observation"><span aria-hidden="true">✦</span><div><strong>Was die Daten zeigen</strong><p>${h(healthObservation(vm))}</p></div></div>
+ ${healthError?`<p class="error">${h(healthError)}</p>`:''}
+ <details class="health-details" ${healthDetailsOpen?'open':''} id="health-day-details"><summary>Tageswerte ansehen <span>${rows.length} gespeicherte Tage</span></summary><div class="health-days-list">${rows.map(d=>`<div class="health-day"><strong>${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'2-digit',month:'short'}).format(new Date(d.day+'T12:00:00Z')))}</strong><span>${d.steps===null?'–':Number(d.steps).toLocaleString('de-AT')} Schritte</span><span>${healthTime(d.sleepMinutes)} Schlaf</span><span>${d.exerciseMinutes??'–'} min Sport</span></div>`).join('')}</div></details>
+ <div class="widget-connect-panel"><div><strong>📱 Android-Widget · Heute auf einen Blick</strong><p>Die Widget-Vorschau zeigt auf Wunsch offene Next Actions, die nächste geplante Aufgabe und Gesundheits-Kurzwerte. Dafür ist ein eigener, jederzeit widerrufbarer Lesezugang erforderlich. Keine Tresor-Passphrase im Widget.</p></div><button type="button" class="secondary-btn" data-action="widget-pair" ${!authToken?'disabled':''}>Widget-Kopplungscode erzeugen</button>${widgetPairCode?`<strong class="watch-code">${h(widgetPairCode)}</strong>`:''}${widgetConnectError?`<p class="error">${h(widgetConnectError)}</p>`:''}${widgetDevices.map(d=>`<div class="watch-session"><span>${h(d.label)} · ${h(d.createdAt.slice(0,10))}</span><button type="button" class="secondary-btn" data-action="widget-revoke" data-id="${h(d.deviceHash)}">Widerrufen</button></div>`).join('')}</div>
+ <details class="health-details" ${healthDevicesOpen?'open':''} id="health-device-details"><summary>Health Connect & Datenschutz <span>Verbindung verwalten</span></summary><div class="health-pair-panel"><p>Im Android-Companion die Berechtigungen erteilen und einen einmaligen Code eingeben.</p><button type="button" class="secondary-btn" data-action="health-pair" ${!authToken?'disabled':''}>Health-Connect-Kopplungscode erzeugen</button> ${healthPairCode?`<strong class="watch-code">${h(healthPairCode)}</strong>`:''}${healthDevices.map(d=>`<div class="watch-session"><span>${h(d.label)}</span><button class="secondary-btn" data-action="health-revoke" data-id="${h(d.deviceHash)}">Trennen</button></div>`).join('')}<button type="button" class="secondary-btn" data-action="health-delete-all">Gesundheitsdaten aus der Cloud löschen</button><small>Manueller Abgleich. Die Werte sind zugriffsgeschützt in Cloudflare D1 gespeichert, aber nicht Ende-zu-Ende-verschlüsselt. Keine medizinische Bewertung.</small></div></details></section>`;
 }
 function discoveryPanel(){
- const events=upcomingImportedEvents(state?.discoveredEvents,localDate()).slice(0,60);
- return `<section class="work-card discovery-panel"><div class="work-heading"><span>${ico('calendar',18)} Entdecken · Veranstaltungen</span><span class="quiet-tag">${events.length} importierte Termine</span></div>
- <p class="muted-line">Rechercheergebnisse aus offiziellen Quellen als JSON importieren. Jede Veranstaltung benötigt einen Quellenlink; Termine vor Besuch beim Veranstalter prüfen. Noch kein automatischer Live-Abruf.</p>
- <div class="discovery-actions"><button type="button" class="secondary-btn" data-action="discovery-prompt">Rechercheprompt kopieren</button><button type="button" class="secondary-btn" data-action="discovery-clear">Importierte Events entfernen</button></div>
- <form id="discovery-import-form" class="compact-stack"><label>Veranstaltungs-JSON<textarea name="events" rows="4" maxlength="200000" placeholder='{"events":[{"title":"...","date":"2026-11-01","city":"Graz","venue":"...","category":"Theater","sourceUrl":"https://..."}]}' required></textarea></label><button class="primary-btn" type="submit">Quellen prüfen & importieren</button></form>
- <div class="discovery-list">${events.map(e=>`<div class="discovery-event"><div><strong>${h(e.title)}</strong><small>${h(e.date)} · ${h(e.venue)} · ${h(e.city)} · ${h(e.category)}</small></div><div><a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">Quelle ansehen</a><button type="button" class="secondary-btn" data-action="discovery-capture" data-id="${h(eventKey(e))}">Merken</button></div></div>`).join('')||'<p class="muted-line">Noch keine Veranstaltungen importiert. Kopiere den Rechercheprompt und füge anschließend das JSON hier ein.</p>'}</div></section>`;
+ const today=localDate(),all=upcomingImportedEvents(state?.discoveredEvents,today);
+ const preferences=state?.eventPreferences||{},fav=all.filter(e=>preferences[eventKey(e)]==='saved').length,hide=all.filter(e=>preferences[eventKey(e)]==='hidden').length;
+ const filter=(e)=>{const status=preferences[eventKey(e)]||'open';if(discoveryRange==='saved'&&status!=='saved')return false;if(discoveryRange==='hidden'&&status!=='hidden')return false;if(!['saved','hidden'].includes(discoveryRange)&&status==='hidden')return false;
+  if(discoveryCity!=='all'&&e.city!==discoveryCity)return false;if(discoveryArea!=='all'){const area=eventArea(e);if(discoveryArea==='austria'?!['graz','vienna','austria'].includes(area):discoveryArea==='europe'?!['graz','vienna','austria','europe'].includes(area):area!==discoveryArea)return false;}if(discoveryCategory!=='all'&&e.category!==discoveryCategory)return false;
+  const d=new Date(today+'T12:00:00Z'),wd=d.getUTCDay();if(discoveryRange==='today')return e.date===today;
+  if(discoveryRange==='week'){d.setUTCDate(d.getUTCDate()+7);return e.date<=d.toISOString().slice(0,10);}
+  if(discoveryRange==='weekend'){d.setUTCDate(d.getUTCDate()+(6-wd+7)%7);const sat=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+1);return e.date>=sat&&e.date<=d.toISOString().slice(0,10);}
+  return true;};
+ const events=all.filter(filter).slice(0,100),groups=new Map();for(const e of events){if(!groups.has(e.date))groups.set(e.date,[]);groups.get(e.date).push(e);}
+ const eventCard=e=>{const key=eventKey(e),[emoji,tone]=discoveryAppearance(e.category),status=preferences[key]||'open';const desc=e.description||`${e.category} im ${e.venue||e.city}. Genauere Informationen zum Programm stehen auf der Veranstalterseite.`;
+ return `<article class="discovery-card discovery-${tone}"><div class="discovery-art" aria-hidden="true">${e.imageUrl?`<img src="${h(e.imageUrl)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"/>`:""}<span class="discovery-art-fallback">${emoji}</span></div><div class="discovery-copy"><span class="discovery-type">${h(e.category)} · ${h(e.city)}${eventCountry(e)?` · ${h(eventCountry(e))}`:""}</span><h4>${h(e.title)}</h4><p>${h(desc)}</p><small>${h(e.venue)} · ${h(e.city)} · Termin und Details vor Besuch prüfen</small></div><div class="discovery-card-actions"><button type="button" class="secondary-btn ${status==='saved'?'is-chosen':''}" data-action="discovery-save" data-id="${h(key)}" aria-label="${status==='saved'?'Von Merkliste entfernen':'Zur Merkliste hinzufügen'}">${status==='saved'?'♥ Gemerkt':'♡ Merken'}</button><button type="button" class="text-link" data-action="discovery-hide" data-id="${h(key)}">${status==='hidden'?'Einblenden':'Ausblenden'}</button><a href="${h(e.sourceUrl)}" class="text-link" target="_blank" rel="noopener noreferrer">Details ↗</a></div></article>`;};
+ const ranges=[['today','Heute'],['week','7 Tage'],['weekend','Wochenende'],['all','Alle'],['saved',`♥ Merkliste (${fav})`],['hidden',`Ausgeblendet (${hide})`]];
+ const cities=[...new Set(all.map(x=>x.city))].sort();
+ return `<section class="work-card discovery-panel"><div class="work-heading"><span>${ico('calendar',18)} Entdecken · Freizeit in deiner Nähe</span><span class="quiet-tag">${all.length} Veranstaltungen · ${fav} gemerkt</span></div>
+ <p class="muted-line">Aus importierten Recherchen – keine Live-Verfügbarkeit. Die Programmbeschreibung wird nur angezeigt, wenn sie im Import enthalten ist.</p>
+ <div class="discovery-tabs">${ranges.map(([value,title])=>`<button class="discovery-tab ${discoveryRange===value?'selected':''}" data-action="discovery-range" data-id="${value}" aria-pressed="${discoveryRange===value}">${h(title)}</button>`).join('')}</div>
+ <div class="discovery-filters"><label>Region<select data-discovery-filter="area"><option value="all" ${discoveryArea==='all'?'selected':''}>Überall</option><option value="graz" ${discoveryArea==='graz'?'selected':''}>Graz & Umgebung</option><option value="vienna" ${discoveryArea==='vienna'?'selected':''}>Wien</option><option value="austria" ${discoveryArea==='austria'?'selected':''}>Österreich</option><option value="europe" ${discoveryArea==='europe'?'selected':''}>Europa</option></select></label><label>Stadt<select data-discovery-filter="city"><option value="all">Alle Städte</option>${cities.map(c=>`<option value="${h(c)}" ${discoveryCity===c?'selected':''}>${h(c)}</option>`).join('')}</select></label><label>Interesse<select data-discovery-filter="category"><option value="all">Alle Kategorien</option>${EVENT_CATEGORIES.map(c=>`<option value="${h(c)}" ${discoveryCategory===c?'selected':''}>${h(discoveryAppearance(c)[0])} ${h(c)}</option>`).join('')}</select></label><button class="secondary-btn" type="button" data-action="discovery-import-toggle">${discoveryImportOpen?'Import schließen':'＋ Veranstaltungen importieren'}</button></div>
+ ${discoveryImportOpen?`<div class="discovery-import-drawer"><div class="discovery-actions"><button type="button" class="secondary-btn" data-action="discovery-prompt">Rechercheprompt kopieren</button><button type="button" class="secondary-btn" data-action="discovery-clear">Importierte Events entfernen</button></div><form id="discovery-import-form" class="compact-stack"><label>Veranstaltungs-JSON<textarea name="events" rows="5" maxlength="200000" placeholder='{"events":[{"title":"...","date":"2026-11-01","city":"Graz","venue":"...","category":"Theater","description":"...","sourceUrl":"https://...","imageUrl":"https://...","country":"Österreich"}]}' required></textarea></label><button class="primary-btn" type="submit">Prüfen & importieren</button></form><small>JSON mit Markdown-Codeblock und typischen KI-URL-Fehlern wird bereinigt. Bei Fehlern zeigen wir den Eintrag.</small></div>`:''}
+ <div class="discovery-day-groups">${[...groups].map(([date,items])=>{const shown=discoveryExpandedDays.has(date)?items:items.slice(0,3);return `<section class="discovery-day"><div class="discovery-day-head"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(date+'T12:00:00Z')))}</h3><span>${items.length} ${items.length===1?'Idee':'Ideen'}</span></div>${shown.map(eventCard).join('')}${items.length>3?`<button type="button" class="text-link discovery-more" data-action="discovery-more" data-id="${date}">${discoveryExpandedDays.has(date)?'Weniger anzeigen':`Weitere ${items.length-3} anzeigen`}</button>`:''}</section>`;}).join('')||'<p class="discovery-empty">Hier ist gerade nichts vorgemerkt. Ändere den Zeitraum oder die Filter, um andere Vorschläge zu sehen.</p>'}</div>
+ </section>`;
 }
+
 function recoveryScreen(){
  const today=localDate(),endDate=new Date(today+'T12:00:00');endDate.setDate(endDate.getDate()+30);const end=localDate(endDate);
  const cal=calendarEvents.filter(e=>e.status!=='cancelled'&&calendarDate(e)>=today&&calendarDate(e)<=end&&eventAppearance(e).category==='Erholung'&&!eventAppearance(e).hidden);
@@ -751,6 +775,11 @@ function activityScreen(){
  <section class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Session-Inspector</span></div>${chosen?`<form id="activity-edit-form" data-id="${h(chosen.id)}" class="compact-stack"><label>Titel<input name="title" required maxlength="100" value="${h(chosen.title)}"/></label><label>Art<select name="category">${choices}</select></label><label>Datum und Uhrzeit<input name="startedAt" type="datetime-local" required value="${h(chosen.startedAt)}"/></label><label>Dauer in Minuten<input name="durationMinutes" type="number" required min="1" max="1440" value="${chosen.durationMinutes}"/></label><label>Projekt<select name="projectId">${projectOpts}</select></label><label>Notiz<textarea name="note" maxlength="1000" rows="3">${h(chosen.note||'')}</textarea></label><p class="muted-line">Quelle: ${h(chosen.source)}${chosen.source==='Garmin'?' · Messwerte bleiben erhalten':''}</p><div class="activity-actions"><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="${chosen.deleted?'activity-restore':'activity-trash'}" data-id="${h(chosen.id)}">${chosen.deleted?'Wiederherstellen':'In Papierkorb'}</button>${chosen.deleted?`<button type="button" class="danger-btn" data-action="activity-purge" data-id="${h(chosen.id)}">Endgültig löschen</button>`:''}</div></form>`:'<p class="muted-line">Wähle eine Session oder lege eine manuelle Aktivität an.</p>'}
  <div class="watch-pair-block"><h3>Garmin fēnix 7S</h3><p class="muted-line">Kopplung und Geräteverwaltung bleiben getrennt von der Session-Bearbeitung.</p>${watchPairCode?`<strong class="watch-code">${h(watchPairCode)}</strong>`:''}<button type="button" class="secondary-btn" data-action="watch-pair" ${!authToken?'disabled':''}>Kopplungscode erstellen</button>${watchDevices.map(d=>`<div class="watch-session"><span>${h(d.label)}</span><button type="button" class="secondary-btn" data-action="watch-revoke" data-id="${h(d.deviceHash)}">Trennen</button></div>`).join('')}${watchError?`<p class="watch-error">${h(watchError)}</p>`:''}</div></section></div>`);
 }
+async function reloadWidgetDevices(){
+ if(!authToken)return;
+ try{const data=await request(config.apiUrl,authToken,'/api/widget/devices');widgetDevices=data.devices||[];widgetConnectError='';render();}
+ catch(ex){widgetConnectError='Widget-Geräte konnten nicht geladen werden: '+ex.message;}
+}
 async function reloadHealth(){
  if(!authToken||!config.apiUrl)return;
  try{const [values,devices]=await Promise.all([request(config.apiUrl,authToken,'/api/health/days?days=90'),request(config.apiUrl,authToken,'/api/health/devices')]);healthDays=values.days||[];healthDevices=devices.devices||[];healthError='';healthLastUpdated=Date.now();render();}
@@ -768,7 +797,7 @@ function render(){
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery')&&authToken)reloadHealth().catch(()=>{});});
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
@@ -895,8 +924,11 @@ function bind() {
   });
   const discoveryForm=app.querySelector('#discovery-import-form');if(discoveryForm)discoveryForm.onsubmit=async ev=>{ev.preventDefault();try{
     const raw=String(new FormData(discoveryForm).get('events')||'');const result=parseEventImport(raw,state?.discoveredEvents||[]);
-    await mutate(st=>{st.discoveredEvents=[...(st.discoveredEvents||[]),...result.added].slice(-250);});toast(`${result.added.length} Veranstaltungen importiert, ${result.duplicates} Dubletten übersprungen.`);
+    await mutate(st=>{st.discoveredEvents=[...(st.discoveredEvents||[]),...result.added].slice(-250);});discoveryImportOpen=false;toast(`${result.added.length} Veranstaltungen importiert, ${result.duplicates} Dubletten übersprungen.`);
    }catch(ex){toast('Import: '+ex.message,true);}};
+  for(const key of ['health-day-details','health-device-details']){const el=app.querySelector('#'+key);if(el)el.ontoggle=()=>{if(key==='health-day-details')healthDetailsOpen=el.open;else healthDevicesOpen=el.open;};}
+  app.querySelectorAll('[data-discovery-filter]').forEach(el=>el.onchange=()=>{if(el.dataset.discoveryFilter==='city')discoveryCity=el.value;else if(el.dataset.discoveryFilter==='area')discoveryArea=el.value;else discoveryCategory=el.value;render();});
+  app.querySelectorAll('.discovery-art img').forEach(img=>{img.onerror=()=>img.remove();});
   const recoveryForm=app.querySelector('#recovery-idea-form');if(recoveryForm)recoveryForm.onsubmit=async ev=>{
     ev.preventDefault();const data=new FormData(recoveryForm);
     const i={id:'idea-'+crypto.randomUUID(),title:String(data.get('title')||'').trim(),emoji:String(data.get('emoji')||'🌿').trim()||'🌿',minutes:Number(data.get('minutes')),weather:String(data.get('weather')||'any'),energy:String(data.get('energy')||'medium'),range:String(data.get('range')||'near')};
@@ -918,6 +950,11 @@ function bind() {
 async function runAction(action,id,stepId=null) {
   lastActivity=Date.now();
   try {
+    if(action==='health-range'){healthSpan=id==='30'?30:7;render();return;}
+    if(action==='discovery-range'){if(['today','week','weekend','all','saved','hidden'].includes(id))discoveryRange=id;render();return;}
+    if(action==='discovery-import-toggle'){discoveryImportOpen=!discoveryImportOpen;render();return;}
+    if(action==='discovery-more'){if(discoveryExpandedDays.has(id))discoveryExpandedDays.delete(id);else discoveryExpandedDays.add(id);render();return;}
+    if(action==='discovery-save'||action==='discovery-hide'){const entry=state?.discoveredEvents?.find(e=>eventKey(e)===id);if(!entry)return;await mutate(st=>{st.eventPreferences??={};const prev=st.eventPreferences[id]||'open';const next=action==='discovery-save'?(prev==='saved'?'open':'saved'):(prev==='hidden'?'open':'hidden');if(next==='open')delete st.eventPreferences[id];else st.eventPreferences[id]=next;});return;}
     if(action==='nav-more'){await mutate(s=>{s.uiPreferences??={};s.uiPreferences.advancedNav=!(s.uiPreferences.advancedNav===true);});return;}
     if(action==='recovery-idea-remove'){if(!String(id).startsWith('idea-'))return;await mutate(s=>{s.recoveryIdeas=(s.recoveryIdeas||[]).filter(i=>i.id!==id);});return;}
     if(action==='recovery-idea-hide'){if(!String(id).startsWith('starter-'))return;await mutate(s=>{s.hiddenStarterIdeas=[...new Set([...(s.hiddenStarterIdeas||[]),id])];});return;}
@@ -1053,7 +1090,9 @@ async function runAction(action,id,stepId=null) {
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
-    if(action==='lock'){clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
+    if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){
       try{const result=await request(config.apiUrl,authToken,'/api/health/pair/start',{method:'POST'});healthPairCode=result.code;healthError='';render();}
       catch(ex){healthError=ex.message;render();}return;
@@ -1069,7 +1108,7 @@ async function runAction(action,id,stepId=null) {
     }
     if(action==='discovery-clear'){
       if(!confirm('Alle importierten Veranstaltungen aus diesem lokalen Tresor entfernen?'))return;
-      await mutate(st=>{st.discoveredEvents=[];});toast('Importierte Veranstaltungen entfernt.');return;
+      await mutate(st=>{st.discoveredEvents=[];st.eventPreferences={};});toast('Importierte Veranstaltungen entfernt.');return;
     }
     if(action==='discovery-capture'){
       const entry=state?.discoveredEvents?.find(e=>eventKey(e)===id);if(!entry)return;
@@ -1087,7 +1126,7 @@ async function runAction(action,id,stepId=null) {
     }
     if(action==='sync'){await syncNow();return;}
     if(action==='logout'){
-      const previous=authToken;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';clearTimeout(syncTimer);
+      const previous=authToken;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];clearTimeout(syncTimer);
       await vault.clearSession();
       try {if(previous)await request(config.apiUrl,previous,'/api/session',{method:'DELETE'});
         toast('Compass-Sitzung auf diesem Gerät beendet. Lokale Daten bleiben geschützt.');}

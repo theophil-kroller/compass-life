@@ -1,0 +1,12 @@
+Compass 0.5.2 — Patch-Installation
+
+1. Backup des bestehenden Compass-Tresors erstellen.
+2. Cloudflare D1 Migration worker/migrations/0010_widget_preview.sql (genau diese!) ausführen.
+3. Patch-Verzeichnisse pfadgleich in GitHub main übernehmen.
+4. Web- und Android-Actions prüfen.
+5. Worker aus aktualisiertem Repo separat mit npm run deploy:api veröffentlichen.
+6. API /api/health muss apiVersion:8, release:0.5.2 und schema.ready:true zeigen.
+7. APK aus erfolgreichem Android Artifact installieren und Widget separat koppeln.
+
+Detailanleitung: docs/COMPASS_0.5.2_RELEASE.md
+Keine alten D1-Migrationen blind erneut starten; keine PWA-/Browserdaten löschen.

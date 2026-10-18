@@ -4,25 +4,25 @@ import {readFileSync} from 'node:fs';
 import {assertCompatibleWorker} from '../client/src/health-check.js';
 
 test('Worker 0.4.10 API 6 and ready D1 work', () => {
-  assert.equal(assertCompatibleWorker({apiVersion:6,schema:{ready:true}}), true);
+  assert.equal(assertCompatibleWorker({apiVersion:8,schema:{ready:true}}), true);
 });
 test('Newer compatible Worker stays accepted', () => {
-  assert.equal(assertCompatibleWorker({apiVersion:7,schema:{ready:true}}), true);
+  assert.equal(assertCompatibleWorker({apiVersion:9,schema:{ready:true}}), true);
 });
 test('Old Worker reports deployment, not SQL issue', () => {
-  assert.throws(() => assertCompatibleWorker({apiVersion:5,schema:{ready:true}}), /Worker veraltet.*SQL allein aktualisiert den Worker/);
+  assert.throws(() => assertCompatibleWorker({apiVersion:7,schema:{ready:true}}), /Worker veraltet.*SQL allein aktualisiert den Worker/);
 });
 test('Ready Worker with missing migration reports D1 and required migration', () => {
-  assert.throws(() => assertCompatibleWorker({apiVersion:6,schema:{ready:false,requiredMigration:'0008'}}), /Migration 0008 erforderlich/);
+  assert.throws(() => assertCompatibleWorker({apiVersion:8,schema:{ready:false,requiredMigration:'0008'}}), /Migration 0008 erforderlich/);
 });
 test('Invalid or absent API rejects safely', () => {
-  for (const v of [null, {}, {apiVersion:'6',schema:{ready:true}}])
+  for (const v of [null, {}, {apiVersion:'8',schema:{ready:true}}])
     assert.throws(()=>assertCompatibleWorker(v), /Worker veraltet/);
 });
 test('App uses shared check and displays frontend version; review and navigation remain enabled', () => {
   const ui=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
   assert.match(ui,/assertCompatibleWorker\(health\)/);
-  assert.match(ui,/COMPASS_CLIENT_VERSION='0\.5\.1'/);
+  assert.match(ui,/COMPASS_CLIENT_VERSION='0\.5\.2'/);
   assert.match(ui,/navItem\('people','Menschen','people'\)/);
   assert.match(ui,/navItem\('recovery','Erholung','heart'\)/);
   assert.ok(!ui.includes('Nicht alles muss sofort geklärt werden.'));
