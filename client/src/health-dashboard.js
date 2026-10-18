@@ -1,3 +1,4 @@
+import {fitdaysFigureReport} from './fitdays-figure.js';
 import {missingGarminDays} from './health-import.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const color={deep:'#345C9C',light:'#9DB6E4',rem:'#A87CC7',awake:'#DEAA76',unknown:'#DCE4E9'};
@@ -50,7 +51,7 @@ export function bodySegmentsReport(latest){
  return `<div class="health-segments-grid">${measure('segmentFat','Fettmasse nach Körperregion','#C58A5D')}${measure('segmentMuscle','Muskelmasse nach Körperregion','#4B977D')}</div>`;
 }
 export function importedHealthDashboard(data={},span=90,selectedNight=''){
- const fit=data.fitdays||[],nights=data.garminNights||[],hrv=data.garminHrv||[],wellness=data.garminWellness||[];
+ const fit=data.fitdays||[],nights=data.garminNights||[],hrv=data.garminHrv||[],wellness=data.garminWellness||[],fitness=data.garminFitness||[],sessions=data.garminSessions||[];
  const today=new Date().toLocaleDateString('sv-SE'),threshold=daysBefore(today,(periodDays[span]||90)-1);
  const body=[...fit.filter(x=>x.day>=threshold)].sort((a,b)=>a.at.localeCompare(b.at));
  const byDay=[...new Map(body.map(x=>[x.day,x])).values()],nightList=nights.filter(x=>x.day>=threshold),hrvRows=hrv.filter(x=>x.day>=threshold);
@@ -59,7 +60,7 @@ export function importedHealthDashboard(data={},span=90,selectedNight=''){
  const metrics=[['Gewicht',fmt(latest?.weightKg,'kg'),'weightKg'],['Körperfett',fmt(latest?.bodyFatPct,'%'),'bodyFatPct'],['Muskelmasse',fmt(latest?.muscleKg,'kg'),'muscleKg'],['Körperwasser',fmt(latest?.waterPct,'%'),'waterPct'],['Viszeralfett',fmt(latest?.visceralFat),'visceralFat']];
  return `<section class="health-import-hub" aria-label="Garmin und Fitdays Import">
  <div class="health-import-heading"><div><span class="eyebrow">COMPASS / GESUNDHEIT</span><h3>Deine Daten. Dein Verlauf.</h3><p>Garmin-Schlaf und HRV gemeinsam mit Fitdays-Körpermessungen – lokal im verschlüsselten Tresor.</p></div><span class="health-local-badge">🔒 Nur auf diesem Gerät</span></div>
- <div class="health-import-brief"><div><strong>${nights.length}</strong><span>Garmin-Nächte</span></div><div><strong>${hrv.length}</strong><span>HRV-Tage</span></div><div><strong>${fit.length}</strong><span>Fitdays-Messungen</span></div><div><strong>${wellness.length}</strong><span>Stress-/Energiepunkte</span></div></div>
+ <div class="health-import-brief"><div><strong>${nights.length}</strong><span>Garmin-Nächte</span></div><div><strong>${hrv.length}</strong><span>HRV-Tage</span></div><div><strong>${fit.length}</strong><span>Fitdays-Messungen</span></div><div><strong>${wellness.length}</strong><span>Stress-/Energiepunkte</span></div><div><strong>${fitness.length}</strong><span>Garmin-Aktivitätstage</span></div><div><strong>${sessions.length}</strong><span>Trainings-FIT-Sessions</span></div></div>
  <div class="health-import-controls"><label class="secondary-btn health-upload-btn">Dateien auswählen <input id="health-import-input" type="file" multiple accept=".zip,.fit,.csv,.xls,.xlsx,.json"/></label><span>Garmin ZIP / FIT / Schlaf-JSON · Fitdays CSV / XLS · auch mehrere Dateien zugleich</span></div>
  <div class="health-import-download-links"><a href="https://connect.garmin.com/app/settings/accountInformation" target="_blank" rel="noopener noreferrer">↗ Garmin Connect · Tagesexport öffnen</a><details><summary>Fitdays-Export: Wo finde ich ihn?</summary><p>Fitdays-App → Verlauf / Berichte → Menü (⋯) → Exportieren → Zeitraum auswählen → Datei speichern oder teilen. Je nach App-Version kann die Beschriftung abweichen.</p></details></div>
  ${missing.length?`<p class="health-import-missing"><strong>Garmin-Nachimport:</strong> ${missing.length} mögliche Tage ohne importierte Garmin-Schlaf-/HRV-Daten seit dem letzten Import, ${esc(shortDate(missing[0]))}–${esc(shortDate(missing.at(-1)))}. Lücken können auch Tage ohne auswertbaren Schlaf bedeuten.</p>`:''}
@@ -75,22 +76,22 @@ export function importedHealthDashboard(data={},span=90,selectedNight=''){
  ${lastNight?`<div class="sleep-stage-summary">${[['Tief',lastNight.totals.deep,color.deep],['Leicht',lastNight.totals.light,color.light],['REM',lastNight.totals.rem,color.rem],['Wach',lastNight.totals.awake,color.awake]].map(([label,v,c])=>`<span><i style="background:${c}"></i>${label}: ${Math.floor(v/60)}h ${String(v%60).padStart(2,'0')}m</span>`).join('')}</div>`:''}</div>
  <article class="health-report-card"><div class="health-report-title"><div><small>GARMIN</small><h4>Herzfrequenzvariabilität · HRV</h4></div><b>${fmt(hrv.at(-1)?.nightAverageMs,'ms')}</b></div>${healthTrendSvg(hrvRows,'nightAverageMs','nächtliche HRV','ms','#8260A3')}</article>
  <p class="health-chart-disclaimer">Garmin-Schlafstadien und Fitdays-Körperzusammensetzung sind Geräteschätzungen. Zeiträume ohne Messung bleiben leer. Kein medizinischer Befund. FIT-Rohdaten werden beim Import nicht gespeichert oder übertragen.</p>
- <div class="health-import-bottom"><span>Letzter manueller Import: ${data.lastImportAt?esc(new Date(data.lastImportAt).toLocaleString('de-AT')):'noch keiner'}</span><button type="button" class="secondary-btn" data-action="health-import-clear" ${!fit.length&&!nights.length&&!hrv.length?'disabled':''}>Lokale Importdaten löschen</button></div>
+ <div class="health-import-bottom"><span>Letzter manueller Import: ${data.lastImportAt?esc(new Date(data.lastImportAt).toLocaleString('de-AT')):'noch keiner'}</span><button type="button" class="secondary-btn" data-action="health-import-clear" ${!fit.length&&!nights.length&&!hrv.length&&!wellness.length&&!fitness.length&&!sessions.length?'disabled':''}>Lokale Importdaten löschen</button></div>
  </section>`;
 }
 
 /** 0.5.8: separate source administration from analytics so that the sidebar has one Insights entry. */
 export function healthSourcesView(data={}){
- const nights=data?.garminNights||[],hrvs=data?.garminHrv||[],fit=data?.fitdays||[],wellness=data?.garminWellness||[],today=new Date().toLocaleDateString('sv-SE');
+ const nights=data?.garminNights||[],hrvs=data?.garminHrv||[],fit=data?.fitdays||[],wellness=data?.garminWellness||[],fitness=data?.garminFitness||[],sessions=data?.garminSessions||[],today=new Date().toLocaleDateString('sv-SE');
  const missing=missingGarminDays([...nights,...hrvs],today);
  return `<section class="health-import-hub health-sources-only" aria-label="Gesundheitsdatenquellen">
  <div class="health-import-heading"><div><span class="eyebrow">INSIGHTS / DATENQUELLEN</span><h3>Import & Verbindungen</h3><p>Deine Auswertungen stehen in Schlaf, Stress, Body Battery, Aktivität und Körper. Hier verwaltest du die Datenquellen.</p></div><span class="health-local-badge">🔒 Garmin & Fitdays lokal</span></div>
- <div class="health-import-brief"><div><strong>${nights.length}</strong><span>Garmin-Nächte</span></div><div><strong>${hrvs.length}</strong><span>HRV-Tage</span></div><div><strong>${fit.length}</strong><span>Fitdays-Messungen</span></div><div><strong>${wellness.length}</strong><span>Stress-/Energiepunkte</span></div></div>
+ <div class="health-import-brief"><div><strong>${nights.length}</strong><span>Garmin-Nächte</span></div><div><strong>${hrvs.length}</strong><span>HRV-Tage</span></div><div><strong>${fit.length}</strong><span>Fitdays-Messungen</span></div><div><strong>${wellness.length}</strong><span>Stress-/Energiepunkte</span></div><div><strong>${fitness.length}</strong><span>Garmin-Aktivitätstage</span></div><div><strong>${sessions.length}</strong><span>Trainings-FIT-Sessions</span></div></div>
  <div class="health-import-controls"><label class="secondary-btn health-upload-btn">Mehrere Exportdateien auswählen<input id="health-import-input" type="file" multiple accept=".zip,.fit,.csv,.xls,.xlsx,.json" /></label><span>Garmin ZIP / FIT / Schlaf-JSON und Fitdays CSV / XLS in einem Import</span></div>
  <div class="health-import-download-links"><a href="https://connect.garmin.com/app/settings/accountInformation" target="_blank" rel="noopener noreferrer">↗ Garmin Connect · Export öffnen</a><details><summary>Fitdays-Export: Anleitung anzeigen</summary><p>Fitdays → Verlauf / Berichte → ⋯ → Exportieren → Zeitraum auswählen → Datei speichern/teilen. Bezeichnungen unterscheiden sich nach App-Version.</p></details></div>
- <p class="health-chart-disclaimer"><strong>Neu in Compass 0.5.9:</strong> Bereits importierte Garmin-Tages-ZIPs bitte einmal erneut als Sammelimport auswählen. So werden Stress- und Body-Battery-Messungen ergänzt, ohne bestehende Schlaf- und HRV-Daten zu verdoppeln.</p>
+ <p class="health-chart-disclaimer"><strong>Neu in Compass 0.5.10:</strong> Bereits importierte Garmin-Tages-ZIPs bitte einmal erneut als Sammelimport auswählen. So werden Stress-, Body-Battery- und Aktivitätsmessungen ergänzt, ohne bestehende Schlaf- und HRV-Daten zu verdoppeln.</p>
  ${missing.length?`<p class="health-import-missing"><strong>Mögliche Garmin-Lücken:</strong> ${missing.length} Tage · ${esc(shortDate(missing[0]))}–${esc(shortDate(missing.at(-1)))}. Das sind Hinweise, keine garantierten Aufzeichnungslücken.</p>`:''}
- <div class="health-import-bottom"><span>Letzter Dateiimport: ${data.lastImportAt?esc(new Date(data.lastImportAt).toLocaleString('de-AT')):'noch keiner'}</span><button type="button" class="secondary-btn" data-action="health-import-clear" ${!fit.length&&!nights.length&&!hrvs.length&&!wellness.length?'disabled':''}>Lokale Importdaten löschen</button></div>
+ <div class="health-import-bottom"><span>Letzter Dateiimport: ${data.lastImportAt?esc(new Date(data.lastImportAt).toLocaleString('de-AT')):'noch keiner'}</span><button type="button" class="secondary-btn" data-action="health-import-clear" ${!fit.length&&!nights.length&&!hrvs.length&&!wellness.length&&!fitness.length&&!sessions.length?'disabled':''}>Lokale Importdaten löschen</button></div>
  <p class="health-chart-disclaimer">Garmin-/Fitdays-Dateien werden lokal verarbeitet und im verschlüsselten Tresor gespeichert. Health-Connect-Tageswerte sind ein gesonderter Cloud-Sync und derzeit nicht Ende-zu-Ende-verschlüsselt.</p></section>`;
 }
 export function healthBodyView(data={},span=90){
@@ -102,7 +103,7 @@ export function healthBodyView(data={},span=90){
  <div class="health-report-metrics">${m.map(([label,value,u])=>`<div class="health-report-metric"><span>${esc(label)}</span><strong>${fmt(value,u)}</strong></div>`).join('')}</div>
  <div class="health-trend-grid"><article class="health-report-card"><div class="health-report-title"><div><small>FITDAYS · VERLAUF</small><h4>Körpergewicht</h4></div><b>${fmt(latest?.weightKg,'kg')}</b></div>${healthTrendSvg(byDay,'weightKg','Körpergewicht','kg','#327E70')}</article>
  <article class="health-report-card"><div class="health-report-title"><div><small>FITDAYS · VERLAUF</small><h4>Körperfett</h4></div><b>${fmt(latest?.bodyFatPct,'%')}</b></div>${healthTrendSvg(byDay,'bodyFatPct','Körperfett','%','#B77E52')}</article></div>
- ${bodySegmentsReport(latest)}<p class="insight-footnote">Segment-Prozentwerte bedeuten Fitdays-Referenzprozente, nicht Körperfettanteile der Regionen. Bei fehlenden Messungen keine Interpolation.</p></section>`;
+ ${fitdaysFigureReport(latest)}<details class="fitdays-legacy-details"><summary>Segmentwerte auch als Balken anzeigen</summary>${bodySegmentsReport(latest)}</details><p class="insight-footnote">Segment-Prozentwerte bedeuten Fitdays-Referenzprozente, nicht Körperfettanteile der Regionen. Bei fehlenden Messungen keine Interpolation.</p></section>`;
 }
 
 /** Existing Health Connect day summaries are preserved in Insights after removing duplicate navigation. */

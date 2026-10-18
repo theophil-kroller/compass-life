@@ -1,5 +1,5 @@
 // FIT binary reader. Only selected wellness records are retained; no GPS, raw samples or device identifiers.
-// Messages: sleep_level(275), sleep_summary(521), hrv_status_summary(370), stress_level(227).
+// Messages: sleep_level(275), sleep_summary(521), hrv_status_summary(370), stress_level(227), monitoring(55), session(18).
 const FIT_EPOCH=Date.UTC(1989,11,31)/1000;
 const time=v=>Number.isInteger(v)&&v>800000000&&v<3000000000?new Date((FIT_EPOCH+v)*1000).toISOString():null;
 function fieldValue(bytes,base,little){
@@ -32,7 +32,7 @@ export function decodeGarminFit(input){
    defs.set(local,{global,little,fields,developer});continue;
   }
   const def=defs.get(local);if(!def)throw Error('FIT-Datensatz ohne Definition');
-  const wanted=[275,521,370,227].includes(def.global),vals={};
+  const wanted=[275,521,370,227,55,18].includes(def.global),vals={};
   for(const f of def.fields){if(offset+f.size>end)throw Error('FIT-Nutzdaten unvollständig');if(wanted&&f.size<=128)vals[f.num]=fieldValue(b.subarray(offset,offset+f.size),f.base,def.little);offset+=f.size;}
   for(const size of def.developer){if(offset+size>end)throw Error('FIT-Entwicklerdaten unvollständig');offset+=size;}
   if(wanted)records.push({type:def.global,fields:vals});
@@ -129,4 +129,48 @@ export function garminStressEnergyFromRecords(records){
   const stress=n?(n%2?values[(n-1)/2]:(values[n/2-1]+values[n/2])/2):null;
   return {at:x.at,stress,bodyBattery:x.battery};
  });
+}
+
+
+/** FIT global 55 (monitoring) exposes *accumulated* step/distance counters for walking/running.
+ * Field 3 = steps for activity type 1/6; field 2 = distance /100 metres.
+ * Use the highest valid counter observed for a UTC day, NEVER sum snapshots.
+ * These are documented monitoring fields, not proprietary Garmin fitness metrics.
+ */
+export function garminMonitoringFromRecords(records){
+ const days=new Map();
+ for(const record of records){
+  if(record.type!==55)continue;
+  const fields=record.fields||{},at=time(fields[253]);
+  if(!at||![1,6].includes(fields[5]))continue;
+  const steps=Number.isInteger(fields[3])&&fields[3]>=0&&fields[3]<=500000?fields[3]:null;
+  const distanceKm=Number.isInteger(fields[2])&&fields[2]>=0&&fields[2]<=50000000?Math.round(fields[2]/100000*100)/100:null;
+  const activeMinutes=Number.isInteger(fields[4])&&fields[4]>=0&&fields[4]<=86400000?Math.round(fields[4]/60000*10)/10:null;
+  if(steps===null&&distanceKm===null&&activeMinutes===null)continue;
+  const day=at.slice(0,10),old=days.get(day)||{day,steps:null,distanceKm:null,activeMinutes:null,samples:0,source:'garmin-fit-monitoring'};
+  days.set(day,{...old,steps:steps===null?old.steps:Math.max(old.steps??0,steps),distanceKm:distanceKm===null?old.distanceKm:Math.max(old.distanceKm??0,distanceKm),activeMinutes:activeMinutes===null?old.activeMinutes:Math.max(old.activeMinutes??0,activeMinutes),samples:old.samples+1});
+ }
+ return [...days.values()].sort((a,b)=>a.day.localeCompare(b.day));
+}
+
+/** Session summaries (global 18). Activity exports may contain them, wellness ZIPs may not.
+ * We keep only timestamp, sport, distance, duration, calories and heart-rate summary.
+ * No precise route or GPS data is decoded or retained.
+ */
+export function garminSessionsFromRecords(records){
+ const sessions=new Map();
+ for(const record of records){
+  if(record.type!==18)continue;
+  const v=record.fields||{},start=time(v[2]),end=time(v[253]);
+  if(!start||!end||end<=start)continue;
+  const seconds=Number.isFinite(v[8])&&v[8]>=0&&v[8]<=86400000?v[8]/1000:null;
+  const distanceKm=Number.isFinite(v[9])&&v[9]>=0&&v[9]<=100000000?Math.round(v[9]/100000*100)/100:null;
+  const calories=Number.isInteger(v[11])&&v[11]>=0&&v[11]<=25000?v[11]:null;
+  const avgHr=Number.isInteger(v[16])&&v[16]>=25&&v[16]<=240?v[16]:null;
+  const maxHr=Number.isInteger(v[17])&&v[17]>=25&&v[17]<=260?v[17]:null;
+  const sport=Number.isInteger(v[5])&&v[5]>=0&&v[5]<255?v[5]:null;
+  const entry={id:`${start}|${sport??'unknown'}`,day:start.slice(0,10),start,end,sport,durationMinutes:seconds===null?null:Math.round(seconds/60*10)/10,distanceKm,calories,avgHr,maxHr,source:'garmin-fit-session'};
+  sessions.set(entry.id,entry);
+ }
+ return [...sessions.values()].sort((a,b)=>a.start.localeCompare(b.start));
 }

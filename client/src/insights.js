@@ -16,7 +16,7 @@ export const INSIGHT_TABS=[
  {id:'sleep',label:'Schlaf',icon:'moon',state:'live',subtitle:'Schlafdauer, -konsistenz und nächtliche HRV'},
  {id:'energy',label:'Body Battery',icon:'bolt',state:'live',subtitle:'Energiereserven, Tageskurven und langfristige Verläufe'},
  {id:'stress',label:'Stress',icon:'activity',state:'live',subtitle:'Garmin-Stress, Belastungszonen und Tagesmuster'},
- {id:'activity',label:'Aktivität',icon:'heart',state:'live',subtitle:'Health-Connect-Schritte und Trainingsminuten · Garmin-Ausbau folgt'},
+ {id:'activity',label:'Aktivität',icon:'heart',state:'live',subtitle:'Garmin-Schritte und Aktivitätsdateien sowie Health-Connect-Training'},
  {id:'focus',label:'Produktivität',icon:'target',state:'planned',subtitle:'Pomodoros, Kalender und Energie · Ausbau 0.5.11'},
  {id:'body',label:'Körper',icon:'layers',state:'live',subtitle:'Fitdays-Report · Körpergewicht, Körperfett und Segmente'},
  {id:'places',label:'Orte',icon:'compass',state:'planned',subtitle:'Reiseorte und Schlaf an verschiedenen Orten · Ausbau 0.5.12'},

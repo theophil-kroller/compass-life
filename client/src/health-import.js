@@ -1,4 +1,4 @@
-import {decodeGarminFit,garminWellnessFromRecords,garminSleepJson,garminStressEnergyFromRecords} from './garmin-fit.js';
+import {decodeGarminFit,garminWellnessFromRecords,garminSleepJson,garminStressEnergyFromRecords,garminMonitoringFromRecords,garminSessionsFromRecords} from './garmin-fit.js';
 
 // File formats are detected from bytes; Fitdays .csv exports are often actually XLS (OLE/BIFF).
 export const isXls=bytes=>bytes.length>=8&&[0xd0,0xcf,0x11,0xe0,0xa1,0xb1,0x1a,0xe1].every((n,i)=>bytes[i]===n);
@@ -62,20 +62,22 @@ export async function parseFitdaysFile(bytes){
  return parseFitdaysRows(rows);
 }
 function mergeGarmin(records){
- const nights=new Map(),hrvs=new Map(),wellness=new Map();
+ const nights=new Map(),hrvs=new Map(),wellness=new Map(),fitness=new Map(),sessions=new Map();
  for(const rows of records){const r=garminWellnessFromRecords(rows);
   if(r.night){const former=nights.get(r.night.day);if(!former||r.night.stages.length>former.stages.length)nights.set(r.night.day,r.night);}
   if(r.hrv?.day){const former=hrvs.get(r.hrv.day);if(!former||r.hrv.nightAverageMs!==null)hrvs.set(r.hrv.day,r.hrv);}
+  for(const d of garminMonitoringFromRecords(rows)){const prev=fitness.get(d.day);fitness.set(d.day,prev?{...prev,steps:Math.max(prev.steps??0,d.steps??0),distanceKm:Math.max(prev.distanceKm??0,d.distanceKm??0),activeMinutes:Math.max(prev.activeMinutes??0,d.activeMinutes??0),samples:prev.samples+d.samples}:d);}
+  for(const item of garminSessionsFromRecords(rows))sessions.set(item.id,item);
   for(const item of garminStressEnergyFromRecords(rows)){
    const prev=wellness.get(item.at);
    wellness.set(item.at,prev?{at:item.at,stress:item.stress??prev.stress,bodyBattery:item.bodyBattery??prev.bodyBattery}:item);
   }
  }
- return {nights:[...nights.values()],hrvs:[...hrvs.values()],wellness:[...wellness.values()].sort((a,b)=>a.at.localeCompare(b.at))};
+ return {nights:[...nights.values()],hrvs:[...hrvs.values()],wellness:[...wellness.values()].sort((a,b)=>a.at.localeCompare(b.at)),fitness:[...fitness.values()].sort((a,b)=>a.day.localeCompare(b.day)),sessions:[...sessions.values()].sort((a,b)=>a.start.localeCompare(b.start))};
 }
 export async function parseGarminFile(bytes,name=''){
  if(isFit(bytes))return mergeGarmin([decodeGarminFit(bytes)]);
- if(/\.json$/i.test(name)&&!isZip(bytes)){const nights=garminSleepJson(JSON.parse(new TextDecoder().decode(bytes)));if(!nights.length)throw Error('Keine auswertbaren Schlafdaten im Garmin-JSON');return {nights,hrvs:[],wellness:[],read:1,failed:[]};}
+ if(/\.json$/i.test(name)&&!isZip(bytes)){const nights=garminSleepJson(JSON.parse(new TextDecoder().decode(bytes)));if(!nights.length)throw Error('Keine auswertbaren Schlafdaten im Garmin-JSON');return {nights,hrvs:[],wellness:[],fitness:[],sessions:[],read:1,failed:[]};}
  if(!isZip(bytes))throw Error('Bitte ein Garmin-ZIP oder eine FIT-Datei wählen');
  const {unzip}=await import('fflate');
  const files=await new Promise((resolve,reject)=>unzip(bytes,{filter:file=>(/\.fit$/i.test(file.name)||/sleepData\.json$/i.test(file.name))&&!file.name.startsWith('__MACOSX/')},(error,result)=>error?reject(error):resolve(result)));
@@ -88,12 +90,12 @@ export async function parseGarminFile(bytes,name=''){
  }
  const parsed=mergeGarmin(records);
  parsed.nights=[...new Map([...historical,...parsed.nights].map(n=>[n.day,n])).values()];
- if(!parsed.nights.length&&!parsed.hrvs.length&&!parsed.wellness.length)throw Error(`Garmin-Archiv enthält keine auswertbaren Schlaf-, HRV-, Stress- oder Body-Battery-Daten (${records.length} FIT-Dateien geprüft).`);
+ if(!parsed.nights.length&&!parsed.hrvs.length&&!parsed.wellness.length&&!parsed.fitness.length&&!parsed.sessions.length)throw Error(`Garmin-Archiv enthält keine auswertbaren Schlaf-, HRV-, Stress-, Body-Battery- oder Aktivitätsdaten (${records.length} FIT-Dateien geprüft).`);
  return {...parsed,read:records.length+historical.length,failed};
 }
 export async function inspectHealthFiles(files){
  if(!files?.length)throw Error('Bitte Dateien auswählen');
- const result={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],errors:[],processed:0};
+ const result={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],errors:[],processed:0};
  if(files.length>75)throw Error('Bitte maximal 75 Dateien gleichzeitig wählen');
  for(const file of files){
   try{
@@ -102,7 +104,7 @@ export async function inspectHealthFiles(files){
    if(isXls(bytes)||/fitdays/i.test(file.name)||/\.(csv|xls|xlsx)$/i.test(file.name)&&!isZip(bytes)){
     result.fitdays.push(...await parseFitdaysFile(bytes));
    }else{
-    const v=await parseGarminFile(bytes,file.name);result.garminNights.push(...v.nights);result.garminHrv.push(...v.hrvs);result.garminWellness.push(...(v.wellness||[]));
+    const v=await parseGarminFile(bytes,file.name);result.garminNights.push(...v.nights);result.garminHrv.push(...v.hrvs);result.garminWellness.push(...(v.wellness||[]));result.garminFitness.push(...(v.fitness||[]));result.garminSessions.push(...(v.sessions||[]));
     if(v.failed?.length)result.errors.push(`${file.name}: ${v.failed.length} FIT-Datei(en) nicht lesbar`);
    }
    result.processed++;
@@ -114,10 +116,12 @@ export async function inspectHealthFiles(files){
  result.garminNights=unique(result.garminNights,x=>x.day,(old,n)=>n.stages.length>=(old.stages?.length||0)).sort((a,b)=>a.day.localeCompare(b.day));
  result.garminHrv=unique(result.garminHrv,x=>x.day).sort((a,b)=>a.day.localeCompare(b.day));
  result.garminWellness=unique(result.garminWellness,x=>x.at).sort((a,b)=>a.at.localeCompare(b.at));
+ result.garminFitness=unique(result.garminFitness,x=>x.day,(old,n)=>(n.steps??0)>(old.steps??0)).sort((a,b)=>a.day.localeCompare(b.day));
+ result.garminSessions=unique(result.garminSessions,x=>x.id).sort((a,b)=>a.start.localeCompare(b.start));
  return result;
 }
 export function commitHealthImport(s,preview){
- s.healthImports??={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],lastImportAt:null};
+ s.healthImports??={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],lastImportAt:null};
  const target=s.healthImports;const merge=(a,b,key,quality=false)=>{const map=new Map();for(const x of [...a,...b]){const old=map.get(key(x));if(!old||!quality||(x.stages?.length||0)>=(old.stages?.length||0))map.set(key(x),x);}return [...map.values()].sort((x,y)=>(x.at||x.day).localeCompare(y.at||y.day));};
  const before=[target.fitdays.length,target.garminNights.length,target.garminHrv.length];
  target.fitdays=merge(target.fitdays,preview.fitdays,x=>x.id);
@@ -127,6 +131,11 @@ export function commitHealthImport(s,preview){
  const points=new Map((target.garminWellness||[]).map(x=>[x.at,x]));
  for(const row of preview.garminWellness||[]){const prior=points.get(row.at);points.set(row.at,prior?{at:row.at,stress:row.stress??prior.stress,bodyBattery:row.bodyBattery??prior.bodyBattery}:row);}
  target.garminWellness=[...points.values()].sort((a,b)=>a.at.localeCompare(b.at));
+ const dayMap=new Map((target.garminFitness||[]).map(x=>[x.day,x]));
+ for(const row of preview.garminFitness||[]){const old=dayMap.get(row.day);dayMap.set(row.day,old?{...old,steps:Math.max(old.steps??0,row.steps??0),distanceKm:Math.max(old.distanceKm??0,row.distanceKm??0),activeMinutes:Math.max(old.activeMinutes??0,row.activeMinutes??0),samples:Math.max(old.samples||0,row.samples||0)}:row);}
+ target.garminFitness=[...dayMap.values()].sort((a,b)=>a.day.localeCompare(b.day));
+ const sessionMap=new Map((target.garminSessions||[]).map(x=>[x.id,x]));for(const row of preview.garminSessions||[])sessionMap.set(row.id,row);
+ target.garminSessions=[...sessionMap.values()].sort((a,b)=>a.start.localeCompare(b.start));
  target.lastImportAt=new Date().toISOString();
  return [target.fitdays.length-before[0],target.garminNights.length-before[1],target.garminHrv.length-before[2]];
 }
