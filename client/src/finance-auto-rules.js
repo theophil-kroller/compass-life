@@ -98,6 +98,9 @@ export function updateBankSuggestions(transactions=[],customRules=[],classify){
  if(typeof classify!=='function')throw new Error('Klassifizierer fehlt.');
  let changed=0,closed=0,review=0,manualKept=0;
  const rows=transactions.map(t=>{
+  // Statement-native Revolut types (especially Deposit / Transfer) must never be
+  // reclassified using Raiffeisen heuristics; otherwise own-account topups can become income.
+  if(t?.sourceFileType==='revolut-csv')return t;
   if((!t?.needsReview&&t?.source!=='broad-rule')||t.source==='user'||t.confidence==='confirmed'){manualKept+=t?.source==='user'?1:0;return t;}
   const suggestion=classify(t,customRules);
   if(!suggestion||!suggestion.category)return t;

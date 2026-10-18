@@ -24,27 +24,49 @@ export function hierarchicalFlows(rows=[]){
 }
 const volume=groups=>groups.reduce((s,x)=>s+x.cents,0);
 const path=(x0,y0,x1,y1,x2,y2,x3,y3)=>`M${q(x0)} ${q(y0)} C${q((x0+x1)/2)} ${q(y0)} ${q((x0+x1)/2)} ${q(y1)} ${q(x1)} ${q(y1)} L${q(x1)} ${q(y2)} C${q((x0+x1)/2)} ${q(y2)} ${q((x0+x1)/2)} ${q(y3)} ${q(x0)} ${q(y3)} Z`;
+/** Cubic-ribbon Sankey: nodes are three real columns with independently spaced
+ * destination layouts. Ribbons retain exact proportional thickness throughout.
+ * No implicit allocation of incomes to expenses is implied by this view.
+ */
+const curveBand=(x0,y0,x1,y1,h)=>{
+ const bend=(x1-x0)*.46;
+ return `M${q(x0)},${q(y0)} C${q(x0+bend)},${q(y0)} ${q(x1-bend)},${q(y1)} ${q(x1)},${q(y1)} L${q(x1)},${q(y1+h)} C${q(x1-bend)},${q(y1+h)} ${q(x0+bend)},${q(y0+h)} ${q(x0)},${q(y0+h)} Z`;
+};
 export function hierarchicalSankey(rows=[]){
- const groups=hierarchicalFlows(rows),sum=volume(groups);if(!sum)return '<p class="insight-no-data">Noch keine kategorisierten Bankabgänge.</p>';
- const leafCount=groups.reduce((s,g)=>s+g.children.length,0),H=Math.max(570,leafCount*30+groups.length*16+60),W=1240;
- const root=125,mid=510,end=940,top=33,gap=14,innerGap=3,dy=(H-2*top-gap*(groups.length-1)-innerGap*(leafCount-groups.length))/sum;
- let y=top,source=top;const left=[],right=[],nodes=[];
- for(const [i,g] of groups.entries()){
-  const gy=y,start=source,gh=g.cents*dy+innerGap*(g.children.length-1);
-  const label=g.name.length>26?g.name.slice(0,25)+'…':g.name;
-  left.push(`<path d="${path(root,start,mid,gy,mid,gy+gh,root,start+gh)}" fill="${g.color}" opacity=".28"><title>${esc(g.name)} · ${esc(euro(g.cents))}</title></path>`);
-  nodes.push(`<g ${g.special?'':click(g.name)}><rect x="${mid-7}" y="${q(gy)}" width="12" height="${q(Math.max(2,gh))}" rx="2" fill="${g.color}"/><text x="${mid-17}" y="${q(gy+Math.max(10,gh/2))}" text-anchor="end" font-size="12" fill="currentColor" font-weight="600">${esc(label)}</text><title>${esc(g.name)} · ${esc(euro(g.cents))}</title></g>`);
-  let cy=gy;
-  for(const [j,c] of g.children.entries()){const ch=c.cents*dy;
-   const startPart=start+(cy-gy),name=c.name.length>26?c.name.slice(0,25)+'…':c.name;
-   right.push(`<path d="${path(mid+5,cy,end,cy,end,cy+ch,mid+5,cy+ch)}" fill="${g.color}" opacity=".53"><title>${esc(g.name)} → ${esc(c.name)} · ${esc(euro(c.cents))}</title></path>`);
-   nodes.push(`<g ${g.special?'':click(g.name,c.name)}><rect x="${end}" y="${q(cy)}" width="9" height="${q(Math.max(2,ch))}" rx="1.5" fill="${g.color}" opacity="${q(.54+j*.08)}"/><title>${esc(g.name)} / ${esc(c.name)} · ${esc(euro(c.cents))}</title>${ch>=13?`<text x="${end+17}" y="${q(cy+Math.max(11,ch/2))}" font-size="11" fill="currentColor">${esc(name)} · ${esc(euro(c.cents))}</text>`:''}</g>`);
-   cy+=ch+innerGap;
+ const groups=hierarchicalFlows(rows),total=volume(groups);
+ if(!total)return '<p class="insight-no-data">Noch keine kategorisierten Bankabgänge.</p>';
+ const n=groups.length,leaves=groups.reduce((x,g)=>x+g.children.length,0);
+ const W=1320,H=Math.max(690,leaves*29+n*18+135),margin=70;
+ const xRoot=135,xParent=545,xLeaf=971,nodeWidth=12,groupGap=17,leafGap=7;
+ // A single value scale is shared across all stages. Group/leaf padding is
+ // inserted independently, causing real curved splits instead of flat stripes.
+ const usable=H-margin*2;
+ const scale=Math.max(.001,Math.min((usable-(n-1)*groupGap)/total,(usable-(leaves-1)*leafGap)/total));
+ const totalPx=total*scale;
+ let rootY=(H-totalPx)/2,parentY=(H-(totalPx+(n-1)*groupGap))/2,leafY=(H-(totalPx+(leaves-1)*leafGap))/2;
+ const ribbons=[],nodes=[],leftLabels=[],rightLabels=[],defs=[];
+ const labelText=(s,max=31)=>s.length>max?s.slice(0,max-1)+'…':s;
+ // Render delicate parent/child color gradients, rather than flat rectangles.
+ groups.forEach((g,i)=>{
+  const h=g.cents*scale,parentStart=parentY,rootStart=rootY;
+  const grad=`compass-sankey-${i}`;
+  defs.push(`<linearGradient id="${grad}" x1="0%" y1="0%" x2="100%" y2="10%"><stop offset="0%" stop-color="${g.color}" stop-opacity=".25"/><stop offset="63%" stop-color="${g.color}" stop-opacity=".62"/><stop offset="100%" stop-color="${g.color}" stop-opacity=".87"/></linearGradient>`);
+  ribbons.push(`<path class="fin-flow-band" ${g.special?'':click(g.name)} d="${curveBand(xRoot+nodeWidth,rootStart,xParent,parentStart,h)}" fill="url(#${grad})" stroke="${g.color}" stroke-opacity=".2" stroke-width=".6"><title>${esc(g.name)} · ${esc(euro(g.cents))}</title></path>`);
+  nodes.push(`<g class="fin-flow-node" ${g.special?'':click(g.name)}><rect x="${xParent}" y="${q(parentStart)}" width="${nodeWidth}" height="${q(Math.max(h,1))}" rx="2" fill="${g.color}"/><title>${esc(g.name)} · ${esc(euro(g.cents))}</title></g>`);
+  if(h>=14)leftLabels.push(`<text class="fin-flow-parent-text" x="${xParent-14}" y="${q(parentStart+h/2+4)}" text-anchor="end">${esc(labelText(g.name,30))}</text>`);
+  let leafStart=parentStart;
+  for(const [j,c] of g.children.entries()){
+   const dh=c.cents*scale,ly=leafY,opacity=Math.max(.28,.8-j*.065);
+   ribbons.push(`<path class="fin-flow-band" ${g.special?'':click(g.name,c.name)} d="${curveBand(xParent+nodeWidth,leafStart,xLeaf,ly,dh)}" fill="${g.color}" fill-opacity="${q(opacity*.51)}" stroke="${g.color}" stroke-opacity=".2" stroke-width=".5"><title>${esc(g.name)} → ${esc(c.name)} · ${esc(euro(c.cents))}</title></path>`);
+   nodes.push(`<g class="fin-flow-node" ${g.special?'':click(g.name,c.name)}><rect x="${xLeaf}" y="${q(ly)}" width="${nodeWidth}" height="${q(Math.max(dh,1))}" rx="2" fill="${g.color}" fill-opacity="${q(opacity)}"/><title>${esc(g.name)} / ${esc(c.name)} · ${esc(euro(c.cents))}</title></g>`);
+   // Small leaves stay available in the detail table rather than overprinting.
+   if(dh>=12)rightLabels.push(`<text class="fin-flow-end-text" x="${xLeaf+18}" y="${q(ly+dh/2+4)}">${esc(labelText(c.name,30))} · ${esc(euro(c.cents))}</text>`);
+   leafStart+=dh;leafY+=dh+leafGap;
   }
-  y+=gh+gap;source+=gh+gap;
- }
- const detailed=groups.map((g,i)=>`<div class="fin-sankey-detail-group"><strong><i style="background:${g.color}"></i>${esc(g.name)} <span>${esc(euro(g.cents))}</span></strong>${g.children.map(c=>`<${g.special?'span':'button type="button"'} ${g.special?'':click(g.name,c.name)}><span>${esc(c.name)}</span><b>${esc(euro(c.cents))}</b></${g.special?'span':'button'}>`).join('')}</div>`).join('');
- return `<div class="fin-flow-hierarchy"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hierarchisches Sankey: Abgänge, Hauptkategorien, Unterkategorien"><text x="${root}" y="21" text-anchor="middle" fill="#3C6E64" font-size="13">Abgänge</text><text x="${mid}" y="21" text-anchor="middle" fill="#3C6E64" font-size="13">Hauptkategorien</text><text x="${end+15}" y="21" fill="#3C6E64" font-size="13">Unterkategorien</text>${left.join('')}${right.join('')}<rect x="${root-13}" y="${top}" width="13" height="${q(y-top-gap)}" rx="4" fill="#2A7166"/><text x="${root-19}" y="${q(H/2)}" text-anchor="end" fill="currentColor" font-size="12">${esc(euro(sum))}</text>${nodes.join('')}</svg></div><details class="fin-sankey-detail"><summary>Alle Haupt- und Unterkategorien mit Beträgen anzeigen</summary><div class="fin-sankey-detail-grid">${detailed}</div></details><p class="fin-art-note">Drei echte Ebenen: Abgänge → Hauptkategorie → Unterkategorie. Berühre eine Verbindung für Betrag und Zuordnung; klicke eine Kategorie für Details. Transfers, Bargeld und ungeklärte Buchungen werden separat geführt, nicht als Konsum klassifiziert. Sehr kleine Unterkategorien sind unter „Weitere“ zusammengefasst.</p>`;
+  parentY+=h+groupGap;rootY+=h;
+ });
+ const detail=groups.map(g=>`<div class="fin-sankey-detail-group"><strong><i style="background:${g.color}"></i>${esc(g.name)} <span>${esc(euro(g.cents))}</span></strong>${g.children.map(c=>g.special?`<span><span>${esc(c.name)}</span><b>${esc(euro(c.cents))}</b></span>`:`<button type="button" ${click(g.name,c.name)}><span>${esc(c.name)}</span><b>${esc(euro(c.cents))}</b></button>`).join('')}</div>`).join('');
+ return `<div class="fin-organic-sankey"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Organischer dreistufiger Sankey: Abgänge zu Hauptkategorien und Unterkategorien"><defs>${defs.join('')}</defs><text x="${xRoot+6}" y="34" font-size="15" fill="#326B60" text-anchor="middle">Abgänge</text><text x="${xParent+6}" y="34" font-size="15" fill="#326B60" text-anchor="middle">Hauptkategorien</text><text x="${xLeaf+6}" y="34" font-size="15" fill="#326B60" text-anchor="middle">Unterkategorien</text>${ribbons.join('')}<rect x="${xRoot}" y="${q((H-totalPx)/2)}" width="${nodeWidth}" height="${q(totalPx)}" rx="4" fill="#286E63"/><text x="${xRoot-18}" y="${q(H/2+5)}" font-size="13" fill="currentColor" text-anchor="end">${esc(euro(total))}</text>${nodes.join('')}${leftLabels.join('')}${rightLabels.join('')}</svg></div><details class="fin-sankey-detail"><summary>Alle Haupt- und Unterkategorien mit Beträgen öffnen</summary><div class="fin-sankey-detail-grid">${detail}</div></details><p class="fin-art-note">Organische, geschwungene Geldbänder: Abgänge → Hauptkategorie → Unterkategorie. Breiten entsprechen den erfassten Beträgen. Sehr kleine Flüsse stehen lesbar in der Detailtabelle. Bargeld, eigene Transfers und unklare Abgänge werden getrennt vom Konsum ausgewiesen.</p>`;
 }
 // SVG circular-sector geometry: angles in radians, 0 points towards 12 o'clock.
 const polar=(cx,cy,r,a)=>[cx+r*Math.sin(a),cy-r*Math.cos(a)];

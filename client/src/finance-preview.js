@@ -12,6 +12,7 @@ export const FINANCE_PANES=[
 ];
 export const FINANCE_EXPORTS=[
  {label:'Bank / Kreditkarte',description:'Im Online-Banking Umsätze als CSV, CAMT oder MT940 exportieren. Das genaue Format hängt von deiner Bank ab.',href:null},
+ {label:'N26 / DKB',description:'Exportiere deine Umsätze als CSV und lade die jeweilige Datei für die Formatprüfung hoch. Bis dahin noch kein automatischer Import in Compass.',href:null},
  {label:'Kraken',description:'Kraken Pro → Profil → Statements → Export Statement; Trades, Ledgers und Balances als CSV auswählen.',href:'https://support.kraken.com/de/articles/14320306955668-how-to-export-your-account-history'},
  {label:'flatex Österreich',description:'flatex classic → Konto & Depot → Konto-/Depotumsätze; Zeitraum wählen. Exportformat im eigenen Depot prüfen.',href:'https://www.flatex.at/produkte-handel/plattformen/flatex-classic/'}
 ];

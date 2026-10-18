@@ -1,6 +1,7 @@
 /** Compass 0.5.14.1 · Local-first bank ledger, explainable categories, and explicit coarse buckets. */
 import {detailedFinanceMatch,financeGenericFallback,updateBankSuggestions} from './finance-auto-rules.js';
 import {matchPrivateFinanceRule} from './finance-private-rules.js';
+import {isRevolutCsv,parseRevolutCsv} from './finance-revolut.js';
 export {updateBankSuggestions} from './finance-auto-rules.js';
 export const FINANCE_CATEGORIES=[
  ['Einnahmen','Gehalt'],['Einnahmen','Honorare'],['Einnahmen','Kapitalerträge'],['Einnahmen','Sonstiges'],
@@ -107,15 +108,20 @@ export function parseRaiffeisenCsv(text,{customRules=[],privateRules=[],maxRows=
   const day=bankDate(r[0]),valueDay=bankDate(r[2]);const amountCents=euroNumber(r[3]);
   if(!day||!valueDay||amountCents===null||upper(r[4])!=='EUR')throw new Error(`Bank-CSV: ungültiges Datum, Betrag oder Währung in Zeile ${i+1}.`);
   const fields=r.map(cleaning);const description=cleaning(r[1]).slice(0,3000);const merchant=bankMerchant(description);
-  const t={id:bankIdentity(fields),day,valueDay,amountCents,description,merchant,currency:'EUR',bankReference:cleaning(r[5]).slice(0,150),source:'Raiffeisen CSV'};
+  const t={id:bankIdentity(fields),day,valueDay,amountCents,description,merchant,currency:'EUR',bankReference:cleaning(r[5]).slice(0,150),source:'Raiffeisen CSV',accountId:'raiffeisen:current:EUR'};
   Object.assign(t,classifyBankTransaction(t,customRules,privateRules));rows.push(t);
  }
  return {rows,skippedHeader};
 }
 export function previewBankFiles(items,existing=[],customRules=[],privateRules=[]){
- const keys=new Set(existing.map(x=>x.id)),seen=new Set(keys);const fresh=[];let duplicates=0;
- for(const {text,name} of items){const parsed=parseRaiffeisenCsv(text,{customRules,privateRules});for(const r of parsed.rows){if(seen.has(r.id)){duplicates++;continue;}seen.add(r.id);fresh.push({...r,sourceFile:String(name).slice(0,120)});}}
- return {rows:fresh,duplicates,review:fresh.filter(x=>x.needsReview).length,auto:fresh.filter(x=>!x.needsReview).length};
+ const seen=new Set(existing.map(x=>x.id)),fresh=[],byAccount=new Map();let duplicates=0,reversed=0,fees=0;
+ for(const {text,name} of items){
+  const revolut=isRevolutCsv(text);
+  const parsed=revolut?parseRevolutCsv(text,{customRules,privateRules,classify:classifyBankTransaction}):parseRaiffeisenCsv(text,{customRules,privateRules});
+  reversed+=parsed.reversed||0;fees+=parsed.fees||0;
+  for(const r of parsed.rows){if(seen.has(r.id)){duplicates++;continue;}seen.add(r.id);fresh.push({...r,sourceFile:String(name).slice(0,120)});const acc=r.accountId||'raiffeisen:current:EUR';byAccount.set(acc,(byAccount.get(acc)||0)+1);}
+ }
+ return {rows:fresh,duplicates,reversed,fees,byAccount:[...byAccount].map(([accountId,count])=>({accountId,count})),review:fresh.filter(x=>x.needsReview).length,auto:fresh.filter(x=>!x.needsReview).length};
 }
 export function categorizeTransaction(t,category,flow){
  if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')throw new Error('Bitte eine konkrete gültige Kategorie auswählen.');
