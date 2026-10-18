@@ -9,6 +9,7 @@ import * as activities from '../client/src/activity-management.js';
 import * as occasions from '../client/src/occasion-planning.js';
 import * as peopleOccasions from '../client/src/people-occasions.js';
 import * as perspectives from '../client/src/context-perspectives.js';
+import * as recovery from '../client/src/recovery-ideas.js';
 const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
 const compiled=source.replace(/^import .*;\r?\n/gm,'').replace('registerSW({immediate:true});','').split("document.addEventListener('keydown'")[0]+`
  globalThis.testUI=(current,mode,events=[])=>{state=current;tab=mode;calendarEvents=events;render();return app.innerHTML;};
@@ -20,7 +21,7 @@ function context(){
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const window={addEventListener:()=>{}};
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
- Object.assign(ctx,tasks,calendar,activities,occasions,peopleOccasions,perspectives);
+ Object.assign(ctx,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery);
  ctx.vault={save:async()=>{},lock:()=>{}};
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.
  runInNewContext(compiled,ctx,{filename:'compass-main-browser-smoke.js',timeout:2000});

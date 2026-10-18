@@ -1,4 +1,5 @@
 import './style.css';
+import {allRecoveryIdeas,scoreRecoveryIdeas,recoveryWeather,validRecoveryIdea} from './recovery-ideas.js';
 import {assertCompatibleWorker} from './health-check.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
@@ -11,7 +12,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.4.11';
+const COMPASS_CLIENT_VERSION='0.5.0';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -33,6 +34,7 @@ function captureReviewDraft(){const form=app?.querySelector('#review-commit-form
 let showCalendarBlocks=false;
 let showCaptureDetails=false;
 let contextFilter='';
+let recoveryIdeaMinutes=180,recoveryIdeaEnergy='medium',recoveryIdeaRange='trip';
 let syncResyncRequested=false;
 let syncTimer=null, lastSyncAt=0;
 const SYNC_INTERVAL_MS=15*60*1000;
@@ -268,16 +270,27 @@ function chrome(content){
  return `<div class="shell"><aside class="sidebar" aria-label="Navigation">
  <div class="brand"><span class="brand-icon">${ico('compass',24)}</span><span class="brand-name">Compass<small>Personal Life Manager · ${COMPASS_CLIENT_VERSION}</small></span></div>
  <nav class="side-nav" aria-label="Hauptnavigation">
+ <span class="nav-section-label">DEIN TAG</span>
+ ${navItem('overview','Übersicht','layers')}
+ ${navItem('today','Heute','sun')}
  ${navItem('inbox','Inbox','inbox',{count:num})}
- ${navItem('today','Heute','sun')}${navItem('forecast','Forecast','calendar')}
- ${navItem('next','Next Actions','target')}${navItem('review','Wochenreview','sync')}
- ${navItem('flagged','Flagged','flag')}${navItem('hold','On Hold','pause')}
+ ${navItem('next','Next Actions','target')}
+ ${navItem('forecast','Forecast','calendar')}
+ ${navItem('review','Wochenreview','sync')}
+ <span class="nav-section-label">GESTALTEN & PLANEN</span>
+ ${navItem('projects','Projekte','folder')}
+ ${navItem('people','Menschen','people')}
+ ${navItem('recovery','Erholung','heart')}
+ ${navItem('progress','Fortschritt','activity')}
+ <button type="button" class="nav-group-toggle" data-action="nav-more" aria-expanded="${state?.uiPreferences?.advancedNav===true||['flagged','hold','someday','activity'].includes(tab)?'true':'false'}">${ico('list',16)} Weitere Ansichten ${ico('arrow',14)}</button>
+ ${state?.uiPreferences?.advancedNav===true||['flagged','hold','someday','activity'].includes(tab)?`<div class="nav-subgroup">
+ ${navItem('flagged','Flagged','flag')}
+ ${navItem('hold','On Hold','pause')}
  ${navItem('someday','Dreams','spark')}
+ ${navItem('activity','Aktivitäten','activity')}
+ </div>`:''}
  <div class="nav-separator"></div>
- ${navItem('projects','Projekte','folder')}${navItem('people','Menschen','people')}
- ${navItem('progress','Fortschritt','activity')}${navItem('recovery','Erholung','heart')}
- <div class="nav-separator"></div>${navItem('overview','Übersicht','layers')}
- ${navItem('activity','Aktivitäten','activity')}${navItem('system','System & Sync','settings')}
+ ${navItem('system','Einstellungen & Sync','settings')}
  </nav><div class="sidebar-foot">${ico('shield',16)} <span>Dein persönlicher Arbeitsraum</span></div>
  </aside><main class="workspace"><div class="utility-bar">
  <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>Ctrl / ⌘ K</kbd></button>
@@ -599,6 +612,11 @@ function systemScreen(){
  <section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('shield',22)}<h2>Lokaler Tresor</h2></div></div><p class="module-subtitle">Verschlüsselt und offline nutzbar.</p>
  <div class="security-line">${ico('check',17)} AES-256-GCM verschlüsselte Speicherung</div><div class="security-line">${ico('check',17)} Passphrase bleibt auf deinem Gerät</div><div class="security-line">${ico('check',17)} Keine privaten Aufgaben in GitHub</div>
  <button class="secondary-btn full" data-action="export-encrypted">Verschlüsseltes Backup herunterladen</button><button class="secondary-btn full" data-action="export-json">Klartext-JSON exportieren</button><p class="small-muted">Klartext-Exporte enthalten unverschlüsselte private Inhalte.</p></section></div>
+ <section class="work-card ux-settings" aria-label="Darstellung anpassen"><div class="work-heading"><span>${ico('settings',18)} Darstellung & Bedienung</span><span class="quiet-tag">Nur auf diesem Gerät</span></div>
+ <p class="muted-line">Diese Einstellungen werden verschlüsselt in deinem lokalen Tresor gespeichert.</p>
+ <div class="ux-settings-row"><div><strong>Weitere Ansichten dauerhaft öffnen</strong><small>Flagged, On Hold, Dreams und Aktivitäten in der Navigation anzeigen.</small></div><button type="button" class="secondary-btn" data-action="nav-more">${state?.uiPreferences?.advancedNav?'Ausblenden':'Einblenden'}</button></div>
+ <div class="ux-settings-row"><div><strong>Erholungsideen</strong><small>Eigene Vorschläge und Filter findest du unter Erholung. Sie werden nicht ungefragt zu Aufgaben.</small></div><button type="button" class="secondary-btn" data-tab="recovery">Erholung öffnen</button></div>
+ </section>
  ${state.conflicts.length?`<section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('sync',21)}<h2>Synchronisationskonflikte (${state.conflicts.length})</h2></div></div><p class="module-subtitle">Wähle bewusst die gewünschte Fassung.</p>${state.conflicts.map(c=>`<div class="conflict"><p><strong>Lokal:</strong> ${h(c.local?.title||'(gelöscht)')}</p><p><strong>Cloud:</strong> ${h(c.remote?.title||'(fehlt)')}</p>${c.local?.note||c.remote?.note?`<p class="small-muted"><strong>Notiz lokal:</strong> ${h(c.local?.note||'(leer)')} · <strong>Cloud:</strong> ${h(c.remote?.note||'(leer)')}</p>`:''}<div class="system-actions"><button class="secondary-btn" data-action="resolve-remote" data-id="${h(c.id)}">Cloud übernehmen</button><button class="primary-btn" data-action="resolve-local" data-id="${h(c.id)}">Meine Version behalten</button></div></div>`).join('')}</section>`:''}`);
 }
 function projectLabel(projectId){return state?.projects?.[projectId]?.title||'Ohne Projekt';}
@@ -677,8 +695,27 @@ function recoveryScreen(){
  const today=localDate(),endDate=new Date(today+'T12:00:00');endDate.setDate(endDate.getDate()+30);const end=localDate(endDate);
  const cal=calendarEvents.filter(e=>e.status!=='cancelled'&&calendarDate(e)>=today&&calendarDate(e)<=end&&eventAppearance(e).category==='Erholung'&&!eventAppearance(e).hidden);
  const acts=activeActivities(watchSessions,state).filter(x=>x.category==='Erholung').slice(0,25);
- return chrome(`<div class="recovery-view"><section class="work-card"><div class="work-heading"><span>${ico('heart',19)} Erholung · kommende 30 Tage</span><span class="quiet-tag">${cal.length} Termine</span></div>${cal.length?cal.map(e=>`<button type="button" class="recovery-row" data-action="agenda-open" data-id="${h(e.id)}"><span>${h(eventAppearance(e).emoji)}</span><strong>${h(eventAppearance(e).displayTitle)}</strong><small>${h(calendarDate(e))}</small></button>`).join(''):`<p class="muted-line">${calendarToken?'Keine erkannten Erholungstermine in den nächsten 30 Tagen.':'Verbinde Google Calendar, um Erholungstermine anzuzeigen.'}</p>`}${calendarToken?calendarFilterToggle():calendarConnectUI()}</section><section class="work-card"><div class="work-heading"><span>${ico('activity',19)} Erfasste Erholung</span><span class="quiet-tag">${acts.length} Aktivitäten</span></div>${acts.map(a=>`<button type="button" class="recovery-row" data-action="activity-open" data-id="${h(a.id)}"><span>🌿</span><strong>${h(a.title)}</strong><small>${h(a.startedAt.slice(0,10))} · ${a.durationMinutes} min</small></button>`).join('')||'<p class="muted-line">Du kannst in Aktivitäten eine Garmin-Session oder eine manuelle Aktivität als Erholung kennzeichnen.</p>'}<button type="button" class="text-link" data-tab="activity">Aktivitäten bearbeiten ${ico('arrow',14)}</button></section></div>`);
+ const d=new Date(today+'T12:00:00');d.setDate(d.getDate()-6);const week=activityStats(activeActivities(watchSessions,state),localDate(d),today);
+ const work=activeActivities(watchSessions,state).filter(x=>x.category==='Arbeit'&&x.startedAt.slice(0,10)>=localDate(d)).reduce((sum,x)=>sum+x.durationMinutes,0);
+ const currentWeather=weather.status==='loaded'?recoveryWeather(weather.label):'unknown';
+ const ideas=scoreRecoveryIdeas(allRecoveryIdeas(state),{weather:currentWeather,minutes:recoveryIdeaMinutes,energy:recoveryIdeaEnergy,range:recoveryIdeaRange});
+ const weatherText=weather.status==='loaded'?`${weather.city}: ${weather.temperature} °C · ${weather.label}`:'Wetter noch nicht geladen';
+ return chrome(`<section class="work-card recovery-idea-hub" aria-label="Freizeit bewusst planen">
+ <div class="work-heading"><span>${ico('heart',20)} Zeit für dich</span><button class="secondary-btn" type="button" data-action="weather-load">${weather.status==='loaded'?'Wetter aktualisieren':'Wetter abrufen'}</button></div>
+ <div class="recovery-glance"><div><span>Erfasste Arbeit · 7 Tage</span><strong>${(work/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong></div><div><span>Erfasste Erholung · 7 Tage</span><strong>${(week.recoveryMinutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong></div><div><span>Wetter · aktuell</span><strong>${h(weather.status==='loaded'?weather.label:'Nicht geladen')}</strong></div></div>
+ <p class="muted-line">${work>0?'Die Erfassung zeigt nur protokollierte Zeiten, keine vollständige Arbeitsbelastung.':''} Diese Ideen sind freiwillige Inspirationen – keine Bewertung deiner Gesundheit. ${h(weatherText)}. Der Wetterfilter verwendet derzeit das aktuelle Stadtwetter, keine Wochenendprognose.</p>
+ <div class="recovery-filter-row"><label>Zeitbudget<select id="recovery-idea-minutes" data-recovery-filter="minutes"><option value="60" ${recoveryIdeaMinutes===60?'selected':''}>Bis 1 Stunde</option><option value="180" ${recoveryIdeaMinutes===180?'selected':''}>Bis 3 Stunden</option><option value="360" ${recoveryIdeaMinutes===360?'selected':''}>Bis 6 Stunden</option><option value="1440" ${recoveryIdeaMinutes===1440?'selected':''}>Ganzer Tag</option></select></label>
+ <label>Energie<select id="recovery-idea-energy" data-recovery-filter="energy"><option value="low" ${recoveryIdeaEnergy==='low'?'selected':''}>Wenig</option><option value="medium" ${recoveryIdeaEnergy==='medium'?'selected':''}>Mittel</option><option value="high" ${recoveryIdeaEnergy==='high'?'selected':''}>Viel</option></select></label>
+ <label>Entfernung<select id="recovery-idea-range" data-recovery-filter="range"><option value="home" ${recoveryIdeaRange==='home'?'selected':''}>Zuhause</option><option value="near" ${recoveryIdeaRange==='near'?'selected':''}>In der Nähe</option><option value="trip" ${recoveryIdeaRange==='trip'?'selected':''}>Auch Ausflüge</option></select></label></div>
+ <div class="recovery-ideas-grid">${ideas.length?ideas.map(i=>`<div class="recovery-idea"><span class="recovery-idea-emoji">${h(i.emoji)}</span><div><strong>${h(i.title)}</strong><small>${i.minutes} min · ${i.range==='home'?'Zuhause':i.range==='near'?'In der Nähe':'Ausflug'} · ${i.weather==='sun'?'☀️':i.weather==='rain'?'🌧️':'🌤️'}</small></div><button type="button" class="secondary-btn" data-action="recovery-idea-capture" data-id="${h(i.id)}" aria-label="${h(i.title)} in Inbox übernehmen">+ Inbox</button><button type="button" class="recovery-remove" data-action="${i.id.startsWith('idea-')?'recovery-idea-remove':'recovery-idea-hide'}" data-id="${h(i.id)}" aria-label="${i.id.startsWith('idea-')?'Idee entfernen':'Starteridee ausblenden'}">×</button></div>`).join(''):'<p class="muted-line">Für diese Auswahl gibt es noch keine passenden Ideen. Erhöhe das Zeitbudget oder ändere den Energiefilter.</p>'}</div>
+ ${(state?.hiddenStarterIdeas||[]).length?`<button type="button" class="text-link" data-action="recovery-ideas-reset">Ausgeblendete Starterideen wiederherstellen (${state.hiddenStarterIdeas.length})</button>`:''}
+ <form id="recovery-idea-form" class="recovery-add-form"><label>Eigene Freizeitidee<input name="title" required maxlength="90" placeholder="z. B. Ausflug zum See"/></label><label>Symbol<input name="emoji" maxlength="12" value="🌿" aria-label="Emoji für Idee"/></label><label>Dauer (Min.)<input name="minutes" type="number" min="15" max="1440" value="120" required/></label>
+ <label>Wetter<select name="weather"><option value="any">Jedes Wetter</option><option value="sun">Sonnig</option><option value="rain">Regen</option></select></label><label>Energie<select name="energy"><option value="low">Wenig</option><option value="medium" selected>Mittel</option><option value="high">Viel</option></select></label><label>Entfernung<select name="range"><option value="home">Zuhause</option><option value="near" selected>In der Nähe</option><option value="trip">Ausflug</option></select></label><button type="submit" class="primary-btn">${ico('plus',15)} Idee speichern</button></form>
+ </section>
+ <div class="recovery-view"><section class="work-card"><div class="work-heading"><span>${ico('calendar',19)} Geplante Erholung · 30 Tage</span><span class="quiet-tag">${cal.length} Termine</span></div>${cal.length?cal.map(e=>`<button type="button" class="recovery-row" data-action="agenda-open" data-id="${h(e.id)}"><span>${h(eventAppearance(e).emoji)}</span><strong>${h(eventAppearance(e).displayTitle)}</strong><small>${h(calendarDate(e))}</small></button>`).join(''):`<p class="muted-line">${calendarToken?'Keine erkannten Erholungstermine in den nächsten 30 Tagen.':'Verbinde Google Calendar, um Erholungstermine anzuzeigen.'}</p>`}${calendarToken?calendarFilterToggle():calendarConnectUI()}</section>
+ <section class="work-card"><div class="work-heading"><span>${ico('activity',19)} Erlebte Erholung</span><span class="quiet-tag">${acts.length} Aktivitäten</span></div>${acts.map(a=>`<button type="button" class="recovery-row" data-action="activity-open" data-id="${h(a.id)}"><span>🌿</span><strong>${h(a.title)}</strong><small>${h(a.startedAt.slice(0,10))} · ${a.durationMinutes} min</small></button>`).join('')||'<p class="muted-line">Du kannst in Aktivitäten eine Garmin-Session oder eine manuelle Aktivität als Erholung kennzeichnen.</p>'}<button type="button" class="text-link" data-tab="activity">Aktivitäten bearbeiten ${ico('arrow',14)}</button></section></div>`);
 }
+
 function activityScreen(){
  const all=projectActivities(watchSessions,state),rows=all.filter(a=>a.deleted===activityTrash);
  const chosen=rows.find(a=>a.id===activitySelectedId)||rows[0]||null;
@@ -821,6 +858,18 @@ function bind() {
     const v=ev.target.value;const caret=ev.target.selectionStart??v.length;inboxQuery=v;render();
     const field=app.querySelector('#inbox-query');if(field){field.focus();try{field.setSelectionRange(caret,caret);}catch{}}
   };
+  app.querySelectorAll('[data-recovery-filter]').forEach(el=>el.onchange=()=>{
+    if(el.dataset.recoveryFilter==='minutes')recoveryIdeaMinutes=Number(el.value);
+    if(el.dataset.recoveryFilter==='energy')recoveryIdeaEnergy=el.value;
+    if(el.dataset.recoveryFilter==='range')recoveryIdeaRange=el.value;
+    render();
+  });
+  const recoveryForm=app.querySelector('#recovery-idea-form');if(recoveryForm)recoveryForm.onsubmit=async ev=>{
+    ev.preventDefault();const data=new FormData(recoveryForm);
+    const i={id:'idea-'+crypto.randomUUID(),title:String(data.get('title')||'').trim(),emoji:String(data.get('emoji')||'🌿').trim()||'🌿',minutes:Number(data.get('minutes')),weather:String(data.get('weather')||'any'),energy:String(data.get('energy')||'medium'),range:String(data.get('range')||'near')};
+    if(!validRecoveryIdea(i)){toast('Bitte Idee, Symbol, Dauer und Kategorien prüfen.',true);return;}
+    await mutate(s=>{s.recoveryIdeas??=[];s.recoveryIdeas.push(i);});toast('Freizeitidee im lokalen Tresor gespeichert.');
+  };
   app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
     if(el.dataset.action==='capture-close-backdrop'&&ev.target!==el)return;
     if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
@@ -836,6 +885,15 @@ function bind() {
 async function runAction(action,id,stepId=null) {
   lastActivity=Date.now();
   try {
+    if(action==='nav-more'){await mutate(s=>{s.uiPreferences??={};s.uiPreferences.advancedNav=!(s.uiPreferences.advancedNav===true);});return;}
+    if(action==='recovery-idea-remove'){if(!String(id).startsWith('idea-'))return;await mutate(s=>{s.recoveryIdeas=(s.recoveryIdeas||[]).filter(i=>i.id!==id);});return;}
+    if(action==='recovery-idea-hide'){if(!String(id).startsWith('starter-'))return;await mutate(s=>{s.hiddenStarterIdeas=[...new Set([...(s.hiddenStarterIdeas||[]),id])];});return;}
+    if(action==='recovery-ideas-reset'){await mutate(s=>{s.hiddenStarterIdeas=[];});return;}
+    if(action==='recovery-idea-capture'){
+      const idea=allRecoveryIdeas(state).find(i=>i.id===id);if(!idea)return;
+      await addCapture(idea.title,'Freizeitidee aus Erholung. Zeitpunkt erst bei konkreter Planung festlegen.');
+      tab='inbox';toast('Idee in die Inbox übernommen. Noch nicht terminiert.');return;
+    }
     if(action.startsWith('review-clarify:')){
       if(!state?.records?.[id]||state.records[id].deleted)return;
       const choice=action.split(':')[1];if(!['next','waiting','hold','dreams'].includes(choice))return;

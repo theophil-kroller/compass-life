@@ -403,3 +403,27 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .birthday-actions{display:flex;gap:9px;flex-wrap:wrap}.person-birthday-form small{font-size:10px;color:#788d7e;line-height:1.5}
 @media(max-width:790px){.guided-review .review-cards-layout{grid-template-columns:1fr}.timeline-axis-date strong{font-size:10px}.timeline-axis-count{font-size:9px}.birthday-fields{grid-template-columns:1fr 1fr}.birthday-fields label:last-child{grid-column:1/-1}}
 @media(max-width:470px){.timeline-week-nav{align-items:flex-start;flex-direction:column}.timeline-axis-date strong{font-size:9px}.timeline-axis-count{font-size:8px}.timeline-axis-day{padding:6px 0}.timeline-axis{overflow-x:auto}.timeline-axis::before{top:59px}.timeline-axis-dot{width:11px;height:11px}}
+
+/* Compass 0.5.0 — calm information hierarchy; no duplicate task data. */
+.nav-section-label{display:block;padding:19px 11px 6px;font-size:9px;letter-spacing:.1em;font-weight:750;color:#8d9d91}
+.side-nav .nav-section-label:first-child{padding-top:4px}
+.nav-group-toggle{border:0;background:transparent;color:#667e6b;display:flex;align-items:center;gap:9px;min-height:38px;padding:8px 11px;width:100%;font-size:12px;text-align:left;border-radius:8px;cursor:pointer}
+.nav-group-toggle svg:last-child{margin-left:auto;transition:transform .18s}
+.nav-group-toggle[aria-expanded="true"] svg:last-child{transform:rotate(90deg)}
+.nav-group-toggle:hover,.nav-group-toggle:focus-visible{background:#eaf3ec}
+.nav-subgroup{border-left:2px solid #dce9dd;margin-left:16px;padding-left:4px}
+.nav-subgroup .nav-item{min-height:34px;font-size:11px}
+.nav-item:focus-visible,.nav-group-toggle:focus-visible,.recovery-idea button:focus-visible{outline:2px solid #548d72;outline-offset:2px}
+.recovery-idea-hub{margin-bottom:16px}.recovery-glance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.recovery-glance>div{background:#f3f8f4;border:1px solid #e2ece5;border-radius:11px;padding:14px;display:flex;flex-direction:column;gap:5px}
+.recovery-glance span{font-size:11px;color:#6b826f}.recovery-glance strong{font-size:20px;color:#355944;font-weight:720}
+.recovery-filter-row{display:flex;gap:11px;flex-wrap:wrap;margin:18px 0}.recovery-filter-row label,.recovery-add-form label{font-size:11px;color:#5f7868;display:flex;gap:5px;flex-direction:column}
+.recovery-filter-row select{min-width:135px}.recovery-filter-row select,.recovery-add-form input,.recovery-add-form select{border:1px solid #dce9de;background:white;border-radius:8px;padding:9px;color:#355b45;min-height:36px}
+.recovery-ideas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:9px;margin:16px 0}
+.recovery-idea{border:1px solid #e1eae4;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;min-width:0;background:#fff}
+.recovery-idea:hover{background:#f7faf7}.recovery-idea-emoji{font-size:22px}.recovery-idea>div{min-width:0;flex:1}.recovery-idea strong{display:block;color:#365b47;font-size:12px}.recovery-idea small{display:block;font-size:10px;color:#8b9b8e;margin-top:4px}
+.recovery-idea button{flex:none}.recovery-idea .recovery-remove{border:0;color:#a55b54;background:transparent;font-size:18px;cursor:pointer;padding:4px}
+.recovery-add-form{display:flex;align-items:end;flex-wrap:wrap;gap:9px;border-top:1px solid #edf0ed;padding-top:16px}.recovery-add-form label:first-child{flex:1 1 170px}.recovery-add-form label{flex:0 1 110px}.recovery-add-form label:nth-child(3){max-width:110px}
+.ux-settings{margin-top:14px}.ux-settings-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0;border-top:1px solid #e8eee9}
+.ux-settings-row strong{display:block;font-size:12px;color:#385b46}.ux-settings-row small{display:block;color:#8a9c8e;font-size:11px;margin-top:4px}.ux-settings-row>button{flex:none}
+@media(max-width:640px){.recovery-glance{grid-template-columns:1fr 1fr}.recovery-glance>div:last-child{grid-column:1/-1}.recovery-idea-hub{padding:14px}.recovery-add-form label{flex:1 1 120px}}

@@ -23,6 +23,7 @@ public class TodayWidget extends AppWidgetProvider {
             view.setTextViewText(R.id.widget_date, new SimpleDateFormat("EEEE, d. MMMM", Locale.GERMAN).format(new Date()));
             view.setOnClickPendingIntent(R.id.widget_today_button,link(context,"https://theophil-kroller.github.io/compass-life/?view=today",100));
             view.setOnClickPendingIntent(R.id.widget_capture_button,link(context,"https://theophil-kroller.github.io/compass-life/?capture=1",101));
+            view.setOnClickPendingIntent(R.id.widget_recovery_button,link(context,"https://theophil-kroller.github.io/compass-life/?view=recovery",102));
             manager.updateAppWidget(id,view);
         }
     }

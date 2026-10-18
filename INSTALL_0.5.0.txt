@@ -1,0 +1,18 @@
+COMPASS 0.5.0 – GITHUB PATCH
+==========================
+Basis: Compass 0.4.11 (inkl. 0.4.10.2 Deployment-Fix).
+
+1. Vorher Compass > System & Sync > verschlüsseltes Tresor-Backup exportieren.
+2. ZIP lokal entpacken. Die darin enthaltenen Verzeichnisse /client, /android, /.github, /tests, /docs im Hauptverzeichnis des GitHub-Repositories pfadgleich überschreiben bzw. hinzufügen. Nicht nur die ZIP selbst hochladen.
+3. Nach Commit GitHub > Actions > Deploy Compass Web kontrollieren: nur ein komplett grüner Lauf bedeutet, dass die PWA veröffentlicht wurde.
+4. In der PWA 0.5.0 unter dem Logo prüfen. Menü Weitere Ansichten; Bereich Erholung; eigene Ideen ausprobieren.
+5. Für Samsung Android Widget: GitHub > Actions > Build Compass Android Widget; automatischen Lauf abwarten oder Run workflow klicken. Erst nach grüner Action > Artifacts > Compass-Widget-0.5.0-debug-apk herunterladen; ZIP entpacken, app-debug.apk auf Samsung installieren; Startbildschirm lange drücken > Widgets > Compass 0.5 hinzufügen.
+6. Achtung: Android-Widget ist ein Debug/Testbuild mit Heute, Erfassen und Erholung als Deep Links. Es zeigt keine Live-Aufgaben/Health-Daten. Nicht für Play Store geeignet.
+7. Keine D1-Migration, keine Wrangler-Neuveröffentlichung und keine Änderung an Garmin-Connect-IQ notwendig.
+
+VALIDIERUNG:
+- 74/74 Node-Tests bestanden, JS-Syntaxcheck und Android-XML-Parsing bestanden.
+- Vite-Produktionsbuild lokal nicht getestet (fehlende npm-Pakete in Offline-Umgebung), GitHub Actions muss ihn ausführen.
+- Android/Gradle Build und echter Samsung-Test noch NICHT durchgeführt: GitHub Action liefert ersten Buildnachweis.
+
+Weiteres: docs/COMPASS_0.5.0_RELEASE.md und android/CompassWidget/README.md
