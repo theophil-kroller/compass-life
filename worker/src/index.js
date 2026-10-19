@@ -1,3 +1,4 @@
+import {publicBitcoinLongHistory} from './market-bitcoin-long-v40.js';
 import {publicKrakenHistory} from './market-kraken-v39.js';
 import {privateMirror} from './private-device-mirror.js';
 import {listProjects,putProject} from './projects.js';
@@ -207,6 +208,10 @@ export default {
     if (req.method==='GET' && path==='/api/market/kraken/ohlc') {
       if(origin && origin!==env.ALLOWED_ORIGIN)return finish(json({error:'origin-not-allowed'},403));
       return finish(await publicKrakenHistory(req));
+    }
+    if (req.method==='GET' && path==='/api/market/bitcoin/history') {
+      if(origin && origin!==env.ALLOWED_ORIGIN)return finish(json({error:'origin-not-allowed'},403));
+      return finish(await publicBitcoinLongHistory(req));
     }
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));
     try {

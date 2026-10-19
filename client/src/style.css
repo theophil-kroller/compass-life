@@ -1852,3 +1852,23 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .fin39-price-stats{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;margin:6px 0 12px}
 .fin39-price-stats .positive{color:#158365}.fin39-price-stats .negative{color:#c44b4b}
 @media(max-width:680px){.fin39-price-card{padding:10px}.fin39-price-head{align-items:flex-start}.fin39-periods button{font-size:11px}}
+
+/* 0.5.40 · advanced Kraken technical terminal: quiet, dense, accessible. */
+.fin40-terminal{background:#fbfcfd;border:1px solid #dce7e5;border-radius:12px;padding:12px 14px;margin:12px 0;color:#23443e;font-family:system-ui,-apple-system,sans-serif}
+.fin40-toolstrip{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:1px 0 10px;border-bottom:1px solid #e7eeeb}
+.fin40-tool-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#71817d;margin-right:6px;font-weight:700}
+.fin40-toggle,.fin40-zoom button{border:1px solid #dbe5e1;background:#fff;border-radius:6px;color:#506963;cursor:pointer;font-size:11px;font-weight:550;min-height:30px;padding:4px 8px}
+.fin40-toggle:hover,.fin40-zoom button:hover{border-color:#80b6a5;background:#f3faf6}
+.fin40-toggle.on,.fin40-zoom button[aria-pressed=true]{background:#e5f3ed;color:#165c4a;border-color:#7ba996;font-weight:700}
+.fin40-toggle:focus-visible,.fin40-zoom button:focus-visible,.fin40-chart-svg:focus-visible{outline:2px solid #1b9880;outline-offset:2px}
+.fin40-separator{height:22px;border-left:1px solid #dfe8e4;margin:0 6px}
+.fin40-market-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:8px 0 3px}
+.fin40-market-head strong{font-size:20px;font-variant-numeric:tabular-nums}.fin40-market-head small{margin-left:12px;font-variant-numeric:tabular-nums}
+.fin40-market-head .positive{color:#0a8a6e}.fin40-market-head .negative{color:#c94859}
+.fin40-zoom{display:flex;gap:4px;flex-wrap:wrap}
+.fin40-indicator-legend{margin:4px 0 2px;color:#698079;font-size:11px}
+.fin40-chart-svg{display:block;width:100%;height:auto;min-height:230px;overflow:visible;touch-action:pan-y;cursor:crosshair}
+.fin40-chart-svg .fin40-cross-label-bg{opacity:.96}
+.fin40-chart-footer{border-top:1px solid #e4edeb;margin-top:3px;padding:8px 1px 2px;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;font-size:11px;font-variant-numeric:tabular-nums;color:#47665b}
+.fin40-caveat{font-size:11px;line-height:1.5;color:#73837f;margin:6px 0 0}
+@media(max-width:850px){.fin40-terminal{padding:8px 7px}.fin40-toolstrip{gap:4px}.fin40-toggle{padding:4px 6px}.fin40-chart-footer{font-size:10px}.fin40-indicator-legend span{display:none}}

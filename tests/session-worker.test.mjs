@@ -18,6 +18,7 @@ source=source.replace("import {schemaStatus} from './schema.js';", "const schema
 source=source.replace("import {listTasks,putTask} from './tasks.js';", "const listTasks=()=>{};const putTask=()=>{};");
 source=source.replace("import {privateMirror} from './private-device-mirror.js';","const privateMirror=()=>new Response(null,{status:404});");
 source=source.replace("import {publicKrakenHistory} from './market-kraken-v39.js';","const publicKrakenHistory=()=>new Response(null,{status:503});");
+source=source.replace("import {publicBitcoinLongHistory} from './market-bitcoin-long-v40.js';","const publicBitcoinLongHistory=()=>new Response(null,{status:503});");
 const {default:worker}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 function fakeD1(){
  const sessions=new Map();

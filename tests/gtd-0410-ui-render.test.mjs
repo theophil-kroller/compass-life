@@ -1,3 +1,4 @@
+import {technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair} from '../client/src/kraken-technical-v40.js';
 import * as inboxFlags from '../client/src/inbox-flags-v27.js';
 import * as inboxOrder from '../client/src/inbox-order-v34.js';
 import * as treeWorkspace from '../client/src/project-workspace-v27.js';
@@ -39,6 +40,7 @@ function context(){
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
  Object.assign(ctx,treeWorkspace,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,relationships);
+ Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.

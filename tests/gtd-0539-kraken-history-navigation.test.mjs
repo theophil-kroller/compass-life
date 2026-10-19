@@ -12,7 +12,8 @@ test('market history maps legacy Kraken XBT to BTC and enforces period bounds',(
  assert.equal(krakenHistoryRequest('BTC','2y').interval,1440);
  assert.throws(()=>krakenHistoryRequest('EUR','1m'),/unterstütztes/);
  assert.throws(()=>krakenHistoryRequest('INVALID-HOLDING','1m'),/unterstütztes/);
- assert.throws(()=>krakenHistoryRequest('BTC','10y'),/Ungültiger/);
+ assert.equal(krakenHistoryRequest('BTC','10y').provider,'coinbase');
+ assert.throws(()=>krakenHistoryRequest('ETH','10y'),/nur für BTC/);
 });
 test('public Worker market route uses restricted Kraken origin and cannot proxy arbitrary URLs or secrets',async()=>{
  assert.deepEqual(krakenPublicParams('https://api.example/api/market/kraken/ohlc?symbol=BTC&interval=1440'),{symbol:'BTC',interval:'1440',pair:'XBTEUR'});
@@ -27,7 +28,7 @@ test('historical quotes request passes symbol and period only, not personal wall
  const data=await fetchKrakenHistory('https://compass.test','XXBT','1m',{fetchFn:fake});
  assert.equal(data.candles.length,3);assert.match(url[0],/symbol=BTC/);assert.doesNotMatch(url[0],/XXBT|balance|amount|token|apikey/);
  const html=krakenPriceChartHtml('XXBT','1m',data,false,'',[{asset:'XXBT',amount:0.42}]);
- assert.match(html,/KRAKEN \/ EUR-KURSHISTORIE/);assert.match(html,/data-action="finance-kraken-chart-period"/);assert.match(html,/Kursverlauf ≠ historische Entwicklung/);assert.match(html,/0,42 Einheiten/);
+ assert.match(html,/MARKTDATEN \/ EUR-KURSHISTORIE/);assert.match(html,/data-action="finance-kraken-chart-period"/);assert.match(html,/Kursverlauf ≠ historische Entwicklung/);assert.match(html,/0,42 Einheiten/);
 });
 test('history series rejects malformed and empty data rather than inventing chart values',()=>{
  assert.throws(()=>krakenHistorySeries({candles:[]}),/wenige/);

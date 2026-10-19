@@ -33,5 +33,5 @@ test('0.5.23 UI links real GTD review to projects and waiting list',()=>{
  const s=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(s,/projectHealth\(state/);assert.match(s,/waitingReview\(state/);
  assert.match(s,/data-action="gtd-review-project"/);assert.match(s,/data-action="gtd-repeat-task"/);
- assert.match(s,/COMPASS_CLIENT_VERSION='0\.5\.39'/);
+ assert.match(s,/COMPASS_CLIENT_VERSION='0\.5\.40'/);
 });
