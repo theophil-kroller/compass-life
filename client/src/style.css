@@ -1306,3 +1306,115 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 
 .people-agenda-capture label{min-width:0}.people-agenda-capture input{box-sizing:border-box;max-width:100%;width:100%;padding:10px;border:1px solid #dbe7de;border-radius:9px;color:#305b48;font:inherit;font-size:12px}
 .people-review-settings select{border:1px solid #dce7df;border-radius:9px;padding:9px;background:#fff;color:#315b48;max-width:100%}
+
+/* Compass 0.5.27 · OmniFocus-inspired progressive disclosure. Navigation is
+   already the location indicator; content starts with the actual work. */
+.content,.content.content-work{padding-top:12px}
+.page-intro.page-intro-compact{min-height:32px;display:flex;align-items:center;gap:10px;margin:0 0 12px;justify-content:space-between}
+.page-intro-compact h1,.content-work .page-intro-compact h1{font:500 18px/1.35 Georgia,'Times New Roman',serif;letter-spacing:-.2px;color:#385347;margin:0}
+.page-compact-info{font:400 10px/1.4 system-ui,sans-serif;color:#91a398;white-space:nowrap}
+.tree-workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
+.tree-workspace.has-inspector{grid-template-columns:minmax(0,1fr) minmax(280px,360px)}
+.tree-work-card,.tree-inspector{min-width:0;padding:16px 18px}
+.tree-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #e8efea;padding:0 0 10px;margin-bottom:6px;color:#375b4a;font-size:12px}
+.tree-toolbar-actions{display:flex;gap:5px;flex-wrap:wrap}
+.tree-toolbar-actions .secondary-btn{display:inline-flex;align-items:center;gap:5px;min-height:33px;font-size:11px;padding:6px 9px}
+.unified-tree{min-height:120px}
+.tree-entry{min-width:0}
+.tree-line{display:flex;gap:5px;align-items:center;border-radius:7px;padding:3px 7px 3px calc(4px + var(--depth,0)*21px);min-height:35px;min-width:0;color:#385849}
+.tree-line:hover,.tree-line:focus-within{background:#f2f7f4}
+.tree-line.selected{background:#e8f2eb}
+.tree-line.tree-drop-hover,.tree-root-drop.tree-drop-hover{outline:2px dashed #35866a;outline-offset:-2px;background:#e0f3e6}
+.tree-node-icon{flex:none;display:inline-flex;color:#658979}
+.tree-node-icon svg{width:16px;height:16px}
+.tree-label{border:0;background:transparent;padding:6px 4px;cursor:pointer;min-width:0;display:flex;flex:1;gap:10px;align-items:center;text-align:left;color:#274c3b;font:500 12px/1.4 system-ui,sans-serif}
+.tree-label>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-label:focus-visible,.tree-expander:focus-visible,.tree-inline-add:focus-visible,.tree-drag-handle:focus-visible{outline:2px solid #2d8762;outline-offset:1px}
+.tree-task .tree-label{font-weight:400}
+.tree-label.tree-done>span:first-child{color:#98aba0;text-decoration:line-through}
+.tree-muted{font-size:10px;color:#8b9e92;white-space:nowrap;font-weight:400}
+.tree-critical{color:#a34c43;font-size:10px;white-space:nowrap}
+.tree-expander,.tree-expander-space{display:grid;place-items:center;width:19px;height:23px;flex:none;font-size:15px;line-height:1;color:#6d8b7b}
+.tree-expander{cursor:pointer;background:transparent;border:0;border-radius:6px}
+.tree-expander:hover{background:#e7eee8}
+.tree-drag-handle{display:flex;align-items:center;justify-content:center;cursor:grab;flex:none;font-size:13px;letter-spacing:-3px;width:17px;height:24px;opacity:.25;color:#648678;user-select:none}
+.tree-line:hover .tree-drag-handle,.tree-drag-handle:focus{opacity:.9}
+.tree-drag-handle:active{cursor:grabbing}
+.tree-line .task-check{flex:none;width:23px;height:23px;border-radius:7px;min-height:23px}
+.tree-inline-add{border:0;background:transparent;color:#56866e;display:grid;place-items:center;width:26px;height:27px;border-radius:6px;flex:none;opacity:0;cursor:pointer}
+.tree-line:hover .tree-inline-add,.tree-line:focus-within .tree-inline-add{opacity:1}
+.tree-inline-add:hover{background:#e1f0e6}
+.tree-flag{display:flex;align-items:center;color:#8f7053;flex:none}
+.tree-root-drop{color:#8a9e92;font-size:10px;cursor:default;border:1px dashed transparent;min-height:33px;display:flex;gap:7px;align-items:center;padding:8px 15px;margin-top:8px}
+.tree-empty{padding:27px 12px;color:#8a9c90;font-size:12px;text-align:center}
+.tree-inspector{position:sticky;top:75px;max-height:calc(100dvh - 97px);overflow-y:auto}
+.tree-inspector-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:9px;border-bottom:1px solid #e8efea;margin-bottom:12px;font-size:12px;color:#406451}
+.tree-close{border:0;background:transparent;color:#8d9e92;cursor:pointer;font-size:21px;line-height:1.2;flex:none}
+.tree-inspector .project-properties{margin-top:6px}
+.tree-inspector .task-edit-form{margin:0}
+.tree-inspector .task-edit-form label{font-size:11px}
+.tree-quick-create{border:1px solid #dceae0;border-radius:11px;padding:11px 13px;margin:14px 0;background:#f8fbf9}
+.tree-quick-create>summary{font-size:12px;font-weight:650;color:#36634b;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.tree-quick-create>summary::-webkit-details-marker{display:none}
+.tree-quick-create>form{margin-top:13px}
+.tree-quick-create .task-create-form,.tree-quick-create .project-form{display:grid;gap:12px;background:none;box-shadow:none;border:0;padding:0}
+.tree-quick-create .task-form-title{display:none}
+.tree-quick-create .task-create-form>input[name=title]{min-height:39px}
+.tree-advanced{border:1px solid #e1ece4;border-radius:8px;padding:9px;color:#506f5d}
+.tree-advanced summary{cursor:pointer;font-size:11px}
+.tree-advanced .task-field-grid{margin-top:12px}
+.tree-secondary{border-top:1px solid #e7efe9;margin-top:16px;padding-top:12px}
+.tree-secondary>summary{font-size:11px;color:#7b9a87;cursor:pointer}
+.tree-secondary[open]>summary{margin-bottom:15px}
+.tree-move-form{display:grid;gap:9px;margin-top:16px;border-top:1px solid #e7efe9;padding-top:15px}
+.tree-move-form label{font-size:11px;display:grid;gap:7px}
+.tree-move-form select{min-width:0;width:100%}
+.template-line{--depth:0}
+.template-task-summary{border-left:1px solid #d5e5d9;margin:0 0 12px 13px}
+.template-property{display:flex!important;align-items:center;gap:9px}
+.template-property input{width:auto!important}
+@media(max-width:960px){.tree-workspace.has-inspector{grid-template-columns:minmax(0,1fr)}.tree-inspector{position:fixed;left:max(12px,3vw);right:max(12px,3vw);bottom:12px;top:auto;z-index:65;max-height:65dvh;overflow:auto;box-shadow:0 16px 48px #183b2b4c;border:1px solid #cbdfd1;border-radius:16px;background:white}.tree-work-card,.tree-inspector{padding:14px}}
+@media(max-width:700px){.page-compact-info{display:none}.page-intro.page-intro-compact{margin-bottom:10px}.tree-line{padding-left:calc(3px + var(--depth,0)*14px)}.tree-label{font-size:12px}.tree-inline-add{opacity:1}.tree-drag-handle{opacity:.3}.tree-workspace{gap:8px}}
+
+/* 0.5.27 – Same quiet three-pane work rhythm in Inbox and Projects. */
+.inbox-mvp-layout{max-width:none;grid-template-columns:minmax(300px,1fr) minmax(280px,.77fr);gap:1px;background:#e9efea;border:1px solid #e7ede8;border-radius:12px;overflow:hidden}
+.inbox-mvp-layout .inbox-mvp-card,.inbox-mvp-layout .inbox-mvp-detail{min-height:480px;padding:14px 18px;border:0;box-shadow:none;border-radius:0}
+.inbox-mvp-head{padding-bottom:10px}.inbox-mvp-head h2{font-family:inherit;font-size:14px;font-weight:650;letter-spacing:0}
+.inbox-mvp-head .primary-btn{padding:7px 11px;font-size:12px}.inbox-search-box{margin-top:10px;border-radius:9px}.inbox-search-box input{height:35px}
+.inbox-mvp-row{padding:9px 8px;border-radius:7px}.inbox-list-copy strong{font-weight:540}.inbox-mvp-list{max-height:68vh}
+.inbox-mvp-detail .inbox-detail-top{padding:3px 0 9px;border-bottom:1px solid #edf1ed}
+.inbox-mvp-detail form.inbox-quiet-inspector{gap:8px;margin-top:14px}
+.inbox-mvp-detail form.inbox-quiet-inspector textarea{min-height:48px;padding:9px 10px;line-height:1.45}
+.inbox-mvp-detail form.inbox-quiet-inspector textarea[name=note]{min-height:78px}
+.inbox-promote-fields{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.8fr);gap:10px}
+.inbox-promote-fields label{min-width:0}.inbox-promote-fields select{width:100%;min-width:0;min-height:35px;border:1px solid #e3ebe5;border-radius:8px;background:#fff;color:#314b3c;padding:6px;font-size:12px}
+.inbox-project-hint{margin:0 0 5px;color:#8a9c8f;font-size:10px;line-height:1.5}
+.inbox-inspector-extra{border-top:1px solid #eef1ed;padding-top:9px}.inbox-inspector-extra summary{cursor:pointer;color:#718779;font-size:11px}
+.inbox-inspector-extra input{width:100%;margin-top:8px}
+.inbox-mvp-detail .inbox-detail-actions{margin-top:10px;align-items:center}.inbox-mvp-detail .inbox-detail-actions button{font-size:11px}
+@media(max-width:1040px){.inbox-mvp-layout{grid-template-columns:1fr;gap:1px}.inbox-mvp-layout .inbox-mvp-card,.inbox-mvp-layout .inbox-mvp-detail{min-height:0}}
+@media(max-width:700px){.inbox-promote-fields{grid-template-columns:1fr 1fr}.inbox-mvp-layout .inbox-mvp-card,.inbox-mvp-layout .inbox-mvp-detail{padding:13px}.inbox-mvp-list{max-height:40vh}}
+/* Calm inspector – title and notes first; advanced metadata on demand. */
+.inspector-extra{margin:9px 0;border-top:1px solid #e8eeea;padding:11px 0 0}
+.inspector-extra>summary{font-size:11px;font-weight:600;color:#738579;cursor:pointer;margin-bottom:10px}
+.inspector-extra>label,.inspector-extra>.inspector-dates{margin:9px 0}
+.inspector-main-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.85fr);gap:8px;margin:10px 0}
+.inspector-main-fields select{min-width:0;width:100%}
+@media(max-width:700px){.inspector-main-fields{grid-template-columns:1fr}}
+
+/* 0.5.27 – One-click flags in quiet OmniFocus-style list rows. */
+.tree-flag-toggle,.inbox-row-flag,.inbox-inspector-flag{background:none;border:0;color:#b5c0b8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;min-width:29px;min-height:30px;padding:5px;transition:color .13s,background .13s}
+.tree-flag-toggle:hover,.inbox-row-flag:hover,.inbox-inspector-flag:hover{background:#f1f5f0;color:#647d6d}
+.tree-flag-toggle.is-flagged,.inbox-row-flag.is-flagged,.inbox-inspector-flag.is-flagged{color:#c77e30}
+.tree-flag-toggle:focus-visible,.inbox-row-flag:focus-visible,.inbox-inspector-flag:focus-visible{outline:2px solid #4c8d66;outline-offset:1px}
+.inbox-row-wrap{display:flex;align-items:center;min-width:0;padding:0 4px}
+.inbox-row-wrap>.inbox-mvp-row{min-width:0;flex:1;width:auto}
+.inbox-detail-top{display:flex;align-items:center;gap:10px}
+.inbox-detail-top .inbox-detail-date{margin-left:auto}
+.flagged-inbox-section{border-top:1px solid #e4eee7;margin-top:16px;padding-top:12px}
+.flagged-inbox-section h3{font-size:12px;font-weight:600;color:#607767;margin:4px 0 9px}
+.flagged-inbox-row{display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:8px}
+.flagged-inbox-row:hover{background:#f6f9f6}
+.flagged-inbox-open{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;background:none;border:0;color:inherit;text-align:left;cursor:pointer;padding:4px;flex:1;font-size:12px}
+.flagged-inbox-open small{font-size:10px;color:#82968a}
+@media(hover:none){.tree-flag-toggle,.inbox-row-flag{min-height:36px;min-width:36px}}

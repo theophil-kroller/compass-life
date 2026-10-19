@@ -1,4 +1,7 @@
 import {parseCaptureLines,parseAiCaptureJson,capturePreview,captureInboxRecord,CAPTURE_KINDS} from './capture-triage-v26.js';
+import {moveProjectHierarchy,moveTaskHierarchy,cloneProjectTemplate,taskDescendants,isTemplateProject} from './project-workspace-v27.js';
+import {inboxTaskDraft} from './inbox-promotion-v27.js';
+import {inboxFlagged,visibleInboxTags,setInboxFlag} from './inbox-flags-v27.js';
 import {CONTACT_TYPES,CONTACT_REVIEW_DAYS,contactTypeLabel,addContactEntry,contactSummary,contactReviewQueue,updateContactReviewDays} from './people-relationships-v24.js';
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {linkedPersonTasks,linkedPersonInbox} from './person-links.js';
@@ -46,7 +49,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.26';
+const COMPASS_CLIENT_VERSION='0.5.27';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -59,6 +62,8 @@ let selectedTaskId=null;
 let selectedProjectId=null;
 let projectFocus=false;
 const projectCollapsed=new Set();
+const treeTaskCollapsed=new Set();
+let treeCreateKind='',treeCreateParent=null,treeTaskParent=null;
 let selectedAgendaEventId=null;
 let calendarRulesOpen=false,showHiddenCalendarEvents=false;
 let reviewWorkflow='next';
@@ -106,7 +111,7 @@ let captureBulkOpen=false,captureBulkMode='lines',captureBulkRaw='',captureBulkP
 const bootSearch=new URLSearchParams(location.search);
 const bootCapture=bootSearch.get('capture')==='1';
 const bootView=bootSearch.get('view');
-if(['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','next','flagged','hold'].includes(bootView))tab=bootView;
+if(['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','next','flagged','hold'].includes(bootView))tab=bootView;
 if(bootView==='health'||bootView==='places')tab='insights';
 if(bootCapture){captureAfterUnlock=true;tab='inbox';}
 
@@ -120,7 +125,7 @@ let sportsMode='all',sportsAnchor=localDate(),sportsMetric='time',sportsSelected
 let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',financePane='Überblick';
 // Non-sensitive presentation only. Deep links always override the last-view preference.
 const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.calm.lastView')||'null');}catch{return null;}})();
-if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
+if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
 if(!bootView&&!bootCapture&&calmLastView?.insight&&INSIGHT_TABS.some(v=>v.id===calmLastView.insight))insightTab=calmLastView.insight;
 if(!bootView&&!bootCapture&&calmLastView?.finance&&FINANCE_TABS.some(v=>v.title===calmLastView.finance))financePane=calmLastView.finance;
 let calmNavGroup=['projects','overview','next','forecast','flagged','hold','someday'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'||tab==='recovery'?'insights':'';
@@ -331,7 +336,7 @@ function navItem(id,label,iconName,{disabled=false,count=null}={}) {
 function chrome(content){
  const num=rows().length;
  const today=new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
- const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',projects:'Projekte',next:'Next Actions',flagged:'Flagged',hold:'On Hold',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten',people:'Menschen',progress:'Fortschritt',recovery:'Erholung',health:'Gesundheit',insights:'Insights',finance:'Finanzen'})[tab]||'Heute');
+ const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',projects:'Projekte',templates:'Vorlagen',next:'Next Actions',flagged:'Flagged',hold:'On Hold',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten',people:'Menschen',progress:'Fortschritt',recovery:'Erholung',health:'Gesundheit',insights:'Insights',finance:'Finanzen'})[tab]||'Heute');
  const sub=({activity:'Sessions bearbeiten, zuordnen und verwalten.',people:'Gespräche, offene Punkte und Kontakte.',progress:'Fortschritt bei Projekten und Tätigkeiten.',recovery:'Aktive Erholung und freie Zeit im Blick.',health:'Schlaf, HRV und Körperzusammensetzung – Garmin und Fitdays an einem Ort.',insights:'Personal Analytics · Muster in Schlaf, Energie und Produktivität erkennen.',today:'Was heute wirklich zählt.',forecast:'Termine, Fristen und Agenden auf einer Zeitachse.',projects:'Ergebnisse verfolgen, nächste Schritte verbinden.',next:'Alle ausführbaren nächsten Schritte, auch ohne Datum.',flagged:'Bewusst hervorgehobene Aufgaben.',hold:'Bewusst pausiert oder auf Rückmeldung wartend.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
  return `<div class="shell"><aside class="sidebar" aria-label="Navigation">
  <div class="brand"><span class="brand-icon">${ico('compass',24)}</span><span class="brand-name">Compass<small>Personal Life Manager · ${COMPASS_CLIENT_VERSION}</small></span></div>
@@ -344,6 +349,7 @@ function chrome(content){
  ${navItem('overview','Übersicht','layers')}
  ${navItem('next','Next Actions','target')}
  ${navItem('projects','Projekte','folder')}
+ ${navItem('templates','Vorlagen','bookmark')}
  ${navItem('forecast','Kalender & Forecast','calendar')}
  ${navItem('flagged','Flagged','flag')}
  ${navItem('hold','On Hold','pause')}
@@ -374,7 +380,7 @@ function chrome(content){
  <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?'Compass verbunden':'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':''}">
- <div class="page-intro"><div><p class="page-overline">${tab==='today'?'DEIN TAGESKOMPASS':tab==='overview'?'DEIN PERSÖNLICHER KOMPASS':'COMPASS · DEIN ARBEITSRAUM'}</p><h1>${h(title)}</h1><p class="intro-subtitle">${h(sub)}</p></div><div class="today-label">${h(today)}<span>${state?'Tresor entsperrt':'Tresor gesperrt'}</span></div></div>
+ <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
  ${notice?`<div role="status" class="alert good">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
  ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${state&&captureOverlayOpen?captureOverlay():``}</div>`;
 }
@@ -432,7 +438,7 @@ function calendarRail(){
 }
 function datesPreview(){return `<div class="date-prototype"><div>${ico('calendar',16)}<span>Wunschtermin</span><span class="date-value">–</span></div><div>${ico('flag',16)}<span>Harte Deadline</span><span class="date-value">–</span></div><div>${ico('clock',16)}<span>Frühestens ab</span><span class="date-value">–</span></div></div>`;}
 function lifeGoalsPanel(){
- const goals=lifeGoals(state),projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&p.status==='active');
+ const goals=lifeGoals(state),projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&!p.isTemplate&&p.status==='active');
  return `<details class="work-card v22-goals" aria-label="Lebensziele und Projekte"><summary>${ico('target',18)} Lebensziele & Projekte <small>· ${goals.filter(g=>g.status==='active').length} aktiv · lokal verschlüsselt</small></summary>
  <p class="muted-line">Ein Ziel beschreibt ein längerfristiges Ergebnis. Projektzuordnungen schaffen einen nachvollziehbaren Bezug zu vorhandenen Next Actions; Projekt- und Aufgaben-Daten bleiben unverändert.</p><details class="v221-life-areas"><summary>Die sieben Lebensbereiche nach John Demartini · optional</summary><p class="muted-line">Zusätzlicher Blick auf deine Ziele: mental, beruflich, finanziell, familiär, sozial, körperlich und spirituell. Kein Balance-Score und keine Pflicht, in jedem Bereich Ziele anzulegen.</p><div class="v221-areas-grid">${LIFE_AREAS.map(([key,label])=>`<div class="v221-area"><span>${h(label)}</span><strong>${goals.filter(g=>g.lifeArea===key).length}</strong></div>`).join('')}</div><small>Freiwillige Orientierung nach Demartinis „Master Planning for Life“. Deine bisherigen Compass-Bereiche wie Forschung oder Lehre bleiben erhalten.</small></details>
  ${goals.map(goal=>{const prog=lifeGoalProgress(state,goal);return `<article class="v22-goal"><div><strong>${h(goal.title)}</strong><small>${h(goal.area)}${goal.lifeArea?' · '+h(lifeAreaLabel(goal.lifeArea)):''} · ${goal.status==='active'?'Aktiv':goal.status==='paused'?'Pausiert':'Erreicht'}${goal.targetDate?' · Zieltermin '+h(goal.targetDate):''}</small>${goal.outcome?`<p>${h(goal.outcome)}</p>`:''}<small>${prog.projects} verknüpfte Projekte · ${prog.completed} von ${prog.taskCount} Aufgaben erledigt${prog.missingProjects?' · '+prog.missingProjects+' Projekte nicht mehr vorhanden':''}</small></div><div class="v22-goal-actions"><label class="v221-area-select">7 Lebensbereiche <select id="life-area-${h(goal.id)}" aria-label="Demartini-Lebensbereich für ${h(goal.title)}"><option value="">Ohne Zuordnung</option>${LIFE_AREAS.map(([key,label])=>`<option value="${key}" ${goal.lifeArea===key?'selected':''}>${h(label)}</option>`).join('')}</select></label><button type="button" class="secondary-btn" data-action="life-goal-area" data-id="${h(goal.id)}">Zuordnen</button>${goal.projectIds.map(id=>state?.projects?.[id]?`<button type="button" class="secondary-btn" data-action="life-goal-project-open" data-id="${h(id)}">${h(state.projects[id].title)} ↗</button>`:'').join('')}
@@ -469,7 +475,7 @@ function todayWork(locked=false){
  <button type="button" class="overview-nudge" data-tab="overview">${ico('layers',17)} Große Übersicht ansehen ${ico('arrow',14)}</button></aside></div>`;
 }
 function forecastScreen(){
- const list=dueTasks(state,600),planned=Object.values(state?.tasks||{}).filter(t=>!t.archived&&!t.completed&&t.plannedDate),today=localDate();
+ const list=dueTasks(state,600),planned=Object.values(state?.tasks||{}).filter(t=>!t.archived&&!state.projects?.[t.projectId]?.isTemplate&&!t.completed&&t.plannedDate),today=localDate();
  const days=Array.from({length:14},(_,i)=>{const d=new Date(today+'T12:00:00');d.setDate(d.getDate()+i);return localDate(d);});
  const overdue=list.filter(t=>t.dueDate<today);
  const dayContent=day=>{
@@ -488,7 +494,7 @@ function forecastScreen(){
 function projectOptions(selected=''){
  const options=['<option value="">Kein Projekt</option>'];
  const visit=(parent,depth)=>{for(const proj of childProjects(state,parent)){
-  if(proj.kind==='project'&&(proj.status!=='completed'||proj.id===selected))options.push(`<option value="${h(proj.id)}" ${selected===proj.id?'selected':''}>${'  '.repeat(depth)}${h(proj.title)}</option>`);
+  if(proj.kind==='project'&&!proj.isTemplate&&(proj.status!=='completed'||proj.id===selected))options.push(`<option value="${h(proj.id)}" ${selected===proj.id?'selected':''}>${'  '.repeat(depth)}${h(proj.title)}</option>`);
   if(depth<15)visit(proj.id,depth+1);
  }};visit(null,0);return options.join('');
 }
@@ -528,27 +534,29 @@ function categoryOptions(selected='Allgemein'){
 function workflowOptions(selected='next'){
  return [['next','Next Action'],['waiting','Waiting For'],['hold','On Hold']].map(([value,label])=>`<option value="${value}" ${selected===value?'selected':''}>${label}</option>`).join('');
 }
-function taskCreateForm(defaultDay='',defaultProject=''){
- return `<form class="task-create-form" id="task-create-form"><div class="task-form-title"><strong>Neue Aufgabe</strong><span>Ohne künstliche Deadline</span></div><input name="title" aria-label="Aufgabentitel" maxlength="180" required placeholder="Was ist der nächste konkrete Schritt?"/><div class="task-field-grid">
+function taskCreateForm(defaultDay='',defaultProject='',defaultParent=''){
+ return `<form class="task-create-form" id="task-create-form"><div class="task-form-title"><strong>Neue Aufgabe</strong><span>Ohne künstliche Deadline</span></div><input name="title" aria-label="Aufgabentitel" maxlength="180" required placeholder="Was ist der nächste konkrete Schritt?"/><details class="tree-advanced"><summary>Weitere Einstellungen</summary><div class="task-field-grid">
  ${dateControl('plannedDate','Planned · Wunschtermin',defaultDay,'Für Heute / Forecast; keine Frist')}
  ${dateControl('dueDate','Due · harte Deadline')}
  ${dateControl('deferUntil','Defer · frühestens ab','','Bis dahin keine Next Action')}
  <label>Duration · Minuten<input name="estimateMinutes" type="number" min="5" max="1440" step="5" placeholder="optional"/></label>
  <label>Bereich<select name="category">${categoryOptions()}</select></label><label>GTD-Status<select name="workflow">${workflowOptions()}</select></label>
- <label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label>${defaultProject?`<label>Unteraufgabe von<select name="parentTaskId">${taskParentOptions(defaultProject)}</select></label>`:''}
+ <label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label>${defaultProject?`<label>Unteraufgabe von<select name="parentTaskId">${taskParentOptions(defaultProject,defaultParent)}</select></label>`:''}
  <label>Agenda-Tags<input name="tags" data-smart-tags placeholder="UKO, Martin" maxlength="300"/></label>
  <label>Kontext-Tags<input name="contextTags" data-smart-tags placeholder="büro, laptop" maxlength="300"/></label>
- <label class="flag-check"><input type="checkbox" name="flagged"/> Flagged</label><button class="primary-btn" type="submit">${ico('plus',16)} Hinzufügen</button></div></form>`;
+ <label class="flag-check"><input type="checkbox" name="flagged"/> Flagged</label></div></details><button class="primary-btn" type="submit">${ico('plus',16)} Hinzufügen</button></form>`;
 }
 function taskList(items,scope,hideEmpty=false){return items.length?`<div class="task-list" data-scope="${h(scope)}">${items.map(t=>`<div class="task-row ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}" ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`: ''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small>${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</button>${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;}
 function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)return '<div class="task-empty">Wähle eine Aufgabe, um ihre Details zu bearbeiten.</div>';
  return `<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="3">${h(t.note||'')}</textarea></label>
+ <div class="inspector-main-fields"><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label></div>
+ <details class="inspector-extra"><summary>Weitere Einstellungen</summary>
  <div class="inspector-dates">${dateControl('deferUntil','Defer · frühestens ab',t.deferUntil,'Verfügbarkeit; keine Deadline')}${dateControl('plannedDate','Planned · Wunschtermin',t.plannedDate,'Für Heute und Forecast')}${dateControl('dueDate','Due · harte Deadline',t.dueDate,'Fälligkeit und Überfälligkeit')}</div>
  <label>Duration · geschätzter Aufwand (Min.)<input name="estimateMinutes" type="number" min="5" max="1440" step="5" value="${t.estimateMinutes??''}"/></label>
- <label>Bereich<select name="category">${categoryOptions(t.category)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label>
- ${t.projectId?`<label>Hierarchie · Unteraufgabe von<select name="parentTaskId">${taskParentOptions(t.projectId,t.parentTaskId,t.id)}</select></label>`:''}
+ <label>Bereich<select name="category">${categoryOptions(t.category)}</select></label>${t.projectId?`<label>Hierarchie · Unteraufgabe von<select name="parentTaskId">${taskParentOptions(t.projectId,t.parentTaskId,t.id)}</select></label>`:''}
  <label>Agenda-Tags<input name="tags" data-smart-tags value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label><label>Kontexte<input name="contextTags" data-smart-tags value="${h((t.contextTags||[]).join(', '))}" placeholder="büro, laptop"/></label>
  <label class="flag-check"><input type="checkbox" name="flagged" ${t.flagged?'checked':''}/> Flagged</label>
+ </details>
  <div class="task-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button>${t.completed?`<button type="button" class="secondary-btn" data-action="gtd-repeat-task" data-id="${h(t.id)}">${ico('sync',15)} Erneut als Aufgabe anlegen</button>`:''}</div></form>${state.taskConflicts[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Die Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
 }
 function gtdTodaySummary(){
@@ -571,46 +579,71 @@ function workflowScreen(which){
  const paused=which==='hold'?shown.filter(t=>t.workflow==='hold'):[];
  const blocked=which==='hold'?blockedByProject(state):[];
  const pausedProjects=which==='hold'?Object.values(state?.projects||{}).filter(p=>p.status==='hold'):[];
- const perspectiveItems=which==='hold'?[...shown,...blocked]:shown;
+ const flaggedInbox=which==='flagged'?inboxRecords(state).filter(inboxFlagged):[];
+ const perspectiveItems=which==='hold'?[...shown,...blocked]:[...shown,...flaggedInbox];
  if(!perspectiveItems.some(t=>t.id===selectedTaskId))selectedTaskId=null;
  const noActions=which==='next'&&!shown.length?`<div class="task-empty perspective-empty"><strong>${contextFilter?'Für diesen Kontext ist gerade nichts verfügbar.':'Keine verfügbaren Next Actions.'}</strong><p>Prüfe die Inbox, kläre deine nächsten Schritte im Review oder lege eine konkrete Aufgabe an. Verschobene und pausierte Aufgaben erscheinen hier nicht.</p><button type="button" class="secondary-btn" data-tab="review">Inbox im Review klären</button> <button type="button" class="secondary-btn" data-tab="inbox">Inbox öffnen</button></div>`:'';
  return chrome(`<div class="workflow-layout"><section class="work-card"><div class="work-heading"><span>${ico(which==='flagged'?'flag':which==='hold'?'pause':'target',20)} ${titles[which]}</span><span class="quiet-tag">${perspectiveItems.length} offen</span></div>
  ${which==='next'?`<div class="context-filter"><label>Aktueller Kontext <select id="context-filter"><option value="">Alle verfügbaren Next Actions</option>${availableContexts.map(c=>`<option value="${h(c.value)}" ${contextFilter===c.value?'selected':''}>${c.group?'▸ ':''}${h(c.label)}</option>`).join('')}</select></label></div>`:''}
- ${which==='flagged'?'<p class="muted-line">Hier erscheinen nur Aufgaben, die du ausdrücklich mit der Flagge markiert hast. Über das Fahnensymbol kannst du die Markierung sofort entfernen.</p>':''}
- ${which==='hold'?`<div class="held-sections"><div class="gtd-waiting-hint">${ico('clock',16)} <span>${waitingReview(state).attention} Waiting-For-Einträge seit mindestens 7 Tagen nicht bearbeitet. Das ist ein Review-Hinweis, keine Deadline.</span></div><h3>Waiting For · ${waiting.length}</h3>${taskList(waiting,'waiting')}<h3>On Hold · ${paused.length}</h3>${taskList(paused,'paused')}<h3>Durch pausierte Projekte zurückgestellt · ${blocked.length}</h3>${taskList(blocked,'project-hold')}<h3>Pausierte Projekte · ${pausedProjects.length}</h3>${pausedProjects.length?pausedProjects.map(p=>`<button type="button" class="held-project-link" data-action="hold-open-project" data-id="${h(p.id)}">${ico('folder',15)} ${h(p.title)} ${ico('arrow',13)}</button>`).join(''):'<p class="muted-line">Keine Projekte pausiert.</p>'}</div>`:`${taskList(shown,which,which==='next')}${noActions}${which==='flagged'?`<details class="calm-create calm-flag-picker"><summary>${ico('flag',15)} Bestehende Aufgabe markieren</summary>${Object.values(state?.tasks||{}).filter(t=>!t.archived&&!t.completed&&!t.flagged).slice(0,80).map(t=>`<button type="button" class="calm-flag-option" data-action="flag-existing" data-id="${h(t.id)}">${ico('flag',14)} ${h(t.title)}</button>`).join('')||'<p class="muted-line">Keine weiteren offenen Aufgaben.</p>'}</details>`:`<details class="calm-create"><summary>${ico('plus',15)} Neue Aufgabe hinzufügen</summary>${taskCreateForm('')}</details>`}`}
+ ${which==='flagged'?'<p class="muted-line">Markierte Aufgaben und ungeklärte Inbox-Einträge. Flaggen dienen zum Hervorheben, nicht als Deadline.</p>':''}
+ ${which==='hold'?`<div class="held-sections"><div class="gtd-waiting-hint">${ico('clock',16)} <span>${waitingReview(state).attention} Waiting-For-Einträge seit mindestens 7 Tagen nicht bearbeitet. Das ist ein Review-Hinweis, keine Deadline.</span></div><h3>Waiting For · ${waiting.length}</h3>${taskList(waiting,'waiting')}<h3>On Hold · ${paused.length}</h3>${taskList(paused,'paused')}<h3>Durch pausierte Projekte zurückgestellt · ${blocked.length}</h3>${taskList(blocked,'project-hold')}<h3>Pausierte Projekte · ${pausedProjects.length}</h3>${pausedProjects.length?pausedProjects.map(p=>`<button type="button" class="held-project-link" data-action="hold-open-project" data-id="${h(p.id)}">${ico('folder',15)} ${h(p.title)} ${ico('arrow',13)}</button>`).join(''):'<p class="muted-line">Keine Projekte pausiert.</p>'}</div>`:`${taskList(shown,which,which==='next'||which==='flagged'&&flaggedInbox.length>0)}${noActions}${which==='flagged'&&flaggedInbox.length?`<div class="flagged-inbox-section"><h3>Markierte Inbox-Einträge · ${flaggedInbox.length}</h3>${flaggedInbox.map(r=>`<div class="flagged-inbox-row"><button type="button" data-action="inbox-flag" data-id="${h(r.id)}" class="inbox-row-flag is-flagged" aria-label="Flagge entfernen" aria-pressed="true">${ico('flag',16)}</button><button type="button" class="flagged-inbox-open" data-action="select-inbox" data-id="${h(r.id)}">${h(r.title)}<small>Inbox · noch ungeklärt</small></button></div>`).join('')}</div>`:''}${which==='flagged'?`<details class="calm-create calm-flag-picker"><summary>${ico('flag',15)} Bestehende Aufgabe markieren</summary>${Object.values(state?.tasks||{}).filter(t=>!t.archived&&!state.projects?.[t.projectId]?.isTemplate&&!t.completed&&!t.flagged).slice(0,80).map(t=>`<button type="button" class="calm-flag-option" data-action="flag-existing" data-id="${h(t.id)}">${ico('flag',14)} ${h(t.title)}</button>`).join('')||'<p class="muted-line">Keine weiteren offenen Aufgaben.</p>'}</details>`:`<details class="calm-create"><summary>${ico('plus',15)} Neue Aufgabe hinzufügen</summary>${taskCreateForm('')}</details>`}`}
  </section><aside class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Aufgabendetails</span></div>${taskEditor()}</aside></div>`);
 }
-function projectTree(){
- const visited=new Set();
- const draw=(parent,depth)=>childProjects(state,parent).map(pr=>{
-  if(visited.has(pr.id))return '';visited.add(pr.id);
-  const children=childProjects(state,pr.id);const selected=pr.id===selectedProjectId;const collapsed=projectCollapsed.has(pr.id);
-  return `<div class="project-branch"><div class="project-branch-line" style="padding-left:${Math.min(depth,10)*14}px">${children.length?`<button type="button" class="tree-chevron" data-action="project-toggle-expand" data-id="${h(pr.id)}" aria-label="${collapsed?'Aufklappen':'Zuklappen'}">${collapsed?'▸':'▾'}</button>`:'<span class="tree-chevron-placeholder"></span>'}<button type="button" class="project-list-item ${selected?'is-current':''}" data-action="project-select" data-id="${h(pr.id)}">${ico('folder',16)}<span class="project-tree-name"><strong>${h(pr.title)}</strong><small>${pr.kind==='folder'?'Ordner':pr.projectType==='sequential'?'Sequential':pr.projectType==='single'?'Single Actions':'Parallel'} · ${pr.status==='active'?'Aktiv':pr.status==='hold'?'Pausiert':'Fertig'}</small></span></button></div>${collapsed?'':draw(pr.id,depth+1)}</div>`;
+function treeTaskRows(projectId,parentTaskId=null,depth=0,visited=new Set()){
+ if(depth>15)return '';
+ return taskChildren(state,projectId,parentTaskId).filter(t=>!visited.has(t.id)).map(t=>{
+  visited.add(t.id);
+  const hasChildren=taskChildren(state,projectId,t.id).length>0,collapsed=treeTaskCollapsed.has(t.id);
+  const due=t.dueDate&&t.dueDate<=localDate()?`<span class="tree-critical">${h(t.dueDate)}</span>`:t.dueDate?`<span class="tree-muted">${h(t.dueDate)}</span>`:'';
+  return `<div class="tree-entry tree-task" data-drag-type="task" data-drag-id="${h(t.id)}"><div class="tree-line tree-drop-target ${selectedTaskId===t.id?'selected':''}" data-drop-type="task" data-drop-id="${h(t.id)}" style="--depth:${depth+1}">
+   ${hasChildren?`<button type="button" class="tree-expander" data-action="tree-task-toggle" data-id="${h(t.id)}" aria-label="Unteraufgaben ${collapsed?'anzeigen':'verbergen'}" aria-expanded="${!collapsed}">${collapsed?'▸':'▾'}</button>`:'<span class="tree-expander-space"></span>'}
+   <span class="tree-drag-handle" draggable="true" data-drag-type="task" data-drag-id="${h(t.id)}" title="Ziehen zum Verschieben" aria-label="Aufgabe ziehen">⋮⋮</span>
+   <button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button>
+   <button class="tree-label ${t.completed?'tree-done':''}" type="button" data-action="tree-task-select" data-id="${h(t.id)}"><span>${h(t.title)}</span>${due}</button>
+   <button type="button" class="tree-flag-toggle ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" aria-label="${t.flagged?'Flagge entfernen':'Flagge setzen'}" aria-pressed="${!!t.flagged}" title="${t.flagged?'Flagge entfernen':'Flagge setzen'}">${ico('flag',15)}</button>
+   <button type="button" class="tree-inline-add" data-action="tree-add-subtask" data-id="${h(t.id)}" title="Unteraufgabe hinzufügen" aria-label="Unteraufgabe hinzufügen">${ico('plus',15)}</button>
+  </div>${collapsed?'':treeTaskRows(projectId,t.id,depth+1,visited)}</div>`;
  }).join('');
- return draw(null,0);
 }
-function projectTaskTree(project){
- const items=hierarchicalProjectTasks(state,project.id);const ready=new Set(nextActions(state).map(t=>t.id));
- if(!items.length)return '<p class="muted-line">Noch keine Aufgaben. Erstelle unten den ersten Schritt.</p>';
- return `<div class="hierarchical-task-list">${items.map(t=>`<div class="hier-task ${t.completed?'completed':''} ${selectedTaskId===t.id?'is-selected':''}" style="--task-depth:${Math.min(t.depth,10)}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}">${t.completed?'✓':'○'}</button><button type="button" class="hier-task-title" data-action="task-select" data-id="${h(t.id)}"><strong>${h(t.title)}</strong><small>${t.completed?'Erledigt':ready.has(t.id)?'Verfügbar':t.deferUntil&&t.deferUntil>localDate()?'Defer bis '+h(t.deferUntil):'Nicht verfügbar'}${t.dueDate?' · Due '+h(t.dueDate):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}</small></button><div class="hier-actions"><button type="button" data-action="task-move-up" data-id="${h(t.id)}" aria-label="Nach oben">↑</button><button type="button" data-action="task-move-down" data-id="${h(t.id)}" aria-label="Nach unten">↓</button><button type="button" data-action="task-add-subtask" data-id="${h(t.id)}" aria-label="Unteraufgabe anlegen">+</button></div></div>`).join('')}</div>`;
+function treeProjectRows(parentId=null,depth=0,visited=new Set()){
+ if(depth>15)return '';
+ return childProjects(state,parentId).filter(p=>!p.isTemplate&&!visited.has(p.id)).map(p=>{
+  visited.add(p.id);
+  const children=childProjects(state,p.id).filter(c=>!c.isTemplate),taskRoots=p.kind==='project'?taskChildren(state,p.id,null):[];
+  const expand=children.length||taskRoots.length,collapsed=projectCollapsed.has(p.id);
+  return `<div class="tree-entry tree-project" data-drag-type="project" data-drag-id="${h(p.id)}"><div class="tree-line tree-drop-target ${selectedProjectId===p.id&&!selectedTaskId?'selected':''}" data-drop-type="project" data-drop-id="${h(p.id)}" style="--depth:${depth}">
+   ${expand?`<button type="button" class="tree-expander" data-action="project-toggle-expand" data-id="${h(p.id)}" aria-expanded="${!collapsed}" aria-label="${collapsed?'Aufklappen':'Zuklappen'}">${collapsed?'▸':'▾'}</button>`:'<span class="tree-expander-space"></span>'}
+   <span class="tree-drag-handle" draggable="true" data-drag-type="project" data-drag-id="${h(p.id)}" title="Ziehen zum Verschieben" aria-label="Projekt oder Ordner ziehen">⋮⋮</span>
+   <span class="tree-node-icon">${ico(p.kind==='folder'?'folder':'list',17)}</span>
+   <button type="button" class="tree-label" data-action="project-select" data-id="${h(p.id)}"><span>${h(p.title)}</span>${p.status==='hold'?'<span class="tree-muted">Pausiert</span>':''}</button>
+   <button type="button" class="tree-inline-add" data-action="${p.kind==='folder'?'tree-add-project':'tree-add-task'}" data-id="${h(p.id)}" aria-label="${p.kind==='folder'?'Projekt hinzufügen':'Aufgabe hinzufügen'}" title="Hinzufügen">${ico('plus',15)}</button>
+  </div>${collapsed?'':`<div>${treeProjectRows(p.id,depth+1,visited)}${p.kind==='project'?treeTaskRows(p.id,null,depth+1):''}</div>`}</div>`;
+ }).join('');
+}
+function treeTaskDestinationOptions(task){
+ const descendants=new Set([task.id,...taskDescendants(state,task.id)]);
+ const choices=['<option value="">Ziel wählen …</option>'];
+ for(const p of Object.values(state.projects||{}).filter(p=>p.kind==='project'&&!p.isTemplate)){
+  choices.push(`<option value="project:${h(p.id)}">${h(p.title)} · Hauptaufgabe</option>`);
+  for(const t of hierarchicalProjectTasks(state,p.id).filter(x=>!descendants.has(x.id)&&!x.archived))choices.push(`<option value="task:${h(t.id)}">${h(p.title)} / ${'· '.repeat(Math.min(4,t.depth+1))}${h(t.title)}</option>`);
+ }
+ return choices.join('');
 }
 function projectScreen(){
- const projects=Object.values(state?.projects||{});const current=state?.projects?.[selectedProjectId]||childProjects(state,null)[0]||projects[0]||null;
- if(current&&!state?.projects?.[selectedProjectId])selectedProjectId=current.id;
- if(current?.kind==='folder'||!current||state?.tasks?.[selectedTaskId]?.projectId!==current.id)selectedTaskId=null;
- const items=current?.kind==='project'?projectTasks(state,current.id):[];
- const nextCount=current?nextActions(state).filter(t=>t.projectId===current.id).length:0;
- const active=projects.filter(x=>x.kind!=='folder'&&x.status==='active').length;
- return chrome(`${lifeGoalsPanel()}<div class="projects-layout omni-projects ${projectFocus?'is-focused':''}">
- <aside class="work-card project-navigation"><div class="work-heading"><span>${ico('folder',20)} Ordner & Projekte</span><span class="quiet-tag">${active} aktiv</span></div>
- <form class="project-form" id="project-create-form"><label>Name<input required name="title" maxlength="140" placeholder="Projekt oder Ordner"/></label><div class="project-create-row"><label>Art<select name="kind"><option value="project">Projekt</option><option value="folder">Ordner</option></select></label><label>Typ<select name="projectType"><option value="parallel">Parallel</option><option value="sequential">Sequential</option><option value="single">Single Actions</option></select></label></div><label>Unterhalb von<select name="parentId">${projectParentOptions(current?.id||'')}</select></label><label>Ergebnis<input name="outcome" maxlength="800" placeholder="Optional"/></label><button class="primary-btn" type="submit">${ico('plus',16)} Anlegen</button></form>
- <div class="project-tree">${projectTree()||'<p class="muted-line">Noch keine Projekte.</p>'}</div></aside>
- <main class="work-card project-middle"><div class="work-heading"><span>${ico('target',18)} ${current?h(current.title):'Projektaufgaben'}</span><div class="project-heading-actions"><span class="quiet-tag">${current?.kind==='folder'?'Ordner':`${nextCount} verfügbar`}</span><button type="button" class="secondary-btn" data-action="project-focus-toggle">${projectFocus?'Übersicht':'Fokusmodus'}</button></div></div>
- ${current?.kind==='folder'?`<p class="muted-line">Dieser Ordner strukturiert deine Projekte.</p><div class="project-folder-children">${childProjects(state,current.id).map(pr=>`<button type="button" class="project-list-item" data-action="project-select" data-id="${h(pr.id)}">${ico('folder',18)} <strong>${h(pr.title)}</strong></button>`).join('')||'<p>Ordner ist leer.</p>'}</div>`:current?`<div class="progress-hint"><span>${items.filter(t=>t.completed).length} von ${items.length} Aufgaben erledigt</span><div class="progress-track"><span style="width:${items.length?Math.round(100*items.filter(t=>t.completed).length/items.length):0}%"></span></div></div>${current.status==='active'&&nextCount===0?'<div class="project-warning">Noch keine verfügbare Next Action in diesem Projekt.</div>':''}${projectTaskTree(current)}${taskCreateForm('',current.id)}`:'<div class="task-empty">Lege zuerst dein erstes Projekt an.</div>'}</main>
- <aside class="work-card project-inspector"><div class="work-heading"><span>${ico('pencil',18)} Inspector</span></div>${gtdProjectHealthPanel()}
- ${current?`<details class="project-properties" ${!selectedTaskId?'open':''}><summary>${current.kind==='folder'?'Ordner':'Projekt'} bearbeiten</summary><form id="project-edit-form" class="task-edit-form" data-id="${h(current.id)}"><label>Name<input name="title" required maxlength="140" value="${h(current.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(current.outcome||'')}</textarea></label><label>Bereich<select name="category">${categoryOptions(current.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${current.status===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Art<select name="kind"><option value="project" ${current.kind!=='folder'?'selected':''}>Projekt</option><option value="folder" ${current.kind==='folder'?'selected':''}>Ordner</option></select></label><label>Projekttyp<select name="projectType">${[['parallel','Parallel'],['sequential','Sequential'],['single','Single Actions']].map(([v,l])=>`<option value="${v}" ${(current.projectType||'parallel')===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Übergeordnet<select name="parentId">${projectParentOptions(current.parentId,current.id)}</select></label>${dateControl('dueDate','Projekt-Deadline',current.dueDate)}<label>Review alle (Tage)<input name="reviewIntervalDays" type="number" min="1" max="90" value="${current.reviewIntervalDays||7}"/></label><div class="project-review-info">Letzter Review: ${current.reviewedAt?h(new Date(current.reviewedAt).toLocaleDateString('de-AT')):'Noch nie'} · ${projectNeedsReview(current)?'Review fällig':'Aktuell'}</div><div class="project-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(current.id)}">Jetzt geprüft</button></div></form>${state.projectConflicts[current.id]?`<div class="task-conflict">Änderungskonflikt. <button data-action="project-conflict-remote" data-id="${h(current.id)}">Cloud</button><button data-action="project-conflict-local" data-id="${h(current.id)}">Lokal</button></div>`:''}</details>`:''}
- ${selectedTaskId?`<div class="inspector-task-heading"><strong>Ausgewählte Aufgabe</strong></div>${taskEditor()}`:current?.kind==='project'?'<div class="task-empty">Wähle links in der Aufgabenliste einen Schritt für den Inspector.</div>':''}
- </aside></div>`);
+ const templates=tab==='templates';
+ const projects=Object.values(state?.projects||{});
+ const current=selectedProjectId&&state?.projects?.[selectedProjectId]||null;
+ if(current&&current.isTemplate!==templates){selectedProjectId=null;selectedTaskId=null;}
+ const active=projects.filter(p=>p.kind==='project'&&!p.isTemplate&&p.status==='active').length;
+ const templateProjects=projects.filter(isTemplateProject).sort((a,b)=>a.title.localeCompare(b.title,'de'));
+ const selection=selectedProjectId&&state.projects?.[selectedProjectId]||null;
+ const selectedTask=selectedTaskId&&state.tasks?.[selectedTaskId]||null;
+ const settings=selection?`<details class="project-properties"><summary>${selection.kind==='folder'?'Ordner':'Projekt'} bearbeiten</summary><form id="project-edit-form" class="task-edit-form" data-id="${h(selection.id)}"><label>Name<input name="title" required maxlength="140" value="${h(selection.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(selection.outcome||'')}</textarea></label><label>Bereich<select name="category">${categoryOptions(selection.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${selection.status===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Art<select name="kind"><option value="project" ${selection.kind!=='folder'?'selected':''}>Projekt</option><option value="folder" ${selection.kind==='folder'?'selected':''}>Ordner</option></select></label><label>Typ<select name="projectType">${[['parallel','Parallel'],['sequential','Sequential'],['single','Single Actions']].map(([v,l])=>`<option value="${v}" ${(selection.projectType||'parallel')===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Übergeordnet<select name="parentId">${projectParentOptions(selection.parentId,selection.id)}</select></label>${selection.kind==='project'?`<label class="template-property"><input type="checkbox" name="isTemplate" ${selection.isTemplate?'checked':''}/> Als wiederverwendbare Vorlage verwenden</label>`:''}${dateControl('dueDate','Projekt-Deadline',selection.dueDate)}<label>Review alle Tage<input name="reviewIntervalDays" type="number" min="1" max="90" value="${selection.reviewIntervalDays||7}"/></label><div class="project-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(selection.id)}">Jetzt geprüft</button></div></form></details>`:'';
+ return chrome(`<div class="tree-workspace ${selectedTask||selection?'has-inspector':''}"><section class="work-card tree-work-card"><div class="tree-toolbar"><strong>${templates?'Vorlagen':`${active} aktive Projekte`}</strong><div class="tree-toolbar-actions">${templates?'':`<button type="button" class="secondary-btn" data-action="tree-add-folder">${ico('plus',15)} Ordner</button><button type="button" class="secondary-btn" data-action="tree-add-project">${ico('plus',15)} Projekt</button>`}</div></div>
+ ${templates?`${templateProjects.length?templateProjects.map(p=>`<div class="tree-line template-line ${selection?.id===p.id?'selected':''}"><span class="tree-node-icon">${ico('bookmark',17)}</span><button type="button" class="tree-label" data-action="project-select" data-id="${h(p.id)}"><span>${h(p.title)}</span><span class="tree-muted">${projectTasks(state,p.id).length} Einträge</span></button><button type="button" class="secondary-btn" data-action="tree-template-use" data-id="${h(p.id)}">Neue Liste</button></div>${selection?.id===p.id?`<div class="template-task-summary">${treeTaskRows(p.id)}</div>`:''}`).join(''):'<div class="tree-empty">Noch keine Vorlagen. Öffne ein Projekt und aktiviere in dessen Einstellungen „Als Vorlage verwenden“.</div>'}`:`<div class="unified-tree" role="tree" aria-label="Ordner, Projekte und Aufgaben">${treeProjectRows()||'<div class="tree-empty">Noch keine Projekte. Lege dein erstes Projekt oder einen Ordner an.</div>'}<div class="tree-root-drop" data-drop-type="project-root" data-drop-id="">${ico('folder',14)} Auf oberste Ebene ziehen</div></div>`}
+ ${treeCreateKind?`<details open class="tree-quick-create"><summary>${treeCreateKind==='task'?'Neue Aufgabe':treeCreateKind==='folder'?'Neuer Ordner':'Neues Projekt'}<button type="button" class="tree-close" data-action="tree-create-close" aria-label="Schließen">×</button></summary>${treeCreateKind==='task'?taskCreateForm('',treeCreateParent||'',treeTaskParent||''):`<form class="project-form" id="project-create-form"><label>Name<input required autofocus name="title" maxlength="140" placeholder="${treeCreateKind==='folder'?'Ordnername':'Projektname'}"/></label><input type="hidden" name="kind" value="${treeCreateKind}"/><label>Unterhalb von<select name="parentId">${projectParentOptions(treeCreateParent||'')}</select></label><details class="tree-advanced"><summary>Weitere Einstellungen</summary><label>Typ<select name="projectType"><option value="parallel">Parallel</option><option value="sequential">Sequential</option><option value="single">Single Actions</option></select></label><label>Ergebnis<input name="outcome" maxlength="800" placeholder="Optional"/></label></details><button class="primary-btn" type="submit">Anlegen</button></form>`}</details>`:''}
+ ${templates?'':`<details class="tree-secondary"><summary>Lebensziele & Projektgesundheit</summary>${lifeGoalsPanel()}${gtdProjectHealthPanel()}</details>`}</section>
+ ${(selection||selectedTask)?`<aside class="work-card tree-inspector"><div class="tree-inspector-header"><strong>${selectedTask?'Aufgabendetails':selection?.title||'Details'}</strong><button class="tree-close" type="button" data-action="tree-inspector-close" title="Schließen" aria-label="Details schließen">×</button></div>${selectedTask?`${taskEditor()}<form id="tree-move-task-form" class="tree-move-form" data-id="${h(selectedTask.id)}"><label>Verschieben nach<select name="target" required>${treeTaskDestinationOptions(selectedTask)}</select></label><button type="submit" class="secondary-btn">Verschieben</button></form>`:settings}${selection?.isTemplate?`<button type="button" class="primary-btn" data-action="tree-template-use" data-id="${h(selection.id)}">Neue Liste aus Vorlage</button>`:''}</aside>`:''}</div>`);
 }
 const DREAM_CATEGORIES=[['lernen','Lernen & Weiterbilden','book'],['lesen','Lesen & Entdecken','bookmark'],['erleben','Erleben & Ausprobieren','suitcase'],['ideen','Projekte & Ideen','spark']];
 function dreamCategory(r){return DREAM_CATEGORIES.find(([key])=>(r.tags||[]).includes('dream-'+key))?.[0]||'ideen';}
@@ -636,7 +669,7 @@ async function loadWeather(city){
  }catch(ex){weather={city,status:'idle',temperature:null,label:''};toast(`Wetter konnte nicht geladen werden: ${ex.message}`,true);}
 }
 function vaultScreen(){
- tab=['inbox','forecast','overview','someday','review','activity','projects','next','flagged','hold'].includes(tab)?'today':tab;
+ tab=['inbox','forecast','overview','someday','review','activity','projects','templates','next','flagged','hold'].includes(tab)?'today':tab;
  return chrome(`<section class="vault-compact" aria-label="Lokalen Tresor einrichten"><div class="vault-copy"><span class="vault-icon">${ico('lock',18)}</span><div><h2>${hasVault?'Tresor entsperren':'Lokalen Tresor einrichten'}</h2><p>${hasVault?'Deine Daten bleiben verborgen, bis du sie entsperrst.':'Einmalig eine Passphrase festlegen; deine lokalen Daten werden verschlüsselt gespeichert.'}</p></div></div>
  <form class="vault-form" id="vault-form" autocomplete="off"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" placeholder="Passphrase (mindestens 12 Zeichen)" autocomplete="off" />
  ${!hasVault?'<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" minlength="12" required autocomplete="off" placeholder="Passphrase wiederholen"/>':''}
@@ -677,18 +710,26 @@ function captureBulkPanel(){
 function inboxScreen(){
  const fullList=rows();
  const query=inboxQuery.trim().toLocaleLowerCase('de');
- const list=query?fullList.filter(r=>`${r.title} ${r.note||''} ${(r.tags||[]).join(' ')}`.toLocaleLowerCase('de').includes(query)):fullList;
+ const list=query?fullList.filter(r=>`${r.title} ${r.note||''} ${visibleInboxTags(r).join(' ')}`.toLocaleLowerCase('de').includes(query)):fullList;
  const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
  return chrome(`<div class="inbox-mvp-layout"><section class="module-card module-active inbox-mvp-card">
  <div class="inbox-mvp-head"><div><h2>Offene Eingänge <span class="count">${fullList.length}</span></h2></div><button type="button" class="primary-btn" data-action="capture-focus">${ico('plus',17)} Erfassen</button></div>
  ${captureBulkPanel()}
  <div class="inbox-search-box">${ico('search',17)}<input id="inbox-query" type="search" placeholder="Einträge durchsuchen …" value="${h(inboxQuery)}" autocomplete="off" aria-label="Inbox durchsuchen"/></div>
  <div class="inbox-mvp-list">
- ${list.length?list.map(r=>`<button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}${r.tags?.length?' · '+r.tags.map(x=>'#'+h(x)).join(' '):''}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button>`).join(''):
+ ${list.length?list.map(r=>`<div class="inbox-row-wrap"><button type="button" class="inbox-row-flag ${inboxFlagged(r)?'is-flagged':''}" data-action="inbox-flag" data-id="${h(r.id)}" aria-label="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}" aria-pressed="${inboxFlagged(r)}" title="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}">${ico('flag',16)}</button><button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}${visibleInboxTags(r).length?' · '+visibleInboxTags(r).map(x=>'#'+h(x)).join(' '):''}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button></div>`).join(''):
  `<div class="inbox-mvp-empty">${ico(query?'search':'inbox',32)}<strong>${query?'Keine passenden Einträge':'Dein Kopf darf leerer werden.'}</strong><span>${query?'Versuche einen anderen Suchbegriff.':'Halte hier alles fest, was dir im Alltag begegnet.'}</span></div>`}
  </div><div class="inbox-mvp-bottom"><span>${state.pending.length} ausstehende Änderungen</span><button type="button" class="review-link" data-tab="review">Wochenreview ${ico('arrow',14)}</button></div></section>
  <aside class="module-card module-active inbox-mvp-detail">${current?
- `<div class="inbox-detail-top"><span class="capture-eyebrow">EINTRAG · INBOX</span><span class="inbox-detail-date">${date(current.updatedAt)}</span></div><form id="inbox-edit-form" data-id="${h(current.id)}"><label for="inbox-edit-title">Gedanke</label><textarea id="inbox-edit-title" name="title" maxlength="1000" rows="3" required>${h(current.title)}</textarea><label for="inbox-edit-note">Notizen, Links, Kontext</label><textarea id="inbox-edit-note" name="note" maxlength="10000" rows="7" placeholder="Optional – für den späteren Review">${h(current.note||'')}</textarea><label for="inbox-edit-tags">Agenda-Tags (Komma getrennt)</label><input id="inbox-edit-tags" name="tags" data-smart-tags value="${h((current.tags||[]).join(', '))}" placeholder="UKO, Martin"/><div class="inbox-detail-actions"><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="remove" data-id="${h(current.id)}">Archivieren</button></div></form><div class="inbox-detail-next">${ico('target',18)}<div><strong>Später klären</strong><p>Im Wochenreview wird daraus eine Next Action, ein Projekt, eine Agenda oder Dreams. Bis dahin bleibt dieser Gedanke zuverlässig in der Inbox.</p><button type="button" class="review-link" data-tab="review">Zum Review ${ico('arrow',14)}</button></div></div>`:
+ `<div class="inbox-detail-top"><span class="capture-eyebrow">INSPECTOR</span><span class="inbox-detail-date">${date(current.updatedAt)}</span><button class="inbox-inspector-flag ${inboxFlagged(current)?'is-flagged':''}" data-action="inbox-flag" data-id="${h(current.id)}" type="button" aria-pressed="${inboxFlagged(current)}" aria-label="${inboxFlagged(current)?'Flagge entfernen':'Flagge setzen'}" title="Flagged umschalten">${ico('flag',17)}</button></div>
+ <form id="inbox-edit-form" data-id="${h(current.id)}" class="inbox-quiet-inspector">
+ <label for="inbox-edit-title">Titel</label><textarea id="inbox-edit-title" name="title" maxlength="1000" rows="2" required>${h(current.title)}</textarea>
+ <div class="inbox-promote-fields"><label for="inbox-project-select">Projekt<select id="inbox-project-select" name="projectId">${projectOptions()}</select></label><label for="inbox-workflow-select">Status<select id="inbox-workflow-select" name="workflow"><option value="next">Next Action</option><option value="waiting">Waiting For</option><option value="hold">On Hold</option></select></label></div>
+ <p class="inbox-project-hint">Mit „Als Aufgabe übernehmen“ wird der Eintrag einem Projekt zugeordnet und aus der Inbox entfernt. Ohne Projekt bleibt er eine Einzelaktion.</p>
+ <label for="inbox-edit-note">Notiz</label><textarea id="inbox-edit-note" name="note" maxlength="10000" rows="3" placeholder="Optional">${h(current.note||'')}</textarea>
+ <details class="inbox-inspector-extra"><summary>Weitere Angaben</summary><label for="inbox-edit-tags">Personen / Agenda-Tags</label><input id="inbox-edit-tags" name="tags" data-smart-tags value="${h(visibleInboxTags(current).join(', '))}" placeholder="UKO, Martin"/></details>
+ <div class="inbox-detail-actions"><button type="submit" name="intent" value="promote" class="primary-btn">${ico('arrow',15)} Als Aufgabe übernehmen</button><button type="submit" name="intent" value="save" class="secondary-btn">Notiz speichern</button><button type="button" class="secondary-btn" data-action="remove" data-id="${h(current.id)}">Archivieren</button></div>
+ </form>`:
  `<div class="inbox-mvp-empty detail-empty">${ico('pencil',32)}<strong>Ein Gedanke genügt.</strong><span>Öffne die Schnellerfassung und halte fest, was dich beschäftigt.</span></div>`}</aside></div>`);
 }
 
@@ -939,7 +980,7 @@ function insightsScreen(){
  </div>`);
 }
 function progressScreen(){
- const projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&p.status==='active');
+ const projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&!p.isTemplate&&p.status==='active');
  const today=localDate(),earlier=new Date(today+'T12:00:00');earlier.setDate(earlier.getDate()-6);const begin=localDate(earlier);
  const stats=activityStats(activeActivities(watchSessions,state),begin,today);
  return chrome(`<div class="progress-view"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitäten der letzten 7 Tage</span></div><div class="metrics-row"><div><strong>${stats.count}</strong><small>Sessions</small></div><div><strong>${(stats.minutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>erfasste Zeit</small></div><div><strong>${stats.pomodoros}</strong><small>Pomodoros</small></div></div><button type="button" class="text-link" data-tab="activity">Sessions verwalten ${ico('arrow',14)}</button></section><section class="work-card"><div class="work-heading"><span>${ico('folder',18)} Projektfortschritt</span><span class="quiet-tag">${projects.length} aktiv</span></div>${projects.length?projects.map(p=>{const tasks=projectTasks(state,p.id);const completed=tasks.filter(x=>x.completed).length;return `<button type="button" class="progress-project" data-action="timeline-project" data-id="${h(p.id)}"><span><strong>${h(p.title)}</strong><small>${completed} / ${tasks.length} Schritte erledigt</small></span><div class="progress-track"><span style="width:${tasks.length?Math.round(completed/tasks.length*100):0}%"></span></div></button>`;}).join(''):'<p class="muted-line">Noch keine aktiven Projekte.</p>'}</section></div>`);
@@ -1046,7 +1087,7 @@ async function reloadWatchSessions(){
 function render(){
  if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
- app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='projects'?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen() ;bind();
+ app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen() ;bind();
  if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto===true&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
    requestAnimationFrame(()=>refreshPublicKrakenPrices(false));
  }
@@ -1055,7 +1096,7 @@ function render(){
 }
 function bind() {
  if(state)wireSmartTags(app,()=>state);
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;calmNavGroup=['overview','projects','next','forecast','flagged','hold','someday'].includes(tab)?'plan':['insights','activity','progress','recovery'].includes(tab)?'insights':'';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery'||tab==='insights')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;calmNavGroup=['overview','projects','templates','next','forecast','flagged','hold','someday'].includes(tab)?'plan':['insights','activity','progress','recovery'].includes(tab)?'insights':'';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery'||tab==='insights')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
@@ -1090,7 +1131,7 @@ function bind() {
     if(r.title.length>180){toast('Bitte den Inbox-Titel vor der Übernahme auf maximal 180 Zeichen kürzen.',true);return;}
     const meta=state.reviewMeta?.[id]||{};
     const contextTags=parseTags([...(meta.energy?['energy-'+meta.energy]:[]),...(meta.attention?['attention-'+meta.attention]:[])]);
-    const task={id:crypto.randomUUID(),title:r.title,note:(r.note||'').slice(0,3000),plannedDate:d.get('plannedDate')||null,dueDate:d.get('dueDate')||null,deferUntil:d.get('deferUntil')||null,estimateMinutes:d.get('estimateMinutes')?Number(d.get('estimateMinutes')):null,category:d.get('category')||'Allgemein',workflow,flagged:false,completed:false,archived:false,projectId:d.get('projectId')||null,parentTaskId:null,sortOrder:0,tags:parseTags(r.tags||[]),contextTags,updatedAt:stamp()};
+    const task={id:crypto.randomUUID(),title:r.title,note:(r.note||'').slice(0,3000),plannedDate:d.get('plannedDate')||null,dueDate:d.get('dueDate')||null,deferUntil:d.get('deferUntil')||null,estimateMinutes:d.get('estimateMinutes')?Number(d.get('estimateMinutes')):null,category:d.get('category')||'Allgemein',workflow,flagged:inboxFlagged(r),completed:false,archived:false,projectId:d.get('projectId')||null,parentTaskId:null,sortOrder:0,tags:parseTags(visibleInboxTags(r)),contextTags,updatedAt:stamp()};
     if(!validLocalTask(task)||task.projectId&&!state.projects?.[task.projectId]){toast('Prüfe das Projekt und die Datumsfelder.',true);return;}
     await mutate(s=>{s.tasks[task.id]=task;s.taskPending[task.id]=true;s.records[id].deleted=true;s.records[id].updatedAt=stamp();s.pending.push(makeMutation(s.records[id]));delete s.reviewMeta?.[id];});
     selectedInboxId=null;selectedTaskId=task.id;reviewWorkflow='next';reviewDrafts.delete(id);toast('Inbox-Eintrag geklärt und als Aufgabe gespeichert.');
@@ -1205,7 +1246,7 @@ function bind() {
     const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:fd.get('parentTaskId')||null,sortOrder:0,tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,updatedAt:stamp()};
     if(!validLocalTask(t)||!validTaskParent(state,t.id,t.projectId,t.parentTaskId)){toast('Aufgabenfelder bzw. Hierarchie prüfen.',true);return;}
     t.sortOrder=Math.min(1000000,100+Math.max(0,...taskChildren(state,t.projectId,t.parentTaskId).map(x=>x.sortOrder||0)));
-    await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);});selectedTaskId=t.id;toast('Aufgabe lokal gespeichert.');
+    await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);});selectedTaskId=t.id;selectedProjectId=t.projectId;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;toast('Aufgabe lokal gespeichert.');
   };
   const taskEditForm=app.querySelector('#task-edit-form');if(taskEditForm)taskEditForm.onsubmit=async ev=>{
     ev.preventDefault();const id=taskEditForm.dataset.id,fd=new FormData(taskEditForm);const existing=state.tasks[id];if(!existing)return;
@@ -1227,13 +1268,13 @@ function bind() {
     };
   }
   const projectCreate=app.querySelector('#project-create-form');if(projectCreate)projectCreate.onsubmit=async ev=>{
-    ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),reviewedAt:null,kind:d.get('kind')||'project',projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null,sortOrder:0};
+    ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),reviewedAt:null,kind:d.get('kind')||'project',isTemplate:false,projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null,sortOrder:0};
     if(!validProject(project)||!validProjectParent(state,project.id,project.parentId)){toast('Projektangaben bzw. Ordnerhierarchie prüfen.',true);return;}
     project.sortOrder=Math.min(1000000,100+Math.max(0,...childProjects(state,project.parentId).map(x=>x.sortOrder||0)));
-    await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;});selectedProjectId=project.id;render();
+    await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;});selectedProjectId=project.id;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;render();
   };
   const projectEdit=app.querySelector('#project-edit-form');if(projectEdit)projectEdit.onsubmit=async ev=>{
-    ev.preventDefault();const id=projectEdit.dataset.id;const d=new FormData(projectEdit);const project={...state.projects[id],title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:d.get('status')||'active',dueDate:d.get('dueDate')||null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),kind:d.get('kind')||'project',projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null};
+    ev.preventDefault();const id=projectEdit.dataset.id;const d=new FormData(projectEdit);const project={...state.projects[id],title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:d.get('status')||'active',dueDate:d.get('dueDate')||null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),kind:d.get('kind')||'project',isTemplate:d.has('isTemplate'),projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null};
     if(!validProject(project)||!validProjectParent(state,id,project.parentId)){toast('Projektangaben bzw. Ordnerhierarchie prüfen.',true);return;}
     if(project.kind==='folder'&&state.projects[id].kind!=='folder'&&projectTasks(state,id).length){toast('Ein Projekt mit Aufgaben kann nicht in einen Ordner umgewandelt werden.',true);return;}
     await mutate(s=>{s.projects[id]=project;s.projectPending[id]=true;});toast('Projekt gespeichert.');
@@ -1257,9 +1298,23 @@ function bind() {
     ev.preventDefault();const id=editForm.dataset.id;const form=new FormData(editForm);
     const title=String(form.get('title')||'').trim(),note=String(form.get('note')||'').trim(),tags=parseTags(form.get('tags'));
     if(!title||title.length>1000||note.length>10000){toast('Bitte Titel und Notizlänge prüfen.',true);return;}
-    const existing=state.records[id];if(!existing)return;
-    if(existing.title===title&&(existing.note||'')===note&&JSON.stringify(existing.tags||[])===JSON.stringify(tags)){notice='Keine Änderungen.';render();return;}
-    try{await mutate(s=>{const r=s.records[id];r.title=title;r.note=note;r.tags=tags;r.updatedAt=stamp();s.pending.push(makeMutation(r));});notice='Änderungen lokal gespeichert.';render();}
+    const existing=state.records[id];if(!existing||existing.deleted)return;
+    const intent=ev.submitter?.value||'save';
+    if(intent==='promote'){
+      try{
+        const task=inboxTaskDraft(state,id,{title,note,tags,projectId:form.get('projectId'),workflow:form.get('workflow')},crypto.randomUUID(),stamp());
+        await mutate(s=>{if(!s.records[id]||s.records[id].deleted)throw new Error('Inbox-Eintrag wurde bereits geklärt.');
+          s.tasks[task.id]=task;s.taskPending[task.id]=true;
+          s.records[id].deleted=true;s.records[id].updatedAt=stamp();s.pending.push(makeMutation(s.records[id]));
+          for(const tag of task.tags)rememberTag(s,tag);
+        });
+        selectedInboxId=null;selectedTaskId=task.id;toast('Eintrag als Aufgabe übernommen und aus der Inbox entfernt.');
+      }catch(ex){toast(ex.message,true);}
+      return;
+    }
+    let savedTags;try{savedTags=setInboxFlag(tags,inboxFlagged(existing));}catch(ex){toast(ex.message,true);return;}
+    if(existing.title===title&&(existing.note||'')===note&&JSON.stringify(existing.tags||[])===JSON.stringify(savedTags)){notice='Keine Änderungen.';render();return;}
+    try{await mutate(s=>{const r=s.records[id];r.title=title;r.note=note;r.tags=savedTags;r.updatedAt=stamp();s.pending.push(makeMutation(r));});notice='Änderungen lokal gespeichert.';render();}
     catch(ex){toast(ex.message,true);}
   };
   const cfilter=app.querySelector('#context-filter');if(cfilter)cfilter.onchange=ev=>{contextFilter=ev.target.value;render();};
@@ -1426,6 +1481,31 @@ function bind() {
   const calmHealthSelect=app.querySelector('#calm-health-view');if(calmHealthSelect)calmHealthSelect.onchange=()=>{if(['sleep','energy','stress','body'].includes(calmHealthSelect.value)){insightTab=calmHealthSelect.value;render();}};
   const insightSelect=app.querySelector('#insights-night-select');if(insightSelect)insightSelect.onchange=()=>{insightNight=insightSelect.value;render();};
   const wellnessSelect=app.querySelector('#insights-wellness-select');if(wellnessSelect)wellnessSelect.onchange=()=>{insightWellnessDay=wellnessSelect.value;render();};
+  const taskMoveForm=app.querySelector('#tree-move-task-form');if(taskMoveForm)taskMoveForm.onsubmit=async ev=>{
+    ev.preventDefault();const taskId=taskMoveForm.dataset.id,to=String(new FormData(taskMoveForm).get('target')||'');const [type,targetId]=to.split(':');
+    if(!['project','task'].includes(type)||!targetId)return;
+    try{await mutate(s=>moveTaskHierarchy(s,taskId,type,targetId,'inside'));selectedProjectId=state.tasks[taskId].projectId;toast('Aufgabe mit Unteraufgaben verschoben.');}catch(ex){toast(ex.message,true);}
+  };
+  let dragData=null;
+  app.querySelectorAll('.tree-drag-handle[draggable="true"]').forEach(el=>el.ondragstart=ev=>{
+    dragData={type:el.dataset.dragType,id:el.dataset.dragId};ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',dragData.type+':'+dragData.id);
+  });
+  app.querySelectorAll('.tree-drop-target,.tree-root-drop').forEach(el=>{
+    el.ondragover=ev=>{if(!dragData)return;
+      const targetType=el.dataset.dropType;
+      if(dragData.type==='project'&&!['project','project-root'].includes(targetType)||dragData.type==='task'&&!['project','task'].includes(targetType))return;
+      ev.preventDefault();ev.dataTransfer.dropEffect='move';el.classList.add('tree-drop-hover');};
+    el.ondragleave=ev=>{if(!el.contains(ev.relatedTarget))el.classList.remove('tree-drop-hover');};
+    el.ondrop=async ev=>{ev.preventDefault();el.classList.remove('tree-drop-hover');const payload=dragData;dragData=null;if(!payload)return;
+      const targetType=el.dataset.dropType,targetId=el.dataset.dropId||null,rect=el.getBoundingClientRect(),ratio=(ev.clientY-rect.top)/(rect.height||1);
+      const where=targetType==='project-root'||payload.type==='task'&&targetType==='project'?'inside':ratio<0.23?'before':ratio>0.77?'after':'inside';
+      try{if(payload.type==='project')await mutate(s=>moveProjectHierarchy(s,payload.id,targetId,where));
+        else await mutate(s=>moveTaskHierarchy(s,payload.id,targetType,targetId,where));
+        if(payload.type==='project')selectedProjectId=payload.id;
+        else {selectedProjectId=state.tasks[payload.id].projectId;selectedTaskId=payload.id;}
+      }catch(ex){toast('Verschieben: '+ex.message,true);}
+    };
+  });
   app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
     if(el.dataset.action==='capture-close-backdrop'&&ev.target!==el)return;
     if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
@@ -1635,6 +1715,23 @@ async function runAction(action,id,stepId=null) {
 
     if(action==='agenda-open'){const e=calendarEvents.find(x=>x.id===id);if(e){selectedDay=calendarDate(e);tab='today';}selectedAgendaEventId=id;render();requestAnimationFrame(()=>{const panel=app.querySelector('#agenda-details');if(panel){panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest',behavior:'smooth'});}});return;}
     if(action==='agenda-close'){selectedAgendaEventId=null;render();return;}
+    if(action==='tree-inspector-close'){selectedTaskId=null;selectedProjectId=null;render();return;}
+    if(action==='tree-create-close'){treeCreateKind='';treeCreateParent=null;treeTaskParent=null;render();return;}
+    if(action==='tree-add-folder'||action==='tree-add-project'||action==='tree-add-task'||action==='tree-add-subtask'){
+      treeCreateKind=action==='tree-add-folder'?'folder':action==='tree-add-project'?'project':'task';
+      treeTaskParent=action==='tree-add-subtask'?id:null;
+      treeCreateParent=treeTaskParent?state.tasks?.[treeTaskParent]?.projectId:((action==='tree-add-project'||action==='tree-add-task')?id:null);
+      if(action==='tree-add-subtask')treeTaskCollapsed.delete(id);
+      if(treeCreateParent)projectCollapsed.delete(treeCreateParent);
+      render();requestAnimationFrame(()=>app.querySelector('#project-create-form [name="title"],#task-create-form [name="title"]')?.focus());return;
+    }
+    if(action==='tree-task-toggle'){if(treeTaskCollapsed.has(id))treeTaskCollapsed.delete(id);else treeTaskCollapsed.add(id);render();return;}
+    if(action==='tree-task-select'){const t=state.tasks?.[id];if(!t)return;selectedTaskId=id;selectedProjectId=t.projectId;render();return;}
+    if(action==='tree-template-use'){
+      if(!state.projects?.[id]?.isTemplate)return;
+      const name=prompt('Name der neuen Liste',state.projects[id].title+' – '+localDate());if(name===null)return;
+      try{let created;await mutate(s=>{created=cloneProjectTemplate(s,id,()=>crypto.randomUUID(),name);});selectedProjectId=created.project.id;selectedTaskId=null;tab='projects';calmNavGroup='plan';projectCollapsed.delete(created.project.id);toast('Neue Liste aus der Vorlage erstellt. Die Vorlage bleibt unverändert.');}catch(ex){toast(ex.message,true);}return;
+    }
     if(action==='project-focus-toggle'){projectFocus=!projectFocus;render();return;}
     if(action==='project-toggle-expand'){if(projectCollapsed.has(id))projectCollapsed.delete(id);else projectCollapsed.add(id);render();return;}
     if(action==='task-add-subtask'){
@@ -1661,7 +1758,7 @@ async function runAction(action,id,stepId=null) {
         await mutate(s=>{s.tasks[newId]=copy;s.taskPending[newId]=true;});selectedTaskId=newId;toast('Neue Next Action angelegt. Eine automatische Wiederholung wurde nicht eingerichtet.');
       }catch(ex){toast(ex.message,true);}return;
     }
-    if(action==='project-select'){selectedProjectId=id;selectedTaskId=null;render();return;}
+    if(action==='project-select'){selectedProjectId=id;selectedTaskId=null;const p=state.projects?.[id];if(p?.isTemplate)tab='templates';else if(tab==='templates')tab='projects';render();return;}
     if(action==='project-reviewed'){if(!state?.projects?.[id])return;await mutate(s=>{s.projects[id].reviewedAt=stamp();s.projectPending[id]=true;});toast('Projekt-Review dokumentiert.');return;}
     if(action==='project-conflict-local'||action==='project-conflict-remote'){
       const conflict=state?.projectConflicts[id];if(!conflict)return;
@@ -1884,8 +1981,9 @@ async function runAction(action,id,stepId=null) {
     }
     if(action==='task-select'){if(!state?.tasks?.[id])return;selectedTaskId=id;render();return;}
     if(action==='flag-existing'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].flagged=true;s.taskPending??={};s.taskPending[id]=true;});return;}
+    if(action==='inbox-flag'){const r=state?.records?.[id];if(!r||r.deleted||r.tags?.includes('dreams'))return;let tags;try{tags=setInboxFlag(r.tags,!inboxFlagged(r));}catch(ex){toast(ex.message,true);return;}selectedInboxId=id;await mutate(s=>{const record=s.records[id];record.tags=tags;record.updatedAt=stamp();s.pending.push(makeMutation(record));});return;}
     if(action==='task-flag'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].flagged=!s.tasks[id].flagged;s.taskPending[id]=true;});return;}
-    if(action==='task-toggle'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].completed=!s.tasks[id].completed;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});return;}
+    if(action==='task-toggle'){if(!state?.tasks?.[id])return;if(state.projects?.[state.tasks[id].projectId]?.isTemplate){toast('Vorlage bleibt unverändert. Erstelle eine neue Liste daraus.');return;}await mutate(s=>{s.tasks[id].completed=!s.tasks[id].completed;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});return;}
     if(action==='task-archive'){if(!confirm('Aufgabe archivieren?'))return;await mutate(s=>{s.tasks[id].archived=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});selectedTaskId=null;return;}
     if(action==='task-conflict-local'||action==='task-conflict-remote'){
        const conflict=state.taskConflicts[id];if(!conflict)return;

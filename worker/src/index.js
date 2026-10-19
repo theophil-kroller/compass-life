@@ -198,7 +198,7 @@ export default {
     const path=new URL(req.url).pathname;
     if (path==='/api/health' && req.method==='GET') {
       const schema=env.DB?await schemaStatus(env.DB):{ready:false,requiredMigration:'0001–0006',missing:[]};
-      return finish(json({ok:true,phase:'GTD',apiVersion:11,release:'0.5.5',planning:true,gtd:true,projects:true,schema}));
+      return finish(json({ok:true,phase:'GTD',apiVersion:12,release:'0.5.27',planning:true,gtd:true,projects:true,schema}));
     }
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));

@@ -1,3 +1,5 @@
+import * as inboxFlags from '../client/src/inbox-flags-v27.js';
+import * as treeWorkspace from '../client/src/project-workspace-v27.js';
 import * as relationships from '../client/src/people-relationships-v24.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -34,8 +36,8 @@ function context(){
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const window={addEventListener:()=>{}};
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
- Object.assign(ctx,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
- Object.assign(ctx,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,relationships);
+ Object.assign(ctx,treeWorkspace,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
+ Object.assign(ctx,inboxFlags,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,relationships);
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.
@@ -44,7 +46,7 @@ function context(){
 }
 test('Every navigation screen renders without missing functions, including previously disabled people/progress/recovery',()=>{
  const ui=context();const state=tasks.prepareTasks({format:1,records:{},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
- for(const [mode,expected] of [['today','Heute'],['overview','Timeline'],['people','Kontakte'],['progress','Projektfortschritt'],['recovery','Erholung'],['activity','Aktivitätsverwaltung'],['review','Inbox klären'],['projects','Projekte'],['next','Next Actions'],['flagged','Flagged'],['hold','Waiting'],['someday','Dreams'],['system','System'],['inbox','Inbox'],['forecast','Forecast']]){
+ for(const [mode,expected] of [['today','Heute'],['overview','Timeline'],['people','Kontakte'],['progress','Projektfortschritt'],['recovery','Erholung'],['activity','Aktivitätsverwaltung'],['review','Inbox klären'],['projects','Projekte'],['templates','Vorlagen'],['next','Next Actions'],['flagged','Flagged'],['hold','Waiting'],['someday','Dreams'],['system','System'],['inbox','Inbox'],['forecast','Forecast']]){
   const html=ui.testUI(state,mode);
   assert.ok(html.includes(expected),`${mode} missing ${expected}`);
   assert.ok(!html.includes('is-disabled'),`${mode}: navigation unexpectedly disabled`);
@@ -68,4 +70,16 @@ test('Occasion acceptance/dismissal creates only chosen task, links it to Next A
  assert.equal(ui.readState().occasionChoices[occasions.occasionStepKey(occasion,occasions.OCCASION_STEPS.birthday.find(x=>x.id==='cake'))],'dismissed');
  html=ui.testUI(ui.readState(),'today',events);
  assert.match(html,/Wieder anzeigen/);
+});
+
+test('Flagged perspective and Inbox both render one-click flag without navigation',()=>{
+ const ui=context();const id='10000000-0000-4000-8000-000000000001';
+ const state=tasks.prepareTasks({format:1,records:{[id]:{id,title:'Person um Rückmeldung bitten',note:'',tags:['compass-system-flag','beratung'],deleted:false,updatedAt:'2026-10-19T06:00:00Z'}},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
+ const flagged=ui.testUI(state,'flagged');
+ assert.match(flagged,/Markierte Inbox-Einträge/);
+ assert.match(flagged,/Person um Rückmeldung bitten/);
+ assert.match(flagged,/data-action="inbox-flag"/);
+ const inbox=ui.testUI(state,'inbox');
+ assert.match(inbox,/inbox-row-flag is-flagged/);
+ assert.doesNotMatch(inbox,/#compass-system-flag/);
 });

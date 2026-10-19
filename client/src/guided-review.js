@@ -19,7 +19,7 @@ export function newReview(now=new Date().toISOString()){
 }
 export function validReview(x){return !!(x&&typeof x==='object'&&/^[\da-f-]{36}$/i.test(x.id||'')&&iso(x.startedAt)&&iso(x.updatedAt)&&(!x.completedAt||iso(x.completedAt))&&Number.isInteger(x.step)&&x.step>=0&&x.step<REVIEW_STEPS.length&&Array.isArray(x.done)&&x.done.length<=REVIEW_STEPS.length&&x.done.every(v=>REVIEW_STEPS.some(s=>s.id===v))&&Array.isArray(x.inspectedProjects)&&x.inspectedProjects.length<=500&&x.inspectedProjects.every(v=>typeof v==='string'&&/^[\da-f-]{36}$/i.test(v))&&typeof x.notes==='string'&&x.notes.length<=1200);}
 export function reviewQueue(state,calendarEvents=[],today=new Date().toISOString().slice(0,10)){
- const projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&p.status==='active');
+ const projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&!p.isTemplate&&p.status==='active');
  const due=projects.filter(p=>projectNeedsReview(p,today));
  const unassigned=Object.values(state?.tasks||{}).filter(t=>!t.archived&&!t.completed&&!t.projectId);
  const waiting=heldTasks(state).filter(t=>t.workflow==='waiting');

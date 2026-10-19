@@ -11,7 +11,7 @@ import {eventState,queueEvent,queueEventPreference,removeEvents,prunePastEvents,
 const dir=fileURLToPath(new URL('../worker/migrations/',import.meta.url));
 const owner={sub:'owner-053'},other={sub:'other-053'};
 function database(){
- const db=new DatabaseSync(':memory:');for(const name of ['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql','0009_health_daily.sql','0010_widget_preview.sql','0011_discovery_events.sql','0012_weekly_review.sql'])db.exec(readFileSync(join(dir,name),'utf8'));
+ const db=new DatabaseSync(':memory:');for(const name of ['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql','0009_health_daily.sql','0010_widget_preview.sql','0011_discovery_events.sql','0012_weekly_review.sql','0013_project_templates.sql'])db.exec(readFileSync(join(dir,name),'utf8'));
  const wrap={prepare(sql){const run=(...args)=>({first:async()=>db.prepare(sql).get(...args)||null,all:async()=>({results:db.prepare(sql).all(...args)}),run:async()=>({meta:{changes:Number(db.prepare(sql).run(...args).changes)}})});return {...run(),bind:(...args)=>run(...args)};}};return {db,env:{DB:wrap}};
 }
 const sample=(title,date='2026-11-02',other={})=>({title,date,city:'Graz',venue:'Orpheum',category:'Kabarett',sourceUrl:'https://events.example.com/source',...other});

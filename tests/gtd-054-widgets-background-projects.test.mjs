@@ -9,7 +9,7 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const addDays=(d,n)=>new Date(Date.parse(d+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
 function fixture(){
  const db=new DatabaseSync(':memory:');
- for(const file of ['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql','0009_health_daily.sql','0010_widget_preview.sql','0011_discovery_events.sql','0012_weekly_review.sql'])
+ for(const file of ['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql','0009_health_daily.sql','0010_widget_preview.sql','0011_discovery_events.sql','0012_weekly_review.sql','0013_project_templates.sql'])
   db.exec(read('worker/migrations/'+file));
  const wrap={prepare(sql){return {bind(...args){
   const statement=db.prepare(sql);
@@ -69,11 +69,13 @@ test('Health background sync requires explicit opt-in, own permission, daily Wor
  assert.match(manifest,/READ_HEALTH_DATA_IN_BACKGROUND/);
  assert.match(gradle,/work-runtime-ktx/);
 });
-test('Projects preserve 3 panes on desktop and Worker is release 0.5.5 API 11',()=>{
+test('Projects use a minimal unified tree and Worker requires API 12',()=>{
  const css=read('client/src/style.css');const worker=read('worker/src/index.js');
  assert.match(css,/@media\(min-width:1020px\)/);
- assert.match(css,/\.projects-layout\.omni-projects:not\(\.is-focused\)>\.project-inspector\{grid-column:3/);
- assert.match(worker,/apiVersion:11,release:'0\.5\.5'/);
+ assert.match(css,/\.tree-workspace\.has-inspector/);
+ assert.match(read('client/src/main.js'),/function treeTaskRows/);
+ assert.match(read('client/src/main.js'),/data-drop-type=/);
+ assert.match(worker,/apiVersion:12,release:'0\.5\.27'/);
  assert.match(worker,/widgetEvents\(req,env\)/);
- assert.match(read('client/src/main.js'),/COMPASS_CLIENT_VERSION='0\.5\.26'/);
+ assert.match(read('client/src/main.js'),/COMPASS_CLIENT_VERSION='0\.5\.27'/);
 });

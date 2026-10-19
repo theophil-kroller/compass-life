@@ -1,8 +1,9 @@
 import {parseTags} from './tasks.js';
+import {INBOX_FLAG_TAG} from './inbox-flags-v27.js';
 const norm=s=>String(s||'').normalize('NFKC').toLocaleLowerCase('de').trim().replace(/^#/,'');
 export function tagCatalog(state){
  const map=new Map();
- const add=(tag,type='tag',label='')=>{const key=parseTags([tag])[0];if(!key)return;const old=map.get(key);if(!old||type==='person')map.set(key,{tag:key,type,label:label||key});};
+ const add=(tag,type='tag',label='')=>{const key=parseTags([tag])[0];if(!key||key===INBOX_FLAG_TAG)return;const old=map.get(key);if(!old||type==='person')map.set(key,{tag:key,type,label:label||key});};
  for(const p of Object.values(state?.people||{}))add(p.tag,'person',p.name);
  for(const t of Object.values(state?.tasks||{})){for(const x of t.tags||[])add(x);for(const x of t.contextTags||[])add(x);}
  for(const r of Object.values(state?.records||{})){for(const x of r.tags||[])add(x);}

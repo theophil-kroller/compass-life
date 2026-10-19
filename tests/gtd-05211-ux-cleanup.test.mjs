@@ -30,7 +30,7 @@ test('Health has four icon buttons with hover text and accessible labels',()=>{
 });
 test('Task list precedes collapsed form and flagged never auto-creates',()=>{
  const start=source.indexOf('function workflowScreen('),stop=source.indexOf('function projectTree(',start),fragment=source.slice(start,stop);
- assert.match(fragment,/taskList\(shown,which,which==='next'\).*?<details class=/s);
+ assert.match(fragment,/taskList\(shown,which,which==='next'.*?<details class=/s);
  assert.match(fragment,/flag-existing/);
  assert.match(source,/class="calm-overview-extra"/);
 });

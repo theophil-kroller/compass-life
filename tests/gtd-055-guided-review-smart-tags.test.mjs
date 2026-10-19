@@ -13,7 +13,7 @@ import {calendarMatchesPerson,personCalendarEvents} from '../client/src/people-m
 const dir=fileURLToPath(new URL('../worker/migrations/',import.meta.url));
 function db(){
  const sql=new DatabaseSync(':memory:');
- for(const name of ['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql','0009_health_daily.sql','0010_widget_preview.sql','0011_discovery_events.sql','0012_weekly_review.sql'])sql.exec(readFileSync(join(dir,name),'utf8'));
+ for(const name of ['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql','0009_health_daily.sql','0010_widget_preview.sql','0011_discovery_events.sql','0012_weekly_review.sql','0013_project_templates.sql'])sql.exec(readFileSync(join(dir,name),'utf8'));
  return {sql,env:{DB:{prepare(query){return{bind(...args){const stmt=sql.prepare(query);return{first:async()=>stmt.get(...args)||null,run:async()=>({meta:{changes:Number(stmt.run(...args).changes)}}),all:async()=>({results:stmt.all(...args)})}},all:async()=>({results:sql.prepare(query).all()})}}}}};
 }
 const owner={sub:'owner-055'},other={sub:'other-055'};
@@ -62,5 +62,5 @@ test('Actual UI has inline review and smart tag suggestions, only copy of Google
  const ui=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8'), css=readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');
  for(const key of ['assistant-project-reviewed','assistant-task-edit','assistant-quick-action','assistant-resolve-local','person-tag-form','personCalendarEvents','wireSmartTags(app'])assert.ok(ui.includes(key),key);
  assert.ok(css.includes('.assistant-review-grid'));assert.ok(css.includes('.smart-tags-menu'));
- assert.equal(readFileSync(new URL('../client/src/health-check.js',import.meta.url),'utf8').includes('MIN_WORKER_API_VERSION = 11'),true);
+ assert.equal(readFileSync(new URL('../client/src/health-check.js',import.meta.url),'utf8').includes('MIN_WORKER_API_VERSION = 12'),true);
 });

@@ -1,6 +1,6 @@
 /** Compass 0.5.23 – descriptive GTD review, no inferred deadlines or automatic task creation.
  * All signals use the already synchronized project/task fields. */
-import {nextActions,projectTasks,projectNeedsReview,localDate,validLocalTask} from './tasks.js';
+import {nextActions,projectTasks,projectNeedsReview,localDate,validLocalTask,isTemplateTask} from './tasks.js';
 
 const dayMs=86400000;
 export function ageDays(iso,day=localDate()){
@@ -10,7 +10,7 @@ export function ageDays(iso,day=localDate()){
 }
 export function projectHealth(state,day=localDate()){
  const available=new Set(nextActions(state,day).map(x=>x.id));
- const items=Object.values(state?.projects||{}).filter(p=>(p.kind||'project')==='project'&&p.status==='active').map(p=>{
+ const items=Object.values(state?.projects||{}).filter(p=>(p.kind||'project')==='project'&&p.status==='active'&&!p.isTemplate).map(p=>{
   const tasks=projectTasks(state,p.id),open=tasks.filter(t=>!t.completed),ready=open.filter(t=>available.has(t.id));
   const reviewDue=projectNeedsReview(p,day),reviewAge=ageDays(p.reviewedAt,day);
   const hasNoAction=ready.length===0;
@@ -28,7 +28,7 @@ export function projectHealth(state,day=localDate()){
 }
 /** An unmodified Waiting For task is a review hint, not an overdue obligation. */
 export function waitingReview(state,day=localDate(),thresholdDays=7){
- const items=Object.values(state?.tasks||{}).filter(t=>!t.archived&&!t.completed&&t.workflow==='waiting').map(task=>{
+ const items=Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!t.completed&&t.workflow==='waiting').map(task=>{
   const age=ageDays(task.updatedAt,day);
   return {task,daysSinceEdit:age,needsAttention:age!==null&&age>=thresholdDays};
  });
