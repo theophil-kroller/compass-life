@@ -1,3 +1,4 @@
+import {parseCaptureLines,parseAiCaptureJson,capturePreview,captureInboxRecord,CAPTURE_KINDS} from './capture-triage-v26.js';
 import {CONTACT_TYPES,CONTACT_REVIEW_DAYS,contactTypeLabel,addContactEntry,contactSummary,contactReviewQueue,updateContactReviewDays} from './people-relationships-v24.js';
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {linkedPersonTasks,linkedPersonInbox} from './person-links.js';
@@ -45,7 +46,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.25';
+const COMPASS_CLIENT_VERSION='0.5.26';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -62,7 +63,7 @@ let selectedAgendaEventId=null;
 let calendarRulesOpen=false,showHiddenCalendarEvents=false;
 let reviewWorkflow='next';
 let reviewEditingTaskId=null,reviewProjectId=null;
-let activitySelectedId=null,activityTrash=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,occasionOpen=true;
+let activitySelectedId=null,activityTrash=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,personOpenPointId='',occasionOpen=true;
 const reviewDrafts=new Map();
 function captureReviewDraft(){const form=app?.querySelector('#review-commit-form');if(form?.dataset.id)reviewDrafts.set(form.dataset.id,Object.fromEntries(new FormData(form).entries()));}
 let showCalendarBlocks=false;
@@ -101,6 +102,7 @@ async function resumeSession(){
 let captureOverlayOpen=false;
 let captureAfterUnlock=false;
 let inboxQuery='';
+let captureBulkOpen=false,captureBulkMode='lines',captureBulkRaw='',captureBulkPreview=null;
 const bootSearch=new URLSearchParams(location.search);
 const bootCapture=bootSearch.get('capture')==='1';
 const bootView=bootSearch.get('view');
@@ -315,6 +317,7 @@ const symbol = {
   bookmark:'<path d="M5 3h14v18l-7-5-7 5z"/>',
   suitcase:'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M9 7V4h6v3M3 12h18"/>',
   bolt:'<path d="m13 2-9 12h7l-1 8 10-13h-7z"/>',
+  chevronDown:'<path d="m6 9 6 6 6-6"/>',
   bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>'
 };
 function ico(name, size=19) {return `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${symbol[name]||symbol.compass}</svg>`;}
@@ -655,7 +658,21 @@ function captureOverlay(){
  <textarea autofocus id="capture-modal-input" name="title" rows="3" maxlength="1000" required placeholder="Was möchtest du nicht vergessen?"></textarea>
  <details class="optional-capture"><summary>${ico('plus',15)} Notiz oder Link ergänzen <span>optional</span></summary><label for="capture-modal-note" class="sr-only">Zusätzliche Notiz</label><textarea id="capture-modal-note" name="note" maxlength="10000" rows="3" placeholder="Zusätzliche Informationen …"></textarea></details>
  <div class="capture-modal-foot"><span>${ico('lock',14)} Verschlüsselt und offline gespeichert</span><button class="primary-btn" type="submit">In Inbox erfassen ${ico('arrow',15)}</button></div></form>
- <p class="capture-modal-hint">Kein Projekt, keine Deadline, keine Priorität nötig · Esc zum Schließen</p></section></div>`;
+ <p class="capture-modal-hint">Kein Projekt, keine Deadline, keine Priorität nötig · Esc zum Schließen</p><button type="button" class="capture-bulk-shortcut" data-action="capture-bulk-open">Mehrere Folgepunkte erfassen →</button></section></div>`;
+}
+function captureBulkPanel(){
+ const proposals=captureBulkPreview||[];
+ return `<details class="capture-bulk-section" id="capture-bulk-details" ${captureBulkOpen?'open':''}>
+ <summary>${ico('list',16)} Mehrere Folgepunkte erfassen <small>optional · keine Meetingprotokolle</small></summary>
+ <p class="muted-line">Kopiere nur konkrete Folgepunkte aus deiner fortlaufenden Notizliste hierher. Keine Notion-Verbindung und keine automatische Aufgabenerstellung. Alle Vorschläge werden erst nach deiner Bestätigung zu Inbox-Einträgen.</p>
+ <form id="capture-bulk-form" class="capture-bulk-form">
+ <label>Format<select name="mode"><option value="lines" ${captureBulkMode==='lines'?'selected':''}>Stichpunkte / Meeting-Ergebnisse</option><option value="json" ${captureBulkMode==='json'?'selected':''}>Strukturierter lokaler KI-Entwurf (JSON)</option></select></label>
+ <label>Folgepunkte<textarea name="text" rows="6" maxlength="40000" placeholder="- [Aktion] Termin vereinbaren\n- [Waiting] Rückmeldung zu Entwurf abwarten\n- [Agenda] Thema beim nächsten Gespräch ansprechen">${h(captureBulkRaw)}</textarea></label>
+ <div class="capture-bulk-buttons"><button type="submit" class="secondary-btn">Vorschau prüfen</button><small>Keine Daten werden für die Vorschau übertragen.</small></div></form>
+ ${proposals.length?`<form id="capture-bulk-confirm" class="capture-bulk-preview"><strong>${proposals.length} Vorschläge · ${proposals.filter(p=>p.duplicate).length} mögliche Dubletten</strong><p class="muted-line">Titel und Typ vor dem Import ändern. Unmarkierte Zeilen werden nicht gespeichert. Alle ausgewählten Ergebnisse gelangen ausschließlich in die Inbox.</p>
+ ${proposals.map((p,i)=>`<div class="capture-bulk-row"><label class="capture-bulk-select"><input type="checkbox" name="chosen" value="${i}" ${p.duplicate?'':'checked'}/> Übernehmen ${p.duplicate?'<span class="capture-bulk-dupe">Mögliche Dublette</span>':''}</label><label>Text<input name="title-${i}" maxlength="180" value="${h(p.title)}"/></label><label>Vorschlag<select name="kind-${i}">${CAPTURE_KINDS.map(k=>`<option value="${h(k)}" ${k===p.kind?'selected':''}>${h(k)}</option>`).join('')}</select></label></div>`).join('')}
+ <button type="submit" class="primary-btn">Ausgewählte Einträge in Inbox übernehmen</button><button type="button" class="secondary-btn" data-action="capture-bulk-clear">Verwerfen</button></form>`:''}
+ </details>`;
 }
 function inboxScreen(){
  const fullList=rows();
@@ -664,6 +681,7 @@ function inboxScreen(){
  const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
  return chrome(`<div class="inbox-mvp-layout"><section class="module-card module-active inbox-mvp-card">
  <div class="inbox-mvp-head"><div><h2>Offene Eingänge <span class="count">${fullList.length}</span></h2></div><button type="button" class="primary-btn" data-action="capture-focus">${ico('plus',17)} Erfassen</button></div>
+ ${captureBulkPanel()}
  <div class="inbox-search-box">${ico('search',17)}<input id="inbox-query" type="search" placeholder="Einträge durchsuchen …" value="${h(inboxQuery)}" autocomplete="off" aria-label="Inbox durchsuchen"/></div>
  <div class="inbox-mvp-list">
  ${list.length?list.map(r=>`<button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}${r.tags?.length?' · '+r.tags.map(x=>'#'+h(x)).join(' '):''}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button>`).join(''):
@@ -821,12 +839,12 @@ function peopleScreen(){
  const contactLabel=contact?.last?new Date(contact.last.day+'T12:00:00').toLocaleDateString('de-AT'):'Noch kein bestätigter Kontakt';
  return chrome(`<div class="people-grid"><section class="work-card"><div class="work-heading"><span>${ico('people',18)} Kontakte & Gesprächspunkte</span><span class="quiet-tag">${people.length}</span></div><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Person hinzufügen</button></form><div class="people-list">${people.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} Aufgaben · ${inboxFor(p).length} Inbox${contactSummary(p,localDate()).last?' · zuletzt '+h(contactSummary(p,localDate()).last.day):''}${p.birthdayMonthDay?` · 🎂 ${h(p.birthdayMonthDay.slice(3))}.${h(p.birthdayMonthDay.slice(0,2))}.`:""}</small></button>`).join('')||'<p class="muted-line">Noch keine Kontakte. Personen und Notizen bleiben in deinem verschlüsselten lokalen Tresor.</p>'}</div></section>
  <section class="work-card"><div class="work-heading"><span>${ico('list',18)} ${selected?h(selected.name):'Gesprächsvorbereitung'}</span>${selected?`<button class="secondary-btn" type="button" data-action="person-remove" data-id="${h(selected.id)}">Entfernen</button>`:''}</div>${selected?`<p class="muted-line">${related.length} offene Aufgaben · ${relatedInbox.length} noch in der Inbox · ${waiting} Waiting For</p>
+ <section class="people-agenda-first"><div class="work-heading"><span>${ico('list',17)} Jetzt zu besprechen</span><span class="quiet-tag">${related.length} Aufgaben · ${relatedInbox.length} Inbox</span></div><div class="people-agendas">${related.map(t=>`<div class="person-point-row"><button type="button" class="person-quick-check" data-action="person-task-done" data-id="${h(t.id)}" aria-label="${h(t.title)} als erledigt markieren" title="Aufgabe erledigen" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)}</button><details class="person-point" data-point="task" data-id="${h(t.id)}" ${personOpenPointId===t.id?'open':''}><summary><span class="person-point-symbol">${ico('checkSquare',16)}</span><span class="person-point-title"><strong>${h(t.title)}</strong><small>${h(t.workflow==='waiting'?'Waiting For':'Aufgabe / Agenda')}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="task" data-id="${h(t.id)}"><label>Notiz zu diesem Punkt<textarea name="note" maxlength="3000" rows="3" placeholder="Was haben wir besprochen?">${h(t.note||'')}</textarea></label>${state?.taskConflicts?.[t.id]?'<p class="person-point-warning">Bearbeitungskonflikt: Bitte zuerst in der Aufgabenansicht auflösen.</p>':''}<div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>Notiz speichern</button><button type="submit" name="intent" value="done" class="primary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)} Erledigt</button></div></form></details></div>`).join('')||'<p class="muted-line">Keine offenen Aufgaben mit diesem Personentag.</p>'}</div>${relatedInbox.length?`<section class="people-linked-inbox"><h3>${ico('inbox',16)} Noch in der Inbox · ${relatedInbox.length}</h3>${relatedInbox.map(r=>`<details class="person-point" data-point="inbox" data-id="${h(r.id)}" ${personOpenPointId===r.id?'open':''}><summary><span class="person-point-symbol">${ico('inbox',16)}</span><span class="person-point-title"><strong>${h(r.title)}</strong><small>Noch zu klären · kein erledigbarer Task</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="inbox" data-id="${h(r.id)}"><label>Gesprächsnotiz<textarea name="note" maxlength="10000" rows="3" placeholder="Was ist dazu besprochen worden?">${h(r.note||'')}</textarea></label><div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn">Notiz speichern</button><button type="submit" name="intent" value="discussed" class="primary-btn">${ico('check',15)} Besprochen &amp; archivieren</button></div><small>Archivieren ist keine Erledigung einer Aufgabe. Später kannst du aus der Inbox bei Bedarf eine Next Action erstellen.</small></form></details>`).join('')}</section>`:''}<form id="person-agenda-form" data-id="${h(selected.id)}" class="people-agenda-capture"><label>Gesprächsthema ergänzen<input name="title" required maxlength="180" placeholder="Was möchte ich mit dieser Person besprechen?"/></label><button type="submit" class="secondary-btn">${ico('plus',15)} Hinzufügen</button></form></section>
  <section class="people-relationship-card"><div class="work-heading"><span>${ico('people',17)} Kontaktverlauf</span><span class="quiet-tag">${contact?.items.length||0} bestätigt</span></div><div class="people-last-contact"><strong>${h(contactLabel)}</strong><small>${contact?.daysSince!==null?`${contact.daysSince} Tage seit dem letzten dokumentierten Kontakt`:'Noch keine Kontakte dokumentiert'}</small></div>
  ${contact?.due?`<p class="people-contact-reminder">${ico('calendar',15)} Freiwilliger Review-Hinweis: ${contact.daysSince} Tage seit dem letzten bestätigten Kontakt. Keine Verpflichtung.</p>`:''}
  <form id="person-contact-form" class="compact-stack" data-id="${h(selected.id)}"><div class="people-contact-fields"><label>Kontaktdatum<input name="day" type="date" required max="${h(localDate())}" value="${h(localDate())}"/></label><label>Art<select name="type">${CONTACT_TYPES.map(([value,label])=>`<option value="${h(value)}">${h(label)}</option>`).join('')}</select></label></div><label>Kurze Notiz (optional)<input name="note" maxlength="1200" placeholder="Was möchte ich behalten?"/></label><button class="secondary-btn" type="submit">${ico('check',15)} Kontakt festhalten</button></form>
  <div class="people-contact-log">${contact?.items.slice(0,8).map(entry=>`<div class="people-contact-row"><div><strong>${h(entry.day)} · ${h(contactTypeLabel(entry.type))}</strong>${entry.note?`<small>${h(entry.note)}</small>`:''}</div><button type="button" class="people-delete-entry" data-action="person-contact-delete" data-id="${h(entry.id)}" aria-label="Kontakteintrag vom ${h(entry.day)} entfernen" title="Eintrag löschen">${ico('x',15)}</button></div>`).join('')||'<p class="muted-line">Hier erscheinen ausschließlich Kontakte, die du selbst bestätigst. Kalendertermine gelten nicht automatisch als Treffen.</p>'}${(contact?.items.length||0)>8?`<details><summary>Alle ${contact.items.length} Kontakte</summary>${contact.items.slice(8).map(entry=>`<div class="people-contact-row"><div><strong>${h(entry.day)} · ${h(contactTypeLabel(entry.type))}</strong>${entry.note?`<small>${h(entry.note)}</small>`:''}</div><button type="button" data-action="person-contact-delete" data-id="${h(entry.id)}" aria-label="Kontakteintrag entfernen">${ico('x',15)}</button></div>`).join('')}</details>`:''}</div>
  <form id="person-review-days-form" class="people-review-settings" data-id="${h(selected.id)}"><label>Freiwillige Kontaktwiedervorlage <select name="days">${CONTACT_REVIEW_DAYS.map(d=>`<option value="${d}" ${contact?.reviewDays===d?'selected':''}>${d===0?'Ausgeschaltet':`Nach ${d} Tagen`}</option>`).join('')}</select></label><button class="secondary-btn" type="submit">Speichern</button><small>Nur im Wochenreview und beim Kontakt. Keine Push-Nachricht, kein Beziehungsscore. Ohne bestätigte Kontakte keine Erinnerung.</small></form></section>
- <section class="people-agenda-first"><div class="work-heading"><span>${ico('list',17)} Offene Gesprächspunkte</span><span class="quiet-tag">${related.length} Aufgaben · ${relatedInbox.length} Inbox</span></div><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Aufgabe / Agenda')}</small></span></button>`).join('')||'<p class="muted-line">Keine offenen Aufgaben mit diesem Personentag.</p>'}</div>${relatedInbox.length?`<section class="people-linked-inbox"><h3>${ico('inbox',16)} Noch in der Inbox · ${relatedInbox.length}</h3>${relatedInbox.map(r=>`<button type="button" class="people-agenda" data-action="person-inbox-open" data-id="${h(r.id)}">${ico('inbox',16)} <span>${h(r.title)}<small>Noch zu klären – keine Next Action</small></span></button>`).join('')}</section>`:''}<form id="person-agenda-form" data-id="${h(selected.id)}" class="people-agenda-capture"><label>Gesprächsthema ergänzen<input name="title" required maxlength="180" placeholder="Was möchte ich mit dieser Person besprechen?"/></label><button type="submit" class="secondary-btn">${ico('plus',15)} Hinzufügen</button></form></section>
  <div class="people-calendar"><div class="work-heading"><span>${ico('calendar',16)} Gemeinsame Google-Termine</span><span class="quiet-tag">${personEvents.upcoming.length} kommende</span></div>${personEvents.upcoming.slice(0,5).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · geplant</small></div>`).join('')||'<p class="muted-line">Keine zugeordneten künftigen Kalendertermine.</p>'}${personEvents.past.length?`<details><summary>${personEvents.past.length} vergangene Termine</summary>${personEvents.past.slice(0,6).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · Durchführung nicht bestätigt</small></div>`).join('')}</details>`:''}<small class="muted-line">Google Kalender wird nur im angemeldeten Browser gelesen. Vergangene Termine sind kein bestätigter Kontakt.</small></div>
 
  <details class="people-admin-details"><summary>Weitere Kontaktangaben und Einstellungen</summary> <form id="person-tag-form" class="compact-stack" data-id="${h(selected.id)}"><label>Personen-Tag<input name="tag" data-smart-tags maxlength="50" value="${h(selected.tag)}" required/></label><label>Namensvarianten für Kalender (optional)<input name="aliases" maxlength="200" value="${h(selected.aliases||'')}" placeholder="Spitzname, Kurzform …"/></label><button class="secondary-btn" type="submit">Zuordnung speichern</button><small>Das Tag verbindet offene Aufgaben und ungeklärte Inbox-Einträge mit dieser Person. Die Inbox-Einträge werden nicht automatisch zu Aufgaben. Kalendertermine werden anhand des Namens oder der angegebenen Varianten erkannt.</small></form>
@@ -1123,6 +1141,25 @@ function bind() {
     catch(ex){toast(ex.message,true);}
   };
   const personNote=app.querySelector('#person-note-form');if(personNote)personNote.onsubmit=async ev=>{ev.preventDefault();const id=personNote.dataset.id, note=String(new FormData(personNote).get('note')||'');if(!state?.people?.[id])return;await mutate(s=>{s.people[id].note=note;});toast('Persönliche Notiz gespeichert.');};
+  app.querySelectorAll('details.person-point').forEach(el=>{el.ontoggle=()=>{if(el.open)personOpenPointId=el.dataset.id;else if(personOpenPointId===el.dataset.id)personOpenPointId='';};});
+  app.querySelectorAll('.person-point-form').forEach(form=>{form.onsubmit=async ev=>{
+    ev.preventDefault();const id=form.dataset.id,kind=form.dataset.kind,intent=ev.submitter?.value||'save',note=String(new FormData(form).get('note')||'').trim();personOpenPointId=(intent==='done'||intent==='discussed')?'':id;
+    if(kind==='task'){
+      const original=state?.tasks?.[id];if(!original||original.archived||original.completed)return;
+      if(state?.taskConflicts?.[id]){toast('Bitte zuerst den Aufgaben-Konflikt auflösen.',true);return;}
+      if(note.length>3000){toast('Notiz darf höchstens 3.000 Zeichen haben.',true);return;}
+      const next={...original,note,completed:intent==='done'?true:original.completed,updatedAt:stamp()};
+      if(!validLocalTask(next)){toast('Aufgabe konnte nicht gespeichert werden.',true);return;}
+      await mutate(s=>{s.tasks[id].note=note;if(intent==='done')s.tasks[id].completed=true;s.tasks[id].updatedAt=next.updatedAt;s.taskPending[id]=true;});
+      toast(intent==='done'?'Aufgabe erledigt – Gesprächsnotiz gespeichert.':'Notiz zur Aufgabe gespeichert.');return;
+    }
+    if(kind==='inbox'){
+      const original=state?.records?.[id];if(!original||original.deleted)return;
+      if(note.length>10000){toast('Notiz darf höchstens 10.000 Zeichen haben.',true);return;}
+      await mutate(s=>{const r=s.records[id];r.note=note;if(intent==='discussed')r.deleted=true;r.updatedAt=stamp();s.pending.push(makeMutation(r));});
+      toast(intent==='discussed'?'Gesprächspunkt besprochen und archiviert.':'Gesprächsnotiz in Inbox gespeichert.');
+    }
+  };});
   const personAgenda=app.querySelector('#person-agenda-form');if(personAgenda)personAgenda.onsubmit=async ev=>{ev.preventDefault();const person=state?.people?.[personAgenda.dataset.id];if(!person)return;const title=String(new FormData(personAgenda).get('title')||'').trim();if(!title||title.length>180){toast('Bitte einen kurzen Agendapunkt eingeben.',true);return;}const t={id:crypto.randomUUID(),title,note:'Gesprächsthema mit '+person.name,category:'Allgemein',workflow:'next',completed:false,archived:false,flagged:false,plannedDate:null,dueDate:null,deferUntil:null,estimateMinutes:null,projectId:null,parentTaskId:null,sortOrder:0,tags:parseTags([person.tag]),contextTags:[],updatedAt:stamp()};await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;rememberTag(s,person.tag);});toast('Agenda-Schritt als Next Action angelegt.');};
   const importField=app.querySelector('#encrypted-import');if(importField)importField.onchange=async ev=>{
     try {const obj=JSON.parse(await ev.target.files[0].text());await vault.importEncrypted(obj);hasVault=true;toast('Backup importiert. Jetzt mit der ursprünglichen Passphrase entsperren.');}
@@ -1135,6 +1172,34 @@ function bind() {
       notice='Sicher in deiner Inbox gespeichert'+(authToken?' · Cloud-Abgleich vorgemerkt':' · nur auf diesem Gerät')+'.';error='';render();
     }catch(ex){if(submit)submit.disabled=false;toast(ex.message,true);}
   });
+  const bulkDetails=app.querySelector('#capture-bulk-details');if(bulkDetails)bulkDetails.ontoggle=()=>{captureBulkOpen=bulkDetails.open;};
+  const bulkForm=app.querySelector('#capture-bulk-form');if(bulkForm)bulkForm.onsubmit=ev=>{
+    ev.preventDefault();const fd=new FormData(bulkForm);captureBulkRaw=String(fd.get('text')||'');captureBulkMode=String(fd.get('mode')||'lines');
+    try {captureBulkPreview=capturePreview(captureBulkMode==='json'?parseAiCaptureJson(captureBulkRaw):parseCaptureLines(captureBulkRaw),Object.values(state.records||{}));
+      if(!captureBulkPreview.length){toast('Keine Folgepunkte erkannt. Verwende Stichpunkte oder ausdrücklich bezeichnete Punkte.',true);return;}
+      captureBulkOpen=true;render();}
+    catch(ex){toast(ex.message,true);}
+  };
+  const bulkConfirm=app.querySelector('#capture-bulk-confirm');if(bulkConfirm)bulkConfirm.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(bulkConfirm),indices=fd.getAll('chosen').map(Number),selected=[];
+    for(const i of indices){const base=captureBulkPreview?.[i];if(!base)continue;
+      const title=String(fd.get('title-'+i)||'').trim(),kind=String(fd.get('kind-'+i)||'Ungeklärt');
+      if(title.length<3||title.length>180||!CAPTURE_KINDS.includes(kind)){toast('Bitte Texte und Vorschlagsarten prüfen.',true);return;}
+      selected.push({...base,title,kind});
+    }
+    if(!selected.length){toast('Bitte mindestens einen Vorschlag auswählen.',true);return;}
+    let added=0,skipped=0;
+    try {await mutate(s=>{
+      const existing=new Set(Object.values(s.records||{}).filter(r=>!r.deleted).map(r=>r.title.trim().toLocaleLowerCase('de').normalize('NFKC').replace(/\s+/g,' ')));
+      for(const item of selected){const key=item.title.trim().toLocaleLowerCase('de').normalize('NFKC').replace(/\s+/g,' ');
+        if(existing.has(key)){skipped++;continue;}
+        const rec=captureInboxRecord(item,{id:crypto.randomUUID(),updatedAt:stamp()});s.records[rec.id]=rec;s.pending.push(makeMutation(rec));s.history.push({type:'captured',at:rec.updatedAt,id:rec.id});
+        for(const tag of rec.tags)rememberTag(s,tag);
+        existing.add(key);added++;
+      }
+    });captureBulkPreview=null;captureBulkRaw='';captureBulkOpen=false;toast(`${added} Folgepunkte in Inbox gespeichert${skipped?' · '+skipped+' Dubletten ausgelassen':''}. Im Review einzeln klären.`);}
+    catch(ex){toast(ex.message,true);}
+  };
   const taskForm=app.querySelector('#task-create-form');if(taskForm)taskForm.onsubmit=async ev=>{
     ev.preventDefault();const fd=new FormData(taskForm);
     const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:fd.get('parentTaskId')||null,sortOrder:0,tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,updatedAt:stamp()};
@@ -1479,7 +1544,16 @@ async function runAction(action,id,stepId=null) {
     if(action==='timeline-week-next'||action==='timeline-week-prev'){overviewWeek=Math.max(0,Math.min(Math.ceil(overviewHorizon/7)-1,overviewWeek+(action==='timeline-week-next'?1:-1)));selectedTimelineDay='';render();return;}
     if(action==='timeline-day'){const today=localDate(),first=shiftDay(today,overviewWeek*7),last=shiftDay(first,Math.min(7,overviewHorizon-overviewWeek*7)-1);if(id>=first&&id<=last){selectedTimelineDay=id;render();}return;}
     if(action==='timeline-project'){if(state?.projects?.[id]){selectedProjectId=id;tab='projects';render();}return;}
-    if(action==='person-select'){selectedPersonId=id;render();return;}
+    if(action==='person-task-done'){
+      const t=state?.tasks?.[id];if(!t||t.completed||t.archived)return;
+      if(state?.taskConflicts?.[id]){toast('Bitte zuerst den Aufgaben-Konflikt auflösen.',true);return;}
+      const noteField=[...app.querySelectorAll('.person-point-form[data-kind="task"]')].find(f=>f.dataset.id===id)?.querySelector('textarea');
+      const note=noteField?noteField.value.trim():String(t.note||'');
+      if(note.length>3000){toast('Notiz darf höchstens 3.000 Zeichen haben.',true);return;}
+      await mutate(s=>{s.tasks[id].note=note;s.tasks[id].completed=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
+      toast('Aufgabe erledigt.');return;
+    }
+    if(action==='person-select'){selectedPersonId=id;personOpenPointId='';render();return;}
     if(action==='person-contact-delete'){
       const person=state?.people?.[selectedPersonId]||Object.values(state?.people||{}).find(p=>p.contactLog?.some(x=>x.id===id));
       if(!person?.contactLog?.some(x=>x.id===id)||!confirm('Diesen dokumentierten Kontakt entfernen?'))return;
@@ -1596,6 +1670,8 @@ async function runAction(action,id,stepId=null) {
     }
     if(action==='calendar-connect'){await connectCalendar();return;}
     if(action==='calendar-refresh'){await fetchCalendar();return;}
+    if(action==='capture-bulk-open'){captureOverlayOpen=false;captureBulkOpen=true;tab='inbox';render();return;}
+    if(action==='capture-bulk-clear'){captureBulkPreview=null;captureBulkRaw='';captureBulkOpen=false;render();return;}
     if(action==='capture-focus'){
       if(!state){captureAfterUnlock=true;document.querySelector('#passphrase')?.focus();return;}
       captureOverlayOpen=true;render();return;

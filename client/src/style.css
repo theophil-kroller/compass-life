@@ -1269,3 +1269,40 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 @media(prefers-reduced-motion:reduce){.sports-type-card{transition:none}.sports-type-card:hover{transform:none}}
 
 @media(max-width:650px){.sports-period-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;overflow:visible}.sports-period-tab{padding:7px 4px;min-width:0}}
+/* 0.5.26 – compact, opt-in multi-capture. The ordinary Inbox remains primary. */
+.capture-bulk-section{border:1px solid #dce8df;border-radius:13px;background:#fbfdfb;margin:0 0 16px;padding:12px 15px}
+.capture-bulk-section>summary{cursor:pointer;display:flex;gap:9px;align-items:center;color:#346850;font-weight:600;font-size:13px;list-style:revert}
+.capture-bulk-section>summary small{font-size:10px;font-weight:400;color:#789186;margin-left:auto}
+.capture-bulk-form{display:grid;gap:12px;padding:16px 2px}.capture-bulk-form label,.capture-bulk-row label{display:grid;gap:5px;color:#527261;font-size:11px}
+.capture-bulk-form select,.capture-bulk-form textarea,.capture-bulk-row input:not([type=checkbox]),.capture-bulk-row select{border:1px solid #dbe5df;border-radius:9px;background:white;color:#315342;padding:9px;font:inherit;min-width:0;width:100%;box-sizing:border-box}
+.capture-bulk-form textarea{font-size:13px;line-height:1.5;resize:vertical}
+.capture-bulk-buttons{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.capture-bulk-buttons small{color:#728a7d}
+.capture-bulk-preview{display:grid;gap:10px;border-top:1px solid #e1eae4;padding:15px 0}.capture-bulk-row{display:grid;grid-template-columns:115px minmax(0,1fr) 130px;gap:10px;align-items:end;border-bottom:1px solid #edf2ed;padding-bottom:10px}
+.capture-bulk-row .capture-bulk-select{display:flex;align-items:center;flex-wrap:wrap;gap:5px}.capture-bulk-dupe{color:#a15d35;font-size:10px}.capture-bulk-shortcut{border:0;color:#477e66;background:none;cursor:pointer;padding:7px 0;font:inherit;font-size:12px;text-decoration:underline}
+@media(max-width:650px){.capture-bulk-row{grid-template-columns:1fr 1fr}.capture-bulk-row label:nth-child(2){grid-column:1/-1;grid-row:2}.capture-bulk-row .capture-bulk-select{grid-column:1/-1;grid-row:1}}
+
+/* 0.5.26 · people-first agendas: point of action is the person, not another screen. */
+.people-agenda-first{border:1px solid #e1eae5;border-radius:14px;padding:16px;background:#fff;margin:0 0 16px}
+.people-agenda-first .work-heading{margin-bottom:13px}.people-agenda-first .people-agendas{display:grid;gap:8px}
+.person-point{border:1px solid #e3ebe6;border-radius:11px;background:#fff;overflow:hidden}
+.person-point[open]{border-color:#bed8c9;background:#fcfefc}
+.person-point>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:13px;cursor:pointer;color:#365f4f}
+.person-point>summary::-webkit-details-marker{display:none}
+.person-point>summary>svg:last-child{margin-left:auto;color:#769588;transition:transform .15s}
+.person-point[open]>summary>svg:last-child{transform:rotate(180deg)}
+.person-point-symbol{display:flex;width:30px;height:30px;flex-shrink:0;align-items:center;justify-content:center;background:#edf5ef;border-radius:9px;color:#548470}
+.person-point-title{min-width:0;display:grid;gap:3px}.person-point-title strong{font-size:13px;overflow-wrap:anywhere}
+.person-point-title small{font-size:11px;color:#779487}
+.person-point-form{padding:0 14px 14px;display:grid;gap:11px}.person-point-form label{display:grid;gap:6px;font-size:11px;color:#668577}
+.person-point-form textarea{box-sizing:border-box;width:100%;min-height:75px;resize:vertical;padding:10px;border:1px solid #d8e6dd;border-radius:10px;color:#315946;background:white;font:inherit;font-size:12px}
+.person-point-actions{display:flex;flex-wrap:wrap;gap:8px}.person-point-form>small{font-size:11px;color:#7b8e82;line-height:1.5}
+.person-point-warning{color:#ad603b;font-size:12px}
+.people-relationship-card{margin-top:14px}
+@media(max-width:650px){.people-agenda-first{padding:12px}.person-point-actions>*{flex:1 1 125px}.person-point>summary{padding:11px}}
+
+.person-point-row{display:flex;align-items:stretch;gap:6px}.person-point-row .person-point{flex:1;min-width:0}
+.person-quick-check{flex:0 0 34px;height:36px;align-self:flex-start;display:flex;align-items:center;justify-content:center;background:#eff6f0;color:#458469;border:1px solid #d8e8dd;border-radius:10px;cursor:pointer}
+.person-quick-check:hover,.person-quick-check:focus-visible{background:#d4ead9;border-color:#66a687}.person-quick-check:disabled{opacity:.4;cursor:default}
+
+.people-agenda-capture label{min-width:0}.people-agenda-capture input{box-sizing:border-box;max-width:100%;width:100%;padding:10px;border:1px solid #dbe7de;border-radius:9px;color:#305b48;font:inherit;font-size:12px}
+.people-review-settings select{border:1px solid #dce7df;border-radius:9px;padding:9px;background:#fff;color:#315b48;max-width:100%}

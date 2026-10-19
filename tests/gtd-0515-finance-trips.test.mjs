@@ -63,7 +63,7 @@ test('0.5.15 travel: route wired in actual Finance tab, encrypted state mutation
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  const dash=readFileSync(new URL('../client/src/finance-dashboard.js',import.meta.url),'utf8');
  const pane=readFileSync(new URL('../client/src/finance-preview.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.25'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.26'/);
  assert.match(main,/data-action="finance-trip-add"|action==='finance-trip-add'/);
  assert.match(main,/financeTripAssignments/);assert.match(main,/financeTripExcluded/);
  assert.match(dash,/financeTravelView/);assert.match(pane,/title:'Reisen'/);
