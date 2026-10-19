@@ -6,7 +6,8 @@ export const BANK_ACCOUNTS=[
  {id:'raiffeisen:current:EUR',label:'Raiffeisen · Giro',bank:'Raiffeisen'},
  {id:'revolut:current:EUR',label:'Revolut · Current EUR',bank:'Revolut'},
  {id:'n26:current:EUR',label:'N26 · Giro EUR',bank:'N26'},
- {id:'dkb:current:EUR',label:'DKB · Giro EUR',bank:'DKB'}
+ {id:'dkb:current:EUR',label:'DKB · Giro EUR',bank:'DKB'},
+ {id:'flatex:cash:EUR',label:'flatex · Verrechnungskonto',bank:'flatex'}
 ];
 export const accountFor=t=>String(t?.accountId||'raiffeisen:current:EUR');
 export const accountLabel=t=>String(t?.accountDisplay||BANK_ACCOUNTS.find(x=>x.id===accountFor(t))?.label||(

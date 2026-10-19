@@ -3,6 +3,7 @@
  * Never store or publish bank account numbers from the export header in source code.
  */
 import {parseCommaCsv} from './finance-revolut.js';
+import {isFlatexCsv} from './finance-flatex-v36.js';
 
 const N26=['Booking Date','Value Date','Partner Name','Partner Iban','Type','Payment Reference','Account Name','Amount (EUR)','Original Amount','Original Currency','Exchange Rate'];
 const DKB_GIRO=['Buchungsdatum','Wertstellung','Status','Zahlungspflichtige*r','Zahlungsempfänger*in','Verwendungszweck','Umsatztyp','IBAN','Betrag (€)','Gläubiger-ID','Mandatsreferenz','Kundenreferenz'];
@@ -24,6 +25,7 @@ const header=(rows,fields)=>rows.findIndex(row=>same(row,fields));
 const n26Space=(name)=>name==='Hauptkonto'||name==='Main Account'?'n26:current:EUR':`n26:space:${integerHash([name])}`;
 export function detectFinanceFormat(text,name=''){
  const start=String(text||'').replace(/^\uFEFF/,'').slice(0,12000);
+ if(isFlatexCsv(start))return 'flatex';
  const comma=parseCommaCsv(start.split(/\r?\n/,1)[0]); // inspect only the intact first header row
  if(comma.length&&same(comma[0],N26))return 'n26';
  const lines=start.split(/\r?\n/).slice(0,12);

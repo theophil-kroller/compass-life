@@ -2,6 +2,7 @@
 import {detailedFinanceMatch,financeGenericFallback,updateBankSuggestions} from './finance-auto-rules.js';
 import {matchPrivateFinanceRule} from './finance-private-rules.js';
 import {parseRevolutCsv} from './finance-revolut.js';
+import {parseFlatexCsv} from './finance-flatex-v36.js';
 import {detectFinanceFormat,parseN26Csv,parseDkbGiroCsv,parseDkbVisaCsv} from './finance-account-import.js';
 export {updateBankSuggestions} from './finance-auto-rules.js';
 export const FINANCE_CATEGORIES=[
@@ -120,7 +121,7 @@ export function previewBankFiles(items,existing=[],customRules=[],privateRules=[
   const format=detectFinanceFormat(text,name);
   if(format==='unknown')throw Error(`Unbekanntes CSV-Format: ${String(name).slice(0,90)}. Bitte Bank und Exportdatei prüfen; keine automatische Zuordnung.`);
   const opt={customRules,privateRules,classify:classifyBankTransaction};
-  const parsed=format==='revolut'?parseRevolutCsv(text,opt):format==='n26'?parseN26Csv(text,opt):format==='dkb-giro'?parseDkbGiroCsv(text,opt):format==='dkb-visa'?parseDkbVisaCsv(text,opt):parseRaiffeisenCsv(text,opt);
+  const parsed=format==='revolut'?parseRevolutCsv(text,opt):format==='n26'?parseN26Csv(text,opt):format==='dkb-giro'?parseDkbGiroCsv(text,opt):format==='dkb-visa'?parseDkbVisaCsv(text,opt):format==='flatex'?parseFlatexCsv(text,opt):parseRaiffeisenCsv(text,opt);
   reversed+=parsed.reversed||0;fees+=parsed.fees||0;zero+=parsed.zero||0;
   for(const r of parsed.rows){if(seen.has(r.id)){duplicates++;continue;}seen.add(r.id);fresh.push({...r,sourceFileType:format});const acc=r.accountId||'raiffeisen:current:EUR';byAccount.set(acc,(byAccount.get(acc)||0)+1);}
  }

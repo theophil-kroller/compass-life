@@ -8,10 +8,11 @@ const finance=readFileSync(new URL('../client/src/finance-dashboard.js',import.m
 const stub=[{id:'synthetic-1',day:'2026-10-15',accountId:'raiffeisen:giro',amountCents:-2830,flow:'expense',merchant:'TEST SUPERMARKT',category:'Lebensmittel / Supermarkt',description:'Künstlicher Testumsatz',needsReview:false}];
 const render=(selected='Überblick')=>financeDashboardView({financeTransactions:stub},selected,'last12',null,0,{account:'all',today:'2026-10-19'});
 test('0.5.21 seven primary routes, one open group at a time, preserve deep link fallback',()=>{
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.35'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.36'/);
  const sidebar=main.slice(main.indexOf(' <nav class="side-nav calm-side-nav"'),main.indexOf(' <\/nav><div class="sidebar-foot">'));
- for(const id of ['today','inbox','people','finance','review','system'])assert.match(sidebar,new RegExp(`navItem\\('${id}'`));
- for(const group of ['plan','insights'])assert.match(sidebar,new RegExp(`data-id="${group}" aria-expanded`));
+ for(const id of ['today','inbox','people','review','system'])assert.match(sidebar,new RegExp(`navItem\\('${id}'`));
+ assert.match(sidebar,/data-action="calm-finance-view"/);
+ for(const group of ['plan','insights','finance'])assert.match(sidebar,new RegExp(`data-id="${group}" aria-expanded`));
  assert.match(main,/calmNavGroup=calmNavGroup===id\?'':id/);
  assert.match(main,/if\(!bootView&&!bootCapture&&calmLastView/);
  assert.match(main,/data-action="calm-insight-view"/);
