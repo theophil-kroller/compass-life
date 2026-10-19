@@ -1112,3 +1112,36 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 
 /* Floating submenu on narrow touch screens: expanded group must not become a 50px column. */
 @media(max-width:700px){.calm-nav-group{position:relative}.calm-nav-group .calm-subitems{position:absolute;top:100%;left:0;z-index:20;width:max-content;min-width:190px;max-width:min(285px,90vw);max-height:50vh;overflow-y:auto;border:1px solid #DBE7DE;border-radius:12px;background:#fff;padding:8px;margin:3px 0;box-shadow:0 14px 35px #1D433025}.calm-side-nav>.nav-item,.calm-side-nav>.calm-nav-group>.calm-group-toggle{white-space:nowrap}.calm-side-nav>.nav-item:nth-child(7){flex-basis:28%}}
+
+/* Compass 0.5.21.1: progressive disclosure and focus-first navigation */
+.calm-create{margin-top:16px;border:1px solid #DCE8DF;border-radius:13px;background:#F7FAF8;padding:0 12px;max-width:100%}
+.calm-create>summary{list-style:none;display:flex;align-items:center;gap:9px;padding:13px 2px;cursor:pointer;color:#286C57;font-weight:650;font-size:12px}
+.calm-create>summary::-webkit-details-marker{display:none}.calm-create[open]>summary{border-bottom:1px solid #E0E9E2;margin-bottom:12px}
+.calm-create .task-form,.calm-create form{margin:10px 0 16px}.calm-flag-picker{background:#FFF}.calm-flag-option{display:flex;align-items:center;gap:8px;background:transparent;border:0;border-bottom:1px solid #E5ECE8;cursor:pointer;padding:11px 4px;color:#3D6354;width:100%;text-align:left;font:inherit;font-size:12px}.calm-flag-option:hover{background:#F0F7F2}
+.calm-overview-extra{margin-top:18px}.calm-overview-extra>summary{cursor:pointer;padding:12px 16px;border:1px solid #DEE8E0;background:#FFF;border-radius:12px;display:flex;gap:9px;align-items:center;color:#416C58;font-size:12px}.calm-overview-extra[open]>summary{margin-bottom:15px}
+.people-linked-inbox{margin-top:16px;padding-top:14px;border-top:1px solid #DFE9E2}.people-linked-inbox h3{display:flex;align-items:center;gap:9px;font:500 18px Georgia,serif;color:#315A49}
+.dream-one-liner{font-size:13px;color:#617F6E;line-height:1.6;margin:0}
+.calm-health-icons{display:inline-flex;align-items:center;gap:7px;margin:1px 0 17px}
+.calm-health-icon{position:relative;display:grid;place-items:center;width:40px;height:40px;background:white;border:1px solid #DEE9E0;border-radius:11px;color:#648779;cursor:pointer;transition:background .15s,border-color .15s}
+.calm-health-icon:hover,.calm-health-icon:focus-visible,.calm-health-icon.selected{color:#256C56;background:#E7F2EA;border-color:#9CCBB3;outline-offset:2px}
+.calm-icon-tooltip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);white-space:nowrap;background:#253F36;color:white;font:500 11px sans-serif;padding:6px 9px;border-radius:7px;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .12s;z-index:6}
+.calm-health-icon:hover .calm-icon-tooltip,.calm-health-icon:focus-visible .calm-icon-tooltip{opacity:1;visibility:visible}
+.discovery-multiselect{position:relative;flex:0 1 220px;min-width:172px;color:#416B57}
+.discovery-multiselect>summary{min-height:36px;padding:9px 12px;border:1px solid #DCE7DF;border-radius:9px;cursor:pointer;background:white;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none}
+.discovery-multiselect>summary::-webkit-details-marker{display:none}
+.discovery-multiselect-list{position:absolute;top:calc(100% + 4px);left:0;min-width:245px;max-height:300px;overflow:auto;z-index:20;padding:9px;background:white;border:1px solid #D9E5DC;box-shadow:0 10px 28px #243E3025;border-radius:12px}
+.discovery-multiselect-list label{display:flex;flex-direction:row;align-items:center;gap:9px;padding:7px 5px;color:#37644F;font-size:12px;cursor:pointer}
+.discovery-multiselect-list input{accent-color:#33816B;width:16px;height:16px}
+.review-step-number{position:relative}.review-step-number small{font-size:8px;position:absolute;top:-3px;right:-3px;transform:translate(20%,-10%);background:#E3ECE5;border-radius:99px;padding:2px 3px}.review-step-number svg{width:17px;height:17px}
+.calm-wealth-detail{margin:14px 0 24px;border-radius:12px;border:1px solid #DCE8DF;background:#F9FBF9;padding:13px}
+.calm-wealth-detail summary{font-size:12px;color:#376D58;cursor:pointer}
+.calm-wealth-detail .fin-net-observed,.calm-wealth-detail .fin-kraken-overview{margin-top:16px}
+@media(max-width:700px){.calm-icon-tooltip{display:none}.calm-health-icon{height:44px;width:44px}.discovery-multiselect-list{min-width:210px}.calm-overview-extra>summary{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.calm-health-icon,.calm-icon-tooltip{transition:none}}
+
+.calm-active-health-label{display:none;color:#426957;font-size:12px;font-weight:650;margin-left:4px}@media(max-width:700px){.calm-active-health-label{display:inline}}
+
+/* Review step icon + small sequential number in one compact unit. */
+.assistant-step>span:first-child{position:relative;display:grid;place-items:center;min-width:28px;min-height:28px}
+.assistant-step>span:first-child>small{position:absolute;right:-5px;top:-5px;display:grid;place-items:center;min-width:13px;height:13px;font:650 8px system-ui,sans-serif;color:#4E7A61;background:#EDF4ED;border:1px solid white;border-radius:10px}
+.assistant-step>span:first-child svg{height:17px;width:17px}

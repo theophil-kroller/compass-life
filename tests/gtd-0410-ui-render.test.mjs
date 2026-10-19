@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {webcrypto} from 'node:crypto';
 import * as tasks from '../client/src/tasks.js';
+import * as personLinks from '../client/src/person-links.js';
+import * as discoveryFilter from '../client/src/discovery-category-filter.js';
 import * as review from '../client/src/guided-review.js';
 import * as tags from '../client/src/smart-tags.js';
 import * as personMatching from '../client/src/people-matching.js';
@@ -30,7 +32,7 @@ function context(){
  const window={addEventListener:()=>{}};
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
  Object.assign(ctx,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
- Object.assign(ctx,review,tags,personMatching,sportsModule,reviewHubModule);
+ Object.assign(ctx,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter);
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.
