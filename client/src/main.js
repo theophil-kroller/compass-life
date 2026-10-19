@@ -52,7 +52,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.31';
+const COMPASS_CLIENT_VERSION='0.5.32';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -125,6 +125,7 @@ let healthSpan=7,healthDetailsOpen=false,healthDevicesOpen=false;
 let importHealthSpan=90,selectedGarminNight='',healthFilePreview=null,healthFileReading=false;
 let insightWellnessDay='';let insightStressGranularity='week',insightBodyComposition='composition';
 let sportsMode='all',sportsAnchor=localDate(),sportsMetric='time',sportsSelected='';
+let financeCycleSelected='';
 let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',financePane='Überblick';
 // Non-sensitive presentation only. Deep links always override the last-view preference.
 const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.calm.lastView')||'null');}catch{return null;}})();
@@ -963,7 +964,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form></details>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,merchantSelected:financeMerchantSelected,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy}));}
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
 const krakenBridgeRequest=async(path,method='GET',body=null)=>{
@@ -1899,6 +1900,8 @@ async function runAction(action,id,stepId=null) {
         financeReviewPage=0;financeLedgerPage=0;toast(`${result.changed} Zuordnungen verbessert · ${result.closed} Fälle abgeschlossen · ${result.review} weiter zur Prüfung. Manuelle Bestätigungen bleiben erhalten.`);
       }catch(e){toast('Vorklassifizierung: '+e.message,true);}return;
     }
+    if(action==='finance-cycle-inspect'){financeCycleSelected=id;render();app.querySelector('.fin32-cycle-detail')?.scrollIntoView?.({behavior:'smooth',block:'nearest'});return;}
+    if(action==='finance-cycle-clear'){financeCycleSelected='';render();return;}
     if(action==='finance-viz-mode'){financeVisualMode=id;render();return;}
     if(action==='finance-merchant-select'){financeMerchantSelected=id;render();app.querySelector('.fin-merchant-inspector')?.scrollIntoView?.({behavior:'smooth',block:'nearest'});return;}
     if(action==='finance-merchant-close'){financeMerchantSelected='';render();return;}
@@ -2299,6 +2302,7 @@ async function syncNow() {
 }
 document.addEventListener('keydown',ev=>{
   const target=ev.target;
+  if((ev.key==='Enter'||ev.key===' ')&&target?.matches?.('.fin32-cycle-hit,.fin32-pattern-card')){ev.preventDefault();runAction(target.dataset.action,target.dataset.id);return;}
   const typing=target instanceof HTMLElement && (['INPUT','TEXTAREA','SELECT'].includes(target.tagName)||target.isContentEditable);
   if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){
     ev.preventDefault();runAction('capture-focus');return;

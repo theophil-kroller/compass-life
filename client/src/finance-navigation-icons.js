@@ -9,6 +9,7 @@ const symbols={
  'target':'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
  'map':'<path d="M3 5 9 3l6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16"/>',
  'folder':'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M3 7V5a2 2 0 0 1 2-2h5l2 4"/>',
+ 'refresh-cw':'<path d="M3 11a9 9 0 0 1 15.3-5.9L21 8m0-5v5h-5M21 13a9 9 0 0 1-15.3 5.9L3 16m0 5v-5h5"/>',
  'git-merge':'<circle cx="6" cy="4" r="2"/><circle cx="6" cy="20" r="2"/><circle cx="18" cy="13" r="2"/><path d="M6 6v12M6 7c0 6 12 0 12 4"/>',
  'aperture':'<circle cx="12" cy="12" r="9"/><path d="m12 3 4 7-4 7-8-1m12-6 5 4m-15 2 3 5m7-11-9 0"/>',
  'list':'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',

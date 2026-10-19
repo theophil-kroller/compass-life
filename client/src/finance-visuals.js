@@ -28,22 +28,22 @@ export function categoryInsightCards(all=[],today=new Date().toLocaleDateString(
   const id=`grad-category-${i}`,p=o.forecast??o.spent,center=o.mean===null?null:X(o.mean),marker=X(p),q0=o.p20===null?null:X(o.p20),q1=o.p80===null?null:X(o.p80);
   const tier=!o.n||o.n<6?'neutral':o.forecast==null?'neutral':o.forecast>o.p80?'high':o.forecast<o.p20?'low':'typical';
   const icon=categoryIcon(key),trend=o.status==='Steigend'?'↗':o.status==='Sinkend'?'↘':o.status==='Stabil'?'→':'·';
-  return `<article class="fin-pattern-card ${selected===key?'is-selected':''}" ${select(key)} aria-label="${h(key)}: Durchschnitt ${h(numberOrDash(o.mean))}, ${h(o.position)}">
+  return `<article class="fin-pattern-card fin32-pattern-card ${selected===key?'is-selected':''}" ${select(key)} aria-label="${h(key)}: Durchschnitt ${h(numberOrDash(o.mean))}, ${h(o.position)}">
    <div class="fin-pattern-heading"><span class="fin-pattern-icon" style="--pattern-accent:${palette[i%palette.length]}">${h(icon)}</span><span><strong>${h(key)}</strong><small>${o.n} von 12 Referenzmonaten erfasst</small></span><span class="fin-pattern-trend">${trend} ${h(o.status)}</span></div>
    <div class="fin-pattern-metrics"><div><small>Ø / Monat</small><strong>${h(numberOrDash(o.mean))}</strong></div><div><small>${o.forecast!==null?'Prognose aktuell':'Bisher im Monat'}</small><strong>${h(euro(p))}</strong></div></div>
-   <svg class="fin-pattern-svg" viewBox="0 0 420 83" role="img" aria-label="Ausgabenskala dunkelgrün bis rot. ${h(o.position)}.">
+   <svg class="fin-pattern-svg" viewBox="0 0 420 55" role="img" aria-label="Ausgabenskala dunkelgrün bis rot. ${h(o.position)}.">
     <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#155B48"/><stop offset=".29" stop-color="#26876E"/><stop offset=".51" stop-color="#79B98F"/><stop offset=".7" stop-color="#E7B15E"/><stop offset=".86" stop-color="#E67D4C"/><stop offset="1" stop-color="#B93D52"/></linearGradient></defs>
-    <rect x="8" y="21" width="404" height="19" rx="9" fill="url(#${id})"/>
-    ${q0!==null?`<rect x="${8+404*q0/100}" y="18" width="${Math.max(2,404*(q1-q0)/100)}" height="25" rx="5" fill="none" stroke="#23493E" stroke-width="1.7" stroke-dasharray="4 3"/>`:''}
-    ${center!==null?`<line x1="${8+404*center/100}" y1="12" x2="${8+404*center/100}" y2="49" stroke="#193C34" stroke-width="2.5"/>`:''}
-    <path d="M${8+404*marker/100-7} 7 L${8+404*marker/100+7} 7 L${8+404*marker/100} 18 Z" fill="#203A34"/>
-    <circle cx="${8+404*marker/100}" cy="30.5" r="8" fill="#FFF" stroke="#2F3432" stroke-width="2.5"/>
-    <text x="8" y="67" font-size="11" fill="currentColor">0 €</text><text x="412" y="67" text-anchor="end" font-size="11" fill="currentColor">${h(euro(max))}</text>
+    <rect x="8" y="19" width="404" height="12" rx="6" fill="url(#${id})"/>
+    ${q0!==null?`<rect x="${8+404*q0/100}" y="16" width="${Math.max(2,404*(q1-q0)/100)}" height="18" rx="5" fill="none" stroke="#23493E" stroke-width="1.7" stroke-dasharray="4 3"/>`:''}
+    ${center!==null?`<line x1="${8+404*center/100}" y1="12" x2="${8+404*center/100}" y2="36" stroke="#193C34" stroke-width="2.5"/>`:''}
+    <path d="M${8+404*marker/100-7} 5 L${8+404*marker/100+7} 5 L${8+404*marker/100} 16 Z" fill="#203A34"/>
+    <circle cx="${8+404*marker/100}" cy="25" r="6" fill="#FFF" stroke="#2F3432" stroke-width="2.5"/>
+    <text x="8" y="48" font-size="11" fill="currentColor">0 €</text><text x="412" y="48" text-anchor="end" font-size="11" fill="currentColor">${h(euro(max))}</text>
    </svg><div class="fin-pattern-footer"><span class="fin-pattern-indicator ${tier}">${h(o.position)}</span><span>${o.p20!==null?`Üblich: ${h(euro(o.p20))}–${h(euro(o.p80))}`:'Für Vergleich mindestens 6 Referenzmonate'}</span></div>
   </article>`;
  });
  const extra='Die Skala verläuft von dunkelgrün (weit unter dem eigenen Mittel) über Grün und Orange bis Rot (deutlich darüber). Der gestrichelte Rahmen zeigt das 20.–80. Perzentil. Farben bewerten keine Ausgaben moralisch. Nur vorhandene Monatsbuchungen werden verwendet; fehlende Monate sind keine Nullwerte.';
- return `<section class="fin-visual-section"><div class="fin-art-heading"><div><small>PERSONAL PATTERNS / 12 MONATE</small><h3>Was ist bei mir üblich?</h3></div><span class="fin-art-tag">Vergleich ohne starres Budget</span></div><div class="fin-pattern-grid">${cards.join('')}</div><p class="fin-art-note">${extra} Die Prognose aus dem bisherigen Monat erscheint nur bei ausreichender Datenlage und regelmäßigen Monatsausgaben; sie bleibt vorläufig.</p></section>`;
+ return `<section class="fin-visual-section fin32-pattern-section"><div class="fin-art-heading"><div><small>PERSONAL PATTERNS / 12 MONATE</small><h3>Was ist bei mir üblich?</h3></div><span class="fin-art-tag">Vergleich ohne starres Budget</span></div><div class="fin-pattern-grid fin32-pattern-grid">${cards.join('')}</div><details class="fin32-pattern-help"><summary>Skala &amp; Berechnung erklären</summary><p class="fin-art-note">${extra} Die Prognose aus dem bisherigen Monat erscheint nur bei ausreichender Datenlage und regelmäßigen Monatsausgaben; sie bleibt vorläufig.</p></details></section>`;
 }
 function categoryLabel(name,cents,color){return `<button type="button" class="fin-viz-category" ${select(name)}><span class="fin-viz-dot" style="background:${color}"></span><span>${h(categoryIcon(name))} ${h(name)}</span><strong>${h(euro(cents))}</strong></button>`;}
 export function financeDonut(rows=[],selected=''){
