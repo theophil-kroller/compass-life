@@ -50,6 +50,7 @@ export function rollingEnvelopeChart(rows,key='nightAverageMs',{title='Verlauf',
 export function fitdaysCompositionChart(rows=[],selected='composition',windowDays=14){
  const all=[...new Map((rows||[]).filter(x=>finite(x.weightKg)&&x.weightKg>0).sort((a,b)=>String(a.at).localeCompare(String(b.at))).map(x=>[x.day,x])).values()].sort((a,b)=>a.day.localeCompare(b.day));
  if(!all.length)return '<p class="insight-no-data">Noch keine Gewichtsmessungen.</p>';
+ if(selected==='stacked')return fatAndLeanStack(all);
  const WATER='water';const components=selected===WATER?[{key:'waterKg',label:'Körperwasser (aus % berechnet)',color:'#4B8EB5'}]:[
  {key:'fatMassKg',label:'Fettmasse',color:'#C38259'},{key:'muscleKg',label:'Muskelmasse',color:'#6D79B6'}];
  const converted=all.map(x=>({...x,fatMassKg:finite(x.fatMassKg)?x.fatMassKg:finite(x.bodyFatPct)?x.weightKg*x.bodyFatPct/100:null,
@@ -64,4 +65,22 @@ export function fitdaysCompositionChart(rows=[],selected='composition',windowDay
  const dots=converted.slice(-240).map(x=>`<circle cx="${X(x)}" cy="${Y(x.weightKg)}" r="3.7" fill="#2D806D"><title>${esc(x.day)}: Gesamtgewicht ${x.weightKg.toFixed(1)} kg</title></circle>`).join('');
  const dates=[0,.25,.5,.75,1].map(t=>{const d=new Date(d0+(d1-d0)*t).toISOString().slice(0,10);return `<text x="${L+w*t}" y="${H-18}" font-size="11" text-anchor="middle" fill="#778C81">${esc(formatDay(d))}</text>`;}).join('');
  return `<div class="insight-svg-scroller"><svg class="insight-svg health-composition-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Fitdays Gesamtgewicht mit ${esc(components.map(x=>x.label).join(' und '))} auf gemeinsamer Kilogrammskala">${grid}${col}${segments.join('')}${dots}${dates}<text x="${L}" y="${H-2}" fill="#708579" font-size="11">kg · Kalenderjahre in der Zeitachse</text></svg></div><div class="insight-legend"><span><i style="background:#2D806D"></i>Gesamtgewicht</span>${components.map(x=>`<span><i style="background:${x.color}"></i>${esc(x.label)}</span>`).join('')}</div><p class="insight-figure-note">Gemeinsame kg-Skala. Fett, Muskeln und Wasser sind physiologisch überlappende Größen und werden deshalb <strong>nicht addiert oder gestapelt</strong>. Wasser wird aus Gewicht × Wasseranteil geschätzt. Lücken sind nicht aufgefüllt.</p>`;
+}
+
+/** Mutually exclusive total: fat mass + derived fat-free mass = body weight.
+ * Muscle/water/protein overlap fat-free mass and MUST NOT be added as separate layers. */
+export function fatAndLeanStack(rows=[]){
+ const all=[...new Map((rows||[]).filter(r=>finite(r.weightKg)&&r.weightKg>0&&finite(r.fatMassKg??r.bodyFatPct)).sort((a,b)=>String(a.at).localeCompare(String(b.at))).map(r=>[r.day,r])).values()].sort((a,b)=>a.day.localeCompare(b.day));
+ if(!all.length)return '<p class="insight-no-data">Für eine gestapelte Körperzusammensetzung fehlen Körperfettmessungen.</p>';
+ const values=all.map(r=>{const fat=finite(r.fatMassKg)?r.fatMassKg:r.weightKg*r.bodyFatPct/100;return {...r,fat,lean:r.weightKg-fat};}).filter(r=>r.fat>=0&&r.lean>=0&&r.fat<=r.weightKg);
+ if(!values.length)return '<p class="insight-no-data">Keine gültige Fett-/Fettfrei-Aufteilung.</p>';
+ const W=850,H=302,L=57,R=24,T=22,B=50,w=W-L-R,h=H-T-B,max=Math.max(1,...values.map(v=>v.weightKg))*1.08;
+ const dateA=stamp(values[0].day),dateB=Math.max(dateA+86400000,stamp(values.at(-1).day));
+ const X=v=>L+(stamp(v.day)-dateA)/(dateB-dateA)*w,Y=v=>T+h-v/max*h;
+ const width=Math.max(2,Math.min(15,w/values.length*.55));
+ const bars=values.map(r=>`<g><rect x="${(X(r)-width/2).toFixed(2)}" y="${Y(r.lean).toFixed(2)}" width="${width}" height="${(Y(0)-Y(r.lean)).toFixed(2)}" fill="#5EA98E" opacity=".78"/><rect x="${(X(r)-width/2).toFixed(2)}" y="${Y(r.weightKg).toFixed(2)}" width="${width}" height="${(Y(r.lean)-Y(r.weightKg)).toFixed(2)}" fill="#D8A17C" opacity=".88"/><circle cx="${X(r)}" cy="${Y(r.weightKg)}" r="3.1" fill="#2B786A"><title>${esc(r.day)} · Gewicht: ${r.weightKg.toFixed(1)} kg · Fettfrei: ${r.lean.toFixed(1)} kg · Fett: ${r.fat.toFixed(1)} kg</title></circle></g>`).join('');
+ const lines=[];for(let i=1;i<values.length;i++)if(stamp(values[i].day)-stamp(values[i-1].day)<=21*86400000)lines.push(`<line x1="${X(values[i-1])}" y1="${Y(values[i-1].weightKg)}" x2="${X(values[i])}" y2="${Y(values[i].weightKg)}" stroke="#2B786A" stroke-width="2.3"/>`);
+ const grid=[0,.25,.5,.75,1].map(t=>`<line x1="${L}" x2="${W-R}" y1="${Y(max*t)}" y2="${Y(max*t)}" stroke="#DFE9E3"/><text x="${L-7}" y="${Y(max*t)+4}" text-anchor="end" font-size="11" fill="#789186">${(max*t).toFixed(0)}</text>`).join('');
+ const dates=[0,.25,.5,.75,1].map(t=>{const day=new Date(dateA+(dateB-dateA)*t).toISOString().slice(0,10);return `<text x="${L+w*t}" y="${H-15}" fill="#768D81" font-size="11" text-anchor="middle">${esc(formatDay(day))}</text>`;}).join('');
+ return `<div class="insight-svg-scroller"><svg class="insight-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Fettmasse und fettfreie Masse als echte gestapelte Komponenten des Körpergewichts">${grid}${bars}${lines.join('')}${dates}</svg></div><div class="insight-legend"><span><i style="background:#5EA98E"></i>Fettfreie Masse (berechnet)</span><span><i style="background:#D8A17C"></i>Fettmasse</span><span><i style="background:#2B786A"></i>Gesamtgewicht</span></div><p class="insight-figure-note">Die einzige zulässige Addition hier ist <strong>Fettmasse + fettfreie Masse = Gesamtgewicht</strong>. Fettfreie Masse ist ein berechneter Restwert und enthält unter anderem Muskeln, Wasser, Knochen und Protein; diese Größen dürfen nicht zusätzlich aufgestapelt werden. BIA-Werte sind geräteabhängige Schätzungen.</p>`;
 }

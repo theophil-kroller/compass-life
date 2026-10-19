@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 import sys
 import time
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 from urllib.request import Request, urlopen
 
 API_HOST = 'https://api.kraken.com'
@@ -72,6 +72,71 @@ def fetch_pages(endpoint, field, public_key, private_key):
     return output, True
 
 
+def _kraken_public(name, params=None):
+    # Only public market-data endpoints; NO credentials are attached.
+    if name not in ('AssetPairs', 'Ticker'):
+        raise ValueError('Nicht erlaubter Marktdaten-Endpunkt')
+    url = API_HOST + '/0/public/' + name
+    if params:
+        url += '?' + urlencode(params)
+    req = Request(url, headers={'User-Agent': 'Compass-Kraken-Local-MarketData/0.5.17.5'})
+    with urlopen(req, timeout=30) as response:
+        obj = json.loads(response.read(4_000_001))
+    if obj.get('error'):
+        raise RuntimeError('Marktdaten temporär nicht verfügbar')
+    return obj.get('result', {})
+
+
+def _asset_name(value):
+    # Kraken spot balance asset symbols include legacy prefixes (XXBT, XETH, ZEUR).
+    asset = str(value).split('.')[0].upper()
+    aliases = {'XXBT': 'XBT', 'BTC': 'XBT', 'XBT': 'XBT', 'XETH': 'ETH', 'ETH': 'ETH', 'ZEUR': 'EUR', 'EUR': 'EUR', 'ZUSD': 'USD', 'USD': 'USD', 'XXRP': 'XRP', 'XRP': 'XRP', 'XXDG': 'DOGE', 'XDG': 'DOGE'}
+    return aliases.get(asset, asset)
+
+
+def fetch_eur_quotes(balances):
+    """Value holdings using public EUR quoted last trade prices, never a synthetic FX rate.
+
+    Unsupported holdings remain unpriced and therefore excluded from portfolio total.
+    """
+    assets = {asset: _asset_name(asset) for asset, val in balances.items() if float(val) > 0}
+    if not assets:
+        return {}, None
+    quotes = {asset: '1' for asset, name in assets.items() if name == 'EUR'}
+    remaining = {asset: name for asset, name in assets.items() if name != 'EUR'}
+    if not remaining:
+        return quotes, dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')
+    try:
+        pairs = _kraken_public('AssetPairs')
+        targets = {}
+        for pair_id, entry in pairs.items():
+            if not isinstance(entry, dict):
+                continue
+            display = entry.get('wsname', '')
+            if '/' not in display:
+                continue
+            base, quote_name = display.split('/', 1)
+            if quote_name.upper() != 'EUR':
+                continue
+            for asset, name in remaining.items():
+                if name == base.upper() and asset not in targets:
+                    targets[asset] = pair_id
+        selected = list(dict.fromkeys(targets.values()))[:100]
+        if selected:
+            prices = _kraken_public('Ticker', {'pair': ','.join(selected)})
+            for asset, pair in targets.items():
+                row = prices.get(pair)
+                if not row:
+                    # Some ticker APIs return normalized keys instead of AssetPairs keys.
+                    row = next((r for k,r in prices.items() if k.upper()==pair.upper()), None)
+                raw = row.get('c',[None])[0] if isinstance(row,dict) else None
+                if raw is not None and 0 < float(raw) < 1e9:
+                    quotes[asset] = safe_number(raw)
+    except (ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
+        print('Hinweis: EUR-Marktkurse nur teilweise abrufbar. Fehlende Assets bleiben unbewertet.')
+    return quotes, dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')
+
+
 def safe_number(x):
     s = str(x)
     if len(s) > 60 or not s or s in ('None', 'nan', 'inf', '-inf'):
@@ -109,9 +174,12 @@ def sync(key, secret):
             'volume': safe_number(row.get('vol')), 'cost': safe_number(row.get('cost')),
             'fee': safe_number(row.get('fee'))
         })
+    print('Kraken Spot: Lade öffentliche EUR-Marktkurse …')
+    quotes, priced_at = fetch_eur_quotes(balances)
     return {'format': 'compass-kraken-readonly-v1',
         'generatedAt': dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00','Z'),
         'balances': balances, 'ledgers': ledgers, 'trades': trades,
+        'quotesEur': quotes, 'pricedAt': priced_at,
         'partial': ledgers_partial or trades_partial}
 
 

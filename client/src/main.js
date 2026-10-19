@@ -11,7 +11,7 @@ import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
-import {validateKrakenSnapshot,mergeKrakenSnapshot} from './finance-kraken.js';
+import {validateKrakenSnapshot,mergeKrakenSnapshot,krakenWealthSummary} from './finance-kraken.js';
 import {createFinanceTrip,tripDelete,tripCandidateRows,travelAttributable} from './finance-travel.js';
 import {validatePrivateFinancePack} from './finance-private-rules.js';
 import {financeSearchTransactions} from './finance-analytics.js';
@@ -36,7 +36,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.17.4';
+const COMPASS_CLIENT_VERSION='0.5.17.5';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -107,6 +107,7 @@ let importHealthSpan=90,selectedGarminNight='',healthFilePreview=null,healthFile
 let insightWellnessDay='';let insightStressGranularity='week',insightBodyComposition='composition';
 let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',financePane='Überblick';
 let financePeriod='last12',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
+let krakenBridgeToken='',krakenBridgeBusy=false,krakenLocalCheckedAt=0;
 let financeVisualMode='hierarchy',financeCompareMode='month_year';
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
 let financeTripSelected='',financeTripQuery='',financeTripMode='suggested',financeTripPage=0;
@@ -584,7 +585,11 @@ function vaultScreen(){
  ${!hasVault?'<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/>':''}</form></section>${todayWork(true)}`);
 }
 function todayScreen(){return chrome(`${occasionPanel()}${todayWork()}`);}
-function homeScreen(){return chrome(`<div class="dashboard-timeline">${timelinePanel()}</div>${occasionPanel()}${dashboardCards()}`);}
+function homeScreen(){
+ const k=state?.krakenPortfolio,valuation=k?.balances?krakenWealthSummary(k):null;
+ const kraken=valuation?`<section class="work-card compass-kraken-home"><div><span class="page-overline">WEALTH / KRAKEN</span><strong>${valuation.covered?((valuation.totalEur).toLocaleString('de-AT',{style:'currency',currency:'EUR'})):'Noch nicht bewertet'}</strong><small>${valuation.complete?'Kraken Spot · EUR-Marktwert':'Nur teilweise bewertete Kraken-Positionen · keine Gesamtvermögenssumme'}</small></div><button type="button" data-tab="finance" class="secondary-btn">Finanz-Dashboard öffnen →</button></section>`:'';
+ return chrome(`<div class="dashboard-timeline">${timelinePanel()}</div>${occasionPanel()}${dashboardCards()}${kraken}`);
+}
 
 function captureOverlay(){
  return `<div class="capture-modal-layer" data-action="capture-close-backdrop">
@@ -764,7 +769,49 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,krakenPreview}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,krakenPreview,krakenBridgeBusy}));}
+
+const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
+const krakenBridgeRequest=async(path,method='GET')=>{
+ const response=await fetch(KRAKEN_BRIDGE_URL+path,{method,headers:{Authorization:'Bearer '+krakenBridgeToken},cache:'no-store',mode:'cors'});
+ if(!response.ok)throw Error('Lokaler Connector nicht erreichbar oder Kopplungscode/Origin stimmt nicht.');
+ return response.json();
+};
+async function syncKrakenBridge(automatic=false){
+ if(!state||krakenBridgeBusy||!krakenBridgeToken)return;
+ krakenBridgeBusy=true;
+ if(tab==='finance'&&financePane==='Portfolio')render();
+ try{
+  await krakenBridgeRequest('/sync','POST');
+  let result=null;
+  for(let i=0;i<200;i++){
+   await new Promise(resolve=>setTimeout(resolve,3000));
+   if(!state)throw Error('Vault ist gesperrt; Vorgang abgebrochen.');
+   const status=await krakenBridgeRequest('/result');
+   if(status.status==='failed')throw Error(status.error||'Kraken-Synchronisation fehlgeschlagen.');
+   if(status.status==='ready'){result=status.snapshot;break;}
+  }
+  if(!result)throw Error('Kraken-Synchronisation dauert zu lange. Bitte später erneut versuchen.');
+  const snapshot=validateKrakenSnapshot(result);
+  krakenLocalCheckedAt=Date.now();
+  if(automatic){
+    await mutate(s=>{s.krakenPortfolio=mergeKrakenSnapshot(s.krakenPortfolio,snapshot);});
+    toast('Kraken-Portfolio lokal aktualisiert.');
+  }else{
+    krakenPreview=snapshot;
+    toast('Kraken-Daten lokal abgeholt. Vorschau im Portfolio prüfen und übernehmen.');
+  }
+ }catch(ex){toast('Lokale Kraken-Verbindung: '+ex.message,true);}
+ finally{krakenBridgeBusy=false;if(state)render();}
+}
+function maybeAutoSyncKraken(){
+ if(!state||tab!=='finance'||financePane!=='Portfolio'||!krakenBridgeToken||krakenBridgeBusy||document.visibilityState!=='visible'||state?.uiPreferences?.krakenAutoSync!==true)return;
+ const last=Date.parse(state.krakenPortfolio?.generatedAt||'')||0;
+ if(Date.now()-Math.max(last,krakenLocalCheckedAt)<12*3600*1000)return;
+ syncKrakenBridge(true).catch(()=>{});
+}
+if(typeof setInterval==='function')setInterval(maybeAutoSyncKraken,15*60*1000);
+if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')maybeAutoSyncKraken();});
 function insightsScreen(){
  const tabDef=INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0];
  const today=localDate();
@@ -1064,6 +1111,12 @@ function bind() {
       toast(`Bankimport: ${financePreview.rows.length} neue Buchungen · ${financePreview.duplicates} Duplikate · ${financePreview.review} zur Prüfung.`);
     }catch(e){toast('Bankimport: '+e.message,true);}finally{financeBusy=false;}
   };
+   const autoKraken=app.querySelector('#finance-kraken-auto-sync');if(autoKraken)autoKraken.onchange=async()=>{
+     const enabled=autoKraken.checked;
+     await mutate(s=>{s.uiPreferences??={};s.uiPreferences.krakenAutoSync=enabled;});
+     toast(enabled?'Automatische lokale Kraken-Aktualisierung aktiviert (maximal alle 12 Stunden).':'Automatische Kraken-Aktualisierung ausgeschaltet.');
+     if(enabled)maybeAutoSyncKraken();
+   };
   const krakenInput=app.querySelector('#finance-kraken-file');if(krakenInput)krakenInput.onchange=async()=>{
     const file=krakenInput.files?.[0];if(!file)return;
     try{
@@ -1174,7 +1227,7 @@ async function runAction(action,id,stepId=null) {
     if(action==='insights-night-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;const model=buildSleepInsights(state?.healthImports||{},localDate(),insightPeriod);if(model.nights.some(x=>x.day===id)){insightNight=id;render();}return;}
     if(action==='insights-wellness-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;const items=(state?.healthImports?.garminWellness||[]);if(items.some(x=>String(x.at||'').slice(0,10)===id)){insightWellnessDay=id;render();}return;}
     if(action==='insights-stress-granularity'){if(['day','week'].includes(id)){insightStressGranularity=id;render();}return;}
-    if(action==='insights-body-composition'){if(['composition','water'].includes(id)){insightBodyComposition=id;render();}return;}
+    if(action==='insights-body-composition'){if(['composition','water','stacked'].includes(id)){insightBodyComposition=id;render();}return;}
     if(action==='review-import-open'){if(id==='health'){tab='insights';insightTab='sources';}else if(id==='places'){tab='insights';insightTab='places';insightPeriod='all';}else if(id==='finance'){tab='finance';financePane='Buchungen';}else if(id==='kraken'){tab='finance';financePane='Portfolio';}render();return;}
      if(action==='assistant-new'){
       if(!confirm('Neuen Wochenreview starten? Der bisherige Durchgang wird als Fortschrittsstand ersetzt; die geprüften Projekte behalten ihre Reviewdaten.'))return;
@@ -1427,6 +1480,13 @@ async function runAction(action,id,stepId=null) {
        if(!a||!b||a.linkedTransferId||b.linkedTransferId||a.amountCents!==-b.amountCents)throw Error('Transferpaar hat sich verändert.');
        for(const [entry,other] of [[a,b],[b,a]])Object.assign(entry,{category:'Transfer / Eigene Konten',flow:'transfer',needsReview:false,confidence:'confirmed',source:'user',linkedTransferId:other.id,ruleReason:'Von dir bestätigter interner Transfer'});
       });toast('Interner Transfer bestätigt – keine doppelten Ausgaben.');return;
+    }
+    if(action==='finance-kraken-bridge-sync'){
+      const input=app.querySelector('#finance-kraken-bridge-token');
+      const candidate=String(input?.value||'').trim();
+      if(candidate){if(!/^[A-Za-z0-9_-]{28,128}$/.test(candidate)){toast('Ungültiger Kopplungscode.',true);return;}krakenBridgeToken=candidate;}
+      if(!krakenBridgeToken){toast('Bitte zuerst den Kopplungscode aus dem lokalen Terminal eingeben.',true);return;}
+      await syncKrakenBridge(false);return;
     }
     if(action==='finance-kraken-cancel'){krakenPreview=null;render();return;}
     if(action==='finance-kraken-confirm'){
