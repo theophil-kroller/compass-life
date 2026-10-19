@@ -5,6 +5,7 @@ import {runInNewContext} from 'node:vm';
 import {webcrypto} from 'node:crypto';
 import * as tasks from '../client/src/tasks.js';
 import * as life from '../client/src/life-intelligence-v22.js';
+import * as gtd23 from '../client/src/gtd-intelligence-v23.js';
 import * as personLinks from '../client/src/person-links.js';
 import * as discoveryFilter from '../client/src/discovery-category-filter.js';
 import * as review from '../client/src/guided-review.js';
@@ -32,7 +33,7 @@ function context(){
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const window={addEventListener:()=>{}};
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
- Object.assign(ctx,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
+ Object.assign(ctx,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter);
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};

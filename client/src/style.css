@@ -1177,3 +1177,22 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 
 .v221-area-select{font-size:11px;display:grid;gap:4px;min-width:165px;color:#5e7569}
 .v221-area-select select{padding:8px 9px;font:inherit;border-radius:9px;border:1px solid #d8e5dc;max-width:240px;background:#fff}
+
+/* 0.5.23: the sport aggregate is the main activity overview; sessions stay optional. */
+.sports-aggregate-rows{margin-top:14px}
+.sports-aggregate-row{padding:13px 0;border-bottom:1px solid #e8efe9}
+.sports-aggregate-row .sports-name small{display:block;margin-top:5px;color:#81958a;font-weight:400;font-size:11px}
+.fitness-sessions-details{margin-top:18px}
+.fitness-sessions-details>summary{cursor:pointer;list-style-position:inside;color:#315d49;font-weight:650;padding:9px 0}
+.fitness-sessions-details[open]>summary{border-bottom:1px solid #e2ebe4;margin-bottom:10px}
+.fitness-sessions-details .insight-fitness-sessions{max-height:480px;overflow:auto}
+.gtd-quick-overview,.gtd-health-stats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
+.gtd-quick-overview span,.gtd-health-stats span{padding:7px 10px;background:#f2f7f3;border:1px solid #e1eae3;border-radius:9px;font-size:11px;color:#426b54}
+.gtd-health{border:1px solid #e3ebe4;border-radius:12px;padding:12px;margin:12px 0}
+.gtd-health summary{cursor:pointer;color:#345f4b;font-weight:650}
+.gtd-health-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-top:1px solid #edf2ed}
+.gtd-health-row strong{font-size:12px;color:#365947}
+.gtd-health-row small{display:block;font-size:11px;color:#7d9185;margin-top:3px}
+.gtd-waiting-hint{display:flex;gap:9px;align-items:center;padding:10px 12px;background:#f5f9f5;border-radius:10px;margin-bottom:9px;font-size:12px}
+.gtd-waiting-review>small{display:block;color:#758e7c;margin:0 0 9px 6px;font-size:11px}
+@media(max-width:650px){.sports-aggregate-row{grid-template-columns: minmax(130px,1fr) 2fr auto}.sports-aggregate-row>small{grid-column:1/-1}}

@@ -56,7 +56,7 @@ test('weekly review hub offers all three working imports with previews, hints, n
 test('existing review step order preserved and main handlers wired',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  const guided=readFileSync(new URL('../client/src/guided-review.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.22\.1'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.23'/);
  assert.match(main,/reviewImportHub\(/);assert.match(main,/places-map-region/);assert.match(main,/places-map-zoom/);
  assert.match(main,/sportsInsightsView\(/);assert.match(main,/distanceKm/);
  assert.match(guided,/\{id:'finish'/);

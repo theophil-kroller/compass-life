@@ -7,6 +7,7 @@ import * as people from '../client/src/people-occasions.js';
 import * as perspectives from '../client/src/context-perspectives.js';
 import * as tasks from '../client/src/tasks.js';
 import * as life from '../client/src/life-intelligence-v22.js';
+import * as gtd23 from '../client/src/gtd-intelligence-v23.js';
 import * as personLinks from '../client/src/person-links.js';
 import * as discoveryFilter from '../client/src/discovery-category-filter.js';
 import * as review from '../client/src/guided-review.js';
@@ -26,7 +27,7 @@ function setup(){
  const app={innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null};
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const ctx={document,window:{addEventListener:()=>{}},location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(Error('offline')),setTimeout,clearTimeout};
- Object.assign(ctx,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter);
+ Object.assign(ctx,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter);
  ctx.vault={save:async()=>{},lock:()=>{}};
  runInNewContext(compiled,ctx,{filename:'browser-ui-smoke.js',timeout:2000});
  return ctx;

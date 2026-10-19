@@ -25,9 +25,9 @@ const inRange=(day,range)=>day&&(!range?.start||day>=range.start)&&(!range?.end|
 export function summarizeSports(sessions=[],activities=[],range={}){
  const rows=[];
  for(const s of sessions){if(!s||!inRange(s.day,range))continue;
-  const titleCategory=titleType(s.title||'');const type=titleCategory!=='other'?titleCategory:(sportMap[s.sport]||'other');const mins=Number(s.durationMinutes);const km=Number(s.distanceKm);
+  const titleCategory=titleType(s.title||s.activityType||'');const activityCategory=titleType(s.activityType||'');const type=titleCategory!=='other'?titleCategory:activityCategory!=='other'?activityCategory:(sportMap[s.sport]||'other');const mins=Number(s.durationMinutes);const km=s.distanceKm==null?null:Number(s.distanceKm);
   if(!Number.isFinite(mins)||mins<=0||mins>24*60)continue;
-  rows.push({id:String(s.id||s.start),at:s.start,day:s.day,type,mins,km:Number.isFinite(km)&&km>=0&&km<1000?km:null,source:'garmin'});
+  rows.push({id:String(s.id||s.start),at:s.start,day:s.day,type,mins,km:km!==null&&Number.isFinite(km)&&km>=0&&km<1000?km:null,source:'garmin'});
  }
  for(const a of activities){if(!a||a.deleted||!inRange(String(a.startedAt||'').slice(0,10),range))continue;
   const type=titleType(a.title),mins=Number(a.durationMinutes);if(!Number.isFinite(mins)||mins<=0||mins>1440||type==='other')continue;
@@ -46,6 +46,6 @@ export function sportsInsightsView(sessions=[],activities=[],range={}){
  const groups=summarizeSports(sessions,activities,range),total=groups.reduce((s,g)=>s+g.minutes,0),distance=groups.filter(x=>x.measuredDistance).reduce((s,g)=>s+g.distanceKm,0);
  return `<article class="insight-chart-card sports-insights"><div class="insight-figure-title"><div><small>06 · SPORT & FREIZEIT</small><h3>Wofür verwende ich meine Zeit?</h3></div><span class="insight-figure-note">${esc(range.start||'Beginn')} – ${esc(range.end||'heute')}</span></div>
  <div class="sports-summary"><span><strong>${fmt(total/60)} h</strong> dokumentiert</span><span><strong>${fmt(distance,1)} km</strong> aus Sessions mit Distanz</span><span><strong>${groups.reduce((s,g)=>s+g.count,0)}</strong> Einheiten</span></div>
- ${groups.length?`<div class="sports-rows">${groups.map(g=>`<div class="sports-row"><span class="sports-name">${esc(g.label)}</span><span class="sports-track"><i style="width:${Math.max(1,Math.round(100*g.minutes/total))}%"></i></span><strong>${fmt(g.minutes/60)} h</strong><small>${g.count}×${g.measuredDistance?' · '+fmt(g.distanceKm,1)+' km':''}</small></div>`).join('')}</div>`:'<p class="insight-no-data">Noch keine zuordenbaren Sporteinheiten im Zeitraum. Garmin-Trainings-FITs importieren oder Aktivitäten mit Titeln wie „Tanzen“, „Wandern“ oder „Disc Golf“ erfassen.</p>'}
+ ${groups.length?`<div class="sports-rows sports-aggregate-rows">${groups.map(g=>`<div class="sports-row sports-aggregate-row"><span class="sports-name">${esc(g.label)}<small>${g.count} ${g.count===1?'Einheit':'Einheiten'} · Ø ${fmt(g.minutes/g.count,0)} min</small></span><span class="sports-track" title="${fmt(100*g.minutes/total,1)} % der erfassten Sportzeit"><i style="width:${Math.max(1,Math.round(100*g.minutes/total))}%"></i></span><strong>${fmt(g.minutes/60)} h</strong><small>${g.measuredDistance?fmt(g.distanceKm,1)+' km gemessen':'Keine Distanz erfasst'}</small></div>`).join('')}</div>`:'<p class="insight-no-data">Noch keine zuordenbaren Sporteinheiten im Zeitraum. Garmin-Trainings-FITs importieren oder Aktivitäten mit Titeln wie „Tanzen“, „Wandern“ oder „Disc Golf“ erfassen.</p>'}
  <p class="insight-figure-note">Garmin: echte FIT-Sessionzeiten und -strecken. Eigene Aktivitäten werden anhand ihrer Titel zugeordnet; bitte im Aktivitäts-Inspector prüfen. Fehlende Kilometer werden nicht geschätzt. Tages-Schrittzähler sind keine unabhängigen Trainingseinheiten.</p></article>`;
 }
