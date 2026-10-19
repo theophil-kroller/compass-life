@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {capacityForecast,capacitySettings,capacitySuggestions,busyIntervals,mergeIntervals} from '../client/src/capacity-engine-v44.js';
+import {capacityForecast,capacitySettings,capacitySuggestions,busyIntervals,mergeIntervals,isAvailabilityBlock} from '../client/src/capacity-engine-v44.js';
 const today='2026-10-19';
 const now=new Date('2026-10-19T08:00:00');
 const coverage={complete:true,start:'2026-10-01',end:'2026-11-30'};
@@ -21,9 +21,9 @@ test('Merging overlapping meetings plus 10 min margins, no double-counting',()=>
  assert.deepEqual(v.slots.map(s=>[new Date(s.start).getHours(),new Date(s.end).getHours(),s.minutes]),[[9,9,50],[12,17,290]]);
  assert.equal(v.totalMinutes,340);
 });
-test('Hidden/routine events still block, transparent and cancelled do not',()=>{
+test('Work availability blocks are free, while meetings, transparent and cancelled events keep their intended semantics',()=>{
  const v=capacityForecast({...input,events:[{...t('09:00','10:00'),summary:'Work',hidden:true},t('10:30','11:30'),{...t('12:00','13:00'),transparency:'transparent'},{...t('14:00','15:00'),status:'cancelled'}]});
- assert.equal(v.slots.length,1);assert.equal(v.slots[0].minutes,320);assert.equal(v.totalMinutes,320);
+ assert.equal(v.slots.length,2);assert.deepEqual(v.slots.map(s=>s.minutes),[80,320]);assert.equal(v.totalMinutes,400);
 });
 test('Opaque all-day event blocks day, transparent all-day does not',()=>{
  const all={start:{date:today},end:{date:'2026-10-20'}};
@@ -40,7 +40,7 @@ test('Filter short slots; elapsed time today does not return past time',()=>{
  const v=capacityForecast({...input,now:n,updatedAt:n.getTime()});assert.equal(v.totalMinutes,0); // 25 minutes left < configured 30-minute minimum
 });
 test('Time window preferences normalized and bounded, invalid end corrected',()=>{
- assert.deepEqual(capacitySettings({startHour:18,endHour:9,bufferMinutes:999,weekends:true}),{startHour:18,endHour:19,bufferMinutes:10,minSlotMinutes:30,weekends:true});
+ assert.deepEqual(capacitySettings({startHour:18,endHour:9,bufferMinutes:999,weekends:true}),{startHour:18,endHour:19,bufferMinutes:10,minSlotMinutes:30,weekends:true,availabilityTitles:'Work'});
 });
 test('No write actions; suggestions obey existing next actions, estimates and unknowns',()=>{
  const f=capacityForecast(input);
@@ -54,4 +54,34 @@ test('Capacity is integrated read-only in forecast and short hint at Heute',()=>
  const m=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(m,/capacityPanel\(\)/);assert.match(m,/compactCapacityHint\(\)/);assert.match(m,/capacity-settings-form/);
  assert.doesNotMatch(readFileSync(new URL('../client/src/capacity-engine-v44.js',import.meta.url),'utf8'),/fetch\(|localStorage|writeFile/);
+});
+
+test('Exact Work blocks can be included without masking a true meeting inside the block',()=>{
+ const work={...t('09:00','17:00'),summary:'Work'};
+ const meeting={...t('11:00','12:00'),summary:'Meeting'};
+ const f=capacityForecast({...input,events:[work,meeting]});
+ assert.equal(f.totalMinutes,400); // Work 8h, minus meeting + 10-minute margins
+ assert.deepEqual(f.slots.map(s=>s.minutes),[110,290]);
+});
+test('Only exact configured labels count as available, and unrelated busy events stay blocked',()=>{
+ assert.equal(isAvailabilityBlock({summary:'Work'}),true);
+ assert.equal(isAvailabilityBlock({summary:' work '}),true);
+ assert.equal(isAvailabilityBlock({summary:'Workshop'}),false);
+ assert.equal(isAvailabilityBlock({summary:'Work – Meeting'}),false);
+ assert.equal(isAvailabilityBlock({summary:'Deep Work'},{availabilityTitles:'Work, Deep Work'}),true);
+ assert.equal(isAvailabilityBlock({summary:'Work'},{availabilityTitles:'Deep Work'}),false);
+ const f=capacityForecast({...input,events:[{...t('09:00','10:00'),summary:'Workshop'}]});
+ assert.equal(f.totalMinutes,410); // 09:00-10:10 busy, then 10:10-17:00
+});
+test('All-day Work label does not block the configured day; a genuine all-day appointment still blocks',()=>{
+ const all={start:{date:today},end:{date:'2026-10-20'}};
+ assert.equal(capacityForecast({...input,events:[{...all,summary:'Work'}]}).totalMinutes,480);
+ assert.equal(capacityForecast({...input,events:[{...all,summary:'Urlaub'}]}).totalMinutes,0);
+});
+test('Availability label remains user-configurable, local, and visible in capacity preferences',()=>{
+ const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
+ assert.match(main,/name="availabilityTitles"/);
+ assert.match(main,/availabilityTitles:String\(fd.get\('availabilityTitles'\)/);
+ assert.equal(capacitySettings({availabilityTitles:'Work, Bürozeit'}).availabilityTitles,'Work, Bürozeit');
+ assert.equal(capacitySettings({availabilityTitles:''}).availabilityTitles,'');
 });

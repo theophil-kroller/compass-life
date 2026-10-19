@@ -7,9 +7,9 @@ const pad=x=>String(x).padStart(2,'0');
 const dayKey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const roundM=ms=>Math.max(0,Math.floor(ms/60000));
 const clamp=(n,min,max,fallback)=>Number.isInteger(Number(n))&&Number(n)>=min&&Number(n)<=max?Number(n):fallback;
-export const CAPACITY_DEFAULTS=Object.freeze({startHour:9,endHour:17,bufferMinutes:10,minSlotMinutes:30,weekends:false});
+export const CAPACITY_DEFAULTS=Object.freeze({startHour:9,endHour:17,bufferMinutes:10,minSlotMinutes:30,weekends:false,availabilityTitles:'Work'});
 export function capacitySettings(raw={}){
- const p={startHour:clamp(raw.startHour,5,18,9),endHour:clamp(raw.endHour,6,23,17),bufferMinutes:clamp(raw.bufferMinutes,0,60,10),minSlotMinutes:clamp(raw.minSlotMinutes,15,120,30),weekends:raw.weekends===true};
+ const p={startHour:clamp(raw.startHour,5,18,9),endHour:clamp(raw.endHour,6,23,17),bufferMinutes:clamp(raw.bufferMinutes,0,60,10),minSlotMinutes:clamp(raw.minSlotMinutes,15,120,30),weekends:raw.weekends===true,availabilityTitles:typeof raw.availabilityTitles==='string'?raw.availabilityTitles.slice(0,200).split(',').map(s=>s.trim()).filter(Boolean).slice(0,8).join(', '):'Work'};
  if(p.endHour<=p.startHour)p.endHour=Math.min(23,p.startHour+1);
  return p;
 }
@@ -21,11 +21,17 @@ export function mergeIntervals(intervals){
  for(const [a,b] of sorted){const last=merged[merged.length-1];if(last&&a<=last[1])last[1]=Math.max(last[1],b);else merged.push([a,b]);}
  return merged;
 }
-/** Never remove events because they are hidden in Compass or look like routine blocks. */
-export function busyIntervals(events=[],workStart,workEnd,bufferMinutes=10){
+/** An explicitly named availability block is NOT a meeting. Exact title only: 'Workshop' must still block. */
+export function isAvailabilityBlock(event,settings={}){
+ const labels=capacitySettings(settings).availabilityTitles.split(',').map(s=>s.trim().toLocaleLowerCase('de')).filter(Boolean);
+ const title=typeof event?.summary==='string'?event.summary.trim().toLocaleLowerCase('de'):'';
+ return Boolean(title)&&labels.includes(title);
+}
+/** Hidden events remain busy; only explicitly configured availability titles are free. */
+export function busyIntervals(events=[],workStart,workEnd,bufferMinutes=10,settings={}){
  const padMs=bufferMinutes*60000,blocks=[];let allDayBusy=0;
  for(const event of (Array.isArray(events)?events:[])){
-  if(!event||event.status==='cancelled'||event.transparency==='transparent')continue;
+  if(!event||event.status==='cancelled'||event.transparency==='transparent'||isAvailabilityBlock(event,settings))continue;
   const start=event.start||{},end=event.end||{};
   let a,b;
   if(start.date&&end.date){ // Google all-day end is exclusive. Opaque holiday/vacation blocks the workday.
@@ -56,7 +62,7 @@ export function capacityForecast({events=[],connected=false,coverage=null,update
   const end=new Date(`${day}T${pad(pref.endHour)}:00:00`).getTime();
   const earliest=day===today?Math.max(begin,now.getTime()):begin;
   const start=day<today?end:earliest;
-  const allDay=allowed?busyIntervals(events,begin,end,pref.bufferMinutes):{intervals:[],allDayBusy:0};
+  const allDay=allowed?busyIntervals(events,begin,end,pref.bufferMinutes,pref):{intervals:[],allDayBusy:0};
   const breaks=[],slots=[];let cursor=start;
   if(allowed){
    for(const [a,b] of allDay.intervals){if(a>cursor&&roundM(a-cursor)>=pref.minSlotMinutes)slots.push({day,start:cursor,end:a,minutes:roundM(a-cursor)});cursor=Math.max(cursor,b);}
