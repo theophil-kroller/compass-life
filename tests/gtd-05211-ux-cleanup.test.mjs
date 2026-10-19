@@ -36,6 +36,6 @@ test('Task list precedes collapsed form and flagged never auto-creates',()=>{
 });
 test('Finance KPIs precede optional valuation and import logic remains intact',()=>{
  const start=finance.indexOf("if(pane==='Überblick'||pane==='Cashflow')"),stop=finance.indexOf("if(pane==='Ausgaben')",start),frag=finance.slice(start,stop);
- assert.ok(frag.indexOf('fin-kpi-grid fin-kpi-v17')<frag.indexOf('calm-wealth-detail'));
+ assert.ok(frag.indexOf('fin43-stat-grid')<frag.indexOf('calm-wealth-detail'));
  assert.match(finance,/finance-import-manager/);
 });

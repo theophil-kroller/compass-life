@@ -33,7 +33,7 @@ test('v37 professional dashboard shows dated allocation, visible holdings, sourc
 test('v37 exposes every finance tab in the left navigation without any hidden more menu',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  const group=main.slice(main.indexOf('id="calm-nav-finance"'),main.indexOf('${navItem(\'review\''));
- assert.match(group,/FINANCE_TABS\.filter\(p=>/);assert.doesNotMatch(group,/Weitere Analysen|calm-finance-sidebar-more/);
+ assert.match(group,/FINANCE_GROUPS\.map\(group=>/);assert.doesNotMatch(group,/Weitere Analysen|calm-finance-sidebar-more/);
  assert.ok(FINANCE_TABS.length>10);assert.match(main,/finance-flatex-positions-file/);
  const html=financeDashboardView({financeTransactions:[]},'Portfolio','all');assert.doesNotMatch(html,/class="calm-finance-more/);
 });

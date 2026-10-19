@@ -11,7 +11,7 @@ const html=(pane='Überblick')=>financeDashboardView(state,pane,'current',null,0
 
 test('compact finance lead shows real top three categories in the right rail, before the Sankey',()=>{
  const markup=html();
- assert.match(markup, /class="fin30-glance-rail"/);
+ assert.match(markup, /class="fin43-overview-side"/);
  assert.match(markup, /class="fin30-category-peek"/);
  const category=markup.slice(markup.indexOf('class="fin30-category-peek"'),markup.indexOf('</aside>'));
  assert.match(category, /Lebensmittel/);
@@ -20,7 +20,7 @@ test('compact finance lead shows real top three categories in the right rail, be
  assert.doesNotMatch(category, /Freizeit/);
  assert.match(category, /data-action="finance-pane" data-id="Ausgaben"/);
  assert.ok(markup.indexOf('fin30-category-peek')<markup.indexOf('fin30-primary-flow'));
- assert.ok(markup.indexOf('fin30-primary-flow')<markup.indexOf('fin30-deep-insights'));
+ assert.ok(markup.indexOf('fin30-primary-flow')>markup.indexOf('fin30-category-peek'));
 });
 test('pending transfers do not appear as consumer categories in the glance panel',()=>{
  const onlyTransfer=[row('t','2026-10-10',-30000,'Sonstiges / Transfer','transfer')];

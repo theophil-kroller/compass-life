@@ -12,7 +12,7 @@ test('finance first fold: month chart, real transactions, budget and confirmed c
  assert.ok(html.indexOf('fin31-months')<html.indexOf('fin31-advanced-flow'));
  assert.ok(html.indexOf('fin31-recent')<html.indexOf('fin31-advanced-flow'));
  assert.match(html,/<details id="finance-overview-sankey" class="fin31-advanced-flow"/);
- assert.match(html, /fin30-lead-grid/);
+ assert.match(html, /fin43-overview-charts/);
 });
 test('finance other panes retain classic drill-down and detailed Sankey',()=>{
  assert.doesNotMatch(markup('Ausgaben'),/fin31-primary-row/);

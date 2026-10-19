@@ -5,17 +5,15 @@ import {financeDashboardView} from '../client/src/finance-dashboard.js';
 const txn=(day,amountCents,flow='expense')=>({id:`fake-${day}-${amountCents}`,day,accountId:'raiffeisen:giro',amountCents,flow,merchant:'TEST TRANSACTION',category:'Lebensmittel / Supermarkt',description:'Nur Testdaten',needsReview:false,confidence:'confirmed'});
 const rows=[txn('2026-10-03',-1850),txn('2026-10-12',-4600),txn('2026-09-03',-1400),txn('2026-09-12',-4200),txn('2026-08-12',-1950),txn('2026-07-12',-2900),txn('2026-10-07',230000,'income')];
 const html=pane=>financeDashboardView({financeTransactions:rows},pane,'last12',null,0,{account:'all',today:'2026-10-19'});
-test('finance shows spending chart in the first visible grid before deep money flow',()=>{
+test('finance cockpit puts compact costs and cumulative pace ahead of deeper Sankey',()=>{
  const markup=html('Überblick');
- const lead=markup.indexOf('class="fin30-lead-grid"');
- assert.ok(lead>0);
+ const summary=markup.indexOf('fin43-stat-grid');
+ const lead=markup.indexOf('fin43-overview-charts');
+ assert.ok(summary>0&&summary<lead);
  assert.ok(markup.indexOf('class="fin-pace"')>lead);
- assert.ok(markup.indexOf('class="fin-pace"')<markup.indexOf('fin-kpi-grid fin-kpi-v17'));
- assert.ok(markup.indexOf('fin-kpi-grid fin-kpi-v17')<markup.indexOf('fin30-primary-flow'));
- assert.ok(markup.indexOf('fin30-primary-flow')<markup.indexOf('fin30-deep-insights'));
- assert.match(markup,/<details class="fin30-deep-insights">/);
+ assert.ok(markup.indexOf('fin43-overview-charts')<markup.indexOf('fin30-primary-flow'));
+ assert.match(markup,/<details class="fin43-more-overview">/);
  assert.match(markup,/<details class="fin30-more-controls">/);
- assert.ok(markup.indexOf('fin30-nav')<markup.indexOf('fin30-topbar'));
  assert.doesNotMatch(markup,/class="calm-finance-head"/);
 });
 test('finance filter settings retain account filtering and import actions behind disclosure',()=>{

@@ -3,7 +3,7 @@
  * The worker sees only encrypted, compressed JSON and opaque metadata.
  */
 export const PRIVATE_KINDS=['finance','health'];
-export const FINANCE_FIELDS=['financeTransactions','financeRules','financePrivateRules','financeTrips','financeTripAssignments','financeTripExcluded','financeRecurringRules','financeFlexBudgets','financeSavingsGoals','financeHoldings','financeFlatexSnapshots','financeWealthSnapshots','financeWealthPlan','financeWealthGoals','krakenPortfolio'];
+export const FINANCE_FIELDS=['financeTransactions','financeRules','financePrivateRules','financeCostClasses','financeTrips','financeTripAssignments','financeTripExcluded','financeRecurringRules','financeFlexBudgets','financeSavingsGoals','financeHoldings','financeFlatexSnapshots','financeWealthSnapshots','financeWealthPlan','financeWealthGoals','krakenPortfolio'];
 export const HEALTH_FIELDS=['healthImports','manualActivities','activityEdits'];
 const te=new TextEncoder(),td=new TextDecoder(),AAD='compass-private-device-sync-v1/';
 export function bytesTo64(bytes){let s='';for(let i=0;i<bytes.length;i+=4096)s+=String.fromCharCode(...bytes.subarray(i,i+4096));return btoa(s);}

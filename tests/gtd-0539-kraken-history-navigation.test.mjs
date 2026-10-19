@@ -44,7 +44,7 @@ test('finance overview remembers expanded Sankey and keeps merchant editor avail
 });
 test('navigation offers Geldkreislauf and Kontenflüsse in Cashflow without menu duplicates',()=>{
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(source,/!\['Geldkreislauf','Kontenflüsse'\]\.includes\(p.title\)/);
+ assert.match(source,/FINANCE_GROUPS\.map\(group=>/);
  const h=financeDashboardView({financeTransactions:[]},'Cashflow','all');
  assert.match(h,/fin39-cashflow-shortcuts/);assert.match(h,/data-id="Geldkreislauf"/);assert.match(h,/data-id="Kontenflüsse"/);
 });

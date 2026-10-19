@@ -24,7 +24,7 @@ import {healthViewModel,healthBars,healthTime,healthObservation} from './health-
 import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-import.js';
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
-import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
+import {financeDashboardView,FINANCE_TABS,FINANCE_GROUPS,financeGroupForPane} from './finance-dashboard.js';
 import {fetchTwelveDataQuote} from './finance-market-v36.js';
 import {fetchFlatexMarketHistory} from './flatex-market-history-v41.js';
 import {putBudgetEntry,putSavingsGoal,validateSavingsGoal,flexBudgetModel} from './finance-flex-budget-v30.js';
@@ -59,7 +59,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.42';
+const COMPASS_CLIENT_VERSION='0.5.43';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -395,7 +395,7 @@ function chrome(content){
  <div class="calm-nav-group">
  <button type="button" class="calm-group-toggle ${calmNavGroup==='finance'?'is-open':''}" data-action="calm-nav-group" data-id="finance" aria-expanded="${calmNavGroup==='finance'}" aria-controls="calm-nav-finance">${ico('folder',19)}<span>Finanzen</span>${ico('arrow',14)}</button>
  ${calmNavGroup==='finance'?`<div class="calm-subitems" id="calm-nav-finance">
- ${FINANCE_TABS.filter(p=>!['Geldkreislauf','Kontenflüsse'].includes(p.title)).map(p=>`<button type="button" class="nav-item ${tab==='finance'&&financePane===p.title?'is-active':''}" data-action="calm-finance-view" data-id="${h(p.title)}" aria-current="${tab==='finance'&&financePane===p.title?'page':'false'}">${ico(({Überblick:'layers',Konten:'folder',Cashflow:'sync',Einnahmen:'activity',Ausgaben:'activity','Budget & Ziele':'target',Prognose:'chart',Fixkosten:'calendar',Sparpotenzial:'target',Reisen:'compass',Portfolio:'folder',Geldkreislauf:'sync',Kontenflüsse:'layers','Visual Lab':'spark',Buchungen:'list',Prüfen:'checkSquare'})[p.title]||'layers',17)}<span>${h(p.title)}</span></button>`).join('')}
+ ${FINANCE_GROUPS.map(group=>`<button type="button" class="nav-item fin43-side-item ${tab==='finance'&&financeGroupForPane(financePane).title===group.title?'is-active':''}" data-action="calm-finance-group" data-id="${h(group.title)}" aria-current="${tab==='finance'&&financeGroupForPane(financePane).title===group.title?'page':'false'}">${ico(({Überblick:'layers',Ausgaben:'activity',Vermögen:'folder',Planung:'target',Werkzeuge:'settings'})[group.title],17)}<span>${h(group.title)}</span></button>`).join('')}
  </div>`:''}</div>
  ${navItem('review','Wochenreview','sync')}
  <div class="nav-separator"></div>
@@ -654,7 +654,7 @@ function treeProjectRows(parentId=null,depth=0,visited=new Set()){
   visited.add(p.id);
   const children=childProjects(state,p.id).filter(c=>!c.isTemplate),taskRoots=p.kind==='project'?taskChildren(state,p.id,null):[];
   const expand=children.length||taskRoots.length,collapsed=projectCollapsed.has(p.id);
-  return `<div class="tree-entry tree-project" data-drag-type="project" data-drag-id="${h(p.id)}"><div class="tree-line tree-drop-target ${selectedProjectId===p.id&&!selectedTaskId?'selected':''}" data-drop-type="project" data-drop-id="${h(p.id)}" style="--depth:${depth}">
+  return `<div class="tree-entry tree-project" data-drag-type="project" data-drag-id="${h(p.id)}"><div class="tree-line tree-drop-target ${p.kind==='folder'?'fin43-folder-row':'fin43-project-row'} ${selectedProjectId===p.id&&!selectedTaskId?'selected':''}" data-drop-type="project" data-drop-id="${h(p.id)}" style="--depth:${depth}">
    ${expand?`<button type="button" class="tree-expander" data-action="project-toggle-expand" data-id="${h(p.id)}" aria-expanded="${!collapsed}" aria-label="${collapsed?'Aufklappen':'Zuklappen'}">${collapsed?'▸':'▾'}</button>`:'<span class="tree-expander-space"></span>'}
    <span class="tree-drag-handle" draggable="true" data-drag-type="project" data-drag-id="${h(p.id)}" title="Ziehen zum Verschieben" aria-label="Projekt oder Ordner ziehen">⋮⋮</span>
    ${p.kind==='folder'?`<button class="tree-node-icon tree-folder-icon" type="button" data-action="folder-icon-open" data-id="${h(p.id)}" title="Ordnersymbol ändern" aria-label="Symbol für ${h(p.title)} ändern">${ico(folderIcon(p),17)}</button>`:`<span class="tree-node-icon">${ico('list',17)}</span>`}
@@ -1593,6 +1593,7 @@ function bind() {
   const deepFocus=app.querySelector('#finance-sankey-focus');if(deepFocus)deepFocus.onchange=()=>{financeSankeyFocus=deepFocus.value;render();};
    const paceCompareEl=app.querySelector('#finance-pace-compare');if(paceCompareEl)paceCompareEl.onchange=()=>{financePaceCompare=paceCompareEl.value==='average3'?'average3':'previous';render();};
   const finAccount=app.querySelector('#finance-account');if(finAccount)finAccount.onchange=()=>{financeAccount=finAccount.value;financeReviewPage=0;financeLedgerPage=0;render();};
+  app.querySelectorAll('[data-finance-cost-class]').forEach(select=>select.onchange=async()=>{const key=select.dataset.financeCostClass,value=select.value;if(!key)return;try{const {checkedCostClass}=await import('./finance-essentials-v43.js');checkedCostClass(key,value);await mutate(s=>{s.financeCostClasses??={};s.financeCostClasses[key]=value;});toast('Kostenart gespeichert.');}catch(ex){toast(ex.message,true);}render();});
   const finPeriod=app.querySelector('#finance-period');if(finPeriod)finPeriod.onchange=()=>{financePeriod=finPeriod.value;financeReviewPage=0;financeLedgerPage=0;render();};
   const scenarioSelector=app.querySelector('#finance-forecast-scenario');if(scenarioSelector)scenarioSelector.onchange=()=>{financeForecastScenario=scenarioSelector.value;render();};
   const finSearch=app.querySelector('#finance-ledger-query');if(finSearch)finSearch.onchange=()=>{financeLedgerQuery=finSearch.value.slice(0,100);financeLedgerPage=0;render();};
@@ -1844,6 +1845,7 @@ async function runAction(action,id,stepId=null) {
     if(action==='discovery-import-toggle'){discoveryImportOpen=!discoveryImportOpen;discoveryImportPreview=null;render();return;}
     if(action==='discovery-more'){if(discoveryExpandedDays.has(id))discoveryExpandedDays.delete(id);else discoveryExpandedDays.add(id);render();return;}
     if(action==='discovery-save'||action==='discovery-hide'){const entry=state?.discoveredEvents?.find(e=>eventKey(e)===id);if(!entry)return;await mutate(st=>{st.eventPreferences??={};const prev=st.eventPreferences[id]||'open';const next=action==='discovery-save'?(prev==='saved'?'open':'saved'):(prev==='hidden'?'open':'hidden');queueEventPreference(st,id,next);});return;}
+    if(action==='calm-finance-group'){const group=FINANCE_GROUPS.find(g=>g.title===id);if(group){tab='finance';calmNavGroup='finance';financePane=group.panes[0];financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-finance-view'){if(FINANCE_TABS.some(p=>p.title===id)){tab='finance';calmNavGroup='finance';financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-nav-group'){calmNavGroup=calmNavGroup===id?'':id;render();return;}
     if(action==='calm-insight-view'){if(INSIGHT_TABS.some(t=>t.id===id)){tab='insights';calmNavGroup='insights';insightTab=id;if(id==='places')insightPeriod='all';render();if(authToken){reloadWatchSessions().catch(()=>{});reloadHealth().catch(()=>{});}}return;}

@@ -70,7 +70,7 @@ test('D1 migration 0016 is additive and counter values persist and optimistic co
 });
 test('row-level +1 and project tree, inspector edit and completion remain separate',()=>{
  const main=readFileSync(join(root,'client/src/main.js'),'utf8');
- for(const code of ['COMPASS_CLIENT_VERSION=\'0.5.42\'','taskProgressInline(t)','task-progress-plus','task-progress-minus','advanceTaskCounter(t,','name="progressTarget"','name="progressCurrent"','taskPending[id]=true','Stückziel erreicht!','Die Aufgabe bleibt offen'])assert.ok(main.includes(code),code);
+ for(const code of ['COMPASS_CLIENT_VERSION=\'0.5.43\'','taskProgressInline(t)','task-progress-plus','task-progress-minus','advanceTaskCounter(t,','name="progressTarget"','name="progressCurrent"','taskPending[id]=true','Stückziel erreicht!','Die Aufgabe bleibt offen'])assert.ok(main.includes(code),code);
  const css=readFileSync(join(root,'client/src/style.css'),'utf8');
  assert.match(css,/\.v42-task-progress/);
  assert.match(css,/\.v42-progress-editor/);
