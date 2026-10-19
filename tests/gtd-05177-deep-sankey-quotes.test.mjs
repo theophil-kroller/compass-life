@@ -19,7 +19,7 @@ test('special own-account transfer cannot be counted as consumption in four-leve
  const transfer={id:'transfer',amountCents:-19000,flow:'transfer',needsReview:false,category:'Transfer / Eigene Konten'};
  const groups=deepSankeyModel([...sample,transfer]);
  assert.equal(groups.filter(g=>!g.special).reduce((a,g)=>a+g.cents,0),sample.reduce((a,g)=>a-g.amountCents,0));
- assert.match(deepSankey([...sample,transfer]),/Transfers \/ Investieren/);
+ assert.doesNotMatch(deepSankey([...sample,transfer]),/Transfers \/ Investieren/);
 });
 test('account network is a real multi-node flow and does not show unsupported confirmations',()=>{
  const rows=[{id:'a',accountId:'raiffeisen:current:EUR',amountCents:-45000,flow:'transfer',linkedTransferId:'b'},

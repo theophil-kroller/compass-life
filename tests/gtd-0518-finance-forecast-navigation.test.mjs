@@ -55,5 +55,5 @@ test('0.5.18 finance panes show meaningful icons, including forecast and account
  assert.match(financeNavIcon('UNKNOWN'),/fin-nav-layers/);
  assert.ok(!financeNavIcon('bad"><script>').includes('<script>'));
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.33'/);assert.match(source,/finance-forecast-scenario/);
+ assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.34'/);assert.match(source,/finance-forecast-scenario/);
 });

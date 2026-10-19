@@ -7,10 +7,10 @@ const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
 const euro=n=>(n/100).toLocaleString('de-AT',{style:'currency',currency:'EUR',maximumFractionDigits:0});
 const r=n=>Math.round(n*100)/100;
 const action=(parent,sub)=>sub?`data-action="finance-subcategory-select" data-id="${h(parent+' / '+sub)}" role="button" tabindex="0"`:`data-action="finance-category-select" data-id="${h(parent)}" role="button" tabindex="0"`;
-const eligible=t=>t&&!t.needsReview&&t.flow==='expense'&&Number.isSafeInteger(t.amountCents)&&t.amountCents<0;
+const eligible=t=>t&&!t.needsReview&&t.flow==='expense'&&!String(t.category||'').startsWith('Transfer /')&&Number.isSafeInteger(t.amountCents)&&t.amountCents<0;
 const compact=(rows,max,other)=>rows.length<=max?rows:[...rows.slice(0,max),{name:other,cents:rows.slice(max).reduce((v,x)=>v+x.cents,0),merchants:rows.slice(max).flatMap(s=>s.merchants||[])}];
 export function deepSankeyModel(rows=[],focus='all'){
- const grouped=hierarchicalFlows(rows).filter(g=>focus==='all'||g.name===focus);
+ const grouped=hierarchicalFlows(rows).filter(g=>!g.special&&(focus==='all'||g.name===focus));
  const sources=new Map();
  for(const t of rows){if(!eligible(t))continue;const [parent,...rest]=String(t.category||'Sonstiges / Unbekannt').split(' / ');
   const sub=rest.join(' / ')||'Ohne Unterkategorie',key=parent+'\u001f'+sub;let m=sources.get(key);if(!m){m=new Map();sources.set(key,m);}const name=merchantDisplay(t);const keyName=merchantNameKey(name);const old=m.get(keyName)||{name,cents:0};old.cents-=t.amountCents;m.set(keyName,old);}
@@ -41,6 +41,8 @@ const ribbon=(a,b,c,d,w)=>{const bend=(c-a)*.46;return `M${r(a)} ${r(b)} C${r(a+
  */
 export function deepSankey(rows=[],focus='all'){
  const groups=deepSankeyModel(rows,focus),total=groups.reduce((v,g)=>v+g.cents,0);
+ const omitted=rows.filter(t=>t?.amountCents<0&&(t.needsReview||t.flow==='transfer'||t.flow==='cash'));
+ const omittedTransfers=omitted.filter(t=>!t.needsReview&&t.flow==='transfer').length;
  if(!total)return '<p class="insight-no-data">Noch keine bestätigten Konsumausgaben für diese Ansicht.</p>';
  const merchantMap=new Map(),leafKey=(g,c,m)=>['Weitere Händler','Weitere Zahlungspartner','Nicht einzeln zugeordnet','Eigenübertrag / kein Einkauf'].includes(m.name)?`${g.name}\u001f${c.name}\u001f${m.name}`:merchantNameKey(m.name);
  for(const g of groups)for(const c of g.children)for(const m of c.merchants){const key=leafKey(g,c,m),old=merchantMap.get(key)||{key,name:m.name,cents:0,color:g.color};old.cents+=m.cents;merchantMap.set(key,old);}
@@ -82,5 +84,5 @@ export function deepSankey(rows=[],focus='all'){
   labels.push(`<text x="${widths[3]+20}" y="${r(y+Math.max(12,height/2+4))}" class="fin-flow-end-text" data-action="finance-merchant-select" data-id="${h(m.name)}" role="button" tabindex="0">${h(m.name.slice(0,28))} · ${h(euro(m.cents))}</text>`);
  }
  const names=['Abgänge','Hauptkategorien','Unterkategorien','Händler / Zahlungspartner'];
- return `<div class="fin-organic-sankey fin-deep-sankey"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vierstufiger Sankey mit zusammengeführten Händlern; Buchungen behalten ihre Kategorien"><defs>${defs.join('')}</defs>${names.map((name,i)=>`<text x="${widths[i]}" y="32" fill="#326B60" font-size="15">${h(name)}</text>`).join('')}${paths.join('')}<rect x="${widths[0]}" y="${r(v0)}" width="${bar}" height="${r(total*scale)}" rx="4" fill="#286E63"/><text x="${widths[0]-16}" y="${r(v0+total*scale/2+4)}" text-anchor="end" fill="currentColor" font-size="14">${h(euro(total))}</text>${nodes.join('')}${labels.join('')}</svg></div><p class="fin-art-note">Händler mit gleichem bestätigten Anzeigenamen werden rechts zu <strong>einem Knoten</strong> zusammengefasst. Zahlungswege aus verschiedenen Kategorien bleiben als getrennte Verbindungen sichtbar. Klick auf einen Händler öffnet die Bearbeitung direkt hier; Originalbuchungen bleiben erhalten.</p>`;
+ return `<div class="fin-organic-sankey fin-deep-sankey"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vierstufiger Sankey mit zusammengeführten Händlern; Buchungen behalten ihre Kategorien"><defs>${defs.join('')}</defs>${names.map((name,i)=>`<text x="${widths[i]}" y="32" fill="#326B60" font-size="15">${h(name)}</text>`).join('')}${paths.join('')}<rect x="${widths[0]}" y="${r(v0)}" width="${bar}" height="${r(total*scale)}" rx="4" fill="#286E63"/><text x="${widths[0]-16}" y="${r(v0+total*scale/2+4)}" text-anchor="end" fill="currentColor" font-size="14">${h(euro(total))}</text>${nodes.join('')}${labels.join('')}</svg></div><p class="fin-art-note"><strong>Nur bestätigter Konsum:</strong> ${omittedTransfers} Transferbuchungen${omittedTransfers?' ausdrücklich ausgeschlossen':''}; ungeklärte Abgänge und Bargeldbehebungen werden ebenfalls separat geführt. Händler mit gleichem bestätigten Anzeigenamen werden rechts zu <strong>einem Knoten</strong> zusammengefasst. Zahlungswege aus verschiedenen Kategorien bleiben als getrennte Verbindungen sichtbar. Klick auf einen Händler öffnet die Bearbeitung direkt hier; Originalbuchungen bleiben erhalten.</p>`;
 }

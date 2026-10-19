@@ -7,6 +7,19 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const euro=c=>(c/100).toLocaleString('de-AT',{style:'currency',currency:'EUR'});
 const short=s=>String(s||'').length>21?String(s).slice(0,20)+'…':String(s||'');
 const money=n=>Number.isSafeInteger(n)&&n>0?n:0;
+export const circularFlowPalette=['#ABD349','#28B682','#197FA6','#3B64B5','#673CA2','#AB075B','#E0443A','#F39A29'];
+export const nodeColor=(id)=>{
+ const key=String(id||'').toLocaleLowerCase('en-US');
+ if(key.startsWith('raiffeisen'))return circularFlowPalette[0];
+ if(key.startsWith('n26'))return circularFlowPalette[1];
+ if(key.startsWith('revolut'))return circularFlowPalette[2];
+ if(key.startsWith('dkb:visa'))return circularFlowPalette[5];
+ if(key.startsWith('dkb'))return circularFlowPalette[4];
+ if(key.includes('kraken')||key.includes('crypto'))return circularFlowPalette[7];
+ if(key.includes('flatex')||key.includes('depot'))return circularFlowPalette[6];
+ let hash=2166136261;for(const c of key){hash=Math.imul(hash^c.charCodeAt(0),16777619);}
+ return circularFlowPalette[(hash>>>0)%circularFlowPalette.length];
+};
 function investmentTarget(t){
  if(t?.category==='Transfer / Krypto')return /\bkraken\b/iu.test(String(t.description||t.merchant||''))?'Kraken':'Kryptobörse';
  if(t?.category==='Transfer / Depot & Wertpapiere')return /\bflatex\b/iu.test(String(t.description||t.merchant||''))?'flatex':'Wertpapierdepot';
@@ -58,25 +71,27 @@ export function circularWealthFlowView(state={},rows=[],selectedId='',account='a
  const nodes=[...nodesMap.values()].filter(n=>visibleKeys.has(n.id));
  const cx=460,cy=256,r=181;const loc=new Map(nodes.map((n,i)=>{const angle=2*Math.PI*i/Math.max(1,nodes.length)-Math.PI/2;return [n.id,{x:cx+r*Math.cos(angle),y:cy+r*Math.sin(angle),angle}]}));
  const max=Math.max(...top.map(e=>e.cents),1);
- const palette=['#4b9a85','#df9d7e','#7394c1','#9f86bd','#87a975','#c1a063','#78a7af','#c78a99'];
+ const palette=circularFlowPalette;
+ const gradients=top.map((e,i)=>{const a=loc.get(e.from),b=loc.get(e.to);return `<linearGradient id="fin34-edge-${i}" gradientUnits="userSpaceOnUse" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"><stop offset="0" stop-color="${nodeColor(e.from)}"/><stop offset=".52" stop-color="#375BAC"/><stop offset="1" stop-color="${nodeColor(e.to)}"/></linearGradient>`;}).join('');
+ const edgeIndex=new Map(top.map((e,i)=>[e.id,i]));
  const lines=top.slice().reverse().map(e=>{
   const a=loc.get(e.from),b=loc.get(e.to),s=(3+23*Math.sqrt(e.cents/max)).toFixed(1);
   const d=`M${a.x.toFixed(1)},${a.y.toFixed(1)} Q${cx},${cy} ${b.x.toFixed(1)},${b.y.toFixed(1)}`;
   const selected=e.id===selectedId;
-  const color=palette[Math.max(0,nodes.findIndex(n=>n.id===e.from))%palette.length];
-  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="${s}" stroke-opacity="${selected?'.9':'.38'}" stroke-linecap="round" ${e.type==='investment'?'stroke-dasharray="9 5"':''}><title>${esc(e.fromLabel)} → ${esc(e.toLabel)} · ${esc(euro(e.cents))}</title></path><path d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(22,Number(s)+8)}" stroke-linecap="round" data-action="finance-cycle-inspect" data-id="${esc(e.id)}" aria-label="${esc(e.fromLabel)} nach ${esc(e.toLabel)}: ${esc(euro(e.cents))}" role="button" tabindex="0" class="fin32-cycle-hit"/>`;
+  const color=`url(#fin34-edge-${edgeIndex.get(e.id)})`;
+  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="${s}" stroke-opacity="${selected?'1':'.68'}" stroke-linecap="round" ${e.type==='investment'?'stroke-dasharray="9 5"':''}><title>${esc(e.fromLabel)} → ${esc(e.toLabel)} · ${esc(euro(e.cents))}</title></path><path d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(22,Number(s)+8)}" stroke-linecap="round" data-action="finance-cycle-inspect" data-id="${esc(e.id)}" aria-label="${esc(e.fromLabel)} nach ${esc(e.toLabel)}: ${esc(euro(e.cents))}" role="button" tabindex="0" class="fin32-cycle-hit"/>`;
  }).join('');
  const dots=nodes.map((n,i)=>{
   const p=loc.get(n.id),outX=cx+(r+19)*Math.cos(p.angle),outY=cy+(r+19)*Math.sin(p.angle);
   const anchor=outX<cx-18?'end':outX>cx+18?'start':'middle';
-  return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="9" fill="${palette[i%palette.length]}" stroke="white" stroke-width="3"><title>${esc(n.label)}</title></circle><text x="${outX.toFixed(1)}" y="${outY.toFixed(1)}" font-size="12" text-anchor="${anchor}" fill="#3a5b50">${esc(short(n.label))}</text>`;
+  return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="9" fill="${nodeColor(n.id)}" stroke="white" stroke-width="3"><title>${esc(n.label)}</title></circle><text x="${outX.toFixed(1)}" y="${outY.toFixed(1)}" font-size="12" text-anchor="${anchor}" fill="#3a5b50">${esc(short(n.label))}</text>`;
  }).join('');
  const selected=edges.find(e=>e.id===selectedId);
  const wealth=wealthSummary(state);
  const wealthNote=(wealth.observed.length||wealth.krakenPricedCents)?`<div class="fin32-wealth-note"><span>Separat dokumentierte Bestände</span><strong>${esc(euro(wealth.totalObservedCents))}</strong><small>Manuelle Konto-/Depotstände und ggf. bewertete Kraken-Bestände · unterschiedliche Stichtage möglich · kein errechneter Geldfluss</small><button type="button" class="fin31-link" data-action="finance-pane" data-id="Portfolio">Bestände ansehen →</button></div>`:'';
  return `<section class="fin32-cycle-layout ${compact?'fin33-cycle-compact':''}" aria-label="Interaktiver Vermögenskreislauf"><div class="fin32-cycle-top"><div><span class="insight-kicker">BEOBACHTETE VERMÖGENSBEWEGUNGEN</span><h3>Geld zwischen Konten und Anlagen</h3><p>Ein Kreisbild der tatsächlich belegten Verbindungen – keine angenommene Herkunft oder Anlageperformance.</p></div><div class="fin32-cycle-total"><strong>${esc(euro(sum))}</strong><small>${edges.length} belegte Kontoverbindungen · Summe der Bewegungen, nicht Vermögenswert</small></div></div>
- ${top.length?`<div class="fin32-cycle-chart"><svg viewBox="0 0 920 515" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Interaktiver Kreisgraph der nachgewiesenen Geldbewegungen"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e6efea" stroke-width="1.5"/>${lines}<circle cx="${cx}" cy="${cy}" r="47" fill="#fbfdfb" stroke="#e8eee9"/><text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="12" fill="#476b59">${edges.length} Wege</text><text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="10" fill="#789086">belegt</text>${dots}</svg></div>`:'<p class="fin31-empty">Noch keine bestätigten Eigenüberträge oder als Depot-/Krypto-Einzahlung klassifizierten Buchungen. Unter „Kontenflüsse“ lassen sich mögliche Gegenbuchungen prüfen. Ohne Belege zeichnet Compass keine Verbindungen.</p>'}
- ${edges.length?`${compact?`<details class="fin33-cycle-connections"><summary>${edges.length} bestätigte Verbindungen aufschlüsseln</summary>`:''}<div class="fin32-cycle-list" aria-label="Alle bestätigten Verbindungen"><div class="fin31-card-header"><strong>Verbindungen öffnen</strong><small>Klicken für Buchungsdetails</small></div>${edges.map((e,i)=>`<button type="button" data-action="finance-cycle-inspect" data-id="${esc(e.id)}" class="fin32-cycle-edge ${selectedId===e.id?'selected':''}"><i style="background:${palette[Math.max(0,nodes.findIndex(n=>n.id===e.from))%palette.length]}"></i><span>${esc(e.fromLabel)} → ${esc(e.toLabel)}</span><b>${esc(euro(e.cents))}</b></button>`).join('')}</div>${compact?'</details>':''}`:''}
+ ${top.length?`<div class="fin32-cycle-chart"><svg viewBox="0 0 920 515" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Interaktiver Kreisgraph der nachgewiesenen Geldbewegungen"><defs>${gradients}</defs><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e6efea" stroke-width="1.5"/>${lines}<circle cx="${cx}" cy="${cy}" r="47" fill="#fbfdfb" stroke="#e8eee9"/><text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="12" fill="#476b59">${edges.length} Wege</text><text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="10" fill="#789086">belegt</text>${dots}</svg></div>`:'<p class="fin31-empty">Noch keine bestätigten Eigenüberträge oder als Depot-/Krypto-Einzahlung klassifizierten Buchungen. Unter „Kontenflüsse“ lassen sich mögliche Gegenbuchungen prüfen. Ohne Belege zeichnet Compass keine Verbindungen.</p>'}
+ ${edges.length?`${compact?`<details class="fin33-cycle-connections"><summary>${edges.length} bestätigte Verbindungen aufschlüsseln</summary>`:''}<div class="fin32-cycle-list" aria-label="Alle bestätigten Verbindungen"><div class="fin31-card-header"><strong>Verbindungen öffnen</strong><small>Klicken für Buchungsdetails</small></div>${edges.map((e,i)=>`<button type="button" data-action="finance-cycle-inspect" data-id="${esc(e.id)}" class="fin32-cycle-edge ${selectedId===e.id?'selected':''}"><i style="background:${nodeColor(e.from)}"></i><span>${esc(e.fromLabel)} → ${esc(e.toLabel)}</span><b>${esc(euro(e.cents))}</b></button>`).join('')}</div>${compact?'</details>':''}`:''}
  ${selected?transactionDetails(rows,selected):''}
  ${wealthNote}<div class="fin32-cycle-help"><button type="button" class="secondary-btn" data-action="finance-pane" data-id="Kontenflüsse">Überträge prüfen →</button><button type="button" class="secondary-btn" data-action="finance-pane" data-id="Portfolio">Vermögenswerte →</button></div>
  ${compact?'<details class="fin33-cycle-method"><summary>Darstellung &amp; Grenzen</summary>':''}<p class="fin31-footnote">Durchgezogene Linien = beidseitig bestätigte Eigenüberträge; gestrichelte Linien = klassifizierte einseitige Depoteinzahlungen. Nur wechselseitig bestätigte Eigenüberträge und ausdrücklich klassifizierte negative Depoteinzahlungen. Ein- und Auszahlungen bei mehreren eigenen Konten können dieselben Euro mehrfach durch das Netzwerk bewegen. Börsengewinne, Depotverkäufe oder Dividenden bilden ohne eindeutig zugeordnete Daten keinen Rückfluss. Die Bestände rechts/unterhalb stammen aus getrennten Bewertungen und werden NICHT mit Überträgen verrechnet.</p>${compact?'</details>':''}</section>`;

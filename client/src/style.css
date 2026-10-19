@@ -1742,3 +1742,20 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .finance-workspace .fin33-cycle-compact>.fin31-footnote{display:none}
 @media(max-width:1050px){.finance-workspace .fin32-header{flex-wrap:wrap}.finance-workspace .fin32-header>.fin30-nav{width:100%;flex:auto;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}.finance-workspace .fin32-header-tools{margin-left:auto}}
 @media(max-width:700px){.insight-workspace>.calm-insight-toolbar{margin:0 0 8px}.insight-workspace .calm-insights-nav{gap:1px}.insight-workspace .calm-insight-tab{min-height:31px;padding:5px 7px;font-size:10px}.insight-workspace>.insight-view-header{align-items:flex-start}.insight-heading-main{gap:7px}.finance-workspace .fin32-header>.fin30-nav{overflow-x:auto}.finance-workspace .fin33-cycle-compact .fin32-cycle-chart svg{max-height:none}.finance-workspace .fin33-cycle-compact .fin32-cycle-total{text-align:left}}
+
+/* Compass 0.5.34 — gentle Inbox drag-and-drop, keyboard/touch fallback. */
+.inbox-row-wrap.fin34-sortable{gap:4px;border-radius:10px;transition:background .12s,outline-color .12s;position:relative}
+.fin34-sortable .inbox-drag-handle{flex:0 0 16px;user-select:none;cursor:grab;color:#91a69c;text-align:center;font:700 19px/24px system-ui,sans-serif;touch-action:none}
+.fin34-sortable .inbox-drag-handle:active{cursor:grabbing}
+.fin34-sortable.inbox-dragging{opacity:.45}
+.fin34-sortable.inbox-drag-over{outline:2px dashed #339d86;background:#eaf5f1}
+.fin34-sortable .inbox-reorder-controls{display:flex;flex-direction:column;gap:2px;flex:0 0 23px;opacity:.5}
+.fin34-sortable:hover .inbox-reorder-controls,.fin34-sortable:focus-within .inbox-reorder-controls{opacity:1}
+.fin34-sortable .inbox-reorder-controls button{border:0;border-radius:5px;min-width:23px;height:20px;padding:0;background:transparent;color:#507868;cursor:pointer;font:600 14px/1 system-ui}
+.fin34-sortable .inbox-reorder-controls button:hover:not(:disabled){background:#dfeee7}
+.fin34-sortable .inbox-reorder-controls button:disabled{opacity:.15;cursor:default}
+@media(max-width:680px){.fin34-sortable .inbox-reorder-controls{opacity:1}}
+
+/* 0.5.34: transfer review status close to the spending Sankey */
+.fin34-transfer-hint{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 13px;border:1px solid #e4e8d7;border-radius:9px;background:#fbfcf6;color:#617667;font-size:11px;margin:8px 0 12px}
+.fin34-transfer-hint strong{color:#286f5c}.fin34-transfer-hint .fin31-link{white-space:nowrap}

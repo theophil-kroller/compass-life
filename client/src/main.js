@@ -2,6 +2,7 @@ import {parseCaptureLines,parseAiCaptureJson,capturePreview,captureInboxRecord,C
 import {moveProjectHierarchy,moveTaskHierarchy,cloneProjectTemplate,taskDescendants,isTemplateProject} from './project-workspace-v27.js';
 import {inboxTaskDraft} from './inbox-promotion-v27.js';
 import {inboxFlagged,visibleInboxTags,setInboxFlag} from './inbox-flags-v27.js';
+import {inboxOrdered,inboxMove,inboxNudge} from './inbox-order-v34.js';
 import {CONTACT_TYPES,CONTACT_REVIEW_DAYS,contactTypeLabel,addContactEntry,contactSummary,contactReviewQueue,updateContactReviewDays} from './people-relationships-v24.js';
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {linkedPersonTasks,linkedPersonInbox} from './person-links.js';
@@ -52,7 +53,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.33';
+const COMPASS_CLIENT_VERSION='0.5.34';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -718,7 +719,7 @@ function captureBulkPanel(){
  </details>`;
 }
 function inboxScreen(){
- const fullList=rows();
+ const fullList=inboxOrdered(rows(),state?.uiPreferences?.inboxManualOrder||[]);
  const query=inboxQuery.trim().toLocaleLowerCase('de');
  const list=query?fullList.filter(r=>`${r.title} ${r.note||''} ${visibleInboxTags(r).join(' ')}`.toLocaleLowerCase('de').includes(query)):fullList;
  const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
@@ -726,8 +727,8 @@ function inboxScreen(){
  <div class="inbox-mvp-head"><div><h2>Offene Eingänge <span class="count">${fullList.length}</span></h2></div><button type="button" class="primary-btn" data-action="capture-focus">${ico('plus',17)} Erfassen</button></div>
  ${captureBulkPanel()}
  <div class="inbox-search-box">${ico('search',17)}<input id="inbox-query" type="search" placeholder="Einträge durchsuchen …" value="${h(inboxQuery)}" autocomplete="off" aria-label="Inbox durchsuchen"/></div>
- <div class="inbox-mvp-list">
- ${list.length?list.map(r=>`<div class="inbox-row-wrap"><button type="button" class="inbox-row-flag ${inboxFlagged(r)?'is-flagged':''}" data-action="inbox-flag" data-id="${h(r.id)}" aria-label="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}" aria-pressed="${inboxFlagged(r)}" title="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}">${ico('flag',16)}</button><button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}${visibleInboxTags(r).length?' · '+visibleInboxTags(r).map(x=>'#'+h(x)).join(' '):''}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button></div>`).join(''):
+ <div class="inbox-mvp-list" aria-label="Manuell sortierbare Inbox-Einträge">
+ ${list.length?list.map((r,i)=>`<div class="inbox-row-wrap fin34-sortable" data-inbox-row="${h(r.id)}"><span class="inbox-drag-handle" draggable="${!query}" data-inbox-drag="${h(r.id)}" role="img" aria-label="${h(r.title)} verschieben" title="Anfassen und ziehen · alternativ Pfeiltasten rechts">⠿</span><button type="button" class="inbox-row-flag ${inboxFlagged(r)?'is-flagged':''}" data-action="inbox-flag" data-id="${h(r.id)}" aria-label="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}" aria-pressed="${inboxFlagged(r)}" title="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}">${ico('flag',16)}</button><button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}${visibleInboxTags(r).length?' · '+visibleInboxTags(r).map(x=>'#'+h(x)).join(' '):''}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button><span class="inbox-reorder-controls"><button type="button" data-action="inbox-move-up" data-id="${h(r.id)}" aria-label="${h(r.title)} nach oben" title="Nach oben" ${i===0||query?'disabled':''}>↑</button><button type="button" data-action="inbox-move-down" data-id="${h(r.id)}" aria-label="${h(r.title)} nach unten" title="Nach unten" ${i===list.length-1||query?'disabled':''}>↓</button></span></div>`).join(''):
  `<div class="inbox-mvp-empty">${ico(query?'search':'inbox',32)}<strong>${query?'Keine passenden Einträge':'Dein Kopf darf leerer werden.'}</strong><span>${query?'Versuche einen anderen Suchbegriff.':'Halte hier alles fest, was dir im Alltag begegnet.'}</span></div>`}
  </div><div class="inbox-mvp-bottom"><span>${state.pending.length} ausstehende Änderungen</span><button type="button" class="review-link" data-tab="review">Wochenreview ${ico('arrow',14)}</button></div></section>
  <aside class="module-card module-active inbox-mvp-detail">${current?
@@ -1608,6 +1609,35 @@ function bind() {
       }catch(ex){toast('Verschieben: '+ex.message,true);}
     };
   });
+  // Drag-and-drop is attached to handles only: clicking the row still opens the inspector.
+  let draggedInboxId='';
+  app.querySelectorAll('[data-inbox-drag]').forEach(handle=>{
+    handle.addEventListener('dragstart',ev=>{
+      if(inboxQuery.trim()){ev.preventDefault();return;}
+      draggedInboxId=handle.dataset.inboxDrag;
+      ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',draggedInboxId);
+      handle.closest('[data-inbox-row]')?.classList.add('inbox-dragging');
+    });
+    handle.addEventListener('dragend',()=>{
+      draggedInboxId='';app.querySelectorAll('.inbox-dragging,.inbox-drag-over').forEach(el=>el.classList.remove('inbox-dragging','inbox-drag-over'));
+    });
+  });
+  app.querySelectorAll('[data-inbox-row]').forEach(row=>{
+    row.addEventListener('dragover',ev=>{
+      if(!draggedInboxId||inboxQuery.trim()||draggedInboxId===row.dataset.inboxRow)return;
+      ev.preventDefault();ev.dataTransfer.dropEffect='move';row.classList.add('inbox-drag-over');
+    });
+    row.addEventListener('dragleave',ev=>{if(!row.contains(ev.relatedTarget))row.classList.remove('inbox-drag-over');});
+    row.addEventListener('drop',async ev=>{
+      row.classList.remove('inbox-drag-over');
+      if(!draggedInboxId||inboxQuery.trim()||draggedInboxId===row.dataset.inboxRow)return;
+      ev.preventDefault();
+      const box=row.getBoundingClientRect(),after=ev.clientY>box.top+box.height/2;
+      const next=inboxMove(state?.uiPreferences?.inboxManualOrder||[],rows(),draggedInboxId,row.dataset.inboxRow,after);
+      draggedInboxId='';
+      if(next)try{await mutate(s=>{s.uiPreferences??={};s.uiPreferences.inboxManualOrder=next;});}catch(ex){toast(ex.message,true);}
+    });
+  });
   app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
     if(el.dataset.action==='capture-close-backdrop'&&ev.target!==el)return;
     if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
@@ -1623,6 +1653,11 @@ function bind() {
 async function runAction(action,id,stepId=null) {
   lastActivity=Date.now();
   try {
+    if(action==='inbox-move-up'||action==='inbox-move-down'){
+      if(inboxQuery.trim())return;
+      const next=inboxNudge(state?.uiPreferences?.inboxManualOrder||[],rows(),id,action==='inbox-move-up'?-1:1);
+      if(next)await mutate(s=>{s.uiPreferences??={};s.uiPreferences.inboxManualOrder=next;});return;
+    }
     if(action==='private-mirror-refresh'){if(!authToken)throw Error('Bitte zuerst anmelden.');if(state?.privateDeviceMirror?.mode==='source'){state.privateDeviceMirror.dirty=true;await persist();await publishPrivateMirror();}else if(state?.privateDeviceMirror?.mode==='receiver')await receivePrivateMirror(true);toast('Verschlüsselter Geräteabgleich abgeschlossen.');return;}
     if(action==='private-mirror-cloud-delete'){
       if(state?.privateDeviceMirror?.mode!=='source'||!authToken)throw Error('Cloud-Kopien nur vom Hauptgerät löschen.');

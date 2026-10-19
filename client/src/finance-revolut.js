@@ -75,12 +75,12 @@ export function parseRevolutCsv(text,{customRules=[],privateRules=[],classify=nu
  * These are ONLY candidate matches until explicit approval.
  */
 export function transferCandidates(transactions=[],limit=12){
- const explicit=t=>t.flow==='transfer'||['Deposit','Transfer'].includes(t.revolutType)||/\b(?:TOP[ .-]?UP|ÜBERTRAG|UEBERTRAG|OWN ACCOUNT|EIGEN(?:ES)? KONTO|N26|REVOLUT|DKB|RAIFFEISEN|VISA(?:-?ABRECHNUNG)?|KREDITKARTENABRECHNUNG)\b/iu.test(String(t.description||''));
+ const explicit=t=>t.flow==='transfer'||['Deposit','Transfer'].includes(t.revolutType)||/\b(?:TOP[ .-]?UP|ÜBERTRAG|UEBERTRAG|ÜBERWEISUNG|UEBERWEISUNG|SEPA[ -]TRANSFER|OWN ACCOUNT|EIGEN(?:ES)? KONTO|N26|REVOLUT|DKB|RAIFFEISEN|VISA(?:-?ABRECHNUNG)?|KREDITKARTENABRECHNUNG)\b/iu.test(String(t.description||''));
  // An unclassified positive credit can be the receiving leg of a bank transfer.
  // Ordinary card purchases, salaries and confirmed consumption are NOT transfer evidence.
  const eligible=(a,b)=>{
   const ae=explicit(a),be=explicit(b);
-  if(ae&&be)return 2;
+  if(ae&&be){const confirmedPurchase=[a,b].some(t=>t.flow==='expense'&&!t.needsReview&&!/(?:\b(?:UEBERWEISUNG|TRANSFER|UEBERTRAG|EIGEN(?:ES)? KONTO)\b|ÜBERWEISUNG|ÜBERTRAG)/iu.test(String(t.description||'')));return confirmedPurchase?0:2;}
   const receiving=a.amountCents>0?a:b,initiator=receiving===a?b:a;
   return explicit(initiator)&&receiving.needsReview===true&&receiving.amountCents>0?1:0;
  };
