@@ -1,0 +1,14 @@
+{
+  "format": "compass-project-exchange",
+  "version": 1,
+  "description": "Beispiel ohne persönliche Daten. Zeitangaben sind illustrative Schätzungen, keine festen Zusagen.",
+  "projects": [
+    {"key": "research-folder", "title": "Forschung", "kind": "folder", "category": "Forschung"},
+    {"key": "review-project", "title": "Literaturreview planen", "kind": "project", "parentKey": "research-folder", "projectType": "sequential", "outcome": "Literaturüberblick mit überprüfter Quellenbasis", "category": "Forschung"}
+  ],
+  "tasks": [
+    {"key": "review-scope", "projectKey": "review-project", "title": "Forschungsfrage und Kriterien festlegen", "estimateMinutes": 90, "category": "Forschung", "sortOrder": 100},
+    {"key": "review-screen", "projectKey": "review-project", "title": "30 Abstracts screenen", "estimateMinutes": 300, "progressTarget": 30, "progressCurrent": 0, "category": "Forschung", "sortOrder": 200},
+    {"key": "review-synthesis", "projectKey": "review-project", "title": "Ergebnisse strukturieren", "estimateMinutes": 240, "category": "Forschung", "sortOrder": 300}
+  ]
+}

@@ -1,4 +1,6 @@
 import {capacityForecast,capacitySettings,capacitySuggestions} from './capacity-engine-v44.js';
+import {deadlineIntelligence} from './deadline-intelligence-v45.js';
+import {exportProjectPlan,parseProjectPlan,projectImportPreview,applyProjectPlan} from './project-exchange-v45.js';
 import {technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair} from './kraken-technical-v40.js';
 import {parseCaptureLines,parseAiCaptureJson,capturePreview,captureInboxRecord,CAPTURE_KINDS} from './capture-triage-v26.js';
 import {moveProjectHierarchy,moveTaskHierarchy,cloneProjectTemplate,taskDescendants,isTemplateProject} from './project-workspace-v27.js';
@@ -60,7 +62,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.44';
+const COMPASS_CLIENT_VERSION='0.5.45';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -71,6 +73,9 @@ let selectedInboxId=null;
 let selectedDreamId=null;
 let selectedTaskId=null;
 let selectedProjectId=null;
+let exchangePreview=null;
+let exchangeRaw='';
+let exchangeBaseline=null;
 let projectFocus=false;
 const projectCollapsed=new Set();
 const treeTaskCollapsed=new Set();
@@ -492,6 +497,17 @@ function capacityPanel(){
  const max=Math.max(1,...useful.map(d=>d.minutes));
  return `<section class="capacity-forecast" aria-label="Kalenderkapazität"><div class="capacity-title">${ico('clock',17)} Freie Zeit · nächste 14 Tage <strong>${capacityDuration(m.totalMinutes)}</strong></div><p class="muted-line">${h(status)} · ${p.startHour}–${p.endHour} Uhr · ${p.bufferMinutes} Min. Puffer je Termin · ${m.slots.length} mögliche Fenster</p><div class="capacity-days">${useful.map(d=>`<div class="capacity-day" title="${h(d.day)}: ${capacityDuration(d.minutes)} in ${d.slots.length} Fenstern"><small>${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric'}).format(new Date(d.day+'T12:00:00')))}</small><span class="capacity-track"><i style="width:${Math.round(100*d.minutes/max)}%"></i></span><strong>${capacityDuration(d.minutes)}</strong></div>`).join('')}</div><details class="capacity-suggestions"><summary>Passende Aufgaben für freie Fenster${suggestions.length?' · '+suggestions.length+' Vorschläge':''}</summary>${suggestions.map(s=>`<button type="button" class="capacity-match" data-action="task-select" data-id="${h(s.task.id)}"><span>${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric',month:'short'}).format(new Date(s.slot.day+'T12:00:00')))} · ${capacityTime(s.slot.start)}–${capacityTime(s.slot.end)}</span><strong>${h(s.task.title)}</strong><small>${s.estimateUnknown?'Aufwand unbekannt · Passung unsicher':s.task.estimateMinutes+' Min. geschätzt'} · ${h((s.reasons||[]).slice(0,1).join(''))}</small></button>`).join('')||'<p class="muted-line">Keine ausführbare Aufgabe passt zu diesen Fenstern und Filtern.</p>'}</details>${settings}<p class="capacity-foot">Planungshilfe, keine Reservierung. Berücksichtigt nur den primären Google-Kalender und ein selbst gewähltes Arbeitsfenster. Ganztägige belegte Termine sperren den Tag; ausgeblendete Termine blockieren weiterhin. Private Zeit, Wege und weitere Kalender können fehlen.</p></section>`;
 }
+function deadlineCompact({inForecast=false}={}){
+ const model=localCapacity(localDateString(new Date()),14);
+ const d=deadlineIntelligence(state,model);
+ if(d.status==='unavailable')return ''; // capacity panel already explains missing calendar
+ const risks=d.items.filter(x=>['conflict','overdue','tight'].includes(x.status));
+ const unknown=d.unknown;
+ if(!risks.length&&!unknown)return ''; // quiet by default
+ const label=risks.some(x=>['conflict','overdue'].includes(x.status))?'Fristen & Kapazität prüfen':'Planung überprüfen';
+ const detail=risks.slice(0,8).map(x=>`<button type="button" data-action="task-select" data-id="${h(x.task.id)}" class="deadline-item"><strong>${h(x.task.title)}</strong><span>${h(x.due)} · ${capacityDuration(x.minutes)} Restaufwand · ${x.status==='overdue'?'Frist überschritten':x.status==='conflict'?'Mehr Aufwand als freie Zeit':x.status==='tight'?'Wenig Puffer':'Prüfen'}${x.latestStart?' · rechnerisch spätestens '+capacityTime(x.latestStart)+' beginnen':''}</span></button>`).join('');
+ return `<details class="deadline-insight ${risks.some(x=>x.status==='conflict'||x.status==='overdue')?'deadline-risk':''}" ${inForecast?'':'data-compact="true"'}><summary>${ico('flag',14)} ${h(label)} <span>${risks.length?risks.length+' mögliche Engpässe':''}${unknown?(risks.length?' · ':'')+unknown+' Aufgaben ohne Zeitschätzung':''}</span></summary><div class="deadline-details">${detail}${unknown?`<p class="muted-line">${unknown} Aufgaben mit Frist haben keine verlässliche Aufwandsschätzung und fehlen in der Kapazitätsrechnung.</p>${d.unknownTasks.slice(0,5).map(x=>`<button type="button" data-action="task-select" data-id="${h(x.task.id)}" class="deadline-item"><strong>${h(x.task.title)}</strong><span>${h(x.due)} · Aufwand fehlt</span></button>`).join('')}`:''}<p class="muted-line">${h(d.caveat)} Soft Deadlines sind keine harten Fristen. Prognose nur innerhalb der vollständigen Kalenderabdeckung; keine Termine werden angelegt.</p></div></details>`;
+}
 function todaySmartPanel(){
  const settings=state?.uiPreferences||{},energy=energyModes.includes(settings.dailyEnergy)?settings.dailyEnergy:'offen';
  const minutes=timeModes.includes(settings.dailyMinutes)?settings.dailyMinutes:60,context=String(settings.dailyContext||'');
@@ -499,6 +515,7 @@ function todaySmartPanel(){
  const recommendation=smartDailyChoices(state,{day:selectedDay,minutes,energy,context});
  return `<section class="work-card v22-daily" aria-label="Begründete Next-Action-Empfehlungen"><div class="work-heading"><span>${ico('spark',18)} Was passt jetzt?</span><span class="quiet-tag">Maximal 3 Vorschläge</span></div>
  ${compactCapacityHint()}
+ ${deadlineCompact()}
  <div class="v22-daily-filters"><label>Zeitbudget<select id="v22-day-minutes">${timeModes.map(n=>`<option value="${n}" ${n===minutes?'selected':''}>${n} Min.</option>`).join('')}</select></label><label>Gefühlte Energie<select id="v22-day-energy">${energyModes.map(e=>`<option value="${e}" ${e===energy?'selected':''}>${e==='offen'?'Nicht angegeben':e==='low'?'Wenig':e==='medium'?'Mittel':'Viel'}</option>`).join('')}</select></label><label>Kontext<select id="v22-day-context"><option value="">Alle Kontexte</option>${contexts.map(c=>`<option value="${h(c.value)}" ${context===c.value?'selected':''}>${h(c.label)}</option>`).join('')}</select></label></div>
  <p class="fin-disclaimer">Aus deinen verfügbaren Next Actions. Zeitbudget und Energie gibst du selbst an; Garmin wird nicht als geistige Leistungsfähigkeit interpretiert.${calendarToken?' Die Zeitslots werden separat berechnet; das Zeitbudget hier bleibt deine persönliche Auswahl.':' Kalender nicht verbunden; tatsächliche freie Zeit unbekannt.'}</p>
  <div class="v22-recommendations">${recommendation.items.map((r,i)=>`<button type="button" class="v22-recommendation" data-action="task-select" data-id="${h(r.task.id)}"><span>${i+1}</span><strong>${h(r.task.title)}</strong><small>${h(r.reasons.slice(0,3).join(' · '))}</small></button>`).join('')||'<p class="muted-line">Keine passende ausführbare Aufgabe für diese Zeit-/Kontextwahl. Du kannst den Filter lockern oder eine bestehende Aufgabe prüfen.</p>'}</div>
@@ -535,6 +552,7 @@ function forecastScreen(){
  };
  return chrome(`<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Deadlines, Planung & Termine</span><span class="quiet-tag">14 Tage</span></div>
  ${capacityPanel()}
+ ${deadlineCompact({inForecast:true})}
  <div class="forecast-tools">${calendarToken?calendarFilterToggle():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · ${planned.length} geplante Aufgaben · ${days.reduce((sum,d)=>sum+recoveryEvents(d).length,0)} Erholungstermine · Google Calendar nur lesend</span></div>
  ${overdue.length?`<div class="forecast-date-overdue"><strong>Überfällig</strong>${taskList(overdue,'forecast')}</div>`:''}
  ${days.map(dayContent).join('')||'<div class="task-empty">Keine Termine oder Fristen für die kommenden 14 Tage.</div>'}
@@ -694,6 +712,20 @@ function treeTaskDestinationOptions(task){
  }
  return choices.join('');
 }
+function projectExchangePanel(){
+ const preview=exchangePreview?projectImportPreview(state,exchangePreview):null;
+ const options=Object.values(state?.projects||{}).filter(p=>!p.isTemplate).sort((a,b)=>a.title.localeCompare(b.title,'de'));
+ return `<details class="tree-secondary project-exchange" id="project-exchange-details" ${preview?'open':''}><summary>${ico('upload',15)} Projektplan mit ChatGPT austauschen</summary>
+ <div class="exchange-contents"><p class="muted-line">Lokal als JSON exportieren, in ChatGPT überarbeiten und nach einer Vorschau importieren. Keine automatische Freigabe von Projektdaten.</p>
+ <div class="exchange-actions"><label>Exportbereich<select id="project-exchange-scope"><option value="">Alle Ordner & Projekte</option>${options.map(x=>`<option value="${h(x.id)}" ${x.id===selectedProjectId?'selected':''}>${h(x.title)}</option>`).join('')}</select></label><button type="button" class="secondary-btn" data-action="project-exchange-export">JSON exportieren</button></div>
+ <form id="project-exchange-preview-form" class="exchange-input"><label>Compass-Projektdatei<input name="file" type="file" accept=".json,application/json"/></label><label>Oder JSON von ChatGPT einfügen<textarea name="json" rows="3" maxlength="1048576" placeholder='{"format":"compass-project-exchange","version":1,...}'>${h(exchangeRaw)}</textarea></label><button type="submit" class="secondary-btn">Importvorschau öffnen</button></form>
+ ${preview?`<form id="project-exchange-commit" class="exchange-preview"><strong>${preview.projects.length} Projekte / Ordner · ${preview.tasks.length} Aufgaben</strong><p class="muted-line">${preview.creates} neu · ${preview.updates} bestehende IDs · ${preview.similar} ähnliche Titel. Wähle die Projektgruppen aus. Nicht ausgewählte Gruppen und ihre Unterpunkte werden übersprungen.</p>
+ <div class="exchange-preview-list">${preview.projects.map(p=>`<label><input type="checkbox" name="project" value="${h(p.key)}" ${p.exists||p.sameTitle?'':'checked'}/> <strong>${h(p.title)}</strong><small>${p.exists?'Bestehende ID · nur mit Update':p.sameTitle?'Ähnlicher Titel – Duplikat prüfen':'Neu'} · ${preview.tasks.filter(t=>t.projectKey===p.key).length} Aufgaben</small></label>`).join('')}</div>
+ <label class="exchange-update-check"><input type="checkbox" name="updateExisting"/> Bestehende Projekte und Aufgaben mit übereinstimmender ID ausdrücklich aktualisieren</label>
+ <p class="muted-line">Ein Import ist ein lokaler Änderungsvorgang. Bitte vorher ein verschlüsseltes Vault-Backup erstellen. Ein ChatGPT-Entwurf kann Zeitaufwände nur schätzen; prüfe Fristen vor dem Bestätigen.</p>
+ <div class="exchange-actions"><button type="submit" class="primary-btn">Ausgewählte Projekte übernehmen</button><button type="button" class="secondary-btn" data-action="project-exchange-cancel">Verwerfen</button></div></form>`:''}
+ </div></details>`;
+}
 function projectScreen(){
  const templates=tab==='templates';
  const projects=Object.values(state?.projects||{});
@@ -707,6 +739,7 @@ function projectScreen(){
  return chrome(`<div class="tree-workspace ${selectedTask||selection?'has-inspector':''}"><section class="work-card tree-work-card"><div class="tree-toolbar"><strong>${templates?'Vorlagen':`${active} aktive Projekte`}</strong><div class="tree-toolbar-actions">${templates?'':`<button type="button" class="secondary-btn" data-action="tree-add-folder">${ico('plus',15)} Ordner</button><button type="button" class="secondary-btn" data-action="tree-add-project">${ico('plus',15)} Projekt</button>`}</div></div>
  ${templates?`${templateProjects.length?templateProjects.map(p=>`<div class="tree-line template-line ${selection?.id===p.id?'selected':''}"><span class="tree-node-icon">${ico('bookmark',17)}</span><button type="button" class="tree-label" data-action="project-select" data-id="${h(p.id)}"><span>${h(p.title)}</span><span class="tree-muted">${projectTasks(state,p.id).length} Einträge</span></button><button type="button" class="secondary-btn" data-action="tree-template-use" data-id="${h(p.id)}">Neue Liste</button></div>${selection?.id===p.id?`<div class="template-task-summary">${treeTaskRows(p.id)}</div>`:''}`).join(''):'<div class="tree-empty">Noch keine Vorlagen. Öffne ein Projekt und aktiviere in dessen Einstellungen „Als Vorlage verwenden“.</div>'}`:`<div class="unified-tree" role="tree" aria-label="Ordner, Projekte und Aufgaben">${treeProjectRows()||'<div class="tree-empty">Noch keine Projekte. Lege dein erstes Projekt oder einen Ordner an.</div>'}<div class="tree-root-drop" data-drop-type="project-root" data-drop-id="">${ico('folder',14)} Auf oberste Ebene ziehen</div></div>`}
  ${treeCreateKind?`<details open class="tree-quick-create"><summary>${treeCreateKind==='task'?'Neue Aufgabe':treeCreateKind==='folder'?'Neuer Ordner':'Neues Projekt'}<button type="button" class="tree-close" data-action="tree-create-close" aria-label="Schließen">×</button></summary>${treeCreateKind==='task'?taskCreateForm('',treeCreateParent||'',treeTaskParent||''):`<form class="project-form" id="project-create-form"><label>Name<input required autofocus name="title" maxlength="140" placeholder="${treeCreateKind==='folder'?'Ordnername':'Projektname'}"/></label><input type="hidden" name="kind" value="${treeCreateKind}"/><label>Unterhalb von<select name="parentId">${projectParentOptions(treeCreateParent||'')}</select></label><details class="tree-advanced"><summary>Weitere Einstellungen</summary><label>Typ<select name="projectType"><option value="parallel">Parallel</option><option value="sequential">Sequential</option><option value="single">Single Actions</option></select></label><label>Ergebnis<input name="outcome" maxlength="800" placeholder="Optional"/></label></details><button class="primary-btn" type="submit">Anlegen</button></form>`}</details>`:''}
+ ${templates?'':projectExchangePanel()}
  ${templates?'':`<details class="tree-secondary"><summary>Lebensziele & Projektgesundheit</summary>${lifeGoalsPanel()}${gtdProjectHealthPanel()}</details>`}</section>
  ${(selection||selectedTask)?`<aside class="work-card tree-inspector"><div class="tree-inspector-header"><strong>${selectedTask?'Aufgabendetails':selection?.title||'Details'}</strong><button class="tree-close" type="button" data-action="tree-inspector-close" title="Schließen" aria-label="Details schließen">×</button></div>${selectedTask?`${taskEditor()}<form id="tree-move-task-form" class="tree-move-form" data-id="${h(selectedTask.id)}"><label>Verschieben nach<select name="target" required>${treeTaskDestinationOptions(selectedTask)}</select></label><button type="submit" class="secondary-btn">Verschieben</button></form>`:settings}${selection?.isTemplate?`<button type="button" class="primary-btn" data-action="tree-template-use" data-id="${h(selection.id)}">Neue Liste aus Vorlage</button>`:''}</aside>`:''}</div>`);
 }
@@ -1413,6 +1446,30 @@ function bind() {
     if(Number(fd.get('endHour'))<=Number(fd.get('startHour'))){toast('Ende muss nach dem Beginn liegen.',true);return;}
     await mutate(s=>{s.uiPreferences??={};s.uiPreferences.capacity=p;});toast('Arbeitsfenster lokal gespeichert. Keine Kalendertermine verändert.');
   };
+  const exchangeForm=app.querySelector('#project-exchange-preview-form');if(exchangeForm)exchangeForm.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(exchangeForm);let raw=String(fd.get('json')||'').trim();const file=fd.get('file');
+    try{
+      if(file?.size){if(file.size>1024*1024)throw Error('Datei zu groß (max. 1 MB).');raw=await file.text();}
+      if(!raw)throw Error('Bitte JSON-Datei wählen oder Text einfügen.');
+      exchangePreview=parseProjectPlan(raw);exchangeBaseline={};for(const item of [...exchangePreview.projects,...exchangePreview.tasks]){const existing=item.id&&(state.projects?.[item.id]||state.tasks?.[item.id]);if(existing)exchangeBaseline[item.id]=JSON.stringify(existing);}exchangeRaw='';toast('Projektvorschau geprüft. Noch keine Daten verändert.');
+    }catch(ex){exchangeRaw=raw.slice(0,1024*1024);toast('Importvorschau: '+ex.message,true);}
+  };
+  const exchangeCommit=app.querySelector('#project-exchange-commit');if(exchangeCommit)exchangeCommit.onsubmit=async ev=>{
+    ev.preventDefault();if(!exchangePreview)return;
+    const fd=new FormData(exchangeCommit),keys=fd.getAll('project').map(String),updateExisting=fd.has('updateExisting');
+    if(!keys.length){toast('Bitte mindestens ein Projekt auswählen.',true);return;}
+    const plan=exchangePreview;
+    try{
+      let result;
+      await mutate(s=>{
+        result=applyProjectPlan(s,plan,{selectedProjectKeys:keys,updateExisting,idFactory:()=>crypto.randomUUID(),baseline:exchangeBaseline});
+        // Mutate only after the full plan passes validation; preserve other Vault sections.
+        s.projects=result.state.projects;s.tasks=result.state.tasks;
+        s.projectPending=result.state.projectPending;s.taskPending=result.state.taskPending;
+      });
+      exchangePreview=null;exchangeBaseline=null;selectedTaskId=null;toast(`${result.projects} Projekte und ${result.tasks} Aufgaben übernommen. Bestehendes nur nach deiner Auswahl geändert.`);
+    }catch(ex){toast('Import nicht durchgeführt: '+ex.message,true);}
+  };
   const projectCreate=app.querySelector('#project-create-form');if(projectCreate)projectCreate.onsubmit=async ev=>{
     ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),reviewedAt:null,kind:d.get('kind')||'project',folderIcon:d.get('kind')==='folder'?'folder':null,isTemplate:false,projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null,sortOrder:0};
     if(!validProject(project)||!validProjectParent(state,project.id,project.parentId)){toast('Projektangaben bzw. Ordnerhierarchie prüfen.',true);return;}
@@ -2066,6 +2123,10 @@ async function runAction(action,id,stepId=null) {
     }
     if(action==='calendar-connect'){await connectCalendar();return;}
     if(action==='calendar-refresh'){await fetchCalendar();return;}
+    if(action==='project-exchange-export'){
+      try{const root=app.querySelector('#project-exchange-scope')?.value||null;const plan=exportProjectPlan(state,root);download(`Compass_Projektplan_${localDate()}.json`,plan);toast('JSON lokal exportiert. Teile mit ChatGPT nur die Daten, die du besprechen möchtest.');}catch(ex){toast(ex.message,true);}return;
+    }
+    if(action==='project-exchange-cancel'){exchangePreview=null;exchangeBaseline=null;exchangeRaw='';render();return;}
     if(action==='capture-bulk-open'){captureOverlayOpen=false;captureBulkOpen=true;tab='inbox';render();return;}
     if(action==='capture-bulk-clear'){captureBulkPreview=null;captureBulkRaw='';captureBulkOpen=false;render();return;}
     if(action==='capture-focus'){
