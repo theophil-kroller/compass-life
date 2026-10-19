@@ -1,6 +1,8 @@
 import {capacityForecast,capacitySettings} from './capacity-engine-v44.js';
 import {deadlineIntelligence} from './deadline-intelligence-v45.js';
 import {proactivePlan} from './proactive-planner-v47.js';
+import {dayPlanBlocks,dayCandidates,dayDropTargets,placeDayBlock,updateDayBlock,dayPlanStatus} from './daily-planning-v48.js';
+import {needsDateDecision} from './urgency-intelligence-v48.js';
 import {exportProjectPlan,parseProjectPlan,projectImportPreview,applyProjectPlan} from './project-exchange-v45.js';
 import {technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair} from './kraken-technical-v40.js';
 import {parseCaptureLines,parseAiCaptureJson,capturePreview,captureInboxRecord,CAPTURE_KINDS} from './capture-triage-v26.js';
@@ -61,10 +63,10 @@ import {ACTIVITY_CATEGORIES,isoLocal,validActivityEdit,validManualActivity,proje
 import {OCCASION_STEPS,OCCASION_LEAD_DAYS,daysUntil,occasionStepKey,occasionTaskTag,relatedOccasionTask,occasionTask,validCustomStep,shiftDay} from './occasion-planning.js';
 import {occasionsWithPeople,validPersonBirthday} from './people-occasions.js';
 import {contextChoices,filterContextTasks} from './context-perspectives.js';
-import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
+import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.47';
+const COMPASS_CLIENT_VERSION='0.5.48';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -78,6 +80,8 @@ let selectedProjectId=null;
 let exchangePreview=null;
 let exchangeRaw='';
 let plannerExpanded=false;
+let selectedForecastDay=localDateString(new Date());
+let dailyPlanExpanded=true,dailyPlanPicked='',dailyPlanDuration=60,dailyPlanShowAll=false,dailyPlanShowUndated=false,dailyPlanDateTask='';
 let exchangeBaseline=null;
 let projectFocus=false;
 const projectCollapsed=new Set();
@@ -499,7 +503,7 @@ function capacityPanel(){
  if(m.status!=='ready')return `<section class="capacity-forecast" aria-label="Kalenderkapazität"><div class="capacity-title">${ico('clock',17)} Freie Zeit · 14 Tage <small>nicht berechenbar</small></div><p class="muted-line">${h(status)}. Keine freien Stunden werden aus fehlenden Terminen abgeleitet.</p>${settings}</section>`;
  const useful=m.days.filter(d=>!d.off);
  const max=Math.max(1,...useful.map(d=>d.minutes));
- return `<section class="capacity-forecast" aria-label="Kalenderkapazität"><div class="capacity-title">${ico('clock',17)} Freie Zeit · nächste 14 Tage <strong>${capacityDuration(m.totalMinutes)}</strong></div><p class="muted-line">${h(status)} · ${p.startHour}–${p.endHour} Uhr · ${p.bufferMinutes} Min. Puffer je Termin · ${m.slots.length} mögliche Fenster</p><div class="capacity-days">${useful.map(d=>`<div class="capacity-day" title="${h(d.day)}: ${capacityDuration(d.minutes)} in ${d.slots.length} Fenstern"><small>${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric'}).format(new Date(d.day+'T12:00:00')))}</small><span class="capacity-track"><i style="width:${Math.round(100*d.minutes/max)}%"></i></span><strong>${capacityDuration(d.minutes)}</strong></div>`).join('')}</div>${settings}<p class="capacity-foot">Planungshilfe, keine Reservierung. Berücksichtigt nur den primären Google-Kalender und ein selbst gewähltes Arbeitsfenster. Ganztägige belegte Termine sperren den Tag. Exakt benannte Verfügbarkeitsblöcke (z. B. Work) blockieren nicht; andere ausgeblendete Termine blockieren weiterhin. Private Zeit, Wege und weitere Kalender können fehlen.</p></section>`;
+ return `<section class="capacity-forecast" aria-label="Kalenderkapazität"><div class="capacity-title">${ico('clock',17)} Freie Zeit · nächste 14 Tage <strong>${capacityDuration(m.totalMinutes)}</strong></div><p class="muted-line">${h(status)} · ${p.startHour}–${p.endHour} Uhr · ${p.bufferMinutes} Min. Puffer je Termin · ${m.slots.length} mögliche Fenster</p><div class="capacity-days">${useful.map(d=>`<button type="button" class="capacity-day ${d.day===selectedForecastDay?'capacity-day-active':''}" data-action="daily-plan-day" data-id="${h(d.day)}" aria-pressed="${d.day===selectedForecastDay}" title="${h(d.day)}: ${capacityDuration(d.minutes)} in ${d.slots.length} Fenstern – Tagesplanung öffnen"><small>${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric'}).format(new Date(d.day+'T12:00:00')))}</small><span class="capacity-track"><i style="width:${Math.round(100*d.minutes/max)}%"></i></span><strong>${capacityDuration(d.minutes)}</strong></button>`).join('')}</div>${settings}<p class="capacity-foot">Planungshilfe, keine Reservierung. Berücksichtigt nur den primären Google-Kalender und ein selbst gewähltes Arbeitsfenster. Ganztägige belegte Termine sperren den Tag. Exakt benannte Verfügbarkeitsblöcke (z. B. Work) blockieren nicht; andere ausgeblendete Termine blockieren weiterhin. Private Zeit, Wege und weitere Kalender können fehlen.</p></section>`;
 }
 function deadlineCompact({inForecast=false}={}){
  const model=localCapacity(localDateString(new Date()),14);
@@ -520,7 +524,8 @@ function proactivePlannerPanel(){
  const risks=plan.shortfalls.length,unknown=plan.unknownCount||0;
  const title=risks?`${risks} Frist${risks===1?'':'en'} mit Zeitengpass`:
   plan.blocks.length?`${plan.blocks.length} mögliche Arbeitsblöcke`:'Keine passenden Aufgaben mit Aufwandsschätzung';
- const shown=plan.blocks.slice(0,10);
+ const manual=dayPlanBlocks(state);
+ const shown=plan.blocks.filter(b=>!manual.some(x=>x.start<b.end&&b.start<x.end)).slice(0,10);
  const rows=shown.map(b=>{
   const date=new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric',month:'short'}).format(new Date(b.day+'T12:00:00'));
   return `<div class="v47-plan-row"><div class="v47-plan-when"><strong>${h(date)}</strong><small>${capacityTime(b.start)}–${capacityTime(b.end)} · ${b.minutes} min</small></div><button class="v47-plan-task" type="button" data-action="task-select" data-id="${h(b.task.id)}"><strong>${h(b.task.title)}</strong><small>${h(b.reason)}${b.remainingAfter?' · Teilblock':''}</small></button><button class="v47-plan-mark" data-action="planner-mark" data-id="${h(b.task.id)}" data-day="${h(b.day)}" type="button" title="Nur als Wunschtermin vormerken, keine Kalenderreservierung">Vormerken</button></div>`;
@@ -528,11 +533,65 @@ function proactivePlannerPanel(){
  const warnings=plan.shortfalls.slice(0,4).map(x=>`<button class="v47-plan-warning" type="button" data-action="task-select" data-id="${h(x.task.id)}">${ico('flag',12)} ${h(x.task.title)} · ${x.reason==='overdue'?'Frist überschritten':capacityDuration(x.remaining)+' nicht eingeplant'}</button>`).join('');
  return `<details id="v47-plan" class="v47-planner" ${plannerExpanded?'open':''}><summary>${ico('calendar',15)} Planvorschlag · ${h(title)} <span>${unknown?unknown+' ohne Aufwand · ':''}14 Tage</span></summary><div class="v47-plan-content">${warnings}${unknown?`<p class="muted-line">${unknown} weitere Aufgaben mit Frist benötigen eine Aufwandsschätzung.</p>`:''}${rows||'<p class="muted-line">Kein passender Block mit verlässlicher Aufwandsschätzung. Du kannst die Aufgaben im Inspector ergänzen.</p>'}${plan.blocks.length>shown.length?`<p class="muted-line">${plan.blocks.length-shown.length} weitere Blöcke nicht angezeigt. Du kannst Aufgaben priorisieren oder Aufwandsschätzungen anpassen.</p>`:''}<p class="v47-plan-note">Nur Vorschläge innerhalb erfasster Zeitfenster. <strong>Vormerken</strong> setzt ausschließlich den Wunschtag (Planned), keine harte Frist oder Kalenderreservierung. Work gilt als verfügbare Arbeitszeit; Meetings bleiben blockiert. ${h(plan.caveat)}</p></div></details>`;
 }
+/** 0.5.48: quiet, user-approved daily plan; suggestions remain real GTD Next Actions. */
+function dailyPlanPanel(){
+ const today=localDateString(new Date()),t=new Date(today+'T12:00:00');t.setDate(t.getDate()+1);const tomorrow=localDateString(t);
+ const range=localCapacity(today,14),day=range.days.some(d=>d.day===selectedForecastDay)?selectedForecastDay:today;
+ const saved=dayPlanBlocks(state,day),status=dayPlanStatus(state,day,new Date(),range);
+ const canEdit=range.status==='ready'&&day>=today;
+ const allCandidates=dayCandidates(state,day,150,{forecast:range});
+ const undated=allCandidates.filter(x=>needsDateDecision(state,x.task));
+ const visibleCandidates=dailyPlanShowUndated?undated:allCandidates;
+ const candidates=visibleCandidates.slice(0,dailyPlanShowAll?75:10);
+ const selected=allCandidates.find(x=>x.task.id===dailyPlanPicked);
+ const entries=dayDropTargets(range,day);
+ const takenAt=ms=>saved.find(b=>ms>=b.start&&ms<b.end);
+ const timeOf=ms=>capacityTime(ms);
+ const taskButton=x=>{
+  const t=x.task;
+  const remaining=x.minutes===null?'Aufwand offen':`${x.minutes} min Rest`;
+  const reason=x.due&&x.due<=day?'Frist heute/überfällig':t.plannedDate===day?'Für diesen Tag vorgemerkt':x.due?'Frist '+x.due:t.flagged?'Markiert':'Next Action';
+  const urgency=x.urgency;
+  const score=urgency.score===null?'':`<span class="v48-urgency v48-urgency-${h(urgency.tone)}" title="${h(urgency.detail)}" aria-label="Dringlichkeit: ${h(urgency.label)}. ${h(urgency.detail)}">${urgency.atRisk?'Gefährdet':urgency.score}</span>`;
+  const askDate=needsDateDecision(state,t);
+  const dateButton=askDate?`<button type="button" class="v48-date-nudge" data-action="daily-plan-date-edit" data-id="${h(t.id)}" title="Wunschtag oder echte Frist festlegen">Datum prüfen</button>`:'';
+  const inlineDate=dailyPlanDateTask===t.id?`<form class="v48-date-form" data-id="${h(t.id)}"><label>Art <select name="dateKind"><option value="plannedDate">Wunschtag (unverbindlich)</option><option value="dueDate">Harte Deadline</option></select></label><label>Datum <input required type="date" name="dateValue" /></label><button type="submit" class="v48-date-save">Speichern</button><button type="button" class="v48-date-cancel" data-action="daily-plan-date-edit" data-id="${h(t.id)}">Abbrechen</button></form>`:'';
+  return `<div class="v48-candidate-wrap"><div class="v48-candidate v48-candidate-${h(urgency.tone)} ${dailyPlanPicked===t.id?'v48-picked':''}" draggable="${canEdit}" data-day-drag="${h(t.id)}"><button class="v48-pick" type="button" data-action="daily-plan-pick" data-id="${h(t.id)}" aria-pressed="${dailyPlanPicked===t.id}"><span class="v48-task-title"><strong>${h(t.title)}</strong>${score}</span><small>${h(reason)} · ${h(remaining)}${x.scheduled?' · '+x.scheduled+' min im Tagesplan':''}</small></button>${dateButton}<button type="button" class="v48-task-details" data-action="task-select" data-id="${h(t.id)}" title="Aufgabe bearbeiten" aria-label="Details zu ${h(t.title)}">${ico('arrow',13)}</button></div>${inlineDate}</div>`;
+ };
+ const slotted=new Set();
+ const targets=entries.map(x=>{
+  const occupied=takenAt(x.start);
+  if(occupied){if(slotted.has(occupied.id))return '';
+   slotted.add(occupied.id);
+   const task=state?.tasks?.[occupied.taskId];
+   return `<div class="v48-slot v48-booked" draggable="${canEdit&&!occupied.done&&!task?.completed}" data-day-drag="${h(occupied.taskId)}" data-day-move="${h(occupied.id)}"><span class="v48-time">${timeOf(occupied.start)}–${timeOf(occupied.end)}</span><span class="v48-slot-task"><strong>${h(task?.title||'Aufgabe nicht gefunden')}</strong><small>${occupied.done||task?.completed?'Erledigt':occupied.estimateUnknown?'Aufwand vorläufig':'Geplant'} · ${occupied.minutes} min</small></span><button type="button" data-action="daily-plan-done" data-id="${h(occupied.id)}" aria-label="Arbeitsblock als erledigt markieren" title="${occupied.done?'Erledigung zurücknehmen':'Arbeitsblock erledigt'}" class="v48-done ${occupied.done||task?.completed?'done':''}">${ico('checkSquare',14)}</button><button type="button" data-action="daily-plan-remove" data-id="${h(occupied.id)}" class="v48-remove" title="Block entfernen" aria-label="Block entfernen">×</button></div>`;
+  }
+  return `<button type="button" class="v48-slot v48-empty" data-day-drop="${x.start}" data-action="daily-plan-place" data-step="${x.start}" aria-label="Aufgabe um ${timeOf(x.start)} hier einplanen" ${canEdit?'':'disabled'}><span class="v48-time">${timeOf(x.start)}</span><span>＋ ${dailyPlanPicked?'Hier einplanen':'frei'}</span></button>`;
+ }).join('');
+ const blocksOutsideTargets=saved.filter(b=>!slotted.has(b.id)).map(b=>{
+  const t=state?.tasks?.[b.taskId];
+  return `<div class="v48-saved-note">${timeOf(b.start)} · ${h(t?.title||'Aufgabe entfernt')} · ${b.minutes} min ${b.done||t?.completed?'✓ erledigt':'· noch offen'} <button data-action="daily-plan-done" data-id="${h(b.id)}" type="button">${b.done?'Rückgängig':'Erledigt'}</button><button data-action="daily-plan-remove" data-id="${h(b.id)}" type="button">Entfernen</button></div>`;
+ }).join('');
+ const display=day===today?'Heute':day===tomorrow?'Morgen':new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric',month:'short'}).format(new Date(day+'T12:00:00'));
+ const chosen=selected?.task.title||'Aufgabe auswählen';
+ const noAvailability=range.status!=='ready'?`Kalender nicht vollständig/frisch geladen. Bereits geplante Blöcke bleiben sichtbar; neue Plätze sind gesperrt.`:(range.days.find(x=>x.day===day)?.off?'Dieser Tag liegt außerhalb deiner eingestellten Arbeitszeiten.':'Keine freien Zeitfenster im gewählten Arbeitsrahmen.');
+ return `<details id="v48-daily-plan" class="v48-day-plan" ${dailyPlanExpanded?'open':''}><summary>${ico('calendar',15)} Tagesplanung · ${h(display)} <span>${status.blocks?`${status.done}/${status.blocks} Blöcke erledigt · `:''}${h(status.label)}</span></summary>
+ <div class="v48-content"><div class="v48-topline"><div class="v48-switch"><button type="button" data-action="daily-plan-day" data-id="${today}" class="${day===today?'on':''}">Heute</button><button type="button" data-action="daily-plan-day" data-id="${tomorrow}" class="${day===tomorrow?'on':''}">Morgen</button>${day!==today&&day!==tomorrow?`<span>${h(display)}</span>`:''}</div><span class="v48-progress">${status.plannedMinutes?`${capacityDuration(status.completeMinutes)} / ${capacityDuration(status.plannedMinutes)} erledigt`:'Noch nichts eingeplant'}</span></div>
+ <div class="v48-grid"><div class="v48-candidates"><div class="v48-col-head"><strong>Passende To-dos</strong><small>Nur ausführbare Next Actions</small></div><p class="v48-legend" aria-label="Dringlichkeitsstufen"><span class="v48-dot v48-dot-green"></span>Spielraum <span class="v48-dot v48-dot-yellow"></span>Bald <span class="v48-dot v48-dot-orange"></span>Dringend <span class="v48-dot v48-dot-red"></span>Sofort <span class="v48-dot v48-dot-risk"></span>Gefährdet</p>${undated.length?`<button type="button" class="v48-date-summary ${dailyPlanShowUndated?'selected':''}" data-action="daily-plan-undated" aria-pressed="${dailyPlanShowUndated}">${ico('calendar',12)} ${undated.length} ohne Termin · ${dailyPlanShowUndated?'Alle Aufgaben zeigen':'Datum prüfen'}</button>`:''}${candidates.map(taskButton).join('')||'<p class="muted-line">Keine weiteren ausführbaren Aufgaben. Someday/Maybe und Waiting For werden nicht vorgeschlagen.</p>'}${!dailyPlanShowAll&&visibleCandidates.length>10?'<button data-action="daily-plan-more" type="button" class="v48-show-more">Weitere Aufgaben anzeigen</button>':''}</div>
+ <div class="v48-slots"><div class="v48-col-head"><strong>Freie Zeitfenster</strong><label>Blocklänge <select id="v48-duration">${[30,45,60,90,120].map(n=>`<option value="${n}" ${dailyPlanDuration===n?'selected':''}>${n} min</option>`).join('')}</select></label></div>${range.status==='ready'&&entries.length?targets:'<p class="muted-line">'+h(noAvailability)+'</p>'}${blocksOutsideTargets}</div></div>
+ <p class="v48-foot">Aufgabe links anklicken oder hineinziehen, rechts im freien Slot ablegen. Mobil: Aufgabe wählen, dann Zeitfenster tippen. <strong>${h(chosen)}</strong>. Die Zeitblöcke werden nur in deinem verschlüsselten lokalen Tresor gespeichert, nicht bei Google reserviert. Nicht erledigte Blöcke müssen abends bestätigt oder neu geplant werden.</p></div></details>`;
+}
+function dailyStatusNudge(day=selectedDay){
+ const s=dayPlanStatus(state,day,new Date(),localCapacity(localDateString(new Date()),14));
+ if(!s.blocks)return '';
+ return `<div class="v48-today-status">${ico('checkSquare',13)} <span>Tagesplan: ${s.done}/${s.blocks} erledigt · ${h(s.label)}${s.dueOpen?' · '+s.dueOpen+' offene Fristen':''}</span><button data-tab="forecast" class="capacity-link" type="button">Plan ansehen ↗</button></div>`;
+}
 function nextRealisticBlock(){
  const f=localCapacity(localDateString(new Date()),14);
  if(f.status!=='ready')return '';
  const plan=proactivePlan(state,f);
- const first=plan.blocks.find(x=>x.day===selectedDay);
+ const manual=dayPlanBlocks(state);
+ const first=plan.blocks.find(x=>x.day===selectedDay&&!manual.some(m=>m.start<x.end&&x.start<m.end));
  if(!first)return '';
  return `<div class="v47-today-nudge">${ico('clock',13)} <span>Passendes Fenster heute: ${capacityTime(first.start)} · ${first.minutes} min · ${h(first.task.title)}</span><button type="button" data-tab="forecast" class="capacity-link">Plan ↗</button></div>`;
 }
@@ -543,6 +602,7 @@ function todaySmartPanel(){
  const recommendation=smartDailyChoices(state,{day:selectedDay,minutes,energy,context});
  return `<section class="work-card v22-daily" aria-label="Begründete Next-Action-Empfehlungen"><div class="work-heading"><span>${ico('spark',18)} Was passt jetzt?</span><span class="quiet-tag">Maximal 3 Vorschläge</span></div>
  ${compactCapacityHint()}
+ ${dailyStatusNudge()}
  ${nextRealisticBlock()}
  ${deadlineCompact()}
  <div class="v22-daily-filters"><label>Zeitbudget<select id="v22-day-minutes">${timeModes.map(n=>`<option value="${n}" ${n===minutes?'selected':''}>${n} Min.</option>`).join('')}</select></label><label>Gefühlte Energie<select id="v22-day-energy">${energyModes.map(e=>`<option value="${e}" ${e===energy?'selected':''}>${e==='offen'?'Nicht angegeben':e==='low'?'Wenig':e==='medium'?'Mittel':'Viel'}</option>`).join('')}</select></label><label>Kontext<select id="v22-day-context"><option value="">Alle Kontexte</option>${contexts.map(c=>`<option value="${h(c.value)}" ${context===c.value?'selected':''}>${h(c.label)}</option>`).join('')}</select></label></div>
@@ -581,6 +641,7 @@ function forecastScreen(){
  };
  return chrome(`<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Deadlines, Planung & Termine</span><span class="quiet-tag">14 Tage</span></div>
  ${capacityPanel()}
+ ${dailyPlanPanel()}
  ${proactivePlannerPanel()}
  ${deadlineCompact({inForecast:true})}
  <div class="forecast-tools">${calendarToken?calendarFilterToggle():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · ${planned.length} geplante Aufgaben · ${days.reduce((sum,d)=>sum+recoveryEvents(d).length,0)} Erholungstermine · Google Calendar nur lesend</span></div>
@@ -1868,10 +1929,84 @@ function bind() {
     }
     runAction(el.dataset.action,el.dataset.id,el.dataset.step,el.dataset.day);
   });
+  app.querySelectorAll('.v48-date-form').forEach(form=>form.onsubmit=async ev=>{
+    ev.preventDefault();
+    const taskId=form.dataset.id,task=state?.tasks?.[taskId];
+    const fd=new FormData(form),kind=String(fd.get('dateKind')||''),value=String(fd.get('dateValue')||'');
+    if(!task||!isActionAvailable(state,task,selectedForecastDay)||state?.taskConflicts?.[taskId])return toast('Aufgabe nicht mehr verfügbar.',true);
+    if(!['plannedDate','dueDate'].includes(kind)||!value||!dateIsValid(value))return toast('Bitte ein gültiges Datum auswählen.',true);
+    if(task[kind]&&task[kind]!==value&&!confirm('Das bestehende Datum ersetzen?'))return;
+    try{
+      await mutate(s=>{s.tasks[taskId][kind]=value;s.tasks[taskId].updatedAt=stamp();s.taskPending[taskId]=true;});
+      dailyPlanDateTask='';dailyPlanExpanded=true;
+      toast(kind==='dueDate'?'Echte Deadline festgelegt.':'Wunschtag vorgemerkt – keine harte Deadline.');
+    }catch(ex){toast(ex.message,true);}
+  });
+  const planDetails=app.querySelector('#v48-daily-plan');
+  if(planDetails)planDetails.addEventListener('toggle',()=>{dailyPlanExpanded=planDetails.open;});
+  const planDuration=app.querySelector('#v48-duration');
+  if(planDuration)planDuration.onchange=()=>{dailyPlanDuration=Number(planDuration.value);};
+  let dragItem=null;
+  app.querySelectorAll('[data-day-drag]').forEach(el=>{
+    el.addEventListener('dragstart',ev=>{
+      dragItem={taskId:el.dataset.dayDrag,moveId:el.dataset.dayMove||null};
+      ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',dragItem.taskId);
+      el.classList.add('v48-dragging');
+    });
+    el.addEventListener('dragend',()=>{dragItem=null;app.querySelectorAll('.v48-dragging,.v48-hover').forEach(x=>x.classList.remove('v48-dragging','v48-hover'));});
+  });
+  app.querySelectorAll('[data-day-drop]').forEach(el=>{
+    el.addEventListener('dragover',ev=>{if(!dragItem)return;ev.preventDefault();ev.dataTransfer.dropEffect='move';el.classList.add('v48-hover');});
+    el.addEventListener('dragleave',()=>el.classList.remove('v48-hover'));
+    el.addEventListener('drop',async ev=>{
+      ev.preventDefault();el.classList.remove('v48-hover');const item=dragItem;dragItem=null;
+      if(!item)return;
+      try{await placeInDailyPlan(item.taskId,Number(el.dataset.dayDrop),item.moveId);}catch(ex){toast(ex.message,true);}
+    });
+  });
+}
+async function placeInDailyPlan(taskId,start,moveId=null){
+ const from=localDateString(new Date()),forecast=localCapacity(from,14);
+ const day=selectedForecastDay;
+ const remaining=state?.tasks?.[taskId]?dayCandidates(state,day,150,{forecast}).find(x=>x.task.id===taskId)?.minutes:null;
+ const minutes=moveId?dayPlanBlocks(state).find(x=>x.id===moveId)?.minutes:remaining==null?Math.min(dailyPlanDuration,30):Math.min(dailyPlanDuration,remaining);
+ if(!Number.isSafeInteger(minutes)||minutes<5)throw Error('Aufwand bitte zuerst prüfen.');
+ const entries=placeDayBlock(state,forecast,{taskId,day,start,minutes,moveId},{idFactory:()=>crypto.randomUUID()});
+ dailyPlanPicked='';dailyPlanExpanded=true;
+ await mutate(s=>{s.uiPreferences??={};s.uiPreferences.dailyPlanBlocks=entries;});
+ toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
   lastActivity=Date.now();
   try {
+    if(action==='daily-plan-day'){
+      const range=localCapacity(localDateString(new Date()),14);
+      if(!range.days.some(d=>d.day===id))return;
+      selectedForecastDay=id;dailyPlanPicked='';dailyPlanDateTask='';dailyPlanShowUndated=false;dailyPlanShowAll=false;dailyPlanExpanded=true;render();return;
+    }
+    if(action==='daily-plan-undated'){dailyPlanShowUndated=!dailyPlanShowUndated;dailyPlanShowAll=false;dailyPlanDateTask='';dailyPlanExpanded=true;render();return;}
+    if(action==='daily-plan-date-edit'){
+      if(!state?.tasks?.[id]||!isActionAvailable(state,state.tasks[id],selectedForecastDay))return toast('Aufgabe nicht mehr verfügbar.',true);
+      dailyPlanDateTask=dailyPlanDateTask===id?'':id;
+      dailyPlanExpanded=true;render();return;
+    }
+    if(action==='daily-plan-more'){dailyPlanShowAll=true;dailyPlanExpanded=true;render();return;}
+    if(action==='daily-plan-pick'){
+      if(!dayCandidates(state,selectedForecastDay,150,{forecast:localCapacity(localDateString(new Date()),14)}).some(x=>x.task.id===id))return toast('Aufgabe ist nicht mehr verfügbar.',true);
+      dailyPlanPicked=dailyPlanPicked===id?'':id;dailyPlanExpanded=true;render();return;
+    }
+    if(action==='daily-plan-place'){
+      if(!dailyPlanPicked)return toast('Zuerst links eine ausführbare Aufgabe auswählen.');
+      await placeInDailyPlan(dailyPlanPicked,Number(stepId));return;
+    }
+    if(action==='daily-plan-done'||action==='daily-plan-remove'){
+      const existing=dayPlanBlocks(state).find(b=>b.id===id);
+      if(!existing)return toast('Arbeitsblock nicht mehr vorhanden.',true);
+      const entries=updateDayBlock(state,id,action==='daily-plan-done'?'toggleDone':'remove');
+      dailyPlanExpanded=true;
+      await mutate(s=>{s.uiPreferences??={};s.uiPreferences.dailyPlanBlocks=entries;});
+      toast(action==='daily-plan-done'?'Arbeitsblock-Status aktualisiert; Aufgabe bleibt unverändert.':'Arbeitsblock entfernt; Aufgabe bleibt bestehen.');return;
+    }
     if(action==='next-move-up'||action==='next-move-down'){
       const full=nextActions(state),visible=inboxOrdered(full,state?.uiPreferences?.nextActionManualOrder||[]).filter(t=>!contextFilter||(t.contextTags||[]).includes(contextFilter));
       const index=visible.findIndex(t=>t.id===id),other=visible[index+(action==='next-move-up'?-1:1)];
