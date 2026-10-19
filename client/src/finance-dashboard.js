@@ -15,6 +15,7 @@ import {accountFlowView} from './finance-account-flows.js';
 import {merchantInsightsView} from './finance-merchant-insights.js';
 import {consolidatedWealthView} from './finance-wealth-consolidation.js';
 import {netWorth19View,netWorthOverviewCard} from './finance-net-worth-v19.js';
+import {wealthPlanningView} from './finance-wealth-planning-v20.js';
 import {categoryInsightCards,financeDonut,financeTreemap,financeOutflowSankey,financeStackedArea,financeWaterfall,financeForecastView,financeIncomeView,financeCategoryFocusedView} from './finance-visuals.js';
 const esc=escapeFinance;
 const eur=v=>(v/100).toLocaleString('de-AT',{style:'currency',currency:'EUR'});
@@ -87,7 +88,7 @@ export function financeDashboardView(state={},selected='Überblick',period='all'
  if(pane==='Kontenflüsse')body=accountFlowView(allTransactions);
  if(pane==='Reisen')body=financeTravelView(state,ui.tripSelected||'',ui.tripQuery||'',ui.tripMode||'suggested',ui.tripPage||0);
  if(pane==='Sparpotenzial')body=financeTrendsView(filtered,'all')+financeCategoryDetailView(filtered,'all')+`<p class="fin-disclaimer">Dies sind deskriptive Ausgabenvergleiche, keine automatische Bewertung deiner Kaufentscheidungen. Ungeklärte Umsätze und fehlende Konten begrenzen die Aussagekraft.</p>`;
- if(pane==='Portfolio')body=netWorth19View(state,today)+'<details class="fin-net-legacy"><summary>+ Bankkontostände und Depot-Gesamtwerte lokal verwalten</summary>'+consolidatedWealthView(state,today)+'</details>'+krakenPortfolioView(state.krakenPortfolio||null,ui.krakenPreview||null,{busy:ui.krakenBridgeBusy,auto:state?.uiPreferences?.krakenAutoSync===true});
+ if(pane==='Portfolio')body=netWorth19View(state,today)+wealthPlanningView(state)+'<details class="fin-net-legacy"><summary>+ Bankkontostände und Depot-Gesamtwerte lokal verwalten</summary>'+consolidatedWealthView(state,today)+'</details>'+krakenPortfolioView(state.krakenPortfolio||null,ui.krakenPreview||null,{busy:ui.krakenBridgeBusy,auto:state?.uiPreferences?.krakenAutoSync===true});
  if(pane==='Buchungen')body=`${financeLedgerView(filtered,'all',ui.query||'',ui.filter||'all',ui.page||0)}<p class="fin-disclaimer">Kontenzuordnung der Buchungen: ${esc(ui.account==='all'||!ui.account?'Alle Konten':accountLabel(allTransactions.find(x=>x.accountId===ui.account)||{accountId:ui.account}))}. Ein identischer Betrag bei verschiedenen Banken wird nicht automatisch als Transfer behandelt.</p>`;
  if(pane==='Prüfen'){
   const pending=full.pending,groups=financeReviewGroups(transactions),shown=groups.slice(page*15,(page+1)*15);

@@ -48,5 +48,5 @@ test('0.5.19 escapes user-controlled labels, never publishes raw account details
 });
 test('0.5.19 is wired into Portfolio and local form without changing workers',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8'),dash=readFileSync(new URL('../client/src/finance-dashboard.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.19'/);assert.match(main,/finance-holding-add/);assert.match(dash,/netWorth19View\(state,today\)/);assert.match(dash,/netWorthOverviewCard/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.20'/);assert.match(main,/finance-holding-add/);assert.match(dash,/netWorth19View\(state,today\)/);assert.match(dash,/netWorthOverviewCard/);
 });

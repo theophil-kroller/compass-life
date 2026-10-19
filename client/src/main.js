@@ -13,6 +13,7 @@ import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransact
 import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
 import {addWealthSnapshot} from './finance-wealth-consolidation.js';
 import {addHoldingSnapshot} from './finance-holdings-v19.js';
+import {validateWealthPlan,addWealthGoal} from './finance-wealth-planning-v20.js';
 import {validateKrakenSnapshot,mergeKrakenSnapshot,updateKrakenQuotes,krakenWealthSummary} from './finance-kraken.js';
 import {createFinanceTrip,tripDelete,tripCandidateRows,travelAttributable} from './finance-travel.js';
 import {validatePrivateFinancePack} from './finance-private-rules.js';
@@ -38,7 +39,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.19';
+const COMPASS_CLIENT_VERSION='0.5.20';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -1157,6 +1158,20 @@ function bind() {
     try{await mutate(s=>{s.financeHoldings=addHoldingSnapshot(s.financeHoldings||[],entry);});toast('Wertpapierposition lokal im Vault gespeichert.');}
     catch(ex){toast(ex.message,true);}
   };
+  const planningForm=app.querySelector('#finance-wealth-plan-form');if(planningForm)planningForm.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(planningForm);
+    const cents=name=>{const v=Number(fd.get(name));if(!Number.isFinite(v)||v<0||v>1e6)throw Error('Ungültiger EUR-Monatswert.');return Math.round(v*100);};
+    try{const plan=validateWealthPlan({monthlyLivingCents:cents('living'),monthlyPassiveCents:cents('passive'),monthlyContributionCents:cents('contribution'),annualReturnBps:Math.round(Number(fd.get('return'))*100),annualInflationBps:Math.round(Number(fd.get('inflation'))*100),horizonYears:Number(fd.get('horizon'))});
+      await mutate(s=>{s.financeWealthPlan=plan;});toast('Planungsannahmen im verschlüsselten Vault gespeichert.');
+    }catch(ex){toast(ex.message,true);}
+  };
+  const wealthGoalForm=app.querySelector('#finance-wealth-goal-form');if(wealthGoalForm)wealthGoalForm.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(wealthGoalForm),target=Number(fd.get('target'));
+    if(!Number.isFinite(target)||target<=0||target>1e9){toast('Bitte gültigen Zielbetrag eingeben.',true);return;}
+    const goal={id:'goal-'+crypto.randomUUID(),label:String(fd.get('label')||''),kind:String(fd.get('kind')||''),targetCents:Math.round(target*100),targetDay:String(fd.get('day')||'')};
+    try{await mutate(s=>{s.financeWealthGoals=addWealthGoal(s.financeWealthGoals||[],goal);});toast('Vermögensziel im verschlüsselten Vault gespeichert.');}
+    catch(ex){toast(ex.message,true);}
+  };
   const wealthForm=app.querySelector('#finance-wealth-add');if(wealthForm)wealthForm.onsubmit=async ev=>{
     ev.preventDefault();const d=new FormData(wealthForm),amount=Number(d.get('amount'));
     if(!Number.isFinite(amount)||amount<0||amount>1e9){toast('Bitte gültigen EUR-Betrag angeben.',true);return;}
@@ -1249,7 +1264,8 @@ async function runAction(action,id,stepId=null) {
     if(action==='insights-stress-granularity'){if(['day','week'].includes(id)){insightStressGranularity=id;render();}return;}
     if(action==='insights-body-composition'){if(['composition','water','stacked'].includes(id)){insightBodyComposition=id;render();}return;}
     if(action==='review-import-open'){if(id==='health'){tab='insights';insightTab='sources';}else if(id==='places'){tab='insights';insightTab='places';insightPeriod='all';}else if(id==='finance'){tab='finance';financePane='Buchungen';}else if(id==='kraken'){tab='finance';financePane='Portfolio';}render();return;}
-     if(action==='assistant-new'){
+     if(action==='finance-wealth-goal-remove'){if(!(state.financeWealthGoals||[]).some(x=>x.id===id))return;if(!confirm('Dieses Vermögensziel entfernen? Bestandswerte bleiben unverändert.'))return;await mutate(s=>{s.financeWealthGoals=(s.financeWealthGoals||[]).filter(x=>x.id!==id);});toast('Ziel entfernt.');return;}
+    if(action==='assistant-new'){
       if(!confirm('Neuen Wochenreview starten? Der bisherige Durchgang wird als Fortschrittsstand ersetzt; die geprüften Projekte behalten ihre Reviewdaten.'))return;
       reviewEditingTaskId=null;reviewProjectId=null;await mutate(s=>{s.weeklyReview=newReview();s.reviewPending=true;});return;
     }

@@ -1054,3 +1054,29 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 @media(max-width:560px){.fin-net-alloc{grid-template-columns:1fr}.fin-net-overview{align-items:start;flex-direction:column}}
 
 .fin-net-legacy{margin:5px 0 22px;border:1px solid #DCE9E0;border-radius:16px;padding:12px 18px;background:#FBFCFA}.fin-net-legacy>summary{cursor:pointer;color:#306D5B;font-weight:600;padding:8px 3px}.fin-net-legacy[open]>summary{margin-bottom:15px}
+/* Compass 0.5.20 · Financial planning on evidenced valuations and explicit assumptions */
+.fin-wealth20{display:grid;gap:17px;margin:22px 0;min-width:0}
+.fin-wealth20-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.fin-wealth20-head h3{font-family:Georgia,serif;font-size:clamp(25px,2.4vw,36px);font-weight:400;color:#245346;margin:7px 0}
+.fin-wealth20-head p{color:#718B80;font-size:13px;line-height:1.55;margin:2px 0}
+.fin-wealth20-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.fin-wealth20-kpis article{background:linear-gradient(135deg,#F5FAF7,#FFF);border:1px solid #DCE8E0;border-radius:17px;padding:19px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.fin-wealth20-kpis small{color:#668576;font-size:12px}.fin-wealth20-kpis strong{font-size:clamp(21px,2vw,30px);font-weight:500;font-family:Georgia,serif;color:#24594C;overflow-wrap:anywhere}.fin-wealth20-kpis span{color:#82988A;font-size:11px;line-height:1.5}
+.fin-wealth20-layout{display:grid;grid-template-columns:minmax(265px,.7fr) minmax(0,1.3fr);gap:15px;align-items:start}
+.fin-wealth20-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:15px}
+.fin-wealth20-form label{display:grid;gap:7px;font-size:12px;color:#597F6C}
+.fin-wealth20-form input,.fin-wealth20-form select{border:1px solid #D3E3DA;padding:11px 12px;border-radius:10px;min-width:0;width:100%;background:#FBFDFB;color:#255548;font:inherit}
+.fin-wealth20-form button{grid-column:1/-1;justify-self:start}.fin-wealth20-chart svg{width:100%;display:block;height:auto;max-height:330px}
+.fin-wealth20-legend{display:flex;flex-wrap:wrap;gap:10px 17px;margin:9px 0 12px;color:#6C857A;font-size:11px}
+.fin-wealth20-legend span{display:flex;align-items:center;gap:6px}.fin-wealth20-legend i{display:inline-block;width:19px;height:4px;border-radius:4px}
+.fin-wealth20-results{display:flex;flex-wrap:wrap;align-items:center;gap:8px 15px;border:1px solid #DCE9E0;border-radius:12px;padding:14px;margin-top:5px;color:#627C6F;font-size:12px}
+.fin-wealth20-results strong{color:#24594D;font-family:Georgia,serif;font-size:22px}.fin-wealth20-results small{flex-basis:100%;color:#82998A}
+.fin-wealth20-goals{display:grid;gap:10px}.fin-wealth20-goal{border:1px solid #E1EAE3;border-radius:12px;background:#FCFDFC;padding:14px}
+.fin-wealth20-goal-title{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.fin-wealth20-goal-title strong{color:#285548;font-size:14px}.fin-wealth20-goal-title small{display:block;margin-top:5px;color:#819689;font-size:11px}
+.fin-wealth20-track{height:10px;background:#E9EFEC;border-radius:20px;overflow:hidden;margin:8px 0}.fin-wealth20-track span{display:block;height:100%;background:linear-gradient(90deg,#3B8973,#91BFC7);border-radius:20px}
+.fin-wealth20-goal>small{color:#708C80;font-size:11px}
+.fin-wealth20-goal-add{border-top:1px solid #E5ECE7;margin-top:12px;padding-top:14px}
+.fin-wealth20-goal-add summary{cursor:pointer;color:#2B6C59;font-size:13px;font-weight:600}
+@media(max-width:1100px){.fin-wealth20-layout{grid-template-columns:1fr}}
+@media(max-width:650px){.fin-wealth20-kpis{grid-template-columns:1fr}.fin-wealth20-form{grid-template-columns:1fr}.fin-wealth20-head{flex-direction:column}}
