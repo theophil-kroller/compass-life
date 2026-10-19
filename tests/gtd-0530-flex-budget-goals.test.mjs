@@ -52,5 +52,5 @@ test('Finance exposes Budget & Ziele as compact navigation with protected escape
 test('UI event wiring saves manually entered goals and budgets through encrypted mutation, not D1',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  for(const field of ['financeFlexBudgets','financeSavingsGoals','finance-budget-month','finance-budget-edit','finance-goal-remove'])assert.ok(main.includes(field),field);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.48'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.49'/);
 });

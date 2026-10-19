@@ -54,6 +54,7 @@ import {fitnessInsightsView} from './insights-fitness.js';
 import {buildProductivityInsights,productivityInsightsView} from './insights-productivity.js';
 import {inspectTimelineFiles,manualPlaceVisit,mergePlaces,placesInsightsView} from './insights-places.js';
 import {reviewImportHub} from './review-import-hub.js';
+import {smartImportHubView,inspectSmartFiles,collectFolderFiles,committedSmartImport,SMART_IMPORT_KINDS,SMART_IMPORT_SOURCES} from './smart-import-hub-v49.js';
 import {sportsInsightsView,sportsPeriodWindow,sportsShiftAnchor,SPORTS_MODES} from './sports-insights.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
@@ -66,7 +67,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.48';
+const COMPASS_CLIENT_VERSION='0.5.49';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -169,6 +170,9 @@ let financeVisualMode='hierarchy',financeCompareMode='month_year',financeMerchan
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
 let financeTripSelected='',financeTripQuery='',financeTripMode='suggested',financeTripPage=0;
 let exploreX='sleepMinutes',exploreY='workMinutes',exploreLag=0;
+let smartHubEntries=[],smartHubBusy=false,smartHubNotice='',smartHubStage=null;
+const smartHubFolders={health:null,finance:null};
+const smartHubFolderStatus={};
 let placesPreview=null,placesImportBusy=false,selectedPlaceKey='',placesMapRegion='world',placesMapZoom=1,placesListLimit=25;
 let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryCategories=null,discoveryCategoriesOpen=false,discoveryImportOpen=false,discoveryWeekOffset=0,discoveryImportPreview=null;
 const discoveryExpandedDays=new Set();
@@ -417,7 +421,7 @@ function chrome(content){
  </nav><div class="sidebar-foot">${ico('shield',16)} <span>Dein persönlicher Arbeitsraum</span></div>
  </aside><main class="workspace"><div class="utility-bar">
  <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>Ctrl / ⌘ K</kbd></button>
- <div class="utility-right">${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
+ <div class="utility-right"><button class="icon-utility" type="button" data-action="smart49-open" title="Smart Import Hub öffnen" aria-label="Dateien zentral importieren">${ico('upload',18)}</button>${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
  <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?(state.privateDeviceMirror?'Planung + privater Geräteabgleich':'Planung synchronisiert · Importe lokal'):'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
@@ -1047,7 +1051,7 @@ function privateMirrorSettings(){
  <details><summary>Datenschutz und Funktionsumfang</summary><p class="small-muted">Nur Bankdaten einschließlich Korrekturen, finanzielle Ziele und lokale Garmin/Fitdays-Importe sowie manuelle Aktivitäten. Cloudflare sieht verschlüsselten Inhalt, Zeitpunkte und die Datenpaketgröße; keine Klartexte und keine Passphrase. Der Schlüssel liegt nur im verschlüsselten lokalen Tresor. Änderungen an diesen Bereichen erfolgen am Hauptgerät; andere Geräte erhalten eine schreibgeschützte Kopie. Beim Abgleich bleibt eine lokale Offline-Kopie erhalten. Verlierst du die Sync-Passphrase auf beiden Geräten und die eingerichteten Tresore, kann niemand Cloud-Daten entschlüsseln. Kein automatisches Zusammenführen widersprüchlicher Finanzkorrekturen.</p></details></section>`;
 }
 function systemScreen(){
- return chrome(`<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
+ return chrome(`${smartImportHubView({entries:smartHubEntries,history:state?.smartImportHistory||[],folderStatus:smartHubFolderStatus,notice:smartHubNotice,busy:smartHubBusy})}<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
  <div class="connection-detail"><span class="connection-dot ${configured()?'green':'amber'}"></span><span>${configured()?'Konfiguration hinterlegt':'Google-Anmeldung noch nicht konfiguriert'}</span></div>
  <p class="small-muted">${configured()?'API: '+h(config.apiUrl):'In client/public/runtime-config.json sind noch Konfigurationswerte zu ergänzen.'}</p><p class="small-muted">Frontend: Compass ${COMPASS_CLIENT_VERSION} · benötigt Worker-API 11 oder neuer.</p>
  <div id="google-button" class="google-button"></div><p class="small-muted">${authToken?'Compass-Sitzung aktiv: '+h(currentUser)+' · bleibt nach erneutem Tresor-Entsperren erhalten.':'Google-Anmeldung einmalig verknüpfen; danach wird die Compass-Sitzung verschlüsselt im Tresor gespeichert.'}</p><p class="small-muted">Planung automatisch: nach Änderungen und bei geöffneter App regelmäßig. Bank- und Garmin-Importe werden erst mit aktiviertem privaten Geräteabgleich übertragen.</p>
@@ -1558,8 +1562,9 @@ function bind() {
         // Mutate only after the full plan passes validation; preserve other Vault sections.
         s.projects=result.state.projects;s.tasks=result.state.tasks;
         s.projectPending=result.state.projectPending;s.taskPending=result.state.taskPending;
+        if(smartHubStage?.kind==='project')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'project');
       });
-      exchangePreview=null;exchangeBaseline=null;selectedTaskId=null;toast(`${result.projects} Projekte und ${result.tasks} Aufgaben übernommen. Bestehendes nur nach deiner Auswahl geändert.`);
+      if(smartHubStage?.kind==='project'){for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}exchangePreview=null;exchangeBaseline=null;selectedTaskId=null;toast(`${result.projects} Projekte und ${result.tasks} Aufgaben übernommen. Bestehendes nur nach deiner Auswahl geändert.`);
     }catch(ex){toast('Import nicht durchgeführt: '+ex.message,true);}
   };
   const projectCreate=app.querySelector('#project-create-form');if(projectCreate)projectCreate.onsubmit=async ev=>{
@@ -1644,6 +1649,25 @@ function bind() {
     try{const q=await fetchTwelveDataQuote(symbol,key);financeMarketQuote=q;toast('Letzter verfügbarer Kurs abgerufen (Quelle & Zeitpunkt beachten).');}
     catch(ex){toast('Kursabfrage: '+ex.message,true);}finally{render();}
   };
+  const hubFileInput=app.querySelector('#smart49-files');
+  async function addSmartFiles(files){
+    if(smartHubBusy||!files?.length)return;
+    smartHubBusy=true;smartHubNotice='Dateien werden lokal untersucht …';
+    try{smartHubEntries=await inspectSmartFiles([...files],state?.smartImportHistory||[]);
+      smartHubNotice=`${smartHubEntries.length} Dateien erkannt. Prüfe die Zuordnung und öffne die Importvorschau.`;
+    }catch(ex){smartHubNotice='Fehler bei der Dateiprüfung: '+ex.message;}
+    finally{smartHubBusy=false;render();}
+  }
+  if(hubFileInput)hubFileInput.onchange=()=>addSmartFiles(hubFileInput.files);
+  const hubDrop=app.querySelector('#smart49-drop');if(hubDrop){
+    hubDrop.addEventListener('dragover',ev=>{ev.preventDefault();hubDrop.classList.add('is-dragover');});
+    hubDrop.addEventListener('dragleave',()=>hubDrop.classList.remove('is-dragover'));
+    hubDrop.addEventListener('drop',ev=>{ev.preventDefault();hubDrop.classList.remove('is-dragover');addSmartFiles(ev.dataTransfer?.files);});
+  }
+  app.querySelectorAll('[data-smart49-kind]').forEach(select=>{select.onchange=()=>{
+    const entry=smartHubEntries[Number(select.dataset.smart49Kind)];if(!entry||entry.duplicate)return;
+    entry.kind=select.value;entry.reason='Manuell gewählter Importtyp – Zielparser validiert den Inhalt';entry.confidence='manual';render();
+  };});
   const financeInput=app.querySelector('#finance-files');if(financeInput)financeInput.onchange=async()=>{
     if(financeBusy||!financeInput.files?.length)return;
     financeBusy=true;financePreview=null;
@@ -2109,6 +2133,74 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='discovery-import-toggle'){discoveryImportOpen=!discoveryImportOpen;discoveryImportPreview=null;render();return;}
     if(action==='discovery-more'){if(discoveryExpandedDays.has(id))discoveryExpandedDays.delete(id);else discoveryExpandedDays.add(id);render();return;}
     if(action==='discovery-save'||action==='discovery-hide'){const entry=state?.discoveredEvents?.find(e=>eventKey(e)===id);if(!entry)return;await mutate(st=>{st.eventPreferences??={};const prev=st.eventPreferences[id]||'open';const next=action==='discovery-save'?(prev==='saved'?'open':'saved'):(prev==='hidden'?'open':'hidden');queueEventPreference(st,id,next);});return;}
+    if(action==='smart49-open'){
+      tab='system';calmNavGroup='';render();requestAnimationFrame(()=>app.querySelector('#smart-import-hub')?.scrollIntoView({behavior:'smooth',block:'start'}));return;
+    }
+    if(action==='smart49-reset'){smartHubEntries=[];smartHubStage=null;smartHubNotice='Dateiliste geleert. Originaldateien sind unverändert.';render();return;}
+    if(action==='smart49-pick-folder'){
+      if(!SMART_IMPORT_SOURCES.some(x=>x.id===id))return;
+      if(typeof window.showDirectoryPicker!=='function'){toast('Ordnerzugriff ist in diesem Browser nicht verfügbar. Bitte Dateien auswählen oder Chromium/Edge auf HTTPS verwenden.',true);return;}
+      try{const folder=await window.showDirectoryPicker({id:'compass-smart49-'+id,mode:'read'});
+        smartHubFolders[id]=folder;smartHubFolderStatus[id]='Freigegeben: '+folder.name+' · nur solange die App geöffnet ist';
+        smartHubNotice='Ordner freigegeben. Klicke auf Prüfen, um Dateien einzulesen.';render();
+      }catch(ex){if(ex.name!=='AbortError')toast('Ordnerauswahl: '+ex.message,true);}return;
+    }
+    if(action==='smart49-rescan-folder'){
+      const handle=smartHubFolders[id];if(!handle||smartHubBusy)return;
+      try{const permission=typeof handle.queryPermission==='function'?await handle.queryPermission({mode:'read'}):'granted';
+        if(permission!=='granted'){smartHubNotice='Ordnerzugriff abgelaufen. Ordner bitte erneut freigeben.';smartHubFolders[id]=null;delete smartHubFolderStatus[id];render();return;}
+        smartHubBusy=true;const scan=await collectFolderFiles(handle);
+        smartHubEntries=await inspectSmartFiles(scan.files,state?.smartImportHistory||[]);
+        smartHubNotice=`${scan.files.length} Dateien aus ${handle.name} geprüft. ${scan.warnings.join(' · ')}`;render();
+      }catch(ex){toast('Ordnerprüfung: '+ex.message,true);}finally{smartHubBusy=false;render();}return;
+    }
+    if(action==='smart49-preview-kind'){
+      if(smartHubBusy||!SMART_IMPORT_KINDS[id]||id==='unknown')return;
+      const group=smartHubEntries.filter(e=>e.kind===id&&!e.duplicate);if(!group.length)return;
+      try{
+        if(id==='bank'){
+          if(group.length>80)throw Error('Bankimport unterstützt höchstens 80 Dateien je Vorschau.');
+          const items=[];for(const e of group){if(e.size>8_000_000)throw Error('Bankdatei über 8 MB: '+e.name);
+            const bytes=await e.file.arrayBuffer();let txt;try{txt=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{txt=new TextDecoder('windows-1252').decode(bytes);}items.push({name:e.name,text:txt});}
+          const preview=previewBankFiles(items,state?.financeTransactions||[],state?.financeRules||[],state?.financePrivateRules||[]);
+          if(!preview.rows.length){smartHubNotice='Bankvorschau: keine neuen Buchungen ('+preview.duplicates+' Duplikate).';render();return;}
+          financePreview=preview;financePane='Prüfen';tab='finance';calmNavGroup='finance';
+        }else if(id==='health'){
+          if(group.length>75)throw Error('Maximal 75 Gesundheitsdateien pro Vorschau.');
+          const preview=await inspectHealthFiles(group.map(x=>x.file));if(!preview.processed)throw Error((preview.errors||[]).join(' · ')||'Keine lesbaren Gesundheitsdateien.');
+          healthFilePreview=preview;tab='insights';insightTab='sources';calmNavGroup='insights';
+        }else if(id==='places'){
+          if(group.length>12)throw Error('Maximal zwölf Timeline-Dateien pro Vorschau.');
+          placesPreview=await inspectTimelineFiles(group.map(x=>x.file));if(!placesPreview.visits.length)throw Error('Keine Standort-Aufenthalte erkannt.');
+          tab='insights';insightTab='places';calmNavGroup='insights';
+        }else if(id==='project'){
+          if(group.length!==1)throw Error('Projektpläne bitte einzeln prüfen, damit bestehende Projekte nicht unbeabsichtigt zusammengeführt werden.');
+          if(group[0].size>1024*1024)throw Error('Projektdatei ist größer als 1 MB.');
+          exchangePreview=parseProjectPlan(await group[0].file.text());exchangeBaseline={};
+          for(const item of [...exchangePreview.projects,...exchangePreview.tasks]){const existing=item.id&&(state.projects?.[item.id]||state.tasks?.[item.id]);if(existing)exchangeBaseline[item.id]=JSON.stringify(existing);}
+          tab='projects';calmNavGroup='plan';
+        }else if(id==='kraken'){
+          if(group.length!==1||group[0].size>12_000_000)throw Error('Bitte eine Kraken-JSON-Datei bis 12 MB auswählen.');
+          krakenPreview=validateKrakenSnapshot(JSON.parse(await group[0].file.text()));
+          tab='finance';financePane='Portfolio';financePortfolioTab='settings';calmNavGroup='finance';
+        }else if(id==='flatex'){
+          if(group.length!==1||group[0].size>1_000_000)throw Error('Bitte eine flatex-CSV bis 1 MB auswählen.');
+          const snap=parseFlatexPositionsCsv(await group[0].file.text());
+          if(!confirm(`flatex-Depotstand ${snap.day} mit ${snap.positions.length} Positionen übernehmen?`))return;
+          await mutate(st=>{st.financeFlatexSnapshots=putFlatexSnapshot(st.financeFlatexSnapshots||[],snap);
+            st.smartImportHistory=committedSmartImport(st.smartImportHistory,group,'flatex');});
+          smartHubEntries.forEach(e=>{if(group.includes(e))e.duplicate=true;});
+          smartHubStage=null;smartHubNotice='flatex-Depotstand übernommen.';toast(smartHubNotice);return;
+        }
+        smartHubStage={kind:id,entries:group};
+        smartHubNotice=`${group.length} ${SMART_IMPORT_KINDS[id]}-Datei(en) zur bestehenden Importvorschau übergeben.`;
+        render();
+        requestAnimationFrame(()=>{
+          const selector=({bank:'#finance-import-manager',health:'.health-import-preview',places:'.places-import-preview',project:'#project-exchange-details',kraken:'.fin41-portfolio-panel'})[id];
+          (selector&&app.querySelector(selector))?.scrollIntoView?.({behavior:'smooth',block:'start'});
+        });
+      }catch(ex){toast('Smart Import: '+ex.message,true);}return;
+    }
     if(action==='calm-finance-group'){const group=FINANCE_GROUPS.find(g=>g.title===id);if(group){tab='finance';calmNavGroup='finance';financePane=group.panes[0];financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-finance-view'){if(FINANCE_TABS.some(p=>p.title===id)){tab='finance';calmNavGroup='finance';financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-nav-group'){calmNavGroup=calmNavGroup===id?'':id;render();return;}
@@ -2305,7 +2397,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='project-exchange-export'){
       try{const root=app.querySelector('#project-exchange-scope')?.value||null;const plan=exportProjectPlan(state,root);download(`Compass_Projektplan_${localDate()}.json`,plan);toast('JSON lokal exportiert. Teile mit ChatGPT nur die Daten, die du besprechen möchtest.');}catch(ex){toast(ex.message,true);}return;
     }
-    if(action==='project-exchange-cancel'){exchangePreview=null;exchangeBaseline=null;exchangeRaw='';render();return;}
+    if(action==='project-exchange-cancel'){if(smartHubStage?.kind==='project')smartHubStage=null;exchangePreview=null;exchangeBaseline=null;exchangeRaw='';render();return;}
     if(action==='capture-bulk-open'){captureOverlayOpen=false;captureBulkOpen=true;tab='inbox';render();return;}
     if(action==='capture-bulk-clear'){captureBulkPreview=null;captureBulkRaw='';captureBulkOpen=false;render();return;}
     if(action==='capture-focus'){
@@ -2486,21 +2578,21 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
         toast(`EUR-Bewertung aktualisiert: ${coverage} von ${total} Kraken-Positionen bepreist.`);
       }catch(err){toast('Kraken-EUR-Kurse: '+err.message,true);}finally{krakenBridgeBusy=false;render();}return;
     }
-    if(action==='finance-kraken-cancel'){krakenPreview=null;render();return;}
+    if(action==='finance-kraken-cancel'){if(smartHubStage?.kind==='kraken')smartHubStage=null;krakenPreview=null;render();return;}
     if(action==='finance-kraken-confirm'){
       if(!krakenPreview)return;
-      try{const incoming=krakenPreview;await mutate(s=>{s.krakenPortfolio=mergeKrakenSnapshot(s.krakenPortfolio,incoming);});krakenPreview=null;toast('Kraken-Daten verschlüsselt im lokalen Tresor gespeichert. Bitte die unverschlüsselte JSON-Datei entfernen.');}
+      try{const incoming=krakenPreview;await mutate(s=>{s.krakenPortfolio=mergeKrakenSnapshot(s.krakenPortfolio,incoming);if(smartHubStage?.kind==='kraken')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'kraken');});if(smartHubStage?.kind==='kraken'){for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}krakenPreview=null;toast('Kraken-Daten verschlüsselt im lokalen Tresor gespeichert. Bitte die unverschlüsselte JSON-Datei entfernen.');}
       catch(e){toast(e.message,true);}return;
     }
     if(action==='finance-kraken-delete'){
       if(!confirm('Alle lokal importierten Kraken-Bestände und Kraken-Historieneinträge aus dem Compass-Tresor löschen? Bankbuchungen bleiben erhalten.'))return;
       await mutate(s=>{delete s.krakenPortfolio;});krakenPreview=null;toast('Kraken-Importdaten lokal entfernt.');return;
     }
-    if(action==='finance-import-cancel'){financePreview=null;render();return;}
+    if(action==='finance-import-cancel'){if(smartHubStage?.kind==='bank')smartHubStage=null;financePreview=null;render();return;}
     if(action==='finance-import-confirm'){
       if(!financePreview?.rows.length)return;
-      try{let added=0,duplicates=0;await mutate(s=>{s.financeTransactions??=[];const seen=new Set(s.financeTransactions.map(t=>t.id));for(const t of financePreview.rows){if(seen.has(t.id)){duplicates++;continue;}s.financeTransactions.push(t);seen.add(t.id);added++;}});
-        financePreview=null;financePane='Prüfen';financeReviewPage=0;toast(`${added} Buchungen lokal übernommen. ${duplicates} weitere Duplikate ausgelassen. Unsichere Zahlungen bitte prüfen.`);
+      try{let added=0,duplicates=0;await mutate(s=>{s.financeTransactions??=[];const seen=new Set(s.financeTransactions.map(t=>t.id));for(const t of financePreview.rows){if(seen.has(t.id)){duplicates++;continue;}s.financeTransactions.push(t);seen.add(t.id);added++;}if(smartHubStage?.kind==='bank')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'bank');});
+        financePreview=null;financePane='Prüfen';financeReviewPage=0;if(smartHubStage?.kind==='bank'){for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}toast(`${added} Buchungen lokal übernommen. ${duplicates} weitere Duplikate ausgelassen. Unsichere Zahlungen bitte prüfen.`);
       }catch(e){toast(e.message,true);}return;
     }
     if(action==='finance-review-prev'||action==='finance-review-next'){
@@ -2511,12 +2603,12 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
      if(action==='places-map-region'){if(['world','europe','austria','china','australia'].includes(id)){placesMapRegion=id;placesMapZoom=1;render();}return;}
      if(action==='places-map-zoom'){placesMapZoom=Math.max(1,Math.min(5,placesMapZoom+(id==='in'?1:id==='out'?-1:0)));render();return;}
      if(action==='places-select'){selectedPlaceKey=id;render();return;}
-    if(action==='places-import-cancel'){placesPreview=null;render();return;}
+    if(action==='places-import-cancel'){if(smartHubStage?.kind==='places')smartHubStage=null;placesPreview=null;render();return;}
     if(action==='places-import-confirm'){
       if(!placesPreview?.visits.length)return;
       try{const incoming=placesPreview.visits;let count=0;
-        await mutate(s=>{const m=mergePlaces(s.placesVisits||[],incoming);s.placesVisits=m.visits;count=m.added;});
-        placesPreview=null;selectedPlaceKey='';toast(`${count} neue Aufenthalte lokal gespeichert. Bestehende Einträge wurden nicht verdoppelt.`);
+        await mutate(s=>{const m=mergePlaces(s.placesVisits||[],incoming);s.placesVisits=m.visits;count=m.added;if(smartHubStage?.kind==='places'&&!placesPreview?.warnings?.length)s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'places');});
+        if(smartHubStage?.kind==='places'){if(!placesPreview?.warnings?.length)for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}placesPreview=null;selectedPlaceKey='';toast(`${count} neue Aufenthalte lokal gespeichert. Bestehende Einträge wurden nicht verdoppelt.`);
       }catch(ex){toast('Standortimport: '+ex.message,true);}return;
     }
     if(action==='places-clear'){
@@ -2532,18 +2624,18 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='sports-select'){if(['running','cycling','walking','hiking','ski','swimming','paddling','dancing','disc','martial','sauna','other'].includes(id)){sportsSelected=sportsSelected===id?'':id;render();}return;}
     if(action==='insights-period'){if(INSIGHT_PERIODS.some(([v])=>v===id)){insightPeriod=id;render();}return;}
     if(action==='import-health-range'){importHealthSpan=id==='all'?'all':Number(id)||90;render();return;}
-    if(action==='health-import-cancel'){healthFilePreview=null;render();return;}
+    if(action==='health-import-cancel'){if(smartHubStage?.kind==='health')smartHubStage=null;healthFilePreview=null;render();return;}
     if(action==='health-import-confirm'){
       if(!healthFilePreview)return;
       const staged=healthFilePreview;
-      try{await mutate(s=>{commitHealthImport(s,staged);});healthFilePreview=null;toast('Garmin- und Fitdays-Messwerte im verschlüsselten Tresor gespeichert.');}
+      try{await mutate(s=>{commitHealthImport(s,staged);if(smartHubStage?.kind==='health'&&!staged.errors?.length)s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'health');});if(smartHubStage?.kind==='health'){if(!staged.errors?.length)for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}healthFilePreview=null;toast('Garmin- und Fitdays-Messwerte im verschlüsselten Tresor gespeichert.');}
       catch(ex){toast(ex.message,true);}return;
     }
     if(action==='health-import-clear'){
       if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
       await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
     }
-    if(action==='lock'){healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){
@@ -2818,7 +2910,7 @@ setInterval(()=>{
 },60000);
 window.addEventListener('offline',render);
 for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();},{passive:true});
-setInterval(()=>{if(state&&Date.now()-lastActivity>15*60*1000){clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
+setInterval(()=>{if(state&&Date.now()-lastActivity>15*60*1000){smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
 (async()=>{
   try{config=await fetch(`${import.meta.env.BASE_URL}runtime-config.json`,{cache:'no-store'}).then(r=>r.json());}
   catch{config={};}

@@ -77,5 +77,5 @@ test('Projects use a minimal unified tree and Worker requires API 12',()=>{
  assert.match(read('client/src/main.js'),/data-drop-type=/);
  assert.match(worker,/apiVersion:12,release:'0\.5\.27'/);
  assert.match(worker,/widgetEvents\(req,env\)/);
- assert.match(read('client/src/main.js'),/COMPASS_CLIENT_VERSION='0\.5\.48'/);
+ assert.match(read('client/src/main.js'),/COMPASS_CLIENT_VERSION='0\.5\.49'/);
 });
