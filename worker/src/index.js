@@ -1,3 +1,4 @@
+import {privateMirror} from './private-device-mirror.js';
 import {listProjects,putProject} from './projects.js';
 import {readWeeklyReview,writeWeeklyReview} from './weekly-review.js';
 import {schemaStatus} from './schema.js';
@@ -133,6 +134,7 @@ async function applyOne(env,sub,raw) {
 }
 async function route(req,env,identity) {
   const url=new URL(req.url);
+  if(/^\/api\/private-device\/(finance|health)$/.test(url.pathname))return privateMirror(req,env,identity);
   if(req.method==='POST' && url.pathname==='/api/widget/pair/start')return startWidgetPair(env,identity);
   if(req.method==='GET' && url.pathname==='/api/widget/devices')return listWidgetDevices(env,identity);
   if(req.method==='POST' && url.pathname==='/api/widget/device/revoke')return revokeWidgetDevice(req,env,identity);

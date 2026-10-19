@@ -39,7 +39,7 @@ function context(){
  Object.assign(ctx,treeWorkspace,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,inboxFlags,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,relationships);
  ctx.discoveryAppearance=eventsImport.eventAppearance;
- ctx.vault={save:async()=>{},lock:()=>{}};
+ ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.
  runInNewContext(compiled,ctx,{filename:'compass-main-browser-smoke.js',timeout:2000});
  return ctx;

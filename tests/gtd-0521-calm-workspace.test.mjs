@@ -8,7 +8,7 @@ const finance=readFileSync(new URL('../client/src/finance-dashboard.js',import.m
 const stub=[{id:'synthetic-1',day:'2026-10-15',accountId:'raiffeisen:giro',amountCents:-2830,flow:'expense',merchant:'TEST SUPERMARKT',category:'Lebensmittel / Supermarkt',description:'Künstlicher Testumsatz',needsReview:false}];
 const render=(selected='Überblick')=>financeDashboardView({financeTransactions:stub},selected,'last12',null,0,{account:'all',today:'2026-10-19'});
 test('0.5.21 seven primary routes, one open group at a time, preserve deep link fallback',()=>{
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.29'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.31'/);
  const sidebar=main.slice(main.indexOf(' <nav class="side-nav calm-side-nav"'),main.indexOf(' <\/nav><div class="sidebar-foot">'));
  for(const id of ['today','inbox','people','finance','review','system'])assert.match(sidebar,new RegExp(`navItem\\('${id}'`));
  for(const group of ['plan','insights'])assert.match(sidebar,new RegExp(`data-id="${group}" aria-expanded`));
@@ -20,7 +20,7 @@ test('finance exposes five first-class panes and eight discoverable secondary pa
  const html=render('Ausgaben');
  assert.equal((html.match(/class="calm-finance-tab /g)||[]).length,5);
  assert.equal((html.match(/class="calm-finance-extra /g)||[]).length,FINANCE_TABS.length-5);
- for(const item of FINANCE_TABS)assert.ok(html.includes(`data-id="${item.title}"`),item.title);
+ for(const item of FINANCE_TABS)assert.ok(html.includes(`data-id="${item.title.replaceAll('&','&amp;')}"`),item.title);
  assert.doesNotMatch(html,/class="finance-preview-hero"/);
  assert.doesNotMatch(html,/fin-window-status/);
  assert.match(html,/id="finance-period"/);

@@ -21,6 +21,8 @@ import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
+import {putBudgetEntry,putSavingsGoal,validateSavingsGoal,flexBudgetModel} from './finance-flex-budget-v30.js';
+import {PRIVATE_KINDS,privateSection,privateChanged,applyPrivateSection,newSalt,syncKeyFromPhrase,encryptSection,decryptSection} from './private-device-sync-v30.js';
 import {financeMerchantEdit} from './finance-merchant-editor.js';
 import {addWealthSnapshot} from './finance-wealth-consolidation.js';
 import {addHoldingSnapshot} from './finance-holdings-v19.js';
@@ -50,7 +52,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.29';
+const COMPASS_CLIENT_VERSION='0.5.31';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -131,7 +133,7 @@ if(!bootView&&!bootCapture&&calmLastView?.insight&&INSIGHT_TABS.some(v=>v.id===c
 if(!bootView&&!bootCapture&&calmLastView?.finance&&FINANCE_TABS.some(v=>v.title===calmLastView.finance))financePane=calmLastView.finance;
 let calmNavGroup=['projects','overview','next','forecast','flagged','hold','someday'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'||tab==='recovery'?'insights':'';
 let financeSankeyFocus='all',financeMerchantSelected='';
-let financePaceCompare='previous';
+let financePaceCompare='previous',financeBudgetMonth=new Date().toLocaleDateString('sv-SE').slice(0,7);
 let financePeriod='last12',financeForecastScenario='basis',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
 let krakenBridgeToken='',krakenBridgeBusy=false,krakenLocalCheckedAt=0;
 let krakenPublicBusy=false,krakenPublicAttempt=0;
@@ -264,6 +266,10 @@ async function mutate(fn) {
   const previous=structuredClone(state);
   try {
     fn(state);
+    if(privateChanged(previous,state)){
+      if(state.privateDeviceMirror?.mode==='receiver')throw Error('Finanz- und importierte Sportdaten sind auf diesem Gerät im Lesemodus. Bitte Änderungen am Hauptgerät durchführen.');
+      if(state.privateDeviceMirror?.mode==='source')state.privateDeviceMirror.dirty=true;
+    }
     await persist();
   }catch(ex){state=previous;render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
   render();
@@ -379,11 +385,11 @@ function chrome(content){
  </aside><main class="workspace"><div class="utility-bar">
  <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>Ctrl / ⌘ K</kbd></button>
  <div class="utility-right">${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
- <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?'Compass verbunden':'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
+ <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?(state.privateDeviceMirror?'Planung + privater Geräteabgleich':'Planung synchronisiert · Importe lokal'):'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
- <div class="content ${tab==='today'||tab==='forecast'?'content-work':''}">
+ <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
- ${notice?`<div role="status" class="alert good">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
+ ${notice?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
  ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${state&&captureOverlayOpen?captureOverlay():``}</div>`;
 }
 
@@ -800,16 +806,76 @@ function reviewScreen(){
   <section class="work-card assistant-current"><div class="assistant-stage-header"><small>${h(step.phase)} · Schritt ${index+1} / ${REVIEW_STEPS.length}</small><h2>${h(step.title)}</h2><p>${h(step.help)}</p></div>${reviewStepBody(step.id,q)}<div class="assistant-review-footer"><button type="button" class="secondary-btn" data-action="assistant-back" ${index===0?'disabled':''}>← Zurück</button><button type="button" class="secondary-btn" data-action="assistant-next" ${index===REVIEW_STEPS.length-1?'disabled':''}>Überspringen</button><button type="button" class="primary-btn" data-action="assistant-complete-step">${index===REVIEW_STEPS.length-1?'Review abschließen':'Diesen Bereich geprüft →'}</button></div></section></div>
  </div>`);
 }
+// Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
+// Source device is authoritative. Receiver is an offline-capable read-only mirror.
+async function mirrorGet(kind){try{return (await request(config.apiUrl,authToken,`/api/private-device/${kind}`)).record;}catch(ex){if(ex.status===404)throw Error('Cloud-Worker zu alt: zuerst Migration 0014 und Worker 0.5.30 installieren.');throw ex;}}
+async function publishPrivateMirror(){
+ const configMirror=state?.privateDeviceMirror;
+ if(!configMirror||configMirror.mode!=='source'||!configMirror.dirty)return;
+ for(const kind of PRIVATE_KINDS){
+   const remote=await mirrorGet(kind);
+   if(remote){
+     if(remote.salt!==configMirror.salt)throw Error('Geräte-Sync: In der Cloud liegt bereits ein anderer Schlüssel. Keine Daten überschrieben.');
+     await decryptSection(configMirror.key,kind,remote);
+     if(configMirror.versions?.[kind] && remote.version!==configMirror.versions[kind])throw Error('Geräte-Sync: Cloud wurde zwischenzeitlich geändert. Keine Daten überschrieben.');
+   }
+   const encrypted=await encryptSection(configMirror.key,kind,privateSection(state,kind));
+   const saved=await request(config.apiUrl,authToken,`/api/private-device/${kind}`,{method:'POST',body:JSON.stringify({...encrypted,salt:configMirror.salt,baseVersion:remote?.version||0})});
+   configMirror.versions??={};configMirror.versions[kind]=saved.version;
+   await persist();
+ }
+ configMirror.dirty=false;configMirror.lastAt=new Date().toISOString();await persist();
+}
+async function receivePrivateMirror(force=false){
+ const configMirror=state?.privateDeviceMirror;if(!configMirror||configMirror.mode!=='receiver')return;
+ let changed=false;
+ for(const kind of PRIVATE_KINDS){
+   const remote=await mirrorGet(kind);if(!remote)continue;
+   if(remote.salt!==configMirror.salt)throw Error('Geräte-Sync: Schlüssel wurde in der Cloud geändert. Keine lokalen Daten überschrieben.');
+   if(!force&&remote.version===(configMirror.versions?.[kind]||0))continue;
+   const data=await decryptSection(configMirror.key,kind,remote);
+   state=applyPrivateSection(state,kind,data);
+   configMirror.versions??={};configMirror.versions[kind]=remote.version;changed=true;
+ }
+ if(changed){configMirror.lastAt=new Date().toISOString();await persist();render();}
+}
+async function setupPrivateMirror(mode,phrase){
+ if(!authToken)throw Error('Zuerst mit deinem Compass-Google-Konto anmelden.');
+ if(!['source','receiver'].includes(mode))throw Error('Gerätetyp auswählen.');
+ const [finance,health]=await Promise.all(PRIVATE_KINDS.map(mirrorGet));
+ const remote=finance||health;
+ if(mode==='receiver'&&!remote)throw Error('Noch keine Daten in der Cloud. Zuerst am Hauptgerät aktivieren und senden.');
+ // A second source must not silently overwrite the existing primary device.
+ if(mode==='source'&&remote)throw Error('Cloud-Daten existieren bereits. Dieses Gerät zunächst als Empfangsgerät einrichten.');
+ if(mode==='receiver'&&((state.financeTransactions?.length||0)>0||Object.values(state.healthImports||{}).some(v=>Array.isArray(v)&&v.length>0))){
+   if(!confirm('Auf diesem Gerät liegen bereits lokale Finanz- oder Garmin-Importe. Das Hauptgerät wird für diese Daten maßgeblich; vorhandene Kopien werden durch dessen Stand ersetzt. Vorher ein verschlüsseltes Vault-Backup erstellen. Fortfahren?'))throw Error('Einrichtung abgebrochen, lokale Daten unverändert.');
+ }
+ const salt=remote?.salt||newSalt();const key=await syncKeyFromPhrase(phrase,salt);
+ if(remote)await decryptSection(key,finance?'finance':'health',remote);
+ state.privateDeviceMirror={mode,key,salt,versions:{},dirty:mode==='source',lastAt:null};
+ await persist();if(mode==='source')await publishPrivateMirror();else await receivePrivateMirror(true);
+ render();
+}
+function privateMirrorSettings(){
+ const mirror=state.privateDeviceMirror;
+ const loaded=state.healthImports?.garminSessions?.length||0,finance=state.financeTransactions?.length||0;
+ return `<section class="work-card private-device-sync" aria-label="Privater Geräteabgleich"><div class="work-heading"><span>${ico('sync',18)} Finanz- & Garmin-Daten auf mehreren Geräten</span><span class="quiet-tag">Ende-zu-Ende verschlüsselt · freiwillig</span></div>
+ <p class="muted-line">Aktuell in diesem Tresor: ${finance.toLocaleString('de-AT')} Bankbuchungen und ${loaded.toLocaleString('de-AT')} importierte Garmin-Einheiten. Planung/Inbox synchronisieren bereits separat; importierte Daten erst mit diesem optionalen Geräteabgleich.</p>
+ ${mirror?`<div class="ux-settings-row"><div><strong>${mirror.mode==='source'?'Hauptgerät · sendet verschlüsselte Daten':'Empfangsgerät · lokaler Offline-Spiegel'}</strong><small>${mirror.lastAt?'Letzter erfolgreicher Abgleich: '+h(date(mirror.lastAt)):'Noch kein erfolgreicher Abgleich'} · Cloudflare speichert nur Ciphertext</small></div><button type="button" class="secondary-btn" data-action="private-mirror-refresh" ${!authToken||busy?'disabled':''}>Jetzt abgleichen</button></div><button type="button" class="secondary-btn" data-action="private-mirror-disconnect">Auf diesem Gerät deaktivieren</button>${mirror.mode==='source'?'<button type="button" class="secondary-btn" data-action="private-mirror-cloud-delete">Verschlüsselte Cloud-Kopien löschen</button>':''}`:
+ `<form id="private-device-sync-setup" class="private-device-form"><label>Gerätetyp <select name="mode"><option value="source">Hauptgerät (Computer) · Daten senden</option><option value="receiver">Handy / Zweitgerät · Daten empfangen</option></select></label><label>Eigene Synchronisierungs-Passphrase (mind. 16 Zeichen) <input type="password" name="phrase" minlength="16" maxlength="200" required autocomplete="new-password" placeholder="Auf beiden Geräten dieselbe Passphrase"/></label><button class="primary-btn" type="submit" ${!authToken?'disabled':''}>Verschlüsselten Geräteabgleich aktivieren</button></form>`}
+ <details><summary>Datenschutz und Funktionsumfang</summary><p class="small-muted">Nur Bankdaten einschließlich Korrekturen, finanzielle Ziele und lokale Garmin/Fitdays-Importe sowie manuelle Aktivitäten. Cloudflare sieht verschlüsselten Inhalt, Zeitpunkte und die Datenpaketgröße; keine Klartexte und keine Passphrase. Der Schlüssel liegt nur im verschlüsselten lokalen Tresor. Änderungen an diesen Bereichen erfolgen am Hauptgerät; andere Geräte erhalten eine schreibgeschützte Kopie. Beim Abgleich bleibt eine lokale Offline-Kopie erhalten. Verlierst du die Sync-Passphrase auf beiden Geräten und die eingerichteten Tresore, kann niemand Cloud-Daten entschlüsseln. Kein automatisches Zusammenführen widersprüchlicher Finanzkorrekturen.</p></details></section>`;
+}
 function systemScreen(){
  return chrome(`<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
  <div class="connection-detail"><span class="connection-dot ${configured()?'green':'amber'}"></span><span>${configured()?'Konfiguration hinterlegt':'Google-Anmeldung noch nicht konfiguriert'}</span></div>
  <p class="small-muted">${configured()?'API: '+h(config.apiUrl):'In client/public/runtime-config.json sind noch Konfigurationswerte zu ergänzen.'}</p><p class="small-muted">Frontend: Compass ${COMPASS_CLIENT_VERSION} · benötigt Worker-API 11 oder neuer.</p>
- <div id="google-button" class="google-button"></div><p class="small-muted">${authToken?'Compass-Sitzung aktiv: '+h(currentUser)+' · bleibt nach erneutem Tresor-Entsperren erhalten.':'Google-Anmeldung einmalig verknüpfen; danach wird die Compass-Sitzung verschlüsselt im Tresor gespeichert.'}</p><p class="small-muted">Automatisch: 7 Sekunden nach Änderungen und etwa alle 15 Minuten, solange Compass geöffnet und sichtbar ist. Manuell jederzeit über „Jetzt synchronisieren“.</p>
+ <div id="google-button" class="google-button"></div><p class="small-muted">${authToken?'Compass-Sitzung aktiv: '+h(currentUser)+' · bleibt nach erneutem Tresor-Entsperren erhalten.':'Google-Anmeldung einmalig verknüpfen; danach wird die Compass-Sitzung verschlüsselt im Tresor gespeichert.'}</p><p class="small-muted">Planung automatisch: nach Änderungen und bei geöffneter App regelmäßig. Bank- und Garmin-Importe werden erst mit aktiviertem privaten Geräteabgleich übertragen.</p>
  <div class="system-actions"><button class="primary-btn" data-action="sync" ${!authToken||busy?'disabled':''}>${busy?'Synchronisiere …':'Jetzt synchronisieren'} ${ico('sync',16)}</button><button class="secondary-btn" data-action="logout" ${!authToken?'disabled':''}>Google trennen</button></div>
  <div class="mini-stats"><div><span>Wartende Änderungen</span><strong>${state.pending.length}</strong></div><div><span>Konflikte</span><strong>${state.conflicts.length}</strong></div><div><span>Sync-Cursor</span><strong>${state.cursor}</strong></div></div></section>
  <section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('shield',22)}<h2>Lokaler Tresor</h2></div></div><p class="module-subtitle">Verschlüsselt und offline nutzbar.</p>
  <div class="security-line">${ico('check',17)} AES-256-GCM verschlüsselte Speicherung</div><div class="security-line">${ico('check',17)} Passphrase bleibt auf deinem Gerät</div><div class="security-line">${ico('check',17)} Keine privaten Aufgaben in GitHub</div>
  <button class="secondary-btn full" data-action="export-encrypted">Verschlüsseltes Backup herunterladen</button><button class="secondary-btn full" data-action="export-json">Klartext-JSON exportieren</button><p class="small-muted">Klartext-Exporte enthalten unverschlüsselte private Inhalte.</p></section></div>
+ ${privateMirrorSettings()}
  <section class="work-card ux-settings" aria-label="Darstellung anpassen"><div class="work-heading"><span>${ico('settings',18)} Darstellung & Bedienung</span><span class="quiet-tag">Nur auf diesem Gerät</span></div>
  <p class="muted-line">Diese Einstellungen werden verschlüsselt in deinem lokalen Tresor gespeichert.</p>
  <div class="ux-settings-row"><div><strong>Weitere Ansichten dauerhaft öffnen</strong><small>Flagged, On Hold, Dreams und Aktivitäten in der Navigation anzeigen.</small></div><button type="button" class="secondary-btn" data-action="nav-more">${state?.uiPreferences?.advancedNav?'Ausblenden':'Einblenden'}</button></div>
@@ -897,7 +963,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form></details>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,merchantSelected:financeMerchantSelected,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,merchantSelected:financeMerchantSelected,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy}));}
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
 const krakenBridgeRequest=async(path,method='GET',body=null)=>{
@@ -1107,6 +1173,11 @@ function bind() {
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
 
+  const privateSetup=app.querySelector('#private-device-sync-setup');if(privateSetup)privateSetup.onsubmit=async ev=>{
+    ev.preventDefault();const values=new FormData(privateSetup),phrase=String(values.get('phrase')||'');
+    try{await setupPrivateMirror(String(values.get('mode')||''),phrase);toast('Privater Geräteabgleich aktiviert. Die Daten sind jetzt auf diesem Gerät verfügbar.');}
+    catch(ex){toast(ex.message,true);}
+  };
   // All Review actions operate inside the assistant; no navigation to other tabs.
   const reviewCapture=app.querySelector('#review-capture');if(reviewCapture)reviewCapture.onsubmit=async ev=>{ev.preventDefault();const title=String(new FormData(reviewCapture).get('title')||'').trim();if(!title)return;await addCapture(title,'');toast('In die Inbox aufgenommen.');};
   const reviewQuick=app.querySelector('#review-quick-action');if(reviewQuick)reviewQuick.onsubmit=async ev=>{
@@ -1389,6 +1460,21 @@ function bind() {
   const tripQuery=app.querySelector('#finance-trip-query');if(tripQuery)tripQuery.onchange=()=>{financeTripQuery=tripQuery.value.slice(0,100);financeTripPage=0;render();};
   const tripMode=app.querySelector('#finance-trip-mode');if(tripMode)tripMode.onchange=()=>{financeTripMode=tripMode.value==='all'?'all':'suggested';financeTripPage=0;render();};
   const merchantCategory=app.querySelector('#finance-merchant-category');if(merchantCategory)merchantCategory.onchange=()=>{financeMerchantCategory=merchantCategory.value;render();};
+  const budgetMonthPicker=app.querySelector('#finance-budget-month');if(budgetMonthPicker)budgetMonthPicker.onchange=()=>{if(/^\d{4}-(0[1-9]|1[0-2])$/.test(budgetMonthPicker.value)){financeBudgetMonth=budgetMonthPicker.value;render();}};
+  const budgetForm=app.querySelector('#finance-flex-budget-form');if(budgetForm)budgetForm.onsubmit=async ev=>{ev.preventDefault();const d=new FormData(budgetForm),limit=Number(d.get('limit'));
+    try{if(!Number.isFinite(limit)||limit<=0||limit>1e9)throw Error('Bitte einen gültigen Budgetbetrag eingeben.');const entry={category:String(d.get('category')||''),group:String(d.get('group')||''),limitCents:Math.round(limit*100)};
+      await mutate(s=>{s.financeFlexBudgets=putBudgetEntry(s.financeFlexBudgets||[],entry);});toast('Budget im lokalen Vault gespeichert.');}
+    catch(ex){toast(ex.message,true);}
+  };
+  const savingsForm=app.querySelector('#finance-savings-goal-form');if(savingsForm)savingsForm.onsubmit=async ev=>{ev.preventDefault();const d=new FormData(savingsForm),target=Number(d.get('target')),saved=Number(d.get('saved'));
+    try{if(!Number.isFinite(target)||target<=0||target>1e9||!Number.isFinite(saved)||saved<0||saved>1e9)throw Error('Ungültige Zielbeträge.');
+      const goal=validateSavingsGoal({id:'saving-'+crypto.randomUUID(),title:String(d.get('title')||''),kind:String(d.get('kind')||''),targetCents:Math.round(target*100),savedCents:Math.round(saved*100),targetDay:String(d.get('targetDay')||''),updatedDay:new Date().toLocaleDateString('sv-SE')});
+      await mutate(s=>{s.financeSavingsGoals=putSavingsGoal(s.financeSavingsGoals||[],goal);});toast('Sparziel im lokalen Vault angelegt.');}
+    catch(ex){toast(ex.message,true);}
+  };
+  app.querySelectorAll('form[data-finance-goal-update]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeGoalUpdate,value=Number(new FormData(form).get('saved'));
+    try{if(!Number.isFinite(value)||value<0||value>1e9)throw Error('Ungültiger EUR-Wert.');await mutate(s=>{const old=(s.financeSavingsGoals||[]).find(g=>g.id===id);if(!old)throw Error('Ziel nicht mehr vorhanden.');s.financeSavingsGoals=putSavingsGoal(s.financeSavingsGoals,{...old,savedCents:Math.round(value*100),updatedDay:new Date().toLocaleDateString('sv-SE')});});toast('Bestätigter Fortschritt gespeichert.');}catch(ex){toast(ex.message,true);}
+  });
   const holdingForm=app.querySelector('#finance-holding-add');if(holdingForm)holdingForm.onsubmit=async ev=>{
     ev.preventDefault();const d=new FormData(holdingForm),price=Number(d.get('price'));
     if(!Number.isFinite(price)||price<0||price>1e9){toast('Bitte gültigen EUR-Kurs eingeben.',true);return;}
@@ -1536,12 +1622,24 @@ function bind() {
 async function runAction(action,id,stepId=null) {
   lastActivity=Date.now();
   try {
+    if(action==='private-mirror-refresh'){if(!authToken)throw Error('Bitte zuerst anmelden.');if(state?.privateDeviceMirror?.mode==='source'){state.privateDeviceMirror.dirty=true;await persist();await publishPrivateMirror();}else if(state?.privateDeviceMirror?.mode==='receiver')await receivePrivateMirror(true);toast('Verschlüsselter Geräteabgleich abgeschlossen.');return;}
+    if(action==='private-mirror-cloud-delete'){
+      if(state?.privateDeviceMirror?.mode!=='source'||!authToken)throw Error('Cloud-Kopien nur vom Hauptgerät löschen.');
+      if(!confirm('Wirklich alle verschlüsselten Finanz- und Garmin-Kopien aus der Compass-Cloud löschen? Lokale Daten auf bereits verbundenen Geräten bleiben erhalten.'))return;
+      for(const kind of PRIVATE_KINDS)await request(config.apiUrl,authToken,`/api/private-device/${kind}`,{method:'DELETE'});
+      delete state.privateDeviceMirror;await persist();toast('Cloud-Kopien gelöscht. Lokale Tresordaten bleiben erhalten.');return;
+    }
+    if(action==='private-mirror-disconnect'){if(!confirm('Geräteabgleich nur auf diesem Gerät deaktivieren? Lokale Daten bleiben erhalten. Verschlüsselte Cloud-Kopien werden dabei NICHT gelöscht.'))return;delete state.privateDeviceMirror;await persist();toast('Geräteabgleich auf diesem Gerät deaktiviert.');return;}
     if(action==='insights-night-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;const model=buildSleepInsights(state?.healthImports||{},localDate(),insightPeriod);if(model.nights.some(x=>x.day===id)){insightNight=id;render();}return;}
     if(action==='insights-wellness-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;const items=(state?.healthImports?.garminWellness||[]);if(items.some(x=>String(x.at||'').slice(0,10)===id)){insightWellnessDay=id;render();}return;}
     if(action==='insights-stress-granularity'){if(['day','week'].includes(id)){insightStressGranularity=id;render();}return;}
     if(action==='insights-body-composition'){if(['composition','water','stacked'].includes(id)){insightBodyComposition=id;render();}return;}
     if(action==='review-import-open'){if(id==='health'){tab='insights';insightTab='sources';}else if(id==='places'){tab='insights';insightTab='places';insightPeriod='all';}else if(id==='finance'){tab='finance';financePane='Buchungen';}else if(id==='kraken'){tab='finance';financePane='Portfolio';}render();return;}
-     if(action==='finance-wealth-goal-remove'){if(!(state.financeWealthGoals||[]).some(x=>x.id===id))return;if(!confirm('Dieses Vermögensziel entfernen? Bestandswerte bleiben unverändert.'))return;await mutate(s=>{s.financeWealthGoals=(s.financeWealthGoals||[]).filter(x=>x.id!==id);});toast('Ziel entfernt.');return;}
+     if(action==='finance-budget-month'){if(/^\d{4}-(0[1-9]|1[0-2])$/.test(id)){financeBudgetMonth=id;render();}return;}
+    if(action==='finance-budget-edit'){const entry=(state.financeFlexBudgets||[]).find(x=>x.category===id);if(!entry)return;const el=app.querySelector('#finance-budget-editor');if(el)el.open=true;const cat=app.querySelector('#finance-budget-category'),group=app.querySelector('#finance-budget-group'),amount=app.querySelector('#finance-flex-budget-form input[name="limit"]');if(cat)cat.value=entry.category;if(group)group.value=entry.group;if(amount)amount.value=(entry.limitCents/100).toFixed(2);el?.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
+    if(action==='finance-budget-remove'){if(!(state.financeFlexBudgets||[]).some(x=>x.category===id)||!confirm('Dieses Budget entfernen? Bankbuchungen bleiben unverändert.'))return;await mutate(s=>{s.financeFlexBudgets=(s.financeFlexBudgets||[]).filter(x=>x.category!==id);});toast('Budget entfernt.');return;}
+    if(action==='finance-goal-remove'){if(!(state.financeSavingsGoals||[]).some(x=>x.id===id)||!confirm('Dieses Sparziel entfernen? Konten und Buchungen bleiben unverändert.'))return;await mutate(s=>{s.financeSavingsGoals=(s.financeSavingsGoals||[]).filter(x=>x.id!==id);});toast('Sparziel entfernt.');return;}
+    if(action==='finance-wealth-goal-remove'){if(!(state.financeWealthGoals||[]).some(x=>x.id===id))return;if(!confirm('Dieses Vermögensziel entfernen? Bestandswerte bleiben unverändert.'))return;await mutate(s=>{s.financeWealthGoals=(s.financeWealthGoals||[]).filter(x=>x.id!==id);});toast('Ziel entfernt.');return;}
     if(action==='assistant-new'){
       if(!confirm('Neuen Wochenreview starten? Der bisherige Durchgang wird als Fortschrittsstand ersetzt; die geprüften Projekte behalten ihre Reviewdaten.'))return;
       reviewEditingTaskId=null;reviewProjectId=null;await mutate(s=>{s.weeklyReview=newReview();s.reviewPending=true;});return;
@@ -2183,6 +2281,8 @@ async function syncNow() {
     await syncTasks();
     await syncEvents();
     await syncReview();
+    if(state?.privateDeviceMirror?.mode==='source')await publishPrivateMirror();
+    else if(state?.privateDeviceMirror?.mode==='receiver')await receivePrivateMirror();
     lastSyncAt=Date.now();
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
     error='';

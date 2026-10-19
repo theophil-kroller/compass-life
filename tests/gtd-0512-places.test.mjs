@@ -69,7 +69,7 @@ test('places screen renders local map, source disclosure, empty and non-empty vi
 });
 test('main screen uses new Places view and no API endpoint for location data',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.29'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.31'/);
  assert.match(main,/placesInsightsView\(/);assert.match(main,/places-import-confirm/);assert.match(main,/places-clear/);
  assert.match(main,/s\.placesVisits/);
  assert.equal(INSIGHT_TABS.find(t=>t.id==='places').state,'live');

@@ -29,7 +29,7 @@ function setup(){
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const ctx={document,window:{addEventListener:()=>{}},location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(Error('offline')),setTimeout,clearTimeout};
  Object.assign(ctx,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,relationships);
- ctx.vault={save:async()=>{},lock:()=>{}};
+ ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
  runInNewContext(compiled,ctx,{filename:'browser-ui-smoke.js',timeout:2000});
  return ctx;
 }

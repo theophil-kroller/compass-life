@@ -5,6 +5,7 @@ export const FINANCE_PANES=[
  {title:'Cashflow',icon:'sync',text:'Einnahmen, Ausgaben und Umbuchungen'},
  {title:'Einnahmen',icon:'trendingUp',text:'Geldquellen und Eingangstrends'},
  {title:'Ausgaben',icon:'activity',text:'Kategorien, Monatsvergleich und Geldflüsse'},
+ {title:'Budget & Ziele',icon:'target',text:'Fix, flexibel, unregelmäßig und manuelle Sparziele'},
  {title:'Prognose',icon:'chart',text:'Muster, Szenarien und Prognosen'},
  {title:'Fixkosten',icon:'calendar',text:'Regelmäßige Zahlungen, Verträge und Abos'},
  {title:'Sparpotenzial',icon:'target',text:'Veränderungen erkennen und selbst bewerten'},

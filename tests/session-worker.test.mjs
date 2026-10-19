@@ -16,6 +16,7 @@ source=source.replace("import {readWeeklyReview,writeWeeklyReview} from './weekl
 source=source.replace("import {listDiscoveryEvents,upsertDiscoveryEvents} from './discovery-events.js';", "const listDiscoveryEvents=()=>{};const upsertDiscoveryEvents=()=>{};");
 source=source.replace("import {schemaStatus} from './schema.js';", "const schemaStatus=async()=>({ready:true,requiredMigration:null,missing:[]});");
 source=source.replace("import {listTasks,putTask} from './tasks.js';", "const listTasks=()=>{};const putTask=()=>{};");
+source=source.replace("import {privateMirror} from './private-device-mirror.js';","const privateMirror=()=>new Response(null,{status:404});");
 const {default:worker}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 function fakeD1(){
  const sessions=new Map();
