@@ -1196,3 +1196,76 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .gtd-waiting-hint{display:flex;gap:9px;align-items:center;padding:10px 12px;background:#f5f9f5;border-radius:10px;margin-bottom:9px;font-size:12px}
 .gtd-waiting-review>small{display:block;color:#758e7c;margin:0 0 9px 6px;font-size:11px}
 @media(max-width:650px){.sports-aggregate-row{grid-template-columns: minmax(130px,1fr) 2fr auto}.sports-aggregate-row>small{grid-column:1/-1}}
+
+/* 0.5.24 — People: opt-in contact history, agenda and gentle reviews */
+.people-relationship-card,.people-agenda-first{background:#F8FBF9;border:1px solid #DFEAE2;border-radius:16px;padding:16px;margin:16px 0}
+.people-relationship-card .work-heading,.people-agenda-first .work-heading{margin-bottom:12px}
+.people-last-contact{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.people-last-contact strong{font:normal 19px Georgia,serif;color:#2B5443}
+.people-last-contact small{font-size:11px;color:#7A9082}
+.people-contact-fields{display:grid;grid-template-columns:minmax(140px,1fr) minmax(155px,1fr);gap:10px}
+.people-relationship-card .compact-stack{margin-bottom:12px}
+.people-contact-log{max-height:300px;overflow-y:auto;margin:10px 0 13px}
+.people-contact-row{display:flex;gap:10px;align-items:center;justify-content:space-between;border-top:1px solid #E3ECE6;padding:9px 0;font-size:12px;color:#335C4A}
+.people-contact-row small{display:block;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:3px;font-size:11px;color:#678574}
+.people-contact-row>div{min-width:0}.people-delete-entry,.people-contact-row>button{border:0;background:transparent;color:#799486;cursor:pointer;min-width:32px;min-height:32px;border-radius:8px}
+.people-delete-entry:hover,.people-contact-row>button:hover{background:#EAF1EC}
+.people-review-settings{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding-top:12px;border-top:1px solid #DBE7DF}
+.people-review-settings label{flex:1 1 230px;min-width:0}.people-review-settings small{flex:1 1 100%;line-height:1.6;color:#789283;font-size:11px}
+.people-contact-reminder{border:1px solid #E5D8B7;background:#FBF8EF;border-radius:9px;padding:10px;display:flex;gap:7px;align-items:center;font-size:12px;color:#7F6642}
+.people-agenda-first .people-agendas{max-height:none;overflow:visible;margin-bottom:11px}
+.people-agenda-capture{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:10px 0 0}
+.people-agenda-capture label{flex:1 1 230px}.people-agenda-capture button{min-height:40px}
+.people-review-queue{border:1px solid #DFEAE2;border-radius:12px;background:#F8FBF9;padding:14px;margin-bottom:14px;display:grid;gap:7px}
+.people-review-queue>strong{display:flex;align-items:center;gap:8px;font-size:13px;color:#315B49}
+.people-review-entry{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#fff;color:#37654C;border:1px solid #E1EAE3;padding:11px;border-radius:9px;cursor:pointer;text-align:left}
+.people-review-entry:hover{background:#EFF6F0}
+@media(max-width:620px){.people-relationship-card,.people-agenda-first{padding:12px}.people-contact-fields{grid-template-columns:minmax(0,1fr)}.people-last-contact{align-items:flex-start;flex-direction:column}}
+
+.people-admin-details{border:1px solid #E5ECE7;border-radius:12px;padding:0 14px 12px;margin-top:16px;background:#FCFDFC}
+.people-admin-details>summary{font-size:12px;color:#3D735B;font-weight:600;padding:14px 0;cursor:pointer}
+.people-admin-details .compact-stack{margin-top:12px}
+
+/* 0.5.25 · Calm Activity Intelligence. Compact sport cards and responsive temporal charts. */
+.sports-insights{--sports-ink:#285347;--sports-border:#e0eae2}
+.sports-control-line{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:17px 0 14px}
+.sports-period-tabs,.sports-metric-tabs{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.sports-period-tab,.sports-metric-tab{border:1px solid transparent;background:transparent;border-radius:9px;color:#628474;cursor:pointer;font:inherit;font-size:12px;padding:8px 12px;min-height:35px}
+.sports-period-tab:hover,.sports-metric-tab:hover{background:#edf5f0}
+.sports-period-tab.active,.sports-metric-tab.active{background:#e6f1e9;border-color:#bfd8c8;color:#285847;font-weight:700}
+.sports-period-arrows{display:flex;align-items:center;gap:8px;color:var(--sports-ink);font-size:12px}
+.sports-period-arrows span{min-width:110px;text-align:center;font-weight:600}
+.sports-period-arrows button{width:32px;height:32px;border:1px solid var(--sports-border);border-radius:9px;background:white;color:var(--sports-ink);font-size:21px;cursor:pointer}
+.sports-period-arrows button:disabled{opacity:.3;cursor:default}
+.sports-summary{margin:5px 0 17px;gap:9px}
+.sports-summary span{min-width:124px;flex:1 1 125px}
+.sports-metric-tabs{margin-bottom:12px}
+.sports-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(183px,1fr));gap:12px;margin:8px 0 23px}
+.sports-type-card{cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px;min-width:0;min-height:173px;background:#fff;border:1px solid #e2ebe5;border-radius:16px;padding:16px;transition:border-color .16s,box-shadow .16s,transform .16s;color:#315747}
+.sports-type-card:hover{border-color:#9dc4af;box-shadow:0 6px 20px #285b4012;transform:translateY(-1px)}
+.sports-type-card:focus-visible{outline:2px solid #37816c;outline-offset:2px}
+.sports-type-card.active{border-color:#4b947c;background:#f2f8f3}
+.sports-type-head{display:flex;align-items:center;gap:9px;font-size:13px}.sports-type-head strong{min-width:0;line-height:1.3}
+.sports-type-icon{display:flex;align-items:center;justify-content:center;flex:0 0 31px;width:31px;height:31px;background:#edf4ef;border-radius:10px;font-size:18px;color:#397b67}
+.sports-type-amount{font:normal 25px Georgia,serif;color:#2e6855;font-variant-numeric:tabular-nums}
+.sports-card-meter{display:block;height:6px;border-radius:10px;background:#ebf0ec;overflow:hidden}
+.sports-card-meter i{display:block;height:100%;max-width:100%;border-radius:10px}
+.sports-card-bottom{font-size:11px;color:#80968a;line-height:1.35}
+.sports-selected-detail{display:flex;flex-wrap:wrap;align-items:center;gap:10px 19px;padding:12px 14px;margin:0 0 15px;background:#f2f7f3;border-radius:12px;font-size:12px;color:#5e786b}
+.sports-selected-detail button{background:#fff;border:1px solid #dae8de;border-radius:8px;color:#367760;cursor:pointer;padding:6px 8px}
+.sports-selected-detail strong{font-size:14px;color:#2f614d}
+.sports-trend{border-top:1px solid #e7eee9;padding-top:18px;margin-top:10px}
+.sports-trend-heading{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;color:#365e4e;font-size:14px}
+.sports-trend-heading small{color:#8a9d90;font-size:11px}
+.sports-trend-chart{display:flex;align-items:end;gap:3px;height:196px;margin-top:18px;padding:0 2px;border-bottom:1px solid #dbe8de;overflow:hidden}
+.sports-trend-col{display:flex;flex-direction:column;align-items:center;justify-content:end;flex:1 1 10px;min-width:3px;height:100%;position:relative}
+.sports-trend-stack{height:164px;display:flex;flex-direction:column;justify-content:flex-end;width:100%;max-width:32px;overflow:hidden;border-radius:3px 3px 0 0}
+.sports-trend-stack span{display:block;width:100%;min-height:0}
+.sports-trend-col small{height:17px;font-size:9px;color:#98aa9f;white-space:nowrap;max-width:52px;overflow:visible}
+.sports-trend-legend{display:flex;flex-wrap:wrap;gap:8px 15px;margin:13px 0;font-size:11px;color:#657f70}
+.sports-trend-legend span{display:inline-flex;gap:6px;align-items:center}.sports-trend-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+@media(max-width:650px){.sports-control-line{align-items:stretch}.sports-period-tabs{width:100%;overflow-x:auto;flex-wrap:nowrap}.sports-period-tab{flex:0 0 auto}.sports-period-arrows{justify-content:space-between;width:100%}.sports-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.sports-type-card{padding:12px;min-height:150px}.sports-type-amount{font-size:20px}.sports-trend-chart{gap:1px}}
+@media(max-width:365px){.sports-card-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.sports-type-card{transition:none}.sports-type-card:hover{transform:none}}
+
+@media(max-width:650px){.sports-period-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;overflow:visible}.sports-period-tab{padding:7px 4px;min-width:0}}

@@ -29,8 +29,8 @@ test('0.5.23 aggregate is shown first and session detail list remains collapsibl
  assert.ok(aggregate>=0&&list>aggregate);
  assert.match(html,/<details class="insight-chart-card fitness-sessions-details">/);
  assert.match(html,/2 Einheiten · Ø 51 min/);
- assert.match(html,/18,5 km gemessen/);
- assert.match(html,/Keine Distanz erfasst/);
+ assert.match(html,/18,5 km/);
+ assert.match(html,/sports-card-grid/);
  assert.equal((html.match(/City Cycling/g)||[]).length,2);
 });
 test('0.5.23 rendered session details escape CSV titles',()=>{

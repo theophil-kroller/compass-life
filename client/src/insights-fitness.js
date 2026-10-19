@@ -3,14 +3,14 @@
  * Session summaries only where Garmin activity exports actually contain global 18.
  */
 import {insightsRange} from './insights.js';
-import {sportsInsightsView} from './sports-insights.js';
+import {sportsInsightsView,sportsPeriodWindow,normalizedSportDistance} from './sports-insights.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(x,d=0)=>Number.isFinite(x)?x.toLocaleString('de-AT',{maximumFractionDigits:d}):'–';
 const dayLabel=x=>new Date(x+'T12:00:00Z').toLocaleDateString('de-AT',{day:'2-digit',month:'short'});
 const finite=x=>Number.isFinite(x)&&x>=0;
 const sportNames={0:'Training',1:'Laufen',2:'Radfahren',3:'Wechsel',4:'Fitnessgerät',5:'Schwimmen',11:'Gehen',17:'Wandern',18:'Gehen',19:'Krafttraining',20:'Indoor-Radfahren'};
 export function joinedFitnessDays(imported={},healthDays=[],today='2026-10-18',period='28'){
- const range=insightsRange(today,period),days=new Map();
+ const range=typeof period==='object'&&period?.end?period:insightsRange(today,period),days=new Map();
  for(const r of healthDays||[]){if(!r||typeof r.day!=='string'||r.day>range.end||range.start&&r.day<range.start)continue;
   days.set(r.day,{day:r.day,steps:finite(r.steps)?r.steps:null,exerciseMinutes:finite(r.exerciseMinutes)?r.exerciseMinutes:null,stepsSource:finite(r.steps)?'Health Connect':null,distanceKm:null,activeMinutes:null});
  }
@@ -41,22 +41,22 @@ function lineChart(rows,key,color,unit,label,period){
 }
 const mean=values=>values.length?values.reduce((a,b)=>a+b,0)/values.length:null;
 const kpi=(name,value,detail)=>`<article class="insight-kpi"><span>${esc(name)}</span><strong>${esc(value)}</strong><small>${esc(detail)}</small></article>`;
-export function fitnessInsightsView(imported={},healthDays=[],period='28',today=new Date().toLocaleDateString('sv-SE'),personalActivities=[]){
- const rows=joinedFitnessDays(imported,healthDays,today,period);
+export function fitnessInsightsView(imported={},healthDays=[],period='28',today=new Date().toLocaleDateString('sv-SE'),personalActivities=[],sportsUI=null){
+ const range=sportsUI?sportsPeriodWindow(sportsUI.mode,sportsUI.anchor,today):insightsRange(today,period);
+ const rows=joinedFitnessDays(imported,healthDays,today,sportsUI?range:period);
  const withSteps=rows.filter(x=>finite(x.steps)),distance=rows.filter(x=>finite(x.distanceKm)),exercise=rows.filter(x=>finite(x.exerciseMinutes)),active=rows.filter(x=>finite(x.activeMinutes));
- const range=insightsRange(today,period);
  const sessions=(imported?.garminSessions||[]).filter(s=>s.day<=range.end&&(!range.start||s.day>=range.start)).sort((a,b)=>b.start.localeCompare(a.start));
  const garminDays=rows.filter(x=>x.stepsSource==='Garmin FIT').length;
  return `<section class="insight-fitness-view" aria-label="Garmin und Health Connect Aktivität">
  <div class="insight-kpi-grid">${kpi('Ø Schritte',num(mean(withSteps.map(r=>r.steps))),'pro erfasstem Tag · Garmin vor Health Connect')}${kpi('Ø Strecke',num(mean(distance.map(r=>r.distanceKm)),2)+' km','Garmin-Monitoring · Gehen/Laufen')}${kpi('Ø Training',num(mean(exercise.map(r=>r.exerciseMinutes)))+' min','Health Connect · pro erfasstem Tag')}${kpi('Garmin-Aktivitäten',num(sessions.length),'Garmin FIT / Activities.csv')}</div>
  <div class="insight-data-note">${rows.length} Tage mit Datensätzen im ausgewählten Zeitraum. Schritte werden je Tag <strong>entweder aus Garmin (${garminDays} Tage) oder Health Connect</strong> übernommen und niemals addiert. Garmin-FIT-Schritte sind Tages-Zählerstände aus Walking/Running-Monitoring; Aktions-/Trainingsminuten werden nicht mit Health-Connect-Intensitätsminuten gleichgesetzt.</div>
- ${sportsInsightsView(imported?.garminSessions||[],personalActivities,range)}
- <div class="insight-chart-grid"><article class="insight-chart-card"><div class="insight-figure-title"><div><small>01 · MOVEMENT</small><h3>Schritte im Zeitverlauf</h3></div><strong>${num(withSteps.length)} Tage</strong></div>${lineChart(rows,'steps','#368B7D','Schritte','Schritte',period)}</article>
- <article class="insight-chart-card"><div class="insight-figure-title"><div><small>02 · DISTANCE</small><h3>Gehen & Laufen</h3></div><strong>${num(distance.length)} Tage</strong></div>${lineChart(rows,'distanceKm','#4C80AD','km','Strecke',period)}<p class="insight-figure-note">Nur dokumentierte FIT-Monitoring-Distanz. GPS-Routen werden nicht importiert.</p></article>
- <article class="insight-chart-card"><div class="insight-figure-title"><div><small>03 · EXERCISE</small><h3>Training über Health Connect</h3></div></div>${lineChart(rows,'exerciseMinutes','#B07E60','min','Trainingsminuten',period)}</article>
- <article class="insight-chart-card"><div class="insight-figure-title"><div><small>04 · ACTIVE TIME</small><h3>Garmin-Geh-/Laufzeit</h3></div></div>${lineChart(rows,'activeMinutes','#A38AC5','min','Geh-/Laufzeit',period)}<p class="insight-figure-note">Garmin-Monitoring-Zähler; keine offiziellen Intensitätsminuten oder unabhängigen Trainingseinheiten.</p></article></div>
+ ${sportsInsightsView(imported?.garminSessions||[],personalActivities,sportsUI?sportsPeriodWindow(sportsUI.mode,sportsUI.anchor,today):range,sportsUI||{})}
+ <div class="insight-chart-grid"><article class="insight-chart-card"><div class="insight-figure-title"><div><small>01 · MOVEMENT</small><h3>Schritte im Zeitverlauf</h3></div><strong>${num(withSteps.length)} Tage</strong></div>${lineChart(rows,'steps','#368B7D','Schritte','Schritte',sportsUI?.mode||period)}</article>
+ <article class="insight-chart-card"><div class="insight-figure-title"><div><small>02 · DISTANCE</small><h3>Gehen & Laufen</h3></div><strong>${num(distance.length)} Tage</strong></div>${lineChart(rows,'distanceKm','#4C80AD','km','Strecke',sportsUI?.mode||period)}<p class="insight-figure-note">Nur dokumentierte FIT-Monitoring-Distanz. GPS-Routen werden nicht importiert.</p></article>
+ <article class="insight-chart-card"><div class="insight-figure-title"><div><small>03 · EXERCISE</small><h3>Training über Health Connect</h3></div></div>${lineChart(rows,'exerciseMinutes','#B07E60','min','Trainingsminuten',sportsUI?.mode||period)}</article>
+ <article class="insight-chart-card"><div class="insight-figure-title"><div><small>04 · ACTIVE TIME</small><h3>Garmin-Geh-/Laufzeit</h3></div></div>${lineChart(rows,'activeMinutes','#A38AC5','min','Geh-/Laufzeit',sportsUI?.mode||period)}<p class="insight-figure-note">Garmin-Monitoring-Zähler; keine offiziellen Intensitätsminuten oder unabhängigen Trainingseinheiten.</p></article></div>
  <details class="insight-chart-card fitness-sessions-details"><summary>Einzelne Garmin-Trainings ansehen · ${num(sessions.length)} im Zeitraum</summary>
- ${sessions.length?`<div class="insight-fitness-sessions">${sessions.map(s=>`<div class="insight-session-row"><div><strong>${esc(s.title||sportNames[s.sport]||'Sportaktivität')}</strong><small>${esc(dayLabel(s.day))} · ${esc(s.start.slice(11,16))} ${s.localTimeNoOffset?'(Garmin-CSV, Zeitzone offen)':'UTC'}</small></div><span>${finite(s.durationMinutes)?esc(num(s.durationMinutes,1))+' min':'–'}</span><span>${finite(s.distanceKm)?esc(num(s.distanceKm,2))+' km':'–'}</span><span>${finite(s.avgHr)?esc(num(s.avgHr))+' bpm':'–'}</span></div>`).join('')}</div>`:'<p class="insight-no-data">Noch keine Garmin-Trainingssessions importiert. Die Tages-Wellness-ZIPs enthalten oft nur Monitoring-Werte. Einzelne Trainings-FITs können zusätzlich importiert werden.</p>'}
- <p class="insight-figure-note">Nur tatsächlich im Export enthaltene Sessions, keine künstlich erzeugten Aktivitäten. Garmin-Activities-CSV: Uhrzeiten ohne Zeitzone; Distanz als km angenommen (Garmin-Anzeigeeinheit prüfen). Keine Karten- oder Positionsdaten gespeichert.</p></details>
+ ${sessions.length?`<div class="insight-fitness-sessions">${sessions.map(s=>`<div class="insight-session-row"><div><strong>${esc(s.title||sportNames[s.sport]||'Sportaktivität')}</strong><small>${esc(dayLabel(s.day))} · ${esc(s.start.slice(11,16))} ${s.localTimeNoOffset?'(Garmin-CSV, Zeitzone offen)':'UTC'}</small></div><span>${finite(s.durationMinutes)?esc(num(s.durationMinutes,1))+' min':'–'}</span><span>${normalizedSportDistance(s,/swimm?ing/i.test(s.title+' '+s.activityType)?'swimming':'other')!==null?esc(num(normalizedSportDistance(s,/swimm?ing/i.test(s.title+' '+s.activityType)?'swimming':'other'),2))+' km':'–'}</span><span>${finite(s.avgHr)?esc(num(s.avgHr))+' bpm':'–'}</span></div>`).join('')}</div>`:'<p class="insight-no-data">Noch keine Garmin-Trainingssessions importiert. Die Tages-Wellness-ZIPs enthalten oft nur Monitoring-Werte. Einzelne Trainings-FITs können zusätzlich importiert werden.</p>'}
+ <p class="insight-figure-note">Nur tatsächlich im Export enthaltene Sessions, keine künstlich erzeugten Aktivitäten. Garmin-Activities-CSV: Uhrzeiten ohne Zeitzone; Freiwasser-Schwimmdistanzen in Metern werden zu km umgerechnet; übrige Einheiten nach Garmin-Export prüfen. Keine Karten- oder Positionsdaten gespeichert.</p></details>
  <div class="insight-footnote">Die dargestellten Schritte, Aktivitätszeiten und Distanzen sind Gerätewerte und können aufgrund unvollständiger FIT-Tagesdateien unter den Garmin-Connect-Werten liegen. Für genaue Tageswerte benötigst du vollständig exportierte Monitoring-Dateien.</div></section>`;
 }

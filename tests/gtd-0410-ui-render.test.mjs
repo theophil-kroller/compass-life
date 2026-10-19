@@ -1,3 +1,4 @@
+import * as relationships from '../client/src/people-relationships-v24.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -34,7 +35,7 @@ function context(){
  const window={addEventListener:()=>{}};
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
  Object.assign(ctx,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
- Object.assign(ctx,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter);
+ Object.assign(ctx,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,relationships);
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.

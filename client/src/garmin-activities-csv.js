@@ -22,9 +22,9 @@ export function parseGarminActivitiesCsv(text){const csv=String(text??'').replac
  for(const row of all){const at=field(row,'date').trim().replace(' ','T');if(!isValidDate(at))continue;const minutes=elapsed(field(row,'time'));if(minutes===null||minutes<=0)continue;
   const activityType=field(row,'activity type').trim().slice(0,64),title=(field(row,'title').trim()||activityType||'Garmin-Aktivität').slice(0,150);
   const sport=SPORT[activityType.toLowerCase()]??0,day=at.slice(0,10);
-  const distance=validNumber(field(row,'distance'),0,1500),calories=validNumber(field(row,'calories'),0,25000),avgHr=validNumber(field(row,'avg hr'),25,240),maxHr=validNumber(field(row,'max hr'),25,260);
+  const rawDistance=validNumber(field(row,'distance'),0,150000),swim=/swimm?ing/i.test(activityType+' '+title),distance=swim&&rawDistance!==null&&rawDistance>30?rawDistance/1000:rawDistance,calories=validNumber(field(row,'calories'),0,25000),avgHr=validNumber(field(row,'avg hr'),25,240),maxHr=validNumber(field(row,'max hr'),25,260);
   result.push({id:`garmin-csv|${at}|${activityType}|${title}`,day,start:at,end:null,sport,title,activityType,durationMinutes:Math.round(minutes*10)/10,
-   distanceKm:distance,calories,avgHr,maxHr,source:'garmin-activities-csv',localTimeNoOffset:true,distanceUnitAssumed:'km'});
+   distanceKm:distance,calories,avgHr,maxHr,source:'garmin-activities-csv',localTimeNoOffset:true,distanceUnitAssumed:swim&&rawDistance!==null&&rawDistance>30?'m-converted':'km'});
  }
  if(!result.length)throw Error('Garmin-Activities-CSV enthält keine verwertbaren Aktivitäten mit Datum und Dauer');
  return result;
