@@ -1,3 +1,4 @@
+import * as capacity from '../client/src/capacity-engine-v44.js';
 import {technicalSettings} from '../client/src/kraken-technical-v40.js';
 import * as relationships from '../client/src/people-relationships-v24.js';
 import test from 'node:test';
@@ -29,7 +30,7 @@ function setup(){
  const app={innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null};
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const ctx={document,window:{addEventListener:()=>{}},location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(Error('offline')),setTimeout,clearTimeout};
- Object.assign(ctx,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,relationships);
+ Object.assign(ctx,capacity,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,relationships);
  ctx.technicalSettings=technicalSettings;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
  runInNewContext(compiled,ctx,{filename:'browser-ui-smoke.js',timeout:2000});
