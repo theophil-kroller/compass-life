@@ -38,7 +38,7 @@ test('HRV now uses dynamic trailing band rather than static full-range rectangle
 });
 test('consolidated Insights retains actual Garmin sleep, Fitdays body and Health Connect activity',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.17\.6'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.17\.7'/);
  assert.match(main,/navItem\('insights','Insights · Gesundheit'/);
  assert.doesNotMatch(main,/navItem\('health'/);
  assert.match(main,/if\(bootView==='health'\|\|bootView==='places'\)tab='insights'/);

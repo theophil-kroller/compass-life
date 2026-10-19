@@ -11,7 +11,7 @@ import secrets
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
-from kraken_sync import sync
+from kraken_sync import sync, fetch_eur_quotes
 
 PORT = 18757
 LIMIT = 3_000_000
@@ -87,6 +87,22 @@ def serve(session):
         def do_POST(self):
             if not self._auth():
                 return self._reply({'error':'Nicht autorisiert'},403)
+            if self.path == '/quotes':
+                size = int(self.headers.get('Content-Length', '0') or 0)
+                if size < 2 or size > 16000:
+                    return self._reply({'error':'Ungültige Kursanfrage'},400)
+                try:
+                    request = json.loads(self.rfile.read(size))
+                    assets = request.get('assets')
+                    if not isinstance(assets,list) or len(assets)>70 or not all(isinstance(a,str) and 1<=len(a)<=35 and all(ch.isalnum() or ch in '._-' for ch in a) for a in assets):
+                        return self._reply({'error':'Ungültige Asset-Liste'},400)
+                    # Public Kraken endpoint; no API credentials or balance amounts leave the client.
+                    quotes, stamp = fetch_eur_quotes({a:'1' for a in assets})
+                    return self._reply({'quotesEur':quotes, 'pricedAt':stamp})
+                except (ValueError,TypeError,KeyError):
+                    return self._reply({'error':'Kurse konnten nicht verarbeitet werden'},400)
+                except Exception:
+                    return self._reply({'error':'Kursdienst derzeit nicht verfügbar'},503)
             if self.path != '/sync':
                 return self._reply({'error':'Nicht gefunden'},404)
             if int(self.headers.get('Content-Length', '0') or 0) != 0:

@@ -986,3 +986,21 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 @media(max-width:650px){.fin-wealth-form{grid-template-columns:1fr}.fin-merchant-item{grid-template-columns:minmax(100px,1fr) 78px}.fin-merchant-item>strong{grid-column:2}.fin-merchant-months{grid-column:1;grid-row:2}.fin-wealth-consolidated,.fin-merchant-insights{padding:15px}}
 
 .fin-merchant-reveal{margin:14px 0 22px}.fin-merchant-reveal>summary{cursor:pointer;color:#316e58;padding:12px 16px;border:1px solid #dbe8df;background:#f8fcf8;border-radius:14px;font-weight:600}.fin-merchant-reveal[open]>summary{border-radius:14px 14px 0 0}
+
+/* 0.5.17.7: readable live Sankey detail across four levels, plus verified account network. */
+.fin-deep-sankey{width:100%;overflow-x:auto;overflow-y:visible;scrollbar-width:thin}
+.fin-deep-sankey svg{min-width:920px;width:100%;height:auto;display:block}
+.fin-deep-sankey [data-action]{cursor:pointer}
+.fin-deep-sankey [data-action]:hover{filter:brightness(.9) drop-shadow(0 1px 3px #27443b33)}
+.fin-account-sankey svg{min-width:720px;width:100%;height:auto;display:block}
+.fin-account-ribbon{transition:opacity .2s ease,filter .2s ease}
+.fin-account-sankey:has(.fin-account-ribbon:hover) .fin-account-ribbon:not(:hover){opacity:.13}
+.fin-account-ribbon:hover{filter:brightness(.98) drop-shadow(0 2px 3px #264b4355)}
+.fin-account-proposals{margin:18px 0;padding:13px 16px;border:1px solid #dce8df;border-radius:12px}
+.fin-account-proposals summary{cursor:pointer;font-weight:600;color:#31594a}
+.fin-account-proposal{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 2px;border-bottom:1px solid #e5ede6;font-size:13px}
+.fin-account-proposal:last-child{border-bottom:none}
+@media(max-width:760px){.fin-deep-sankey svg{min-width:920px}.fin-account-proposal{flex-wrap:wrap}}
+
+.fin-sankey-focus{display:flex;align-items:center;gap:12px;color:#54776a;font-size:13px;margin:12px 0 20px}
+.fin-sankey-focus select{border:1px solid #d7e4db;border-radius:12px;padding:8px 14px;color:#244e43;background:white;min-width:215px}

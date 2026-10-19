@@ -66,7 +66,7 @@ export function financeTreemap(rows=[],selected=''){
  return `<div class="fin-treemap-shell"><svg viewBox="0 0 920 380" class="fin-treemap" role="img" aria-label="Treemap der Ausgaben, Rechteckfläche entspricht Ausgabebetrag">${tiles.map(t=>`<g ${select(t.name)} class="fin-treemap-tile ${t.name===selected?'active':''}"><rect x="${round(t.x+2)}" y="${round(t.y+2)}" width="${round(Math.max(0,t.w-4))}" height="${round(Math.max(0,t.h-4))}" rx="8" fill="${t.color}"/><title>${h(t.name)} · ${h(euro(t.cents))} · ${h(pct(t.cents/total))}</title>${t.w>98&&t.h>51?`<text x="${round(t.x+14)}" y="${round(t.y+23)}" font-size="14" font-weight="700" fill="#fff">${h(t.name.length>Math.floor(t.w/11)?t.name.slice(0,Math.floor(t.w/11)-1)+'…':t.name)}</text><text x="${round(t.x+14)}" y="${round(t.y+44)}" font-size="12" fill="#fff">${h(euro(t.cents))}</text>`:''}</g>`).join('')}</svg></div><p class="fin-art-note">Je größer die Fläche, desto höher die Ausgaben. Klicke auf eine Kategorie für Details.</p>`;
 }
 /** Three-stage Sankey: actual top categories and their classified subcategories. */
-export function financeOutflowSankey(rows=[]){return hierarchicalSankey(rows);}
+export function financeOutflowSankey(rows=[],focus='all'){return hierarchicalSankey(rows,focus);}
 export function financeStackedArea(rows=[]){
  const months=financeMonthlySeries(rows),period=months.slice(-15);if(period.length<2)return empty('Für einen Ausgabenverlauf werden mindestens zwei Monate benötigt.');
  const ranked=new Map();period.forEach(m=>Object.entries(m.categories).forEach(([k,v])=>ranked.set(k,(ranked.get(k)||0)+v)));

@@ -70,6 +70,23 @@ export function mergeKrakenSnapshot(oldData,raw){
  }
  return {...incoming,valuationHistory:historic.sort((a,b)=>a.at.localeCompare(b.at)).slice(-365),ledgers:merge(past?.ledgers,incoming.ledgers),trades:merge(past?.trades,incoming.trades)};
 }
+/** Update EUR quotes without refreshing balances, ledger or trades. Historic valuations
+ * are recorded only when all positive assets are priced, at the quote timestamp.
+ * The portfolio's original balance-snapshot time remains unchanged.
+ */
+export function updateKrakenQuotes(current,reply){
+ if(current?.format!==KRAKEN_FORMAT)throw Error('Vor Kursaktualisierung zuerst Kraken-Bestände importieren.');
+ const candidate=validateKrakenSnapshot({...current,quotesEur:reply?.quotesEur,pricedAt:reply?.pricedAt});
+ const updated={...current,quotesEur:candidate.quotesEur,pricedAt:candidate.pricedAt};
+ const summary=krakenWealthSummary(updated);
+ if(summary.complete&&updated.pricedAt&&updated.generatedAt.slice(0,10)===updated.pricedAt.slice(0,10)){
+  const at=updated.pricedAt,day=at.slice(0,10),older=Array.isArray(current.valuationHistory)?current.valuationHistory:[];
+  const rows=older.filter(x=>x.day!==day&&Number.isFinite(x.valueEur)).slice(-364);
+  rows.push({at,day,valueEur:Math.round(summary.totalEur*100)/100,assets:summary.total});
+  updated.valuationHistory=rows.sort((a,b)=>a.at.localeCompare(b.at)).slice(-365);
+ }
+ return updated;
+}
 const euro=x=>Number(x).toLocaleString('de-AT',{style:'currency',currency:'EUR',maximumFractionDigits:2});
 function allocationRing(positions){
  const priced=positions.filter(x=>x.value!==null&&x.value>0),total=priced.reduce((n,x)=>n+x.value,0);
@@ -96,7 +113,7 @@ export function krakenWealthView(data){
  <div class="fin-kpi-grid"><article class="fin-kpi"><small>${summary.complete?'Gesamtwert · Spot':'Bewerteter Teil · Spot'}</small><strong>${summary.covered?esc(euro(summary.totalEur)):'–'}</strong><span>${summary.covered} von ${summary.total} Beständen in EUR bewertbar${summary.complete?'':' · unvollständig'}</span></article><article class="fin-kpi"><small>Coin-Positionen</small><strong>${summary.total}</strong><span>Positive Kraken Spot-Bestände</span></article><article class="fin-kpi"><small>Nicht bewertet</small><strong>${unrated.length}</strong><span>Ohne verlässlichen EUR-Kurs</span></article></div>
  <div class="fin-wealth-layout">${allocationRing(summary.positions)}<div class="fin-wealth-positions">${summary.positions.slice(0,24).map((p,i)=>`<div class="fin-wealth-asset"><div><strong>${esc(p.asset)}</strong><small>${esc(String(p.amount))} Einheiten${p.rate!==null?' · '+esc(euro(p.rate))+' / Einheit':''}</small></div><div class="fin-wealth-val"><strong>${p.value===null?'Nicht bewertet':esc(euro(p.value))}</strong>${p.value!==null?`<span style="width:${Math.max(2,100*p.value/max).toFixed(2)}%;background:${['#2C8F7A','#7D98D1','#DDA373','#AA89CA','#63B3C3'][i%5]}"></span>`:''}</div></div>`).join('')||'<p>Keine positiven Spot-Bestände.</p>'}</div></div>
  <div class="fin-wealth-history-card"><h4>Entwicklung des bewerteten Portfolios</h4>${historySpark(data.valuationHistory||[])}</div>
- <p class="fin-disclaimer">Die Euro-Bewertung verwendet unverbindliche zuletzt verfügbare Kraken-Marktkurse, <strong>keine</strong> Echtzeit-Handelsausführung und keine Steuer- oder Gewinnberechnung. Nur Kraken Spot; flatex, Earn, Staking und externe Wallets fehlen. Bei nicht bewerteten Positionen ist die angezeigte Summe ausdrücklich <strong>nicht dein Gesamtvermögen</strong>.</p></section>`;
+ <p class="fin-disclaimer">Bewertung des Bestands vom ${esc(new Date(data.generatedAt).toLocaleDateString('de-AT'))} mit unverbindlichen Kraken-EUR-Marktkursen, <strong>keine</strong> Echtzeit-Handelsausführung und keine Steuer- oder Gewinnberechnung. Nur Kraken Spot; flatex, Earn, Staking und externe Wallets fehlen. Bei nicht bewerteten Positionen ist die angezeigte Summe ausdrücklich <strong>nicht dein Gesamtvermögen</strong>.</p></section>`;
 }
 export function krakenPortfolioView(data=null,preview=null,ui={}){
  const usable=data?.format===KRAKEN_FORMAT?data:null;
@@ -112,6 +129,7 @@ export function krakenPortfolioView(data=null,preview=null,ui={}){
  <div class="fin-bridge-controls"><label>Kopplungscode des lokalen Connectors<input type="password" id="finance-kraken-bridge-token" maxlength="128" autocomplete="off" placeholder="Im Terminal angezeigten Code eingeben"/></label><button type="button" class="primary-btn" data-action="finance-kraken-bridge-sync" ${ui.busy?'disabled':''}>${ui.busy?'Synchronisiere …':'Jetzt lokal synchronisieren'}</button></div>
  <label class="fin-bridge-auto"><input type="checkbox" id="finance-kraken-auto-sync" ${ui.auto?'checked':''}/> Beim offenen, entsperrten Portfolio automatisch aktualisieren (höchstens alle 12 Stunden, nur wenn der lokale Connector läuft)</label>
  <p class="fin-disclaimer">Keine Zugangsdaten im Browser oder Cloudflare. Der Kopplungscode bleibt nur bis zum Schließen dieser Compass-Sitzung im Arbeitsspeicher. Für automatische Aktualisierung muss der lokale Connector gestartet und gekoppelt sein. Die alternative JSON-Datei bleibt weiter nutzbar.</p></div>
+ <button type="button" class="secondary-btn" data-action="finance-kraken-refresh-quotes" ${ui.busy||!usable?'disabled':''}>EUR-Kurse der importierten Coins aktualisieren</button><p class="fin-disclaimer">Öffentliche Kraken-Marktkurse via lokalem Connector; keine erneute Trade-Abfrage. Bei alten Balance-Daten wird ausdrücklich nur der alte Bestand mit neuen Kursen bewertet.</p>
  <label class="secondary-btn fin-kraken-upload">Kraken-API-Export auswählen<input type="file" id="finance-kraken-file" accept=".json,application/json" /></label>
  ${preview?`<div class="fin-preview-result"><strong>Importvorschau: ${Object.keys(preview.balances).length} Währungen · ${preview.ledgers.length} Ledger-Einträge · ${preview.trades.length} Trades</strong><p>Stand ${esc(fmtTime(preview.generatedAt))}${preview.partial?' · API-Historie unvollständig':''}. Vorhandene Einträge mit gleicher Kraken-ID werden nicht verdoppelt.</p><button type="button" class="primary-btn" data-action="finance-kraken-confirm">Kraken-Daten übernehmen</button> <button type="button" class="secondary-btn" data-action="finance-kraken-cancel">Abbrechen</button></div>`:''}
  ${usable?`<div class="fin-kpi-grid"><article class="fin-kpi"><small>Währungen mit Bestand</small><strong>${assets.length}</strong><span>Kraken Spot</span></article><article class="fin-kpi"><small>Ledger-Einträge</small><strong>${usable.ledgers.length}</strong><span>${deposits.length} Einzahlungen · ${withdrawals.length} Auszahlungen</span></article><article class="fin-kpi"><small>Trades</small><strong>${usable.trades.length}</strong><span>Abgeschlossene Trades</span></article><article class="fin-kpi"><small>Datenstand</small><strong>${esc(fmtTime(usable.generatedAt).slice(0,10))}</strong><span>${usable.partial?'Historie teilweise geladen':'Vom lokalen Exporthelfer'}</span></article></div>

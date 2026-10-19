@@ -32,42 +32,8 @@ const curveBand=(x0,y0,x1,y1,h)=>{
  const bend=(x1-x0)*.46;
  return `M${q(x0)},${q(y0)} C${q(x0+bend)},${q(y0)} ${q(x1-bend)},${q(y1)} ${q(x1)},${q(y1)} L${q(x1)},${q(y1+h)} C${q(x1-bend)},${q(y1+h)} ${q(x0+bend)},${q(y0+h)} ${q(x0)},${q(y0+h)} Z`;
 };
-export function hierarchicalSankey(rows=[]){
- const groups=hierarchicalFlows(rows),total=volume(groups);
- if(!total)return '<p class="insight-no-data">Noch keine kategorisierten Bankabgänge.</p>';
- const n=groups.length,leaves=groups.reduce((x,g)=>x+g.children.length,0);
- const W=1320,H=Math.max(690,leaves*29+n*18+135),margin=70;
- const xRoot=135,xParent=545,xLeaf=971,nodeWidth=12,groupGap=17,leafGap=7;
- // A single value scale is shared across all stages. Group/leaf padding is
- // inserted independently, causing real curved splits instead of flat stripes.
- const usable=H-margin*2;
- const scale=Math.max(.001,Math.min((usable-(n-1)*groupGap)/total,(usable-(leaves-1)*leafGap)/total));
- const totalPx=total*scale;
- let rootY=(H-totalPx)/2,parentY=(H-(totalPx+(n-1)*groupGap))/2,leafY=(H-(totalPx+(leaves-1)*leafGap))/2;
- const ribbons=[],nodes=[],leftLabels=[],rightLabels=[],defs=[];
- const labelText=(s,max=31)=>s.length>max?s.slice(0,max-1)+'…':s;
- // Render delicate parent/child color gradients, rather than flat rectangles.
- groups.forEach((g,i)=>{
-  const h=g.cents*scale,parentStart=parentY,rootStart=rootY;
-  const grad=`compass-sankey-${i}`;
-  defs.push(`<linearGradient id="${grad}" x1="0%" y1="0%" x2="100%" y2="10%"><stop offset="0%" stop-color="${g.color}" stop-opacity=".25"/><stop offset="63%" stop-color="${g.color}" stop-opacity=".62"/><stop offset="100%" stop-color="${g.color}" stop-opacity=".87"/></linearGradient>`);
-  ribbons.push(`<path class="fin-flow-band" ${g.special?'':click(g.name)} d="${curveBand(xRoot+nodeWidth,rootStart,xParent,parentStart,h)}" fill="url(#${grad})" stroke="${g.color}" stroke-opacity=".2" stroke-width=".6"><title>${esc(g.name)} · ${esc(euro(g.cents))}</title></path>`);
-  nodes.push(`<g class="fin-flow-node" ${g.special?'':click(g.name)}><rect x="${xParent}" y="${q(parentStart)}" width="${nodeWidth}" height="${q(Math.max(h,1))}" rx="2" fill="${g.color}"/><title>${esc(g.name)} · ${esc(euro(g.cents))}</title></g>`);
-  if(h>=14)leftLabels.push(`<text class="fin-flow-parent-text" x="${xParent-14}" y="${q(parentStart+h/2+4)}" text-anchor="end">${esc(labelText(g.name,30))}</text>`);
-  let leafStart=parentStart;
-  for(const [j,c] of g.children.entries()){
-   const dh=c.cents*scale,ly=leafY,opacity=Math.max(.28,.8-j*.065);
-   ribbons.push(`<path class="fin-flow-band" ${g.special?'':click(g.name,c.name)} d="${curveBand(xParent+nodeWidth,leafStart,xLeaf,ly,dh)}" fill="${g.color}" fill-opacity="${q(opacity*.51)}" stroke="${g.color}" stroke-opacity=".2" stroke-width=".5"><title>${esc(g.name)} → ${esc(c.name)} · ${esc(euro(c.cents))}</title></path>`);
-   nodes.push(`<g class="fin-flow-node" ${g.special?'':click(g.name,c.name)}><rect x="${xLeaf}" y="${q(ly)}" width="${nodeWidth}" height="${q(Math.max(dh,1))}" rx="2" fill="${g.color}" fill-opacity="${q(opacity)}"/><title>${esc(g.name)} / ${esc(c.name)} · ${esc(euro(c.cents))}</title></g>`);
-   // Small leaves stay available in the detail table rather than overprinting.
-   if(dh>=12)rightLabels.push(`<text class="fin-flow-end-text" x="${xLeaf+18}" y="${q(ly+dh/2+4)}">${esc(labelText(c.name,30))} · ${esc(euro(c.cents))}</text>`);
-   leafStart+=dh;leafY+=dh+leafGap;
-  }
-  parentY+=h+groupGap;rootY+=h;
- });
- const detail=groups.map(g=>`<div class="fin-sankey-detail-group"><strong><i style="background:${g.color}"></i>${esc(g.name)} <span>${esc(euro(g.cents))}</span></strong>${g.children.map(c=>g.special?`<span><span>${esc(c.name)}</span><b>${esc(euro(c.cents))}</b></span>`:`<button type="button" ${click(g.name,c.name)}><span>${esc(c.name)}</span><b>${esc(euro(c.cents))}</b></button>`).join('')}</div>`).join('');
- return `<div class="fin-organic-sankey"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Organischer dreistufiger Sankey: Abgänge zu Hauptkategorien und Unterkategorien"><defs>${defs.join('')}</defs><text x="${xRoot+6}" y="34" font-size="15" fill="#326B60" text-anchor="middle">Abgänge</text><text x="${xParent+6}" y="34" font-size="15" fill="#326B60" text-anchor="middle">Hauptkategorien</text><text x="${xLeaf+6}" y="34" font-size="15" fill="#326B60" text-anchor="middle">Unterkategorien</text>${ribbons.join('')}<rect x="${xRoot}" y="${q((H-totalPx)/2)}" width="${nodeWidth}" height="${q(totalPx)}" rx="4" fill="#286E63"/><text x="${xRoot-18}" y="${q(H/2+5)}" font-size="13" fill="currentColor" text-anchor="end">${esc(euro(total))}</text>${nodes.join('')}${leftLabels.join('')}${rightLabels.join('')}</svg></div><details class="fin-sankey-detail"><summary>Alle Haupt- und Unterkategorien mit Beträgen öffnen</summary><div class="fin-sankey-detail-grid">${detail}</div></details><p class="fin-art-note">Organische, geschwungene Geldbänder: Abgänge → Hauptkategorie → Unterkategorie. Breiten entsprechen den erfassten Beträgen. Sehr kleine Flüsse stehen lesbar in der Detailtabelle. Bargeld, eigene Transfers und unklare Abgänge werden getrennt vom Konsum ausgewiesen.</p>`;
-}
+import {deepSankey} from './finance-deep-sankey.js';
+export function hierarchicalSankey(rows=[],focus='all'){return deepSankey(rows,focus);}
 // SVG circular-sector geometry: angles in radians, 0 points towards 12 o'clock.
 const polar=(cx,cy,r,a)=>[cx+r*Math.sin(a),cy-r*Math.cos(a)];
 export function sector(cx,cy,inner,outer,a,b){if(b<=a+1e-9)return '';const wide=b-a>Math.PI?1:0,p1=polar(cx,cy,outer,a),p2=polar(cx,cy,outer,b),p3=polar(cx,cy,inner,b),p4=polar(cx,cy,inner,a);return `M${q(p1[0])},${q(p1[1])} A${outer},${outer} 0 ${wide} 1 ${q(p2[0])},${q(p2[1])} L${q(p3[0])},${q(p3[1])} A${inner},${inner} 0 ${wide} 0 ${q(p4[0])},${q(p4[1])} Z`;}
