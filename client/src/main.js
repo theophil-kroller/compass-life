@@ -52,7 +52,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.32';
+const COMPASS_CLIENT_VERSION='0.5.33';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -374,6 +374,7 @@ function chrome(content){
  ${navItem('recovery','Erholung','heart')}
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='places'?'is-active':''}" data-action="calm-insight-view" data-id="places">${ico('compass',19)}<span>Orte & Weltkarte</span></button>
  ${navItem('progress','Fortschritt','target')}
+ <button type="button" class="nav-item ${tab==='insights'&&insightTab==='focus'?'is-active':''}" data-action="calm-insight-view" data-id="focus">${ico('target',19)}<span>Produktivität</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='explore'?'is-active':''}" data-action="calm-insight-view" data-id="explore">${ico('spark',19)}<span>Explore</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='sources'?'is-active':''}" data-action="calm-insight-view" data-id="sources">${ico('settings',19)}<span>Datenquellen</span></button>
  </div>`:''}
@@ -390,7 +391,7 @@ function chrome(content){
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
- ${notice?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
+ ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
  ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${state&&captureOverlayOpen?captureOverlay():``}</div>`;
 }
 
@@ -1041,9 +1042,8 @@ function insightsScreen(){
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
  const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
- <div class="calm-insight-toolbar"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
- ${healthChoices}
- <div class="insight-view-header"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
+ <div class="calm-insight-toolbar" aria-label="Mobile Insights-Navigation"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
+ <div class="insight-view-header"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
  ${content}
 
  </div>`);

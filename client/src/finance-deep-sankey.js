@@ -49,9 +49,9 @@ export function deepSankey(rows=[],focus='all'){
  const H=Math.max(700,125+nm*34+ns*15+np*22),W=1740,top=68,gp=24,sp=15,mp=12;
  const avail=H-top-45,scale=Math.min((avail-gp*(np-1))/total,(avail-sp*(ns-1))/total,(avail-mp*(nm-1))/total);
  if(!(scale>0))return '<p class="insight-no-data">Zu viele Kategorien für diese Darstellung.</p>';
- const widths=[132,522,970,1405],bar=13;const v0=(H-total*scale)/2;
- let py=(H-(total*scale+gp*(np-1)))/2,sy=(H-(total*scale+sp*(ns-1)))/2,ry=v0;
- let my=(H-(total*scale+mp*(nm-1)))/2;
+ const widths=[132,522,970,1405],bar=13;const v0=top;
+ let py=top,sy=top,ry=v0;
+ let my=top;
  const tops=new Map(),used=new Map();for(const m of merchants){tops.set(m.key,my);used.set(m.key,0);my+=m.cents*scale+mp;}
  const defs=[],paths=[],nodes=[],labels=[];
  groups.forEach((g,i)=>{
@@ -82,5 +82,5 @@ export function deepSankey(rows=[],focus='all'){
   labels.push(`<text x="${widths[3]+20}" y="${r(y+Math.max(12,height/2+4))}" class="fin-flow-end-text" data-action="finance-merchant-select" data-id="${h(m.name)}" role="button" tabindex="0">${h(m.name.slice(0,28))} · ${h(euro(m.cents))}</text>`);
  }
  const names=['Abgänge','Hauptkategorien','Unterkategorien','Händler / Zahlungspartner'];
- return `<div class="fin-organic-sankey fin-deep-sankey"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vierstufiger Sankey mit zusammengeführten Händlern; Buchungen behalten ihre Kategorien"><defs>${defs.join('')}</defs>${names.map((name,i)=>`<text x="${widths[i]}" y="32" fill="#326B60" font-size="15">${h(name)}</text>`).join('')}${paths.join('')}<rect x="${widths[0]}" y="${r(v0)}" width="${bar}" height="${r(total*scale)}" rx="4" fill="#286E63"/><text x="${widths[0]-16}" y="${r(H/2+4)}" text-anchor="end" fill="currentColor" font-size="14">${h(euro(total))}</text>${nodes.join('')}${labels.join('')}</svg></div><p class="fin-art-note">Händler mit gleichem bestätigten Anzeigenamen werden rechts zu <strong>einem Knoten</strong> zusammengefasst. Zahlungswege aus verschiedenen Kategorien bleiben als getrennte Verbindungen sichtbar. Klick auf einen Händler öffnet die Bearbeitung direkt hier; Originalbuchungen bleiben erhalten.</p>`;
+ return `<div class="fin-organic-sankey fin-deep-sankey"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vierstufiger Sankey mit zusammengeführten Händlern; Buchungen behalten ihre Kategorien"><defs>${defs.join('')}</defs>${names.map((name,i)=>`<text x="${widths[i]}" y="32" fill="#326B60" font-size="15">${h(name)}</text>`).join('')}${paths.join('')}<rect x="${widths[0]}" y="${r(v0)}" width="${bar}" height="${r(total*scale)}" rx="4" fill="#286E63"/><text x="${widths[0]-16}" y="${r(v0+total*scale/2+4)}" text-anchor="end" fill="currentColor" font-size="14">${h(euro(total))}</text>${nodes.join('')}${labels.join('')}</svg></div><p class="fin-art-note">Händler mit gleichem bestätigten Anzeigenamen werden rechts zu <strong>einem Knoten</strong> zusammengefasst. Zahlungswege aus verschiedenen Kategorien bleiben als getrennte Verbindungen sichtbar. Klick auf einen Händler öffnet die Bearbeitung direkt hier; Originalbuchungen bleiben erhalten.</p>`;
 }
