@@ -1004,3 +1004,35 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 
 .fin-sankey-focus{display:flex;align-items:center;gap:12px;color:#54776a;font-size:13px;margin:12px 0 20px}
 .fin-sankey-focus select{border:1px solid #d7e4db;border-radius:12px;padding:8px 14px;color:#244e43;background:white;min-width:215px}
+
+/* Compass 0.5.18 · Financial navigation and scenario planner */
+.finance-workspace .fin-modern-nav .finance-preview-pane{display:flex;align-items:flex-start;gap:10px;min-height:101px;position:relative;overflow:hidden}
+.finance-workspace .fin-modern-nav .finance-preview-pane.is-selected{border-color:#77A896;background:#EFF7F3;box-shadow:0 5px 18px #2B776016}
+.fin-nav-icon{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;color:#2E806D;background:#E7F3ED;border:1px solid #D5E9DD;border-radius:12px}
+.fin-nav-sync,.fin-nav-git-merge{background:#E7F2F8;border-color:#D2E5EF;color:#3986A0}
+.fin-nav-activity,.fin-nav-aperture{background:#F7EDE5;border-color:#F1DCCF;color:#B87556}
+.fin-nav-chart,.fin-nav-trendingUp,.fin-nav-target{background:#E8F3EE;border-color:#D0E8DB;color:#2B876D}
+.fin-nav-calendar,.fin-nav-list,.fin-nav-checkSquare{background:#F3EDF7;border-color:#E8DBEE;color:#8668A2}
+.fin-nav-map,.fin-nav-folder{background:#F6F2E7;border-color:#EBE2C9;color:#977C4B}
+.finance-workspace .fin-modern-nav .finance-preview-pane strong{font-size:12px;line-height:1.45}
+.finance-workspace .fin-modern-nav .finance-preview-pane small{font-size:10px}
+.fin-forecast-18{display:grid;gap:17px;min-width:0}
+.fin-forecast-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.fin-forecast-kpis article{border:1px solid #DFE9E1;border-radius:15px;padding:16px;display:grid;gap:8px;min-width:0;background:#F9FCF9}
+.fin-forecast-kpis small{font-size:10px;color:#80958A}.fin-forecast-kpis strong{font:normal clamp(19px,2.4vw,27px) Georgia,serif;color:#2D6251;overflow-wrap:anywhere}.fin-forecast-kpis span{font-size:10px;color:#7B9384;line-height:1.5}
+.fin-forecast-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:11px;color:#829489}
+.fin-forecast-controls label{display:flex;align-items:center;gap:10px;font-weight:650;color:#577867}.fin-forecast-controls select{padding:10px;border-radius:11px;border:1px solid #D2E2D8;max-width:100%;color:#345C4B;background:#fff}
+.fin-forecast-18 svg{width:100%;height:auto;min-width:720px;display:block}
+.fin-forecast-table{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.fin-forecast-table>div{display:grid;gap:7px;border:1px solid #DDE7E0;border-radius:12px;padding:13px;background:#F8FBF9;color:#61806B}
+.fin-forecast-table strong{color:#345D4D;font:normal 21px Georgia,serif}.fin-forecast-table small{font-size:11px}.fin-forecast-table span{font-size:11px}
+.fin-forecast-method{padding:13px 16px;background:#F7FAF8;border:1px solid #E1EBE4;border-radius:12px;font-size:12px;color:#6A8777;line-height:1.7}.fin-forecast-method summary{cursor:pointer;font-weight:650;color:#396452}
+.fin-forecast-warnings{font-size:11px;line-height:1.7;color:#8B8F7B;padding-left:21px}.fin-forecast-empty{padding:20px;background:#FFF8F0;border:1px solid #EADCCB;border-radius:14px;color:#8C785C}.fin-forecast-empty p{font-size:12px;line-height:1.6}.fin-forecast-shortcut{justify-self:end}
+@media(max-width:1000px){.fin-forecast-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.finance-workspace .fin-modern-nav{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}}
+@media(max-width:600px){.fin-forecast-kpis{grid-template-columns:1fr 1fr}.fin-forecast-table{grid-template-columns:1fr}.finance-workspace .fin-modern-nav .finance-preview-pane{min-height:85px}.fin-nav-icon{width:31px;height:31px;flex-basis:31px}.fin-forecast-kpis strong{font-size:18px}}
+
+.fin-fixed-months{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;align-items:end;height:220px;border-bottom:1px solid #E3ECE5;padding:18px 10px 0}
+.fin-fixed-month{height:100%;display:grid;grid-template-rows:minmax(0,1fr) 22px;justify-items:stretch;align-items:end;min-width:0}
+.fin-fixed-bar{display:flex;flex-direction:column;justify-content:flex-end;width:min(100%,62px);height:100%;margin:auto;border-radius:7px 7px 0 0;overflow:hidden;background:#F2F5F3}
+.fin-fixed-bar .fixed{background:#338D7A;display:block;min-height:0}.fin-fixed-bar .variable{background:#E9A470;display:block;min-height:0}
+.fin-fixed-month small{text-align:center;font-size:11px;color:#6E8B79;padding:6px 0}.fin-fixed-month.is-missing .fin-fixed-bar{background:repeating-linear-gradient(45deg,#F2F5F3,#F2F5F3 7px,#E4EAE6 7px,#E4EAE6 11px)}

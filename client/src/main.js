@@ -37,7 +37,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.17.7';
+const COMPASS_CLIENT_VERSION='0.5.18';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -108,7 +108,7 @@ let importHealthSpan=90,selectedGarminNight='',healthFilePreview=null,healthFile
 let insightWellnessDay='';let insightStressGranularity='week',insightBodyComposition='composition';
 let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',financePane='Überblick';
 let financeSankeyFocus='all';
-let financePeriod='last12',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
+let financePeriod='last12',financeForecastScenario='basis',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
 let krakenBridgeToken='',krakenBridgeBusy=false,krakenLocalCheckedAt=0;
 let financeVisualMode='hierarchy',financeCompareMode='month_year',financeMerchantCategory='Lebensmittel';
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
@@ -771,7 +771,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,krakenPreview,krakenBridgeBusy}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy}));}
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
 const krakenBridgeRequest=async(path,method='GET',body=null)=>{
@@ -1159,6 +1159,7 @@ function bind() {
   const deepFocus=app.querySelector('#finance-sankey-focus');if(deepFocus)deepFocus.onchange=()=>{financeSankeyFocus=deepFocus.value;render();};
    const finAccount=app.querySelector('#finance-account');if(finAccount)finAccount.onchange=()=>{financeAccount=finAccount.value;financeReviewPage=0;financeLedgerPage=0;render();};
   const finPeriod=app.querySelector('#finance-period');if(finPeriod)finPeriod.onchange=()=>{financePeriod=finPeriod.value;financeReviewPage=0;financeLedgerPage=0;render();};
+  const scenarioSelector=app.querySelector('#finance-forecast-scenario');if(scenarioSelector)scenarioSelector.onchange=()=>{financeForecastScenario=scenarioSelector.value;render();};
   const finSearch=app.querySelector('#finance-ledger-query');if(finSearch)finSearch.onchange=()=>{financeLedgerQuery=finSearch.value.slice(0,100);financeLedgerPage=0;render();};
   const finFilter=app.querySelector('#finance-ledger-filter');if(finFilter)finFilter.onchange=()=>{financeLedgerFilter=finFilter.value;financeLedgerPage=0;render();};
   app.querySelectorAll('form[data-finance-edit]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeEdit;const data=new FormData(form),category=String(data.get('category')||''),flow=String(data.get('flow')||'');if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')return toast('Bitte eine konkrete Kategorie auswählen.',true);try{let affected=0;const remember=data.get('remember')==='yes';
