@@ -46,31 +46,31 @@ export function deepSankey(rows=[],focus='all'){
  for(const g of groups)for(const c of g.children)for(const m of c.merchants){const key=leafKey(g,c,m),old=merchantMap.get(key)||{key,name:m.name,cents:0,color:g.color};old.cents+=m.cents;merchantMap.set(key,old);}
  const merchants=[...merchantMap.values()];
  const np=groups.length,ns=groups.reduce((n,g)=>n+g.children.length,0),nm=merchants.length;
- const H=Math.max(680,125+nm*31+ns*12+np*18),W=1560,top=68,gp=18,sp=11,mp=9;
+ const H=Math.max(700,125+nm*34+ns*15+np*22),W=1740,top=68,gp=24,sp=15,mp=12;
  const avail=H-top-45,scale=Math.min((avail-gp*(np-1))/total,(avail-sp*(ns-1))/total,(avail-mp*(nm-1))/total);
  if(!(scale>0))return '<p class="insight-no-data">Zu viele Kategorien für diese Darstellung.</p>';
- const widths=[136,465,832,1191],bar=12;const v0=(H-total*scale)/2;
+ const widths=[132,522,970,1405],bar=13;const v0=(H-total*scale)/2;
  let py=(H-(total*scale+gp*(np-1)))/2,sy=(H-(total*scale+sp*(ns-1)))/2,ry=v0;
  let my=(H-(total*scale+mp*(nm-1)))/2;
  const tops=new Map(),used=new Map();for(const m of merchants){tops.set(m.key,my);used.set(m.key,0);my+=m.cents*scale+mp;}
  const defs=[],paths=[],nodes=[],labels=[];
  groups.forEach((g,i)=>{
   const tall=g.cents*scale,pr=py,root=ry,id=`deep-flow-grad-${i}`;
-  defs.push(`<linearGradient id="${id}"><stop stop-color="${g.color}" stop-opacity=".32"/><stop offset="1" stop-color="${g.color}" stop-opacity=".74"/></linearGradient>`);
+  defs.push(`<linearGradient id="${id}"><stop stop-color="${g.color}" stop-opacity=".41"/><stop offset="1" stop-color="${g.color}" stop-opacity=".86"/></linearGradient>`);
   paths.push(`<path class="fin-flow-band" d="${ribbon(widths[0]+bar,root,widths[1],pr,tall)}" fill="url(#${id})" ${g.special?'':action(g.name)}><title>${h(g.name)} · ${h(euro(g.cents))}</title></path>`);
   nodes.push(`<rect x="${widths[1]}" y="${r(pr)}" width="${bar}" height="${r(Math.max(tall,1))}" fill="${g.color}" rx="2"/>`);
   if(tall>13)labels.push(`<text x="${widths[1]-14}" y="${r(pr+tall/2+4)}" text-anchor="end" class="fin-flow-parent-text">${h(g.name.slice(0,30))}</text>`);
   let fromSub=pr;
   g.children.forEach(c=>{
    const sh=c.cents*scale,subStart=sy;
-   paths.push(`<path class="fin-flow-band" d="${ribbon(widths[1]+bar,fromSub,widths[2],subStart,sh)}" fill="${g.color}" fill-opacity=".48" ${g.special?'':action(g.name,c.name)}><title>${h(g.name)} → ${h(c.name)} · ${h(euro(c.cents))}</title></path>`);
+   paths.push(`<path class="fin-flow-band" d="${ribbon(widths[1]+bar,fromSub,widths[2],subStart,sh)}" fill="${g.color}" fill-opacity=".54" ${g.special?'':action(g.name,c.name)}><title>${h(g.name)} → ${h(c.name)} · ${h(euro(c.cents))}</title></path>`);
    nodes.push(`<rect x="${widths[2]}" y="${r(subStart)}" width="${bar}" height="${r(Math.max(sh,1))}" fill="${g.color}" fill-opacity=".8" rx="2"/>`);
    if(sh>12)labels.push(`<text x="${widths[2]-15}" y="${r(subStart+sh/2+4)}" text-anchor="end" class="fin-flow-end-text">${h(c.name.slice(0,29))}</text>`);
    let subOut=subStart;
    c.merchants.forEach(m=>{
     const mh=m.cents*scale,key=leafKey(g,c,m),merchantStart=tops.get(key)+used.get(key);
     // Merchant ribbons share a genuine target node instead of duplicating names.
-    paths.push(`<path class="fin-flow-band" d="${ribbon(widths[2]+bar,subOut,widths[3],merchantStart,mh)}" fill="${g.color}" fill-opacity=".43" data-action="finance-merchant-select" data-id="${h(m.name)}" role="button" tabindex="0"><title>${h(g.name)} / ${h(c.name)} / ${h(m.name)} · ${h(euro(m.cents))}</title></path>`);
+    paths.push(`<path class="fin-flow-band" d="${ribbon(widths[2]+bar,subOut,widths[3],merchantStart,mh)}" fill="${g.color}" fill-opacity=".53" data-action="finance-merchant-select" data-id="${h(m.name)}" role="button" tabindex="0"><title>${h(g.name)} / ${h(c.name)} / ${h(m.name)} · ${h(euro(m.cents))}</title></path>`);
     used.set(key,used.get(key)+mh);subOut+=mh;
    });
    fromSub+=sh;sy+=sh+sp;

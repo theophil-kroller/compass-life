@@ -1435,3 +1435,30 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .fin-merchant-selected-row small{font-size:11px;color:#667d73}
 .fin-merchant-inspector-actions{display:flex;flex-wrap:wrap;gap:9px}
 @media(max-width:670px){.fin-merchant-edit-grid{grid-template-columns:1fr}.fin-merchant-inspector{padding:12px}.fin-merchant-inspector-head{flex-wrap:wrap}}
+
+/* 0.5.29 · Monarch-inspired clarity without replacing Compass's original charts. */
+.fin-pace{background:#fff;border:1px solid #E0EAE6;border-radius:16px;padding:20px 22px;margin:0 0 18px;min-width:0}
+.fin-pace-heading{display:flex;gap:14px;align-items:start;justify-content:space-between;flex-wrap:wrap}
+.fin-pace-heading h3{font-family:Georgia,serif;font-size:clamp(19px,2vw,25px);font-weight:500;color:#244E44;margin:5px 0}
+.fin-pace-heading p,.fin-pace-caveat,.fin-accounts-intro{font-size:11px;color:#799087;line-height:1.6;margin:5px 0 8px}
+.fin-pace-selector{display:grid;gap:5px;font-size:11px;color:#60796E}
+.fin-pace-selector select{min-height:35px;padding:7px 10px;border-radius:9px;background:white;border:1px solid #DEE9E3}
+.fin-pace-summary{display:flex;align-items:end;flex-wrap:wrap;gap:14px 36px;margin:15px 0 6px}
+.fin-pace-summary>div{display:grid;gap:4px}.fin-pace-summary small{color:#6F897F;font-size:11px}.fin-pace-summary strong{font-size:clamp(20px,2.2vw,28px);color:#244D43;font-weight:650;font-variant-numeric:tabular-nums}
+.fin-pace-delta{font-size:11px;color:#697D78;background:#F1F6F4;padding:7px 10px;border-radius:9px}
+.fin-pace-plot svg{display:block;width:100%;height:auto;max-height:320px}
+.fin-pace-legend{display:flex;justify-content:center;gap:22px;font-size:11px;color:#637B73;flex-wrap:wrap}.fin-pace-legend span{display:inline-flex;align-items:center;gap:7px}
+.fin-pace-legend i{width:18px;height:3px;border-radius:2px;display:inline-block}.fin-pace-key-current{background:#208E8B}.fin-pace-key-previous{background:#8893A3}
+.fin-pace-caveat{margin-top:11px}
+.fin-accounts{display:grid;gap:15px}.fin-accounts-group,.fin-account-snapshots{background:white;border:1px solid #E0EAE6;border-radius:15px;overflow:hidden}
+.fin-accounts-group-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 18px;background:#F7FAF8;border-bottom:1px solid #E5ECE6}
+.fin-accounts-group-head h4{margin:0;color:#285747;font-size:13px}.fin-accounts-group-head>span{color:#7F978B;font-size:11px}
+.fin-account-line{display:flex;align-items:center;gap:13px;text-align:left;width:100%;padding:14px 17px;background:transparent;border:0;border-bottom:1px solid #EFF2EF;color:#285546;cursor:pointer}
+.fin-account-line:last-child{border-bottom:0}.fin-account-line:hover,.fin-account-line:focus-visible{background:#F0F7F4}
+.fin-account-avatar{width:32px;height:32px;border-radius:10px;background:#DDEFE9;color:#247A70;font-weight:700;display:grid;place-items:center;flex:none}
+.fin-account-title{flex:1;min-width:0;display:grid;gap:3px}.fin-account-title strong{font-size:12px;overflow-wrap:anywhere}.fin-account-title small,.fin-account-movements small{font-size:10px;color:#86978E}
+.fin-account-movements{text-align:right;display:grid;gap:4px;font-variant-numeric:tabular-nums}.fin-account-movements b{font-size:12px}.fin-account-arrow{color:#75998D;font-size:22px}
+.fin-account-snapshots{padding-bottom:14px}.fin-account-snapshots>.secondary-btn,.fin-account-snapshots>.fin-accounts-intro{margin:12px 16px}
+.fin-account-snapshot-row{display:flex;justify-content:space-between;gap:20px;padding:12px 16px;border-bottom:1px solid #EFF3EF}.fin-account-snapshot-row span{display:grid;gap:4px}.fin-account-snapshot-row span strong,.fin-account-snapshot-row>strong{font-size:12px;color:#2B5245}.fin-account-snapshot-row small{font-size:10px;color:#84988B}
+.fin-deep-sankey svg{max-width:none}.fin-deep-sankey .fin-flow-band:hover{opacity:.98;filter:drop-shadow(0 1px 2px #2B536244)}
+@media(max-width:650px){.fin-pace{padding:14px 12px}.fin-pace-summary{gap:12px 18px}.fin-pace-summary strong{font-size:20px}.fin-account-line{padding:12px;gap:9px}.fin-account-movements small{display:none}.fin-account-movements b{font-size:11px}.fin-accounts-group-head{padding:12px}.fin-accounts-group-head>span{font-size:10px}}

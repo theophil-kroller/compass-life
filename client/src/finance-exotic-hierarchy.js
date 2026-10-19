@@ -4,7 +4,7 @@
  */
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const euro=c=>(c/100).toLocaleString('de-AT',{style:'currency',currency:'EUR',maximumFractionDigits:0});
-export const flowColors=['#327B75','#668CC5','#D78869','#8C7CAF','#D4A251','#50A09A','#B87B9C','#80A16B','#C38E65','#647F91','#A6A77F','#C07E83'];
+export const flowColors=['#178A95','#517DD0','#E58D61','#8864B2','#D6A43D','#34A892','#C76D95','#7CA34A','#D77F5D','#5779A4','#94A54C','#D06379'];
 const special=[['Transfers / Investieren','Transfer','#8C7CAF'],['Bargeld · Zweck unbekannt','Bargeld','#C69F69'],['Noch ungeklärt','Prüfen','#DA9858']];
 const q=x=>Math.round(x*100)/100;
 const click=(parent,child='')=>child?`data-action="finance-subcategory-select" data-id="${esc(parent+' / '+child)}" role="button" tabindex="0"`:`data-action="finance-category-select" data-id="${esc(parent)}" role="button" tabindex="0"`;

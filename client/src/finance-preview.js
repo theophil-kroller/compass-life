@@ -1,6 +1,7 @@
 /** Compass 0.5.8 – intentional future-finance scaffold. No data collection or bank connection. */
 export const FINANCE_PANES=[
  {title:'Überblick',icon:'layers',text:'Cashflow und Vermögensentwicklung auf einen Blick'},
+ {title:'Konten',icon:'folder',text:'Banken und Karten gruppiert; echte Kontostände getrennt'},
  {title:'Cashflow',icon:'sync',text:'Einnahmen, Ausgaben und Umbuchungen'},
  {title:'Einnahmen',icon:'trendingUp',text:'Geldquellen und Eingangstrends'},
  {title:'Ausgaben',icon:'activity',text:'Kategorien, Monatsvergleich und Geldflüsse'},
