@@ -25,7 +25,7 @@ const inRange=(day,range)=>day&&(!range?.start||day>=range.start)&&(!range?.end|
 export function summarizeSports(sessions=[],activities=[],range={}){
  const rows=[];
  for(const s of sessions){if(!s||!inRange(s.day,range))continue;
-  const type=sportMap[s.sport]||'other';const mins=Number(s.durationMinutes);const km=Number(s.distanceKm);
+  const titleCategory=titleType(s.title||'');const type=titleCategory!=='other'?titleCategory:(sportMap[s.sport]||'other');const mins=Number(s.durationMinutes);const km=Number(s.distanceKm);
   if(!Number.isFinite(mins)||mins<=0||mins>24*60)continue;
   rows.push({id:String(s.id||s.start),at:s.start,day:s.day,type,mins,km:Number.isFinite(km)&&km>=0&&km<1000?km:null,source:'garmin'});
  }

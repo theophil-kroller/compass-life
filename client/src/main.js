@@ -1,6 +1,6 @@
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {linkedPersonTasks,linkedPersonInbox} from './person-links.js';
-import {validateLifeGoal,lifeGoals,lifeGoalProgress,smartDailyChoices,energyModes,timeModes} from './life-intelligence-v22.js';
+import {validateLifeGoal,lifeGoals,lifeGoalProgress,smartDailyChoices,energyModes,timeModes,LIFE_AREAS,lifeAreaLabel} from './life-intelligence-v22.js';
 import {fetchPublicEurQuotes} from './kraken-public-market-v22.js';
 import {matchesEventCategories,toggleEventCategory,selectedCategoryLabel} from './discovery-category-filter.js';
 import {wireSmartTags,rememberTag} from './smart-tags.js';
@@ -43,7 +43,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.22';
+const COMPASS_CLIENT_VERSION='0.5.22.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -427,10 +427,10 @@ function datesPreview(){return `<div class="date-prototype"><div>${ico('calendar
 function lifeGoalsPanel(){
  const goals=lifeGoals(state),projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&p.status==='active');
  return `<details class="work-card v22-goals" aria-label="Lebensziele und Projekte"><summary>${ico('target',18)} Lebensziele & Projekte <small>· ${goals.filter(g=>g.status==='active').length} aktiv · lokal verschlüsselt</small></summary>
- <p class="muted-line">Ein Ziel beschreibt ein längerfristiges Ergebnis. Projektzuordnungen schaffen einen nachvollziehbaren Bezug zu vorhandenen Next Actions; Projekt- und Aufgaben-Daten bleiben unverändert.</p>
- ${goals.map(goal=>{const prog=lifeGoalProgress(state,goal);return `<article class="v22-goal"><div><strong>${h(goal.title)}</strong><small>${h(goal.area)} · ${goal.status==='active'?'Aktiv':goal.status==='paused'?'Pausiert':'Erreicht'}${goal.targetDate?' · Zieltermin '+h(goal.targetDate):''}</small>${goal.outcome?`<p>${h(goal.outcome)}</p>`:''}<small>${prog.projects} verknüpfte Projekte · ${prog.completed} von ${prog.taskCount} Aufgaben erledigt${prog.missingProjects?' · '+prog.missingProjects+' Projekte nicht mehr vorhanden':''}</small></div><div class="v22-goal-actions">${goal.projectIds.map(id=>state?.projects?.[id]?`<button type="button" class="secondary-btn" data-action="life-goal-project-open" data-id="${h(id)}">${h(state.projects[id].title)} ↗</button>`:'').join('')}
+ <p class="muted-line">Ein Ziel beschreibt ein längerfristiges Ergebnis. Projektzuordnungen schaffen einen nachvollziehbaren Bezug zu vorhandenen Next Actions; Projekt- und Aufgaben-Daten bleiben unverändert.</p><details class="v221-life-areas"><summary>Die sieben Lebensbereiche nach John Demartini · optional</summary><p class="muted-line">Zusätzlicher Blick auf deine Ziele: mental, beruflich, finanziell, familiär, sozial, körperlich und spirituell. Kein Balance-Score und keine Pflicht, in jedem Bereich Ziele anzulegen.</p><div class="v221-areas-grid">${LIFE_AREAS.map(([key,label])=>`<div class="v221-area"><span>${h(label)}</span><strong>${goals.filter(g=>g.lifeArea===key).length}</strong></div>`).join('')}</div><small>Freiwillige Orientierung nach Demartinis „Master Planning for Life“. Deine bisherigen Compass-Bereiche wie Forschung oder Lehre bleiben erhalten.</small></details>
+ ${goals.map(goal=>{const prog=lifeGoalProgress(state,goal);return `<article class="v22-goal"><div><strong>${h(goal.title)}</strong><small>${h(goal.area)}${goal.lifeArea?' · '+h(lifeAreaLabel(goal.lifeArea)):''} · ${goal.status==='active'?'Aktiv':goal.status==='paused'?'Pausiert':'Erreicht'}${goal.targetDate?' · Zieltermin '+h(goal.targetDate):''}</small>${goal.outcome?`<p>${h(goal.outcome)}</p>`:''}<small>${prog.projects} verknüpfte Projekte · ${prog.completed} von ${prog.taskCount} Aufgaben erledigt${prog.missingProjects?' · '+prog.missingProjects+' Projekte nicht mehr vorhanden':''}</small></div><div class="v22-goal-actions"><label class="v221-area-select">7 Lebensbereiche <select id="life-area-${h(goal.id)}" aria-label="Demartini-Lebensbereich für ${h(goal.title)}"><option value="">Ohne Zuordnung</option>${LIFE_AREAS.map(([key,label])=>`<option value="${key}" ${goal.lifeArea===key?'selected':''}>${h(label)}</option>`).join('')}</select></label><button type="button" class="secondary-btn" data-action="life-goal-area" data-id="${h(goal.id)}">Zuordnen</button>${goal.projectIds.map(id=>state?.projects?.[id]?`<button type="button" class="secondary-btn" data-action="life-goal-project-open" data-id="${h(id)}">${h(state.projects[id].title)} ↗</button>`:'').join('')}
  <select id="life-goal-project-${h(goal.id)}" aria-label="Projekt zu Ziel hinzufügen"><option value="">Projekt verbinden …</option>${projects.filter(p=>!goal.projectIds.includes(p.id)).map(p=>`<option value="${h(p.id)}">${h(p.title)}</option>`).join('')}</select><button type="button" class="secondary-btn" data-action="life-goal-link" data-id="${h(goal.id)}">Verbinden</button><button type="button" class="secondary-btn" data-action="life-goal-toggle" data-id="${h(goal.id)}">${goal.status==='active'?'Pausieren':'Aktivieren'}</button><button type="button" class="secondary-btn" data-action="life-goal-remove" data-id="${h(goal.id)}">Entfernen</button></div></article>`;}).join('')||'<p class="muted-line">Noch kein Lebensziel definiert. Beginne mit einem konkreten Ergebnis, das dir persönlich wichtig ist.</p>'}
- <details class="calm-create"><summary>${ico('plus',15)} Lebensziel anlegen</summary><form id="life-goal-form" class="v22-goal-form"><label>Zielname<input name="title" required maxlength="120" placeholder="Was möchte ich erreichen?"/></label><label>Gewünschtes Ergebnis<textarea name="outcome" maxlength="600" rows="2" placeholder="Woran erkenne ich den Fortschritt?"></textarea></label><label>Lebensbereich<select name="area">${categoryOptions()}</select></label><label>Erstes Projekt (optional)<select name="projectId">${projectOptions()}</select></label><label>Zieldatum (optional, keine Deadline)<input name="targetDate" type="date"/></label><button type="submit" class="primary-btn">Ziel speichern</button></form></details></details>`;
+ <details class="calm-create"><summary>${ico('plus',15)} Lebensziel anlegen</summary><form id="life-goal-form" class="v22-goal-form"><label>Zielname<input name="title" required maxlength="120" placeholder="Was möchte ich erreichen?"/></label><label>Gewünschtes Ergebnis<textarea name="outcome" maxlength="600" rows="2" placeholder="Woran erkenne ich den Fortschritt?"></textarea></label><label>Compass-Bereich<select name="area">${categoryOptions()}</select></label><label>7 Lebensbereiche (optional)<select name="lifeArea"><option value="">Ohne Zuordnung</option>${LIFE_AREAS.map(([key,label])=>`<option value="${key}">${h(label)}</option>`).join('')}</select></label><label>Erstes Projekt (optional)<select name="projectId">${projectOptions()}</select></label><label>Zieldatum (optional, keine Deadline)<input name="targetDate" type="date"/></label><button type="submit" class="primary-btn">Ziel speichern</button></form></details></details>`;
 }
 function todaySmartPanel(){
  const settings=state?.uiPreferences||{},energy=energyModes.includes(settings.dailyEnergy)?settings.dailyEnergy:'offen';
@@ -1116,7 +1116,7 @@ function bind() {
   };
   const lifeGoalForm=app.querySelector('#life-goal-form');if(lifeGoalForm)lifeGoalForm.onsubmit=async ev=>{
     ev.preventDefault();const fd=new FormData(lifeGoalForm),projectId=String(fd.get('projectId')||'');
-    const goal={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),outcome:String(fd.get('outcome')||'').trim(),area:String(fd.get('area')||'Allgemein'),status:'active',targetDate:String(fd.get('targetDate')||'')||null,projectIds:projectId?[projectId]:[]};
+    const goal={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),outcome:String(fd.get('outcome')||'').trim(),area:String(fd.get('area')||'Allgemein'),lifeArea:String(fd.get('lifeArea')||''),status:'active',targetDate:String(fd.get('targetDate')||'')||null,projectIds:projectId?[projectId]:[]};
     if(!validateLifeGoal(goal)||projectId&&!state.projects?.[projectId]||lifeGoals(state).length>=40){toast('Zielangaben prüfen (maximal 40 Ziele).',true);return;}
     await mutate(s=>{s.lifeGoals??=[];s.lifeGoals.push(goal);});toast('Lebensziel im lokalen Vault gespeichert.');
   };
@@ -1476,6 +1476,11 @@ async function runAction(action,id,stepId=null) {
       const select=app.querySelector('#life-goal-project-'+id),projectId=String(select?.value||'');
       if(!state?.projects?.[projectId]||!lifeGoals(state).some(g=>g.id===id))return toast('Projekt auswählen.',true);
       await mutate(s=>{const g=s.lifeGoals.find(x=>x.id===id);if(g&&!g.projectIds.includes(projectId)&&g.projectIds.length<30)g.projectIds.push(projectId);});return;
+    }
+    if(action==='life-goal-area'){
+      const area=String(app.querySelector('#life-area-'+id)?.value||'');
+      if(area&&!LIFE_AREAS.some(([key])=>key===area))return toast('Lebensbereich nicht bekannt.',true);
+      await mutate(s=>{const goal=(s.lifeGoals||[]).find(x=>x.id===id);if(goal)goal.lifeArea=area;});return;
     }
     if(action==='life-goal-toggle'){await mutate(s=>{const g=(s.lifeGoals||[]).find(x=>x.id===id);if(g)g.status=g.status==='active'?'paused':'active';});return;}
     if(action==='life-goal-remove'){

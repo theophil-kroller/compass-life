@@ -1,3 +1,4 @@
+import {isGarminActivitiesCsv,parseGarminActivitiesCsv} from './garmin-activities-csv.js';
 import {decodeGarminFit,garminWellnessFromRecords,garminSleepJson,garminStressEnergyFromRecords,garminMonitoringFromRecords,garminSessionsFromRecords} from './garmin-fit.js';
 
 // File formats are detected from bytes; Fitdays .csv exports are often actually XLS (OLE/BIFF).
@@ -101,7 +102,9 @@ export async function inspectHealthFiles(files){
   try{
    if(file.size>LIMIT_FILE)throw Error('Datei größer als 120 MB – Archiv bitte aufteilen');
    const bytes=new Uint8Array(await file.arrayBuffer());
-   if(isXls(bytes)||/fitdays/i.test(file.name)||/\.(csv|xls|xlsx)$/i.test(file.name)&&!isZip(bytes)){
+   if(/\.csv$/i.test(file.name)&&isGarminActivitiesCsv(new TextDecoder('utf-8').decode(bytes.subarray(0,2048)))){
+    result.garminSessions.push(...parseGarminActivitiesCsv(new TextDecoder('utf-8').decode(bytes)));
+   }else if(isXls(bytes)||/fitdays/i.test(file.name)||/\.(csv|xls|xlsx)$/i.test(file.name)&&!isZip(bytes)){
     result.fitdays.push(...await parseFitdaysFile(bytes));
    }else{
     const v=await parseGarminFile(bytes,file.name);result.garminNights.push(...v.nights);result.garminHrv.push(...v.hrvs);result.garminWellness.push(...(v.wellness||[]));result.garminFitness.push(...(v.fitness||[]));result.garminSessions.push(...(v.sessions||[]));

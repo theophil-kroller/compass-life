@@ -70,7 +70,7 @@ test('planned panes remain clearly nonfunctional and now open consolidated sourc
 });
 test('navigation and 0.5.8 actions are wired into actual client, without cloud migration',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.22'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.22\.1'/);
  assert.match(main,/data-action=\"calm-insight-view\"/);assert.match(main,/calm-nav-group/);
  assert.match(main,/insightTab==='sleep'\?insightsSleepView/);
  assert.match(main,/action==='insights-period'/);

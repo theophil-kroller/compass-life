@@ -4,12 +4,20 @@
 import {nextActions,localDate,TASK_CATEGORIES} from './tasks.js';
 
 export const LIFE_GOAL_LIMIT=40;
+/** Optional lens inspired by Demartini's Seven Areas; independent of Compass task areas. */
+export const LIFE_AREAS=[
+ ['mental','Mental · Lernen & Denken'],['vocational','Beruf · Wirken & Beitrag'],
+ ['financial','Finanzen · Unabhängigkeit'],['familial','Familie · Nähe & Beziehungen'],
+ ['social','Soziales · Gemeinschaft & Führung'],['physical','Körper · Gesundheit & Vitalität'],
+ ['spiritual','Sinn · Mission & Spiritualität']
+];
+export const lifeAreaLabel=(key)=>LIFE_AREAS.find(([id])=>id===key)?.[1]||'Ohne Zuordnung';
 const uuid=/^[0-9a-f-]{36}$/i;
 export const energyModes=['offen','low','medium','high'];
 export const timeModes=[15,30,60,120];
 export function validateLifeGoal(goal){
  return !!(goal&&typeof goal==='object'&&uuid.test(goal.id)&&typeof goal.title==='string'&&goal.title.trim().length>0&&goal.title.length<=120&&
-  typeof(goal.outcome||'')==='string'&&(goal.outcome||'').length<=600&&TASK_CATEGORIES.includes(goal.area)&&
+  typeof(goal.outcome||'')==='string'&&(goal.outcome||'').length<=600&&TASK_CATEGORIES.includes(goal.area)&&(!goal.lifeArea||LIFE_AREAS.some(([id])=>id===goal.lifeArea))&&
   ['active','paused','achieved'].includes(goal.status)&&Array.isArray(goal.projectIds)&&goal.projectIds.length<=30&&new Set(goal.projectIds).size===goal.projectIds.length&&goal.projectIds.every(x=>uuid.test(x))&&
   (!goal.targetDate||/^\d{4}-\d{2}-\d{2}$/.test(goal.targetDate)&&!Number.isNaN(Date.parse(goal.targetDate+'T12:00:00Z'))));
 }

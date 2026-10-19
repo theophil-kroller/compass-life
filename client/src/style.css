@@ -1167,3 +1167,13 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 @media(max-width:680px){.v22-goal-form{grid-template-columns:1fr}.v22-goal-form label:nth-child(2){grid-column:auto}.v22-public-prices{align-items:stretch}}
 
 .v22-goals>summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;font:17px Georgia,serif;color:#2f5a49;padding:3px 0}.v22-goals>summary::-webkit-details-marker{display:none}.v22-goals>summary small{margin-left:auto;font:11px sans-serif;color:#789585}.v22-goals[open]>summary{margin-bottom:15px}
+
+/* 0.5.22.1 – optional seven life areas */
+.v221-life-areas{margin:14px 0;padding:12px 14px;border:1px solid #dae6dd;border-radius:12px;background:#f9fcf9}
+.v221-life-areas>summary{cursor:pointer;font-size:12px;color:#315d49;font-weight:650}
+.v221-areas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin:10px 0}
+.v221-area{background:white;border:1px solid #e4ebe6;border-radius:10px;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 11px;font-size:11px;color:#537868}
+.v221-area strong{font:18px Georgia,serif;color:#2b6651}
+
+.v221-area-select{font-size:11px;display:grid;gap:4px;min-width:165px;color:#5e7569}
+.v221-area-select select{padding:8px 9px;font:inherit;border-radius:9px;border:1px solid #d8e5dc;max-width:240px;background:#fff}
