@@ -53,10 +53,10 @@ import {ACTIVITY_CATEGORIES,isoLocal,validActivityEdit,validManualActivity,proje
 import {OCCASION_STEPS,OCCASION_LEAD_DAYS,daysUntil,occasionStepKey,occasionTaskTag,relatedOccasionTask,occasionTask,validCustomStep,shiftDay} from './occasion-planning.js';
 import {occasionsWithPeople,validPersonBirthday} from './people-occasions.js';
 import {contextChoices,filterContextTasks} from './context-perspectives.js';
-import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
+import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.37';
+const COMPASS_CLIENT_VERSION='0.5.38';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -565,7 +565,10 @@ function taskCreateForm(defaultDay='',defaultProject='',defaultParent=''){
  <label>Kontext-Tags<input name="contextTags" data-smart-tags placeholder="büro, laptop" maxlength="300"/></label>
  <label class="flag-check"><input type="checkbox" name="flagged"/> Flagged</label></div></details><button class="primary-btn" type="submit">${ico('plus',16)} Hinzufügen</button></form>`;
 }
-function taskList(items,scope,hideEmpty=false){return items.length?`<div class="task-list" data-scope="${h(scope)}">${items.map(t=>`<div class="task-row ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}"><button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}" ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`: ''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small>${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</button>${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;}
+function taskList(items,scope,hideEmpty=false){
+ const nextScope=scope==='next';
+ return items.length?`<div class="task-list ${nextScope?'next38-list':''}" data-scope="${h(scope)}">${items.map((t,i)=>`<div class="task-row ${nextScope?'next38-row':''} ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}" ${nextScope?`data-next-row="${h(t.id)}"`:''}>${nextScope?`<span class="next38-drag" draggable="true" data-next-drag="${h(t.id)}" role="img" aria-label="${h(t.title)} zum Sortieren ziehen" title="Ziehen zum Sortieren, alternativ Pfeiltasten">⠿</span>`:''}<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}" ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`: ''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}${nextScope&&t.plannedDate===localDate()?' · Für heute vorgemerkt':''}</small>${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</button>${nextScope?`<button type="button" class="next38-today ${t.plannedDate===localDate()?'is-planned':''}" data-action="next-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" title="${t.plannedDate===localDate()?'Heute-Vormerkung entfernen':'Ohne Fälligkeitsdatum für heute vormerken'}">${ico('calendar',14)} <span>${t.plannedDate===localDate()?'Heute ✓':'Heute'}</span></button><span class="next38-move"><button type="button" data-action="next-move-up" data-id="${h(t.id)}" aria-label="${h(t.title)} nach oben" title="Nach oben" ${i===0?'disabled':''}>↑</button><button type="button" data-action="next-move-down" data-id="${h(t.id)}" aria-label="${h(t.title)} nach unten" title="Nach unten" ${i===items.length-1?'disabled':''}>↓</button></span>`:''}${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;
+}
 function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)return '<div class="task-empty">Wähle eine Aufgabe, um ihre Details zu bearbeiten.</div>';
  return `<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="3">${h(t.note||'')}</textarea></label>
  <div class="inspector-main-fields"><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label></div>
@@ -591,7 +594,7 @@ function gtdProjectHealthPanel(){
 }
 function workflowScreen(which){
  const titles={next:'Next Actions',flagged:'Flagged',hold:'On Hold & Waiting For'};
- const tasks=which==='next'?nextActions(state):which==='flagged'?flaggedTasks(state):heldTasks(state);
+ const tasks=which==='next'?inboxOrdered(nextActions(state),state?.uiPreferences?.nextActionManualOrder||[]):which==='flagged'?flaggedTasks(state):heldTasks(state);
  const shown=which==='next'?filterContextTasks(tasks,contextFilter):tasks;
  const availableContexts=contextChoices(tasks);
  const waiting=which==='hold'?shown.filter(t=>t.workflow==='waiting'):[];
@@ -603,6 +606,7 @@ function workflowScreen(which){
  if(!perspectiveItems.some(t=>t.id===selectedTaskId))selectedTaskId=null;
  const noActions=which==='next'&&!shown.length?`<div class="task-empty perspective-empty"><strong>${contextFilter?'Für diesen Kontext ist gerade nichts verfügbar.':'Keine verfügbaren Next Actions.'}</strong><p>Prüfe die Inbox, kläre deine nächsten Schritte im Review oder lege eine konkrete Aufgabe an. Verschobene und pausierte Aufgaben erscheinen hier nicht.</p><button type="button" class="secondary-btn" data-tab="review">Inbox im Review klären</button> <button type="button" class="secondary-btn" data-tab="inbox">Inbox öffnen</button></div>`:'';
  return chrome(`<div class="workflow-layout"><section class="work-card"><div class="work-heading"><span>${ico(which==='flagged'?'flag':which==='hold'?'pause':'target',20)} ${titles[which]}</span><span class="quiet-tag">${perspectiveItems.length} offen</span></div>
+ ${which==='next'?`<p class="next38-hint">${ico('list',14)} Reihenfolge mit ⠿ oder ↑ ↓ ändern · <strong>Heute</strong> plant eine Aufgabe für heute, ohne eine Fälligkeit zu setzen. Die Sortierung bleibt auf diesem Gerät.</p>`:''}
  ${which==='next'?`<div class="context-filter"><label>Aktueller Kontext <select id="context-filter"><option value="">Alle verfügbaren Next Actions</option>${availableContexts.map(c=>`<option value="${h(c.value)}" ${contextFilter===c.value?'selected':''}>${c.group?'▸ ':''}${h(c.label)}</option>`).join('')}</select></label></div>`:''}
  ${which==='flagged'?'<p class="muted-line">Markierte Aufgaben und ungeklärte Inbox-Einträge. Flaggen dienen zum Hervorheben, nicht als Deadline.</p>':''}
  ${which==='hold'?`<div class="held-sections"><div class="gtd-waiting-hint">${ico('clock',16)} <span>${waitingReview(state).attention} Waiting-For-Einträge seit mindestens 7 Tagen nicht bearbeitet. Das ist ein Review-Hinweis, keine Deadline.</span></div><h3>Waiting For · ${waiting.length}</h3>${taskList(waiting,'waiting')}<h3>On Hold · ${paused.length}</h3>${taskList(paused,'paused')}<h3>Durch pausierte Projekte zurückgestellt · ${blocked.length}</h3>${taskList(blocked,'project-hold')}<h3>Pausierte Projekte · ${pausedProjects.length}</h3>${pausedProjects.length?pausedProjects.map(p=>`<button type="button" class="held-project-link" data-action="hold-open-project" data-id="${h(p.id)}">${ico('folder',15)} ${h(p.title)} ${ico('arrow',13)}</button>`).join(''):'<p class="muted-line">Keine Projekte pausiert.</p>'}</div>`:`${taskList(shown,which,which==='next'||which==='flagged'&&flaggedInbox.length>0)}${noActions}${which==='flagged'&&flaggedInbox.length?`<div class="flagged-inbox-section"><h3>Markierte Inbox-Einträge · ${flaggedInbox.length}</h3>${flaggedInbox.map(r=>`<div class="flagged-inbox-row"><button type="button" data-action="inbox-flag" data-id="${h(r.id)}" class="inbox-row-flag is-flagged" aria-label="Flagge entfernen" aria-pressed="true">${ico('flag',16)}</button><button type="button" class="flagged-inbox-open" data-action="select-inbox" data-id="${h(r.id)}">${h(r.title)}<small>Inbox · noch ungeklärt</small></button></div>`).join('')}</div>`:''}${which==='flagged'?`<details class="calm-create calm-flag-picker"><summary>${ico('flag',15)} Bestehende Aufgabe markieren</summary>${Object.values(state?.tasks||{}).filter(t=>!t.archived&&!state.projects?.[t.projectId]?.isTemplate&&!t.completed&&!t.flagged).slice(0,80).map(t=>`<button type="button" class="calm-flag-option" data-action="flag-existing" data-id="${h(t.id)}">${ico('flag',14)} ${h(t.title)}</button>`).join('')||'<p class="muted-line">Keine weiteren offenen Aufgaben.</p>'}</details>`:`<details class="calm-create"><summary>${ico('plus',15)} Neue Aufgabe hinzufügen</summary>${taskCreateForm('')}</details>`}`}
@@ -1640,6 +1644,35 @@ function bind() {
   });
   // Drag-and-drop is attached to handles only: clicking the row still opens the inspector.
   let draggedInboxId='';
+  // Next Actions: personal display order is a device-local preference, never project sortOrder.
+  let draggedNextId='';
+  const nextFullList=()=>nextActions(state);
+  app.querySelectorAll('[data-next-drag]').forEach(handle=>{
+    handle.addEventListener('dragstart',ev=>{
+      draggedNextId=handle.dataset.nextDrag;
+      ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',draggedNextId);
+      handle.closest('[data-next-row]')?.classList.add('next38-dragging');
+    });
+    handle.addEventListener('dragend',()=>{
+      draggedNextId='';app.querySelectorAll('.next38-dragging,.next38-over').forEach(el=>el.classList.remove('next38-dragging','next38-over'));
+    });
+  });
+  app.querySelectorAll('[data-next-row]').forEach(row=>{
+    row.addEventListener('dragover',ev=>{
+      if(!draggedNextId||draggedNextId===row.dataset.nextRow)return;
+      ev.preventDefault();ev.dataTransfer.dropEffect='move';row.classList.add('next38-over');
+    });
+    row.addEventListener('dragleave',ev=>{if(!row.contains(ev.relatedTarget))row.classList.remove('next38-over');});
+    row.addEventListener('drop',async ev=>{
+      row.classList.remove('next38-over');
+      if(!draggedNextId||draggedNextId===row.dataset.nextRow)return;
+      ev.preventDefault();
+      const rect=row.getBoundingClientRect(),after=ev.clientY>rect.top+rect.height/2;
+      const updated=inboxMove(state?.uiPreferences?.nextActionManualOrder||[],nextFullList(),draggedNextId,row.dataset.nextRow,after);
+      draggedNextId='';
+      if(updated)try{await mutate(s=>{s.uiPreferences??={};s.uiPreferences.nextActionManualOrder=updated;});}catch(ex){toast(ex.message,true);}
+    });
+  });
   app.querySelectorAll('[data-inbox-drag]').forEach(handle=>{
     handle.addEventListener('dragstart',ev=>{
       if(inboxQuery.trim()){ev.preventDefault();return;}
@@ -1682,6 +1715,22 @@ function bind() {
 async function runAction(action,id,stepId=null) {
   lastActivity=Date.now();
   try {
+    if(action==='next-move-up'||action==='next-move-down'){
+      const full=nextActions(state),visible=inboxOrdered(full,state?.uiPreferences?.nextActionManualOrder||[]).filter(t=>!contextFilter||(t.contextTags||[]).includes(contextFilter));
+      const index=visible.findIndex(t=>t.id===id),other=visible[index+(action==='next-move-up'?-1:1)];
+      if(index<0||!other)return;
+      const updated=inboxMove(state?.uiPreferences?.nextActionManualOrder||[],full,id,other.id,action==='next-move-down');
+      if(updated)await mutate(s=>{s.uiPreferences??={};s.uiPreferences.nextActionManualOrder=updated;});return;
+    }
+    if(action==='next-plan-today'){
+      const current=state?.tasks?.[id];
+      if(!current||!isActionAvailable(state,current,localDate())||state?.taskConflicts?.[id])return;
+      const today=localDate();
+      if(current.plannedDate&&current.plannedDate!==today&&!confirm(`Die Aufgabe ist für ${current.plannedDate} geplant. Auf heute ändern? Die Fälligkeit bleibt unverändert.`))return;
+      const setDate=current.plannedDate===today?null:today;
+      await mutate(s=>{s.tasks[id].plannedDate=setDate;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
+      toast(setDate?'Für heute vorgemerkt – ohne neue Deadline.':'Heute-Vormerkung entfernt.');return;
+    }
     if(action==='inbox-move-up'||action==='inbox-move-down'){
       if(inboxQuery.trim())return;
       const next=inboxNudge(state?.uiPreferences?.inboxManualOrder||[],rows(),id,action==='inbox-move-up'?-1:1);

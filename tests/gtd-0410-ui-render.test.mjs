@@ -84,3 +84,51 @@ test('Flagged perspective and Inbox both render one-click flag without navigatio
  assert.match(inbox,/inbox-row-flag is-flagged/);
  assert.doesNotMatch(inbox,/#compass-system-flag/);
 });
+
+test('0.5.38 Next Actions expose sorting handles, keyboard/touch arrows and a voluntary Today button',()=>{
+ const ui=context();const a='10000000-0000-4000-8000-000000000011',b='10000000-0000-4000-8000-000000000012';
+ const mk=(id,title)=>({id,title,category:'Allgemein',workflow:'next',plannedDate:null,dueDate:null,completed:false,archived:false});
+ const st=tasks.prepareTasks({format:1,records:{},tasks:{[a]:mk(a,'A Aktion'),[b]:mk(b,'B Aktion')},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
+ let html=ui.testUI(st,'next');
+ assert.match(html,/data-next-drag=/);assert.match(html,/data-next-row=/);
+ assert.match(html,/data-action="next-plan-today"/);assert.match(html,/data-action="next-move-up"/);
+ const reordered=inboxOrder.inboxMove([],tasks.nextActions(st),b,a,false);
+ st.uiPreferences={nextActionManualOrder:reordered};html=ui.testUI(st,'next');
+ assert.ok(html.indexOf('B Aktion')<html.indexOf('A Aktion'));
+ assert.deepEqual(tasks.nextActions(st).map(x=>x.title),['A Aktion','B Aktion'],'GTD core order is independent of UI order');
+});
+
+test('0.5.38 Vormerken writes plannedDate (not dueDate), appears in Today and is reversible',async()=>{
+ const ui=context(),id='10000000-0000-4000-8000-000000000013';
+ const task={id,title:'Bericht lesen',category:'Allgemein',workflow:'next',plannedDate:null,dueDate:null,completed:false,archived:false};
+ const st=tasks.prepareTasks({format:1,records:{},tasks:{[id]:task},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
+ ui.testUI(st,'next');await ui.testAction('next-plan-today',id);
+ assert.equal(ui.readState().tasks[id].plannedDate,tasks.localDate());
+ assert.equal(ui.readState().tasks[id].dueDate,null);
+ assert.equal(ui.readState().taskPending[id],true,'cloud task sync is queued');
+ assert.match(ui.testUI(ui.readState(),'today'),/Bericht lesen/);
+ await ui.testAction('next-plan-today',id);
+ assert.equal(ui.readState().tasks[id].plannedDate,null);
+ assert.equal(ui.readState().tasks[id].dueDate,null);
+});
+
+
+test('0.5.38 Next Actions move-down stores display order in encrypted local preference, without modifying task sortOrder',async()=>{
+ const ui=context(),a='10000000-0000-4000-8000-000000000021',b='10000000-0000-4000-8000-000000000022';
+ const make=(id,title)=>({id,title,category:'Allgemein',workflow:'next',sortOrder:100,plannedDate:null,dueDate:null,completed:false,archived:false});
+ const st=tasks.prepareTasks({format:1,records:{},tasks:{[a]:make(a,'A zuerst'),[b]:make(b,'B danach')},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
+ ui.testUI(st,'next');await ui.testAction('next-move-down',a);
+ assert.equal(ui.readState().uiPreferences.nextActionManualOrder[0],b);
+ assert.equal(ui.readState().tasks[a].sortOrder,100);
+ const html=ui.testUI(ui.readState(),'next');
+ assert.ok(html.indexOf('B danach')<html.indexOf('A zuerst'));
+});
+
+test('0.5.38 Today shortcut never changes an existing dueDate',async()=>{
+ const ui=context(),id='10000000-0000-4000-8000-000000000023';
+ const task={id,title:'Abgabe vorbereiten',category:'Allgemein',workflow:'next',plannedDate:null,dueDate:'2026-11-09',completed:false,archived:false};
+ const st=tasks.prepareTasks({format:1,records:{},tasks:{[id]:task},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
+ ui.testUI(st,'next');await ui.testAction('next-plan-today',id);
+ assert.equal(ui.readState().tasks[id].plannedDate,tasks.localDate());
+ assert.equal(ui.readState().tasks[id].dueDate,'2026-11-09');
+});

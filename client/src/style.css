@@ -1812,3 +1812,23 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .fin37-import{display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid #d9e9dd;border-radius:12px;padding:12px 14px;background:#f4faf6}.fin37-import strong{font-size:12px}.fin37-import p{margin:5px 0 0;font-size:10px;color:#668174;max-width:720px}.fin37-import .fin-file-pick{flex:none}
 @media(max-width:1120px){.fin37-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fin37-panels{grid-template-columns:1fr}.fin37-alloc{grid-template-columns:180px minmax(0,1fr)}}
 @media(max-width:740px){.fin37-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fin37-import{flex-direction:column;align-items:start}.fin37-alloc{grid-template-columns:1fr}.fin37-positions{overflow-x:auto}.fin37-table-head,.fin37-pos>summary{min-width:760px}.fin37-dashboard .fin37-head h2{font-size:21px}}
+
+
+/* Compass 0.5.38 — compact sortable Next Actions, voluntary Today planning. */
+.next38-hint{margin:3px 0 9px;color:#647d71;font:500 11px/1.5 system-ui,sans-serif}
+.next38-hint svg{vertical-align:middle;margin-right:3px}
+.next38-row{gap:5px;transition:background .13s,outline-color .13s;border-radius:9px}
+.next38-row .task-title-button{min-width:0;flex:1}
+.next38-row .next38-drag{user-select:none;cursor:grab;flex:0 0 20px;color:#86a79b;font:700 19px/25px system-ui,sans-serif;text-align:center}
+.next38-row .next38-drag:active{cursor:grabbing}
+.next38-row.next38-over{outline:2px dashed #369782;background:#e7f4ee}
+.next38-row.next38-dragging{opacity:.5}
+.next38-row .next38-today{border:1px solid #dce8df;background:#fff;color:#3c7360;border-radius:8px;padding:6px 8px;white-space:nowrap;cursor:pointer;font:600 11px/1.2 system-ui,sans-serif;display:inline-flex;gap:5px;align-items:center;justify-content:center}
+.next38-row .next38-today.is-planned{background:#e5f4e8;border-color:#a7d2b7;color:#1d7657}
+.next38-row .next38-today:hover{background:#eef7ef}
+.next38-row .next38-move{display:flex;flex-direction:column;gap:1px;opacity:.65}
+.next38-row:hover .next38-move,.next38-row:focus-within .next38-move{opacity:1}
+.next38-row .next38-move button{border:0;border-radius:5px;min-width:24px;min-height:20px;background:transparent;color:#578270;cursor:pointer;font:600 15px/1 system-ui}
+.next38-row .next38-move button:hover:not(:disabled){background:#e1eee6}
+.next38-row .next38-move button:disabled{opacity:.2;cursor:default}
+@media(max-width:700px){.next38-row{flex-wrap:wrap}.next38-row .next38-today{padding:5px}.next38-row .next38-move{opacity:1}.next38-row .next38-drag{display:none}}
