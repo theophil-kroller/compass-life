@@ -1418,3 +1418,20 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .flagged-inbox-open{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;background:none;border:0;color:inherit;text-align:left;cursor:pointer;padding:4px;flex:1;font-size:12px}
 .flagged-inbox-open small{font-size:10px;color:#82968a}
 @media(hover:none){.tree-flag-toggle,.inbox-row-flag{min-height:36px;min-width:36px}}
+
+/* 0.5.28 · merchant inspector follows chart without changing Finance navigation. */
+.fin-merchant-inspector{background:#fcfdfb;border:1px solid #dce8df;border-radius:16px;margin:18px 0 4px;padding:19px;box-shadow:0 4px 24px #183d2910}
+.fin-merchant-inspector-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.fin-merchant-inspector-head h3{margin:5px 0 4px;font-size:21px}
+.fin-merchant-inspector-head p{margin:0;color:#53746b;font-size:12px}
+.fin-merchant-edit-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:11px}
+.fin-merchant-edit-grid label{display:grid;gap:6px;color:#44645a;font-size:12px;font-weight:600}
+.fin-merchant-edit-grid input,.fin-merchant-edit-grid select{min-width:0;width:100%;border:1px solid #d8e4db;background:white;padding:9px;border-radius:9px;box-sizing:border-box}
+.fin-merchant-selected-list{max-height:330px;overflow-y:auto;border:1px solid #e4eae5;border-radius:10px;background:white;margin:12px 0}
+.fin-merchant-selected-row{display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid #e9ede8;padding:10px 12px;cursor:pointer}
+.fin-merchant-selected-row:last-child{border-bottom:0}
+.fin-merchant-selected-row input{margin-top:4px;flex:none}
+.fin-merchant-selected-row>span{min-width:0;display:grid;gap:3px;font-size:12px;overflow-wrap:anywhere}
+.fin-merchant-selected-row small{font-size:11px;color:#667d73}
+.fin-merchant-inspector-actions{display:flex;flex-wrap:wrap;gap:9px}
+@media(max-width:670px){.fin-merchant-edit-grid{grid-template-columns:1fr}.fin-merchant-inspector{padding:12px}.fin-merchant-inspector-head{flex-wrap:wrap}}

@@ -2,6 +2,7 @@
  * Never infer complete account coverage, contracts, travel attribution, or wealth
  * from a collection of exported bank transactions alone. */
 import {merchantKey,safeMerchantRule} from './finance-core.js';
+import {normalizedMerchant} from './finance-merchant-insights.js';
 
 const cents=t=>Math.abs(Number(t.amountCents)||0);
 const signed=t=>Number(t.amountCents)||0;
@@ -33,7 +34,7 @@ export function financeExpenseOverview(transactions=[],period='all'){
   if(t.needsReview||t.flow!=='expense'||signed(t)>=0||(period!=='all'&&!String(t.day).startsWith(period)))continue;
   const v=cents(t),c=String(t.category||'Unbekannt'),parent=c.split(' / ')[0];
   const group=categories.get(parent)||{name:parent,cents:0,detail:new Map(),count:0};group.cents+=v;group.count++;group.detail.set(c,(group.detail.get(c)||0)+v);categories.set(parent,group);
-  const mk=merchantKey(t.merchant||''),prev=merchants.get(mk)||{name:t.merchant||'Unbekannt',cents:0,count:0};prev.count++;prev.cents+=v;merchants.set(mk,prev);
+  const display=t.merchantDisplayName?normalizedMerchant(t.merchantDisplayName):(t.merchant||'Unbekannt'),mk=merchantKey(display),prev=merchants.get(mk)||{name:display,cents:0,count:0};prev.count++;prev.cents+=v;merchants.set(mk,prev);
  }
  const sortedCategories=[...categories.values()].map(c=>({...c,details:[...c.detail].map(([name,cents])=>({name,cents})).sort((a,b)=>b.cents-a.cents),detail:undefined})).sort((a,b)=>b.cents-a.cents);
  const latest=months.at(-1),prev=months.at(-2);
@@ -82,7 +83,7 @@ export function financeSearchTransactions(transactions=[],{query='',period='all'
   if(filter==='broad'&&(t.needsReview||!(t.confidence==='broad'||t.source==='broad-rule')))return false;
   if(filter==='expense'&&(t.needsReview||t.flow!=='expense'||signed(t)>=0))return false;
   if(filter==='transfer'&&(t.needsReview||t.flow!=='transfer'))return false;
-  return !q||[t.merchant,t.description,t.category,t.day].some(x=>String(x||'').normalize('NFKC').toLocaleLowerCase('de-AT').includes(q));
+  return !q||[t.merchantDisplayName,t.merchant,t.description,t.category,t.day].some(x=>String(x||'').normalize('NFKC').toLocaleLowerCase('de-AT').includes(q));
  }).sort((a,b)=>String(b.day).localeCompare(String(a.day))||String(a.id).localeCompare(String(b.id)));
  const safePage=Math.min(Math.max(0,Math.trunc(Number(page)||0)),Math.max(0,Math.ceil(list.length/pageSize)-1));
  return {rows:list.slice(safePage*pageSize,(safePage+1)*pageSize),count:list.length,page:safePage,pages:Math.max(1,Math.ceil(list.length/pageSize))};

@@ -62,7 +62,7 @@ test('local productivity insights render both real health links and explicit cov
 });
 test('script does not pass health or Google titles to server; tab is wired as live',()=>{
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.27'/);
+ assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.28'/);
  assert.match(source,/insightTab==='focus'\?productivityInsightsView/);
  assert.match(source,/start\.setDate\(start\.getDate\(\)-90\)/);
  assert.match(source,/calendarCoverage=/);

@@ -24,12 +24,12 @@ export function merchantExpenseGroups(rows=[],category='Lebensmittel'){
  for(const t of rows){if(!eligible(t))continue;
   const [parent,sub='Ohne Unterkategorie']=t.category.split(' / ');
   if(category&&parent!==category)continue;
-  const name=normalizedMerchant(t.merchant||t.description||''),id=`${parent} / ${sub}`,existing=byCategory.get(id)||{name:id,parent,sub,cents:0,count:0,merchants:new Map()};
-  let r=existing.merchants.get(name)||{name,cents:0,count:0,lastDay:'',months:{},rawExamples:new Set()};
+  const name=normalizedMerchant(t.merchantDisplayName||t.merchant||t.description||''),id=`${parent} / ${sub}`,existing=byCategory.get(id)||{name:id,parent,sub,cents:0,count:0,merchants:new Map()};
+  const key=name.toLocaleLowerCase('de-AT');let r=existing.merchants.get(key)||{name,cents:0,count:0,lastDay:'',months:{},rawExamples:new Set()};
   const c=-t.amountCents;r.cents+=c;r.count++;if(t.day>r.lastDay)r.lastDay=t.day;
   if(/^\d{4}-\d{2}-\d{2}$/.test(t.day||'')){const m=t.day.slice(0,7);r.months[m]=(r.months[m]||0)+c;}
   if(r.rawExamples.size<4)r.rawExamples.add(clean(t.merchant||'').slice(0,75));
-  existing.cents+=c;existing.count++;existing.merchants.set(name,r);byCategory.set(id,existing);
+  existing.cents+=c;existing.count++;existing.merchants.set(key,r);byCategory.set(id,existing);
  }
  return [...byCategory.values()].map(g=>({...g,merchants:[...g.merchants.values()].map(x=>({...x,rawExamples:[...x.rawExamples]})).sort((a,b)=>b.cents-a.cents)})).sort((a,b)=>b.cents-a.cents);
 }

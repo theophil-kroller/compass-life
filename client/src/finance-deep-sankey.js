@@ -1,7 +1,7 @@
 /** Compass 0.5.17.7: four real proportional levels, not a separate merchant list.
  * Category/merchant labels come from locally imported entries only. Not a receipt.
  */
-import {normalizedMerchant} from './finance-merchant-insights.js';
+import {merchantDisplay,merchantNameKey} from './finance-merchant-editor.js';
 import {hierarchicalFlows} from './finance-exotic-hierarchy.js';
 const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const euro=n=>(n/100).toLocaleString('de-AT',{style:'currency',currency:'EUR',maximumFractionDigits:0});
@@ -13,7 +13,7 @@ export function deepSankeyModel(rows=[],focus='all'){
  const grouped=hierarchicalFlows(rows).filter(g=>focus==='all'||g.name===focus);
  const sources=new Map();
  for(const t of rows){if(!eligible(t))continue;const [parent,...rest]=String(t.category||'Sonstiges / Unbekannt').split(' / ');
-  const sub=rest.join(' / ')||'Ohne Unterkategorie',key=parent+'\u001f'+sub;let m=sources.get(key);if(!m){m=new Map();sources.set(key,m);}const name=normalizedMerchant(t.merchant||t.description||'');m.set(name,(m.get(name)||0)-t.amountCents);}
+  const sub=rest.join(' / ')||'Ohne Unterkategorie',key=parent+'\u001f'+sub;let m=sources.get(key);if(!m){m=new Map();sources.set(key,m);}const name=merchantDisplay(t);const keyName=merchantNameKey(name);const old=m.get(keyName)||{name,cents:0};old.cents-=t.amountCents;m.set(keyName,old);}
  const regular=grouped.filter(g=>!g.special),special=grouped.filter(g=>g.special);
  const selected=focus==='all'&&regular.length>10?
   [...regular.slice(0,10),{name:'Weitere Konsumkategorien',color:'#829E90',cents:regular.slice(10).reduce((a,g)=>a+g.cents,0),children:regular.slice(10).map(g=>({name:g.name,cents:g.cents}))},...special]:grouped;
@@ -21,7 +21,7 @@ export function deepSankeyModel(rows=[],focus='all'){
   let children=(g.children||[]).map(c=>{
    let values=[];
    if(!g.special){const merchant=sources.get(g.name+'\u001f'+c.name);
-    values=[...(merchant||new Map())].map(([name,cents])=>({name,cents})).sort((a,b)=>b.cents-a.cents);
+    values=[...(merchant||new Map()).values()].map(({name,cents})=>({name,cents})).sort((a,b)=>b.cents-a.cents);
    }
    // The legacy hierarchy groups tiny subcategories into a single labelled slot.
    // Preserve all cents even if individual merchants cannot be attributed to that slot.
@@ -36,15 +36,23 @@ export function deepSankeyModel(rows=[],focus='all'){
  });
 }
 const ribbon=(a,b,c,d,w)=>{const bend=(c-a)*.46;return `M${r(a)} ${r(b)} C${r(a+bend)} ${r(b)} ${r(c-bend)} ${r(d)} ${r(c)} ${r(d)} L${r(c)} ${r(d+w)} C${r(c-bend)} ${r(d+w)} ${r(a+bend)} ${r(b+w)} ${r(a)} ${r(b+w)} Z`;};
+/** A single canonical merchant can receive flows from multiple subcategories.
+ * Incoming ribbon segments never claim one economic expense twice.
+ */
 export function deepSankey(rows=[],focus='all'){
  const groups=deepSankeyModel(rows,focus),total=groups.reduce((v,g)=>v+g.cents,0);
  if(!total)return '<p class="insight-no-data">Noch keine bestätigten Konsumausgaben für diese Ansicht.</p>';
- const np=groups.length,ns=groups.reduce((n,g)=>n+g.children.length,0),nm=groups.reduce((n,g)=>n+g.children.reduce((a,s)=>a+s.merchants.length,0),0);
- const H=Math.max(680,125+nm*26+ns*12+np*18),W=1560,top=68,gp=18,sp=11,mp=5;
+ const merchantMap=new Map(),leafKey=(g,c,m)=>['Weitere Händler','Weitere Zahlungspartner','Nicht einzeln zugeordnet','Eigenübertrag / kein Einkauf'].includes(m.name)?`${g.name}\u001f${c.name}\u001f${m.name}`:merchantNameKey(m.name);
+ for(const g of groups)for(const c of g.children)for(const m of c.merchants){const key=leafKey(g,c,m),old=merchantMap.get(key)||{key,name:m.name,cents:0,color:g.color};old.cents+=m.cents;merchantMap.set(key,old);}
+ const merchants=[...merchantMap.values()];
+ const np=groups.length,ns=groups.reduce((n,g)=>n+g.children.length,0),nm=merchants.length;
+ const H=Math.max(680,125+nm*31+ns*12+np*18),W=1560,top=68,gp=18,sp=11,mp=9;
  const avail=H-top-45,scale=Math.min((avail-gp*(np-1))/total,(avail-sp*(ns-1))/total,(avail-mp*(nm-1))/total);
  if(!(scale>0))return '<p class="insight-no-data">Zu viele Kategorien für diese Darstellung.</p>';
  const widths=[136,465,832,1191],bar=12;const v0=(H-total*scale)/2;
- let py=(H-(total*scale+gp*(np-1)))/2,sy=(H-(total*scale+sp*(ns-1)))/2,my=(H-(total*scale+mp*(nm-1)))/2,ry=v0;
+ let py=(H-(total*scale+gp*(np-1)))/2,sy=(H-(total*scale+sp*(ns-1)))/2,ry=v0;
+ let my=(H-(total*scale+mp*(nm-1)))/2;
+ const tops=new Map(),used=new Map();for(const m of merchants){tops.set(m.key,my);used.set(m.key,0);my+=m.cents*scale+mp;}
  const defs=[],paths=[],nodes=[],labels=[];
  groups.forEach((g,i)=>{
   const tall=g.cents*scale,pr=py,root=ry,id=`deep-flow-grad-${i}`;
@@ -60,16 +68,19 @@ export function deepSankey(rows=[],focus='all'){
    if(sh>12)labels.push(`<text x="${widths[2]-15}" y="${r(subStart+sh/2+4)}" text-anchor="end" class="fin-flow-end-text">${h(c.name.slice(0,29))}</text>`);
    let subOut=subStart;
    c.merchants.forEach(m=>{
-    const mh=m.cents*scale,merchantStart=my;
-    paths.push(`<path class="fin-flow-band" d="${ribbon(widths[2]+bar,subOut,widths[3],merchantStart,mh)}" fill="${g.color}" fill-opacity=".38" data-action="finance-merchant-select" data-id="${h(m.name)}" role="button" tabindex="0"><title>${h(g.name)} / ${h(c.name)} / ${h(m.name)} · ${h(euro(m.cents))}</title></path>`);
-    nodes.push(`<rect x="${widths[3]}" y="${r(merchantStart)}" width="${bar}" height="${r(Math.max(mh,1))}" fill="${g.color}" fill-opacity=".77" rx="2"/>`);
-    if(mh>=6)labels.push(`<text x="${widths[3]+20}" y="${r(merchantStart+mh/2+4)}" class="fin-flow-end-text" data-action="finance-merchant-select" data-id="${h(m.name)}" role="button" tabindex="0">${h(m.name.slice(0,27))} · ${h(euro(m.cents))}</text>`);
-    subOut+=mh;my+=mh+mp;
+    const mh=m.cents*scale,key=leafKey(g,c,m),merchantStart=tops.get(key)+used.get(key);
+    // Merchant ribbons share a genuine target node instead of duplicating names.
+    paths.push(`<path class="fin-flow-band" d="${ribbon(widths[2]+bar,subOut,widths[3],merchantStart,mh)}" fill="${g.color}" fill-opacity=".43" data-action="finance-merchant-select" data-id="${h(m.name)}" role="button" tabindex="0"><title>${h(g.name)} / ${h(c.name)} / ${h(m.name)} · ${h(euro(m.cents))}</title></path>`);
+    used.set(key,used.get(key)+mh);subOut+=mh;
    });
    fromSub+=sh;sy+=sh+sp;
   });
   py+=tall+gp;ry+=tall;
  });
+ for(const m of merchants){const y=tops.get(m.key),height=m.cents*scale;
+  nodes.push(`<rect x="${widths[3]}" y="${r(y)}" width="${bar}" height="${r(Math.max(height,1))}" fill="${m.color}" fill-opacity=".88" rx="2" data-action="finance-merchant-select" data-id="${h(m.name)}" role="button" tabindex="0"/>`);
+  labels.push(`<text x="${widths[3]+20}" y="${r(y+Math.max(12,height/2+4))}" class="fin-flow-end-text" data-action="finance-merchant-select" data-id="${h(m.name)}" role="button" tabindex="0">${h(m.name.slice(0,28))} · ${h(euro(m.cents))}</text>`);
+ }
  const names=['Abgänge','Hauptkategorien','Unterkategorien','Händler / Zahlungspartner'];
- return `<div class="fin-organic-sankey fin-deep-sankey"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Organischer vierstufiger Sankey: Abgänge zu Hauptkategorien, Unterkategorien und Händlern"><defs>${defs.join('')}</defs>${names.map((name,i)=>`<text x="${widths[i]}" y="32" fill="#326B60" font-size="15">${h(name)}</text>`).join('')}${paths.join('')}<rect x="${widths[0]}" y="${r(v0)}" width="${bar}" height="${r(total*scale)}" rx="4" fill="#286E63"/><text x="${widths[0]-16}" y="${r(H/2+4)}" text-anchor="end" fill="currentColor" font-size="14">${h(euro(total))}</text>${nodes.join('')}${labels.join('')}</svg></div><p class="fin-art-note">Vier echte Ebenen: Abgänge → Hauptkategorien → Unterkategorien → Händler. Händlerdaten stammen aus Bankbuchungen, nicht aus Kassenzetteln. Winzige Positionen sind in der Detailansicht lesbar. Transfers sind separat vom Konsum ausgewiesen.</p>`;
+ return `<div class="fin-organic-sankey fin-deep-sankey"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vierstufiger Sankey mit zusammengeführten Händlern; Buchungen behalten ihre Kategorien"><defs>${defs.join('')}</defs>${names.map((name,i)=>`<text x="${widths[i]}" y="32" fill="#326B60" font-size="15">${h(name)}</text>`).join('')}${paths.join('')}<rect x="${widths[0]}" y="${r(v0)}" width="${bar}" height="${r(total*scale)}" rx="4" fill="#286E63"/><text x="${widths[0]-16}" y="${r(H/2+4)}" text-anchor="end" fill="currentColor" font-size="14">${h(euro(total))}</text>${nodes.join('')}${labels.join('')}</svg></div><p class="fin-art-note">Händler mit gleichem bestätigten Anzeigenamen werden rechts zu <strong>einem Knoten</strong> zusammengefasst. Zahlungswege aus verschiedenen Kategorien bleiben als getrennte Verbindungen sichtbar. Klick auf einen Händler öffnet die Bearbeitung direkt hier; Originalbuchungen bleiben erhalten.</p>`;
 }
