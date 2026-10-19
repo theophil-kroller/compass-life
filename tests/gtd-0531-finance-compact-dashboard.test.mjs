@@ -11,7 +11,7 @@ test('finance first fold: month chart, real transactions, budget and confirmed c
  const html=markup();for(const cls of ['fin31-primary-row','fin31-months','fin31-recent','fin31-secondary-row','fin31-budget','fin31-fixed','fin31-advanced-flow'])assert.match(html,new RegExp(cls));
  assert.ok(html.indexOf('fin31-months')<html.indexOf('fin31-advanced-flow'));
  assert.ok(html.indexOf('fin31-recent')<html.indexOf('fin31-advanced-flow'));
- assert.match(html,/<details class="fin31-advanced-flow">/);
+ assert.match(html,/<details id="finance-overview-sankey" class="fin31-advanced-flow"/);
  assert.match(html, /fin30-lead-grid/);
 });
 test('finance other panes retain classic drill-down and detailed Sankey',()=>{

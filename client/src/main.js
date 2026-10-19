@@ -10,6 +10,7 @@ import {linkedPersonTasks,linkedPersonInbox} from './person-links.js';
 import {projectHealth,waitingReview,repeatedTask} from './gtd-intelligence-v23.js';
 import {validateLifeGoal,lifeGoals,lifeGoalProgress,smartDailyChoices,energyModes,timeModes,LIFE_AREAS,lifeAreaLabel} from './life-intelligence-v22.js';
 import {fetchPublicEurQuotes} from './kraken-public-market-v22.js';
+import {fetchKrakenHistory} from './kraken-history-v39.js';
 import {matchesEventCategories,toggleEventCategory,selectedCategoryLabel} from './discovery-category-filter.js';
 import {wireSmartTags,rememberTag} from './smart-tags.js';
 import {personCalendarEvents} from './people-matching.js';
@@ -56,7 +57,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.38';
+const COMPASS_CLIENT_VERSION='0.5.39';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -143,6 +144,8 @@ let financePaceCompare='previous',financeBudgetMonth=new Date().toLocaleDateStri
 let financePeriod='last12',financeForecastScenario='basis',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
 let krakenBridgeToken='',krakenBridgeBusy=false,krakenLocalCheckedAt=0;
 let krakenPublicBusy=false,krakenPublicAttempt=0;
+let krakenChartAsset='',krakenChartPeriod='1m',krakenChartBusy=false,krakenChartError='',krakenChartData=null;
+let financeOverviewSankeyOpen=false;
 let financeVisualMode='hierarchy',financeCompareMode='month_year',financeMerchantCategory='Lebensmittel';
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
 let financeTripSelected='',financeTripQuery='',financeTripMode='suggested',financeTripPage=0;
@@ -387,7 +390,7 @@ function chrome(content){
  <div class="calm-nav-group">
  <button type="button" class="calm-group-toggle ${calmNavGroup==='finance'?'is-open':''}" data-action="calm-nav-group" data-id="finance" aria-expanded="${calmNavGroup==='finance'}" aria-controls="calm-nav-finance">${ico('folder',19)}<span>Finanzen</span>${ico('arrow',14)}</button>
  ${calmNavGroup==='finance'?`<div class="calm-subitems" id="calm-nav-finance">
- ${FINANCE_TABS.map(p=>`<button type="button" class="nav-item ${tab==='finance'&&financePane===p.title?'is-active':''}" data-action="calm-finance-view" data-id="${h(p.title)}" aria-current="${tab==='finance'&&financePane===p.title?'page':'false'}">${ico(({Überblick:'layers',Konten:'folder',Cashflow:'sync',Einnahmen:'activity',Ausgaben:'activity','Budget & Ziele':'target',Prognose:'chart',Fixkosten:'calendar',Sparpotenzial:'target',Reisen:'compass',Portfolio:'folder',Geldkreislauf:'sync',Kontenflüsse:'layers','Visual Lab':'spark',Buchungen:'list',Prüfen:'checkSquare'})[p.title]||'layers',17)}<span>${h(p.title)}</span></button>`).join('')}
+ ${FINANCE_TABS.filter(p=>!['Geldkreislauf','Kontenflüsse'].includes(p.title)).map(p=>`<button type="button" class="nav-item ${tab==='finance'&&financePane===p.title?'is-active':''}" data-action="calm-finance-view" data-id="${h(p.title)}" aria-current="${tab==='finance'&&financePane===p.title?'page':'false'}">${ico(({Überblick:'layers',Konten:'folder',Cashflow:'sync',Einnahmen:'activity',Ausgaben:'activity','Budget & Ziele':'target',Prognose:'chart',Fixkosten:'calendar',Sparpotenzial:'target',Reisen:'compass',Portfolio:'folder',Geldkreislauf:'sync',Kontenflüsse:'layers','Visual Lab':'spark',Buchungen:'list',Prüfen:'checkSquare'})[p.title]||'layers',17)}<span>${h(p.title)}</span></button>`).join('')}
  </div>`:''}</div>
  ${navItem('review','Wochenreview','sync')}
  <div class="nav-separator"></div>
@@ -982,7 +985,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form></details>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy,marketQuote:financeMarketQuote}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,marketQuote:financeMarketQuote}));}
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
 const krakenBridgeRequest=async(path,method='GET',body=null)=>{
@@ -1004,6 +1007,15 @@ async function refreshPublicKrakenPrices(manual=false){
   await mutate(s=>{s.krakenPortfolio=updateKrakenQuotes(s.krakenPortfolio,reply);const summary=krakenWealthSummary(s.krakenPortfolio);n=summary.covered;total=summary.total;});
   if(manual)toast(`Öffentliche Kraken-Kurse aktualisiert: ${n}/${total} Positionen in EUR bewertbar.`);
  }catch(e){if(manual)toast('Live-Kurse: '+e.message,true);}finally{krakenPublicBusy=false;render();}
+}
+async function loadKrakenCoinChart(asset,period='1m'){
+ if(!state?.krakenPortfolio?.balances||!Object.hasOwn(state.krakenPortfolio.balances,asset))return;
+ krakenChartAsset=asset;krakenChartPeriod=period;krakenChartBusy=true;krakenChartError='';krakenChartData=null;render();
+ try{
+  const data=await fetchKrakenHistory(config.apiUrl,asset,period);
+  if(krakenChartAsset===asset&&krakenChartPeriod===period)krakenChartData=data;
+ }catch(e){if(krakenChartAsset===asset&&krakenChartPeriod===period)krakenChartError=e.message||'Historische Kurse nicht verfügbar.';}
+ finally{if(krakenChartAsset===asset&&krakenChartPeriod===period){krakenChartBusy=false;render();}}
 }
 async function syncKrakenBridge(automatic=false){
  if(!state||krakenBridgeBusy||!krakenBridgeToken)return;
@@ -1039,7 +1051,7 @@ function maybeAutoSyncKraken(){
  syncKrakenBridge(true).catch(()=>{});
 }
 function maybeAutoRefreshPublicKraken(){
- if(!state||tab!=='finance'||financePane!=='Portfolio'||!state?.krakenPortfolio?.balances||document.visibilityState!=='visible'||state?.uiPreferences?.krakenPublicAuto!==true||krakenPublicBusy)return;
+ if(!state||tab!=='finance'||financePane!=='Portfolio'||!state?.krakenPortfolio?.balances||document.visibilityState!=='visible'||state?.uiPreferences?.krakenPublicAuto===false||krakenPublicBusy)return;
  if(Date.now()-krakenPublicAttempt<15*60*1000)return;
  refreshPublicKrakenPrices(false).catch(()=>{});
 }
@@ -1174,7 +1186,7 @@ function render(){
  if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen() ;bind();
- if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto===true&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
+ if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto!==false&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
    requestAnimationFrame(()=>refreshPublicKrakenPrices(false));
  }
  if(captureOverlayOpen)requestAnimationFrame(()=>app.querySelector('#capture-modal-input')?.focus());
@@ -1550,6 +1562,7 @@ function bind() {
       toast(`${count} Buchung(en) geändert. Das Sankey wurde neu zusammengefasst.`);
     }catch(ex){toast(ex.message,true);}
   };
+  const overviewSankey=app.querySelector('#finance-overview-sankey');if(overviewSankey)overviewSankey.addEventListener('toggle',()=>{if(overviewSankey.isConnected)financeOverviewSankeyOpen=overviewSankey.open;});
   const deepFocus=app.querySelector('#finance-sankey-focus');if(deepFocus)deepFocus.onchange=()=>{financeSankeyFocus=deepFocus.value;render();};
    const paceCompareEl=app.querySelector('#finance-pace-compare');if(paceCompareEl)paceCompareEl.onchange=()=>{financePaceCompare=paceCompareEl.value==='average3'?'average3':'previous';render();};
   const finAccount=app.querySelector('#finance-account');if(finAccount)finAccount.onchange=()=>{financeAccount=finAccount.value;financeReviewPage=0;financeLedgerPage=0;render();};
@@ -2081,6 +2094,14 @@ async function runAction(action,id,stepId=null) {
        if(!a||!b||a.linkedTransferId||b.linkedTransferId||a.amountCents!==-b.amountCents)throw Error('Transferpaar hat sich verändert.');
        for(const [entry,other] of [[a,b],[b,a]])Object.assign(entry,{category:'Transfer / Eigene Konten',flow:'transfer',needsReview:false,confidence:'confirmed',source:'user',linkedTransferId:other.id,ruleReason:'Von dir bestätigter interner Transfer'});
       });toast('Interner Transfer bestätigt – keine doppelten Ausgaben.');return;
+    }
+    if(action==='finance-kraken-chart-select'){
+      if(Object.hasOwn(state?.krakenPortfolio?.balances||{},id))await loadKrakenCoinChart(id,krakenChartPeriod);
+      return;
+    }
+    if(action==='finance-kraken-chart-period'){
+      if(krakenChartAsset&&['1d','7d','1m','3m','1y','2y'].includes(id))await loadKrakenCoinChart(krakenChartAsset,id);
+      return;
     }
     if(action==='finance-kraken-public-quotes'){
       await refreshPublicKrakenPrices(true);return;

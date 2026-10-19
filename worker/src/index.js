@@ -1,3 +1,4 @@
+import {publicKrakenHistory} from './market-kraken-v39.js';
 import {privateMirror} from './private-device-mirror.js';
 import {listProjects,putProject} from './projects.js';
 import {readWeeklyReview,writeWeeklyReview} from './weekly-review.js';
@@ -203,6 +204,10 @@ export default {
       return finish(json({ok:true,phase:'GTD',apiVersion:12,release:'0.5.27',planning:true,gtd:true,projects:true,schema}));
     }
     if (!configIsSafe(env)) return finish(json({error:'server-not-configured'},503));
+    if (req.method==='GET' && path==='/api/market/kraken/ohlc') {
+      if(origin && origin!==env.ALLOWED_ORIGIN)return finish(json({error:'origin-not-allowed'},403));
+      return finish(await publicKrakenHistory(req));
+    }
     if (origin && origin!==env.ALLOWED_ORIGIN) return finish(json({error:'origin-not-allowed'},403));
     try {
       if(path==='/api/widget/pair/claim' && req.method==='POST')return finish(await claimWidgetPair(req,env));

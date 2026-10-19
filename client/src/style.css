@@ -1832,3 +1832,23 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .next38-row .next38-move button:hover:not(:disabled){background:#e1eee6}
 .next38-row .next38-move button:disabled{opacity:.2;cursor:default}
 @media(max-width:700px){.next38-row{flex-wrap:wrap}.next38-row .next38-today{padding:5px}.next38-row .next38-move{opacity:1}.next38-row .next38-drag{display:none}}
+
+/* Compass 0.5.39: Dense finance navigation, persistent Sankey editor and Kraken market details */
+.calm-nav-group #calm-nav-finance .nav-item{min-height:23px;padding:3px 8px;gap:7px;font-size:10.5px;line-height:1.12}
+.calm-nav-group #calm-nav-finance .nav-item svg{width:14px;height:14px;flex:none}
+.calm-nav-group #calm-nav-finance .calm-subitems{gap:0}
+.fin39-cashflow-shortcuts{display:flex;gap:8px;align-items:center;margin:8px 0 12px}
+.finance-workspace .fin31-advanced-flow[open]{background:#fff}
+.fin39-coin-row{width:100%;border:0;border-bottom:1px solid #e3ece7;border-radius:7px;background:transparent;cursor:pointer;text-align:left;padding:10px 8px;color:inherit;font:inherit}
+.fin39-coin-row:hover,.fin39-coin-row:focus-visible{background:#edf6f1;outline:1px solid #98bfad}
+.fin39-coin-row .fin-wealth-val small{font-size:10px;color:#397968;display:block;text-align:right}
+.fin39-price-card{border:1px solid #dae7df;border-radius:14px;padding:18px;margin:16px 0;background:#fff;min-width:0}
+.fin39-price-head,.fin39-periods{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fin39-price-head{justify-content:space-between;margin-bottom:10px}
+.fin39-price-head h4{margin:5px 0;font-size:17px}
+.fin39-periods button{border:1px solid #dde9e3;background:#f6f9f7;border-radius:7px;padding:5px 9px;color:#325a4e;cursor:pointer}
+.fin39-periods button[aria-pressed=true]{background:#dcece4;border-color:#7dab97;font-weight:650}
+.fin39-price-svg{display:block;width:100%;height:auto;max-height:310px}
+.fin39-price-stats{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;margin:6px 0 12px}
+.fin39-price-stats .positive{color:#158365}.fin39-price-stats .negative{color:#c44b4b}
+@media(max-width:680px){.fin39-price-card{padding:10px}.fin39-price-head{align-items:flex-start}.fin39-periods button{font-size:11px}}
