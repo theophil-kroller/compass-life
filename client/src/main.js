@@ -1,5 +1,7 @@
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {linkedPersonTasks,linkedPersonInbox} from './person-links.js';
+import {validateLifeGoal,lifeGoals,lifeGoalProgress,smartDailyChoices,energyModes,timeModes} from './life-intelligence-v22.js';
+import {fetchPublicEurQuotes} from './kraken-public-market-v22.js';
 import {matchesEventCategories,toggleEventCategory,selectedCategoryLabel} from './discovery-category-filter.js';
 import {wireSmartTags,rememberTag} from './smart-tags.js';
 import {personCalendarEvents} from './people-matching.js';
@@ -41,7 +43,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.21.1';
+const COMPASS_CLIENT_VERSION='0.5.22';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -120,6 +122,7 @@ let calmNavGroup=['projects','overview','next','forecast','flagged','hold','some
 let financeSankeyFocus='all';
 let financePeriod='last12',financeForecastScenario='basis',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
 let krakenBridgeToken='',krakenBridgeBusy=false,krakenLocalCheckedAt=0;
+let krakenPublicBusy=false,krakenPublicAttempt=0;
 let financeVisualMode='hierarchy',financeCompareMode='month_year',financeMerchantCategory='Lebensmittel';
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
 let financeTripSelected='',financeTripQuery='',financeTripMode='suggested',financeTripPage=0;
@@ -421,6 +424,26 @@ function calendarRail(){
  <div class="rail-caption">Nächste 7 Tage</div><div class="rail-days">${Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);return `<button class="rail-day ${localDateString(d)===selectedDay?'on':''}" type="button" data-action="select-day" data-id="${localDateString(d)}"><span>${h(dayFormat(d))}</span><small>–</small></button>`;}).join('')}</div><p class="rail-footnote">Kalendereinträge erscheinen nach der Google-Verbindung. Aufgaben bleiben in Compass.</p></aside>`;
 }
 function datesPreview(){return `<div class="date-prototype"><div>${ico('calendar',16)}<span>Wunschtermin</span><span class="date-value">–</span></div><div>${ico('flag',16)}<span>Harte Deadline</span><span class="date-value">–</span></div><div>${ico('clock',16)}<span>Frühestens ab</span><span class="date-value">–</span></div></div>`;}
+function lifeGoalsPanel(){
+ const goals=lifeGoals(state),projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&p.status==='active');
+ return `<details class="work-card v22-goals" aria-label="Lebensziele und Projekte"><summary>${ico('target',18)} Lebensziele & Projekte <small>· ${goals.filter(g=>g.status==='active').length} aktiv · lokal verschlüsselt</small></summary>
+ <p class="muted-line">Ein Ziel beschreibt ein längerfristiges Ergebnis. Projektzuordnungen schaffen einen nachvollziehbaren Bezug zu vorhandenen Next Actions; Projekt- und Aufgaben-Daten bleiben unverändert.</p>
+ ${goals.map(goal=>{const prog=lifeGoalProgress(state,goal);return `<article class="v22-goal"><div><strong>${h(goal.title)}</strong><small>${h(goal.area)} · ${goal.status==='active'?'Aktiv':goal.status==='paused'?'Pausiert':'Erreicht'}${goal.targetDate?' · Zieltermin '+h(goal.targetDate):''}</small>${goal.outcome?`<p>${h(goal.outcome)}</p>`:''}<small>${prog.projects} verknüpfte Projekte · ${prog.completed} von ${prog.taskCount} Aufgaben erledigt${prog.missingProjects?' · '+prog.missingProjects+' Projekte nicht mehr vorhanden':''}</small></div><div class="v22-goal-actions">${goal.projectIds.map(id=>state?.projects?.[id]?`<button type="button" class="secondary-btn" data-action="life-goal-project-open" data-id="${h(id)}">${h(state.projects[id].title)} ↗</button>`:'').join('')}
+ <select id="life-goal-project-${h(goal.id)}" aria-label="Projekt zu Ziel hinzufügen"><option value="">Projekt verbinden …</option>${projects.filter(p=>!goal.projectIds.includes(p.id)).map(p=>`<option value="${h(p.id)}">${h(p.title)}</option>`).join('')}</select><button type="button" class="secondary-btn" data-action="life-goal-link" data-id="${h(goal.id)}">Verbinden</button><button type="button" class="secondary-btn" data-action="life-goal-toggle" data-id="${h(goal.id)}">${goal.status==='active'?'Pausieren':'Aktivieren'}</button><button type="button" class="secondary-btn" data-action="life-goal-remove" data-id="${h(goal.id)}">Entfernen</button></div></article>`;}).join('')||'<p class="muted-line">Noch kein Lebensziel definiert. Beginne mit einem konkreten Ergebnis, das dir persönlich wichtig ist.</p>'}
+ <details class="calm-create"><summary>${ico('plus',15)} Lebensziel anlegen</summary><form id="life-goal-form" class="v22-goal-form"><label>Zielname<input name="title" required maxlength="120" placeholder="Was möchte ich erreichen?"/></label><label>Gewünschtes Ergebnis<textarea name="outcome" maxlength="600" rows="2" placeholder="Woran erkenne ich den Fortschritt?"></textarea></label><label>Lebensbereich<select name="area">${categoryOptions()}</select></label><label>Erstes Projekt (optional)<select name="projectId">${projectOptions()}</select></label><label>Zieldatum (optional, keine Deadline)<input name="targetDate" type="date"/></label><button type="submit" class="primary-btn">Ziel speichern</button></form></details></details>`;
+}
+function todaySmartPanel(){
+ const settings=state?.uiPreferences||{},energy=energyModes.includes(settings.dailyEnergy)?settings.dailyEnergy:'offen';
+ const minutes=timeModes.includes(settings.dailyMinutes)?settings.dailyMinutes:60,context=String(settings.dailyContext||'');
+ const contexts=contextChoices(nextActions(state)).filter(c=>!c.value.startsWith('energy-')&&!c.value.startsWith('attention-'));
+ const recommendation=smartDailyChoices(state,{day:selectedDay,minutes,energy,context});
+ return `<section class="work-card v22-daily" aria-label="Begründete Next-Action-Empfehlungen"><div class="work-heading"><span>${ico('spark',18)} Was passt jetzt?</span><span class="quiet-tag">Maximal 3 Vorschläge</span></div>
+ <div class="v22-daily-filters"><label>Zeitbudget<select id="v22-day-minutes">${timeModes.map(n=>`<option value="${n}" ${n===minutes?'selected':''}>${n} Min.</option>`).join('')}</select></label><label>Gefühlte Energie<select id="v22-day-energy">${energyModes.map(e=>`<option value="${e}" ${e===energy?'selected':''}>${e==='offen'?'Nicht angegeben':e==='low'?'Wenig':e==='medium'?'Mittel':'Viel'}</option>`).join('')}</select></label><label>Kontext<select id="v22-day-context"><option value="">Alle Kontexte</option>${contexts.map(c=>`<option value="${h(c.value)}" ${context===c.value?'selected':''}>${h(c.label)}</option>`).join('')}</select></label></div>
+ <p class="fin-disclaimer">Aus deinen verfügbaren Next Actions. Zeitbudget und Energie gibst du selbst an; Garmin wird nicht als geistige Leistungsfähigkeit interpretiert.${calendarToken?' Kalender verbunden; freie Zeit wurde nicht automatisch unterstellt.':' Kalender nicht verbunden; tatsächliche freie Zeit unbekannt.'}</p>
+ <div class="v22-recommendations">${recommendation.items.map((r,i)=>`<button type="button" class="v22-recommendation" data-action="task-select" data-id="${h(r.task.id)}"><span>${i+1}</span><strong>${h(r.task.title)}</strong><small>${h(r.reasons.slice(0,3).join(' · '))}</small></button>`).join('')||'<p class="muted-line">Keine passende ausführbare Aufgabe für diese Zeit-/Kontextwahl. Du kannst den Filter lockern oder eine bestehende Aufgabe prüfen.</p>'}</div>
+ ${recommendation.skippedTime||recommendation.skippedContext?`<small>${recommendation.skippedTime} zu lang geschätzte · ${recommendation.skippedContext} außerhalb des gewählten Kontexts</small>`:''}
+ <p class="muted-line">Keine automatische Umplanung und keine neu erzeugten Fristen. Empfehlungen sind begründete Vorschläge.</p></section>`;
+}
 function todayWork(locked=false){
  const selected=localDateString(new Date())===selectedDay;
  return `<div class="today-layout">${calendarRail()}<div class="today-center">
@@ -432,11 +455,10 @@ function todayWork(locked=false){
  <div class="capture-inline"><form id="capture-form"><label class="sr-only" for="capture">Schnell in die Inbox erfassen</label><input id="capture" name="title" maxlength="1000" required placeholder="Gedanken sofort in der Inbox festhalten …" ${locked?'disabled':''}/><button type="submit" class="primary-btn" ${locked?'disabled':''}>${ico('plus',17)} Erfassen</button></form><small>Inbox bleibt ein eigener Eingang; eine Aufgabe erhält bewusst ein Datum.</small></div></section>
  <div class="below-today"><section class="work-card deadline-card"><div class="work-heading"><span>${ico('flag',18)} Fristen & Vorausschau</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">${dueTasks(state,4).map(t=>`<div class="deadline-inline"><strong>${h(t.dueDate)}</strong> ${h(t.title)}</div>`).join('')||'Noch keine offenen Deadlines erfasst.'}</div></section>
  <section class="work-card review-card"><div class="work-heading"><span>${ico('sync',18)} Review</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Offene Schleifen werden später regelmäßig geprüft – ohne künstliche Deadlines.</div></section></div>
- </div><aside class="inspector-rail" aria-label="Aufgabendetails und Personen-Kontext"><section class="work-card inspector-card"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabendetails</span><span class="quiet-tag">Planung</span></div>
+ </div><aside class="inspector-rail" aria-label="Aufgabendetails und Personen-Kontext">${todaySmartPanel()}<section class="work-card inspector-card"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabendetails</span><span class="quiet-tag">Planung</span></div>
  ${taskEditor()}
  <div class="inspector-other"><span>Projekt</span><b>–</b><span>Kontext</span><b>–</b><span>Personen</span><b>–</b><span>Aufwand</span><b>–</b></div></section>
  <section class="work-card person-preview"><div class="work-heading"><span>${ico('people',18)} Offene Gesprächsthemen</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Person auswählen → alle offenen Agenda-Punkte sehen. Personen-Agendas folgen im GTD-Ausbau.</div></section>
- <section class="work-card energy-context"><div class="work-heading"><span>${ico('bolt',18)} Energie & Kontext</span><span class="quiet-tag">Planungsfilter</span></div><div class="energy-levels" aria-label="Energiestufen (Vorschau)"><button disabled type="button">Wenig</button><button disabled type="button">Mittel</button><button disabled type="button">Viel</button></div><p class="energy-hint">Wenn du erschöpft oder blockiert bist, zeigt Compass später kleine, passende Next Actions – statt dir zusätzliche Aufgaben aufzudrängen.</p></section>
  <button type="button" class="overview-nudge" data-tab="overview">${ico('layers',17)} Große Übersicht ansehen ${ico('arrow',14)}</button></aside></div>`;
 }
 function forecastScreen(){
@@ -561,7 +583,7 @@ function projectScreen(){
  const items=current?.kind==='project'?projectTasks(state,current.id):[];
  const nextCount=current?nextActions(state).filter(t=>t.projectId===current.id).length:0;
  const active=projects.filter(x=>x.kind!=='folder'&&x.status==='active').length;
- return chrome(`<div class="projects-layout omni-projects ${projectFocus?'is-focused':''}">
+ return chrome(`${lifeGoalsPanel()}<div class="projects-layout omni-projects ${projectFocus?'is-focused':''}">
  <aside class="work-card project-navigation"><div class="work-heading"><span>${ico('folder',20)} Ordner & Projekte</span><span class="quiet-tag">${active} aktiv</span></div>
  <form class="project-form" id="project-create-form"><label>Name<input required name="title" maxlength="140" placeholder="Projekt oder Ordner"/></label><div class="project-create-row"><label>Art<select name="kind"><option value="project">Projekt</option><option value="folder">Ordner</option></select></label><label>Typ<select name="projectType"><option value="parallel">Parallel</option><option value="sequential">Sequential</option><option value="single">Single Actions</option></select></label></div><label>Unterhalb von<select name="parentId">${projectParentOptions(current?.id||'')}</select></label><label>Ergebnis<input name="outcome" maxlength="800" placeholder="Optional"/></label><button class="primary-btn" type="submit">${ico('plus',16)} Anlegen</button></form>
  <div class="project-tree">${projectTree()||'<p class="muted-line">Noch keine Projekte.</p>'}</div></aside>
@@ -790,7 +812,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form><form id="person-agenda-form" data-id="${h(selected.id)}" class="compact-stack"><label>Gesprächsthema oder Aufgabe<input name="title" maxlength="180" required placeholder="Was möchte ich ansprechen?"/></label><button type="submit" class="primary-btn">Agenda-Schritt anlegen</button></form><div class="people-agendas">${related.map(t=>`<button type="button" class="people-agenda" data-action="person-task-open" data-id="${h(t.id)}">${ico('checkSquare',16)} <span>${h(t.title)}<small>${h(t.workflow==='waiting'?'Waiting For':'Next Action')}</small></span></button>`).join('')||'<p class="muted-line">Noch keine offenen Agenda-Schritte.</p>'}</div>${relatedInbox.length?`<section class="people-linked-inbox"><h3>${ico('inbox',16)} Noch in der Inbox · ${relatedInbox.length}</h3><p class="muted-line">Getaggte Gedanken, noch keine Next Actions. Du kannst sie in der Inbox oder beim Review klären.</p>${relatedInbox.map(r=>`<button type="button" class="people-agenda" data-action="person-inbox-open" data-id="${h(r.id)}">${ico('inbox',16)} <span>${h(r.title)}<small>Ungeklärt · Inbox öffnen</small></span></button>`).join('')}</section>`:''}`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy}));}
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
 const krakenBridgeRequest=async(path,method='GET',body=null)=>{
@@ -798,6 +820,21 @@ const krakenBridgeRequest=async(path,method='GET',body=null)=>{
  if(!response.ok)throw Error('Lokaler Connector nicht erreichbar oder Kopplungscode/Origin stimmt nicht.');
  return response.json();
 };
+async function refreshPublicKrakenPrices(manual=false){
+ if(!state?.krakenPortfolio?.balances||krakenPublicBusy)return;
+ if(!navigator.onLine){if(manual)toast('Offline: keine Live-Kurse abrufbar.',true);return;}
+ krakenPublicBusy=true;krakenPublicAttempt=Date.now();
+ if(manual)render();
+ try{
+  const assets=Object.entries(state.krakenPortfolio.balances).filter(([,v])=>Number(v)>0).map(([asset])=>asset);
+  if(assets.length>70)throw Error('Zu viele Währungen für den öffentlichen Kursabruf.');
+  const reply=await fetchPublicEurQuotes(assets);
+  if(!Object.keys(reply.quotesEur).length)throw Error('Keine passenden Kraken-EUR-Märkte mit Live-Kursdaten erreicht.');
+  let n=0,total=0;
+  await mutate(s=>{s.krakenPortfolio=updateKrakenQuotes(s.krakenPortfolio,reply);const summary=krakenWealthSummary(s.krakenPortfolio);n=summary.covered;total=summary.total;});
+  if(manual)toast(`Öffentliche Kraken-Kurse aktualisiert: ${n}/${total} Positionen in EUR bewertbar.`);
+ }catch(e){if(manual)toast('Live-Kurse: '+e.message,true);}finally{krakenPublicBusy=false;render();}
+}
 async function syncKrakenBridge(automatic=false){
  if(!state||krakenBridgeBusy||!krakenBridgeToken)return;
  krakenBridgeBusy=true;
@@ -831,8 +868,14 @@ function maybeAutoSyncKraken(){
  if(Date.now()-Math.max(last,krakenLocalCheckedAt)<12*3600*1000)return;
  syncKrakenBridge(true).catch(()=>{});
 }
+function maybeAutoRefreshPublicKraken(){
+ if(!state||tab!=='finance'||financePane!=='Portfolio'||!state?.krakenPortfolio?.balances||document.visibilityState!=='visible'||state?.uiPreferences?.krakenPublicAuto!==true||krakenPublicBusy)return;
+ if(Date.now()-krakenPublicAttempt<15*60*1000)return;
+ refreshPublicKrakenPrices(false).catch(()=>{});
+}
+if(typeof setInterval==='function')setInterval(maybeAutoRefreshPublicKraken,60*1000);
 if(typeof setInterval==='function')setInterval(maybeAutoSyncKraken,15*60*1000);
-if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')maybeAutoSyncKraken();});
+if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){maybeAutoSyncKraken();maybeAutoRefreshPublicKraken();}});
 function insightsScreen(){
  const tabDef=INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0];
  const today=localDate();
@@ -961,7 +1004,10 @@ async function reloadWatchSessions(){
 function render(){
  if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
- app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='projects'?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();bind();
+ app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='projects'?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen() ;bind();
+ if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto===true&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
+   requestAnimationFrame(()=>refreshPublicKrakenPrices(false));
+ }
  if(captureOverlayOpen)requestAnimationFrame(()=>app.querySelector('#capture-modal-input')?.focus());
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
@@ -1068,6 +1114,18 @@ function bind() {
     if(t.projectId!==existing.projectId&&Object.values(state.tasks).some(child=>!child.archived&&child.parentTaskId===id)){toast('Unteraufgaben zuerst einzeln verschieben, bevor du das Projekt dieser Aufgabe wechselst.',true);return;}
     await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);});toast('Aufgabe aktualisiert.');
   };
+  const lifeGoalForm=app.querySelector('#life-goal-form');if(lifeGoalForm)lifeGoalForm.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(lifeGoalForm),projectId=String(fd.get('projectId')||'');
+    const goal={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),outcome:String(fd.get('outcome')||'').trim(),area:String(fd.get('area')||'Allgemein'),status:'active',targetDate:String(fd.get('targetDate')||'')||null,projectIds:projectId?[projectId]:[]};
+    if(!validateLifeGoal(goal)||projectId&&!state.projects?.[projectId]||lifeGoals(state).length>=40){toast('Zielangaben prüfen (maximal 40 Ziele).',true);return;}
+    await mutate(s=>{s.lifeGoals??=[];s.lifeGoals.push(goal);});toast('Lebensziel im lokalen Vault gespeichert.');
+  };
+  for(const [id,check,normalize] of [['v22-day-minutes',v=>timeModes.includes(Number(v)),v=>Number(v)],['v22-day-energy',v=>energyModes.includes(v),v=>v],['v22-day-context',v=>v.length<=60,v=>v]]){
+    const ctrl=app.querySelector('#'+id);if(ctrl)ctrl.onchange=async()=>{
+      if(!check(ctrl.value))return;const key=id==='v22-day-minutes'?'dailyMinutes':id==='v22-day-energy'?'dailyEnergy':'dailyContext';
+      await mutate(s=>{s.uiPreferences??={};s.uiPreferences[key]=normalize(ctrl.value);});
+    };
+  }
   const projectCreate=app.querySelector('#project-create-form');if(projectCreate)projectCreate.onsubmit=async ev=>{
     ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),reviewedAt:null,kind:d.get('kind')||'project',projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null,sortOrder:0};
     if(!validProject(project)||!validProjectParent(state,project.id,project.parentId)){toast('Projektangaben bzw. Ordnerhierarchie prüfen.',true);return;}
@@ -1413,6 +1471,17 @@ async function runAction(action,id,stepId=null) {
       }else{await mutate(s=>{delete s.manualActivities[id];});}
       activitySelectedId=null;toast('Session endgültig entfernt.');return;
     }
+    if(action==='life-goal-project-open'){if(!state?.projects?.[id])return;selectedProjectId=id;selectedTaskId=null;tab='projects';render();return;}
+    if(action==='life-goal-link'){
+      const select=app.querySelector('#life-goal-project-'+id),projectId=String(select?.value||'');
+      if(!state?.projects?.[projectId]||!lifeGoals(state).some(g=>g.id===id))return toast('Projekt auswählen.',true);
+      await mutate(s=>{const g=s.lifeGoals.find(x=>x.id===id);if(g&&!g.projectIds.includes(projectId)&&g.projectIds.length<30)g.projectIds.push(projectId);});return;
+    }
+    if(action==='life-goal-toggle'){await mutate(s=>{const g=(s.lifeGoals||[]).find(x=>x.id===id);if(g)g.status=g.status==='active'?'paused':'active';});return;}
+    if(action==='life-goal-remove'){
+      if(!confirm('Dieses Ziel aus Compass entfernen? Verknüpfte Projekte und Aufgaben bleiben unverändert.'))return;
+      await mutate(s=>{s.lifeGoals=(s.lifeGoals||[]).filter(g=>g.id!==id);});return;
+    }
     if(action==='occasion-toggle'){occasionOpen=!occasionOpen;render();return;}
     if(['occasion-accept','occasion-dismiss','occasion-reset','occasion-custom'].includes(action)){
       const occasion=allOccasions().find(o=>o.id===id);if(!occasion)return;
@@ -1546,6 +1615,15 @@ async function runAction(action,id,stepId=null) {
        if(!a||!b||a.linkedTransferId||b.linkedTransferId||a.amountCents!==-b.amountCents)throw Error('Transferpaar hat sich verändert.');
        for(const [entry,other] of [[a,b],[b,a]])Object.assign(entry,{category:'Transfer / Eigene Konten',flow:'transfer',needsReview:false,confidence:'confirmed',source:'user',linkedTransferId:other.id,ruleReason:'Von dir bestätigter interner Transfer'});
       });toast('Interner Transfer bestätigt – keine doppelten Ausgaben.');return;
+    }
+    if(action==='finance-kraken-public-quotes'){
+      await refreshPublicKrakenPrices(true);return;
+    }
+    if(action==='finance-kraken-public-auto'){
+      const checked=Boolean(app.querySelector('#finance-kraken-public-auto')?.checked);
+      await mutate(s=>{s.uiPreferences??={};s.uiPreferences.krakenPublicAuto=checked;});
+      if(checked)await refreshPublicKrakenPrices(false);
+      return;
     }
     if(action==='finance-kraken-bridge-sync'){
       const input=app.querySelector('#finance-kraken-bridge-token');

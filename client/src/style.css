@@ -1145,3 +1145,25 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .assistant-step>span:first-child{position:relative;display:grid;place-items:center;min-width:28px;min-height:28px}
 .assistant-step>span:first-child>small{position:absolute;right:-5px;top:-5px;display:grid;place-items:center;min-width:13px;height:13px;font:650 8px system-ui,sans-serif;color:#4E7A61;background:#EDF4ED;border:1px solid white;border-radius:10px}
 .assistant-step>span:first-child svg{height:17px;width:17px}
+
+/* 0.5.22 – Smart Daily Compass & Life Goals (local only) */
+.v22-daily .work-heading,.v22-goals .work-heading{margin-bottom:12px}
+.v22-daily-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:9px 0 13px}
+.v22-daily-filters label,.v22-goal-form label{display:grid;gap:5px;min-width:0;font-size:11px;font-weight:600;color:#628074}
+.v22-daily-filters label:last-child{grid-column:1/-1}
+.v22-daily-filters select,.v22-goal-form input,.v22-goal-form textarea,.v22-goal-form select,.v22-goal-actions select{width:100%;min-width:0;border:1px solid #d7e4da;border-radius:10px;background:#fff;padding:9px;color:#315947;font:inherit;font-size:12px}
+.v22-recommendations{display:grid;gap:8px;margin:12px 0}
+.v22-recommendation{display:grid;grid-template-columns:24px minmax(0,1fr);gap:3px 9px;align-items:center;width:100%;text-align:left;border:1px solid #dce9df;background:#f9fcfa;border-radius:12px;padding:11px;cursor:pointer;color:#315a49}
+.v22-recommendation:hover,.v22-recommendation:focus-visible{border-color:#74aa91;background:#f0f7f2;outline-offset:2px}
+.v22-recommendation>span{grid-row:span 2;display:grid;place-items:center;width:24px;height:24px;background:#e1f0e6;border-radius:50%;font-size:11px}
+.v22-recommendation strong{font-size:12px;line-height:1.4}.v22-recommendation small{color:#758c7e;font-size:10px;line-height:1.5}
+.v22-goals{margin-bottom:16px}
+.v22-goal{display:flex;gap:14px;justify-content:space-between;flex-wrap:wrap;border-top:1px solid #e7eee9;padding:13px 0}
+.v22-goal>div:first-child{flex:2 1 250px;min-width:0}.v22-goal strong{color:#315847;font-size:14px}.v22-goal small{display:block;font-size:11px;color:#769184;margin-top:5px}.v22-goal p{font-size:12px;color:#496954;margin:6px 0}
+.v22-goal-actions{display:flex;gap:6px;align-items:center;flex:1 1 240px;flex-wrap:wrap}.v22-goal-actions select{max-width:210px}.v22-goal-actions button{font-size:11px}
+.v22-goal-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;padding:12px}.v22-goal-form label:nth-child(2){grid-column:1/-1}
+.v22-public-prices{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;padding:14px;margin:15px 0;border:1px solid #d9e8df;background:#f5faf6;border-radius:14px}
+.v22-public-prices>div{flex:2 1 260px}.v22-public-prices strong{display:block;font-size:13px;color:#315e4d}.v22-public-prices small{display:block;margin-top:6px;font-size:11px;line-height:1.5;color:#779281}.v22-public-prices label{font-size:11px;color:#486d57;display:flex;align-items:center;gap:8px}
+@media(max-width:680px){.v22-goal-form{grid-template-columns:1fr}.v22-goal-form label:nth-child(2){grid-column:auto}.v22-public-prices{align-items:stretch}}
+
+.v22-goals>summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;font:17px Georgia,serif;color:#2f5a49;padding:3px 0}.v22-goals>summary::-webkit-details-marker{display:none}.v22-goals>summary small{margin-left:auto;font:11px sans-serif;color:#789585}.v22-goals[open]>summary{margin-bottom:15px}
