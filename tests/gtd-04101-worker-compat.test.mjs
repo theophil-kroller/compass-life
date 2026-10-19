@@ -22,7 +22,7 @@ test('Invalid or absent API rejects safely', () => {
 test('App uses shared check and displays frontend version; review and navigation remain enabled', () => {
   const ui=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
   assert.match(ui,/assertCompatibleWorker\(health\)/);
-  assert.match(ui,/COMPASS_CLIENT_VERSION='0\.5\.45\.1'/);
+  assert.match(ui,/COMPASS_CLIENT_VERSION='0\.5\.46'/);
   assert.match(ui,/navItem\('people','Menschen','people'\)/);
   assert.match(ui,/navItem\('recovery','Erholung','heart'\)/);
   assert.ok(!ui.includes('Nicht alles muss sofort geklärt werden.'));

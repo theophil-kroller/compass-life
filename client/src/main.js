@@ -28,6 +28,7 @@ import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS,FINANCE_GROUPS,financeGroupForPane} from './finance-dashboard.js';
+import {financeAssistantPatterns,financeAssistantView,financeAssistEligible,askLocalFinanceModel,applyFinanceAssistantGroup} from './finance-local-assistant-v46.js';
 import {fetchTwelveDataQuote} from './finance-market-v36.js';
 import {fetchFlatexMarketHistory} from './flatex-market-history-v41.js';
 import {putBudgetEntry,putSavingsGoal,validateSavingsGoal,flexBudgetModel} from './finance-flex-budget-v30.js';
@@ -62,7 +63,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.45.1';
+const COMPASS_CLIENT_VERSION='0.5.46';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -149,6 +150,7 @@ if(!bootView&&!bootCapture&&calmLastView?.finance&&FINANCE_TABS.some(v=>v.title=
 let calmNavGroup=['projects','overview','next','forecast','flagged','hold','someday'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'||tab==='recovery'?'insights':tab==='finance'?'finance':'';
 let financeSankeyFocus='all',financeMerchantSelected='';
 let financePaceCompare='previous',financeBudgetMonth=new Date().toLocaleDateString('sv-SE').slice(0,7);
+let financeAiSuggestions=[],financeAiOffset=0;
 let financePeriod='last12',financeForecastScenario='basis',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
 let krakenBridgeToken='',krakenBridgeBusy=false,krakenLocalCheckedAt=0;
 let krakenPublicBusy=false,krakenPublicAttempt=0;
@@ -1053,7 +1055,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form></details>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote,portfolioTab:financePortfolioTab,portfolioMarket:financePortfolioMarket,flatexSort:{key:flatexPositionSort,descending:flatexPositionDescending},flatexChart:{isin:flatexChartIsin,ticker:flatexChartTicker,period:flatexChartPeriod,busy:flatexChartBusy,error:flatexChartError,data:flatexChartData,settings:flatexChartSettings}}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,financeAiSuggestions,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote,portfolioTab:financePortfolioTab,portfolioMarket:financePortfolioMarket,flatexSort:{key:flatexPositionSort,descending:flatexPositionDescending},flatexChart:{isin:flatexChartIsin,ticker:flatexChartTicker,period:flatexChartPeriod,busy:flatexChartBusy,error:flatexChartError,data:flatexChartData,settings:flatexChartSettings}}));}
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
 const krakenBridgeRequest=async(path,method='GET',body=null)=>{
@@ -2140,6 +2142,24 @@ async function runAction(action,id,stepId=null) {
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
     if(action==='finance-open-import'){if(financePane==='Portfolio'){financePortfolioTab='settings';render();}const el=app.querySelector('#finance-import-manager');if(el){el.open=true;el.scrollIntoView?.({behavior:'smooth',block:'start'});}return;}
+    if(action==='finance-ai-next'){const available=(state?.financeTransactions||[]).filter(t=>accountMatches(t,financeAccount)&&financeAssistEligible(t)).length;financeAiOffset=available?((financeAiOffset+12)%available):0;financeAiSuggestions=[];toast(`Nächster KI-Prüfstapel ab Buchung ${financeAiOffset+1}. Jetzt lokale Modellprüfung starten.`);return;}
+    if(action==='finance-ai-local'){
+      if(!state?.financeTransactions?.length)return;
+      if(!confirm('Maximal 12 unbestätigte Buchungen ausschließlich an dein lokal laufendes LM Studio (127.0.0.1) senden? Texte werden gekürzt und typische Kontoreferenzen maskiert. Keine automatische Übernahme.'))return;
+      try{financeAiSuggestions=await askLocalFinanceModel((state.financeTransactions||[]).filter(t=>accountMatches(t,financeAccount)),fetch,financeAiOffset);toast(`${financeAiSuggestions.length} lokale Modellvorschläge zur Prüfung bereit. Keine Buchung geändert.`);}
+      catch(ex){toast('Lokale KI nicht erreichbar: '+ex.message+'. LM Studio starten, Modell laden und lokalen API-Server mit CORS aktivieren.',true);}
+      return;
+    }
+    if(action==='finance-ai-apply'||action==='finance-ai-all'){
+      const current=financeAssistantView((state?.financeTransactions||[]).filter(t=>accountMatches(t,financeAccount)),financeAiSuggestions).suggestions;
+      const selected=action==='finance-ai-all'?financeAssistantPatterns((state?.financeTransactions||[]).filter(t=>accountMatches(t,financeAccount)),30):[current[Number(id)]];
+      if(!selected.length||selected.some(x=>!x))return;
+      const n=selected.reduce((a,x)=>a+x.ids.length,0);
+      if(!confirm(`${n} Buchung(en) gemäß Vorschlag bestätigen? Buchungskategorien werden dadurch als von dir bestätigt gespeichert. Keine automatische Händlerregel.`))return;
+      try{await mutate(s=>{let rows=s.financeTransactions||[];for(const item of selected){rows=applyFinanceAssistantGroup(rows,item).rows;}s.financeTransactions=rows;});financeAiSuggestions=[];financeAiOffset=0;financeReviewPage=0;toast(`${n} Buchung(en) bestätigt. Andere Vorgänge unverändert.`);}
+      catch(ex){toast('Stapelprüfung: '+ex.message,true);}
+      return;
+    }
     if(action==='finance-reclassify'){
       let result={changed:0,closed:0,review:0};
       try{await mutate(s=>{s.financeTransactions??=[];result=updateBankSuggestions(s.financeTransactions,s.financeRules||[],(t,r)=>classifyBankTransaction(t,r,s.financePrivateRules||[]));s.financeTransactions=result.rows;});

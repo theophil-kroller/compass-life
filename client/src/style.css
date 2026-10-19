@@ -2046,3 +2046,19 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .exchange-preview-list{display:grid;gap:4px;max-height:220px;overflow-y:auto}.exchange-preview-list label{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface-secondary,#f4f6f7);border-radius:7px;flex-wrap:wrap}.exchange-preview-list small{margin-left:auto;color:var(--muted,#647481)}
 .exchange-update-check{display:flex!important;align-items:flex-start;gap:8px!important}.exchange-update-check input{margin-top:3px}
 @media(max-width:700px){.deadline-item{align-items:flex-start;flex-direction:column}.exchange-actions>*{max-width:100%}}
+
+/* 0.5.46 Finance assistant – compact, optional, consistent with Finance Simplified */
+.fin46-assistant{margin:0 0 12px;border:1px solid var(--line,#dce5e5);border-radius:12px;background:var(--surface,#fff);overflow:hidden}
+.fin46-assistant>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;padding:11px 14px;font-size:.9rem}
+.fin46-assistant>summary span{font-size:.74rem;color:var(--muted,#64748b)}
+.fin46-assistant-content{padding:4px 14px 14px;font-size:.82rem}
+.fin46-assistant-content>p{margin:6px 0 10px;color:var(--muted,#64748b)}
+.fin46-assistant-content>small{display:block;line-height:1.4;margin:8px 0 10px;color:var(--muted,#64748b)}
+.fin46-actions{display:flex;flex-wrap:wrap;gap:8px}
+.fin46-suggestions{display:grid;gap:5px;margin-top:12px}
+.fin46-suggestion{padding:8px 9px;border:1px solid var(--line,#e5e7eb);border-radius:8px;display:flex;align-items:center;gap:12px;justify-content:space-between}
+.fin46-suggestion>div{min-width:0;display:grid;gap:2px}
+.fin46-suggestion strong{font-size:.83rem}
+.fin46-suggestion span{font-size:.79rem}
+.fin46-suggestion small{font-size:.73rem;color:var(--muted,#64748b)}
+@media(max-width:650px){.fin46-assistant>summary{align-items:flex-start;flex-direction:column;gap:3px}.fin46-suggestion{align-items:flex-start;flex-direction:column}.fin46-actions>button{width:100%}}
