@@ -34,7 +34,7 @@ test('Manual wealth snapshots use latest date per source, with no duplicate summ
 test('Finance overview renders pace; accounts is navigable and previous Sankey and gauges remain',()=>{
  const transactions=[expense('2026-10-11',12345)];const overview=financeDashboardView({financeTransactions:transactions},'Überblick','current',null,0,{today:'2026-10-19'});
  assert.match(overview,/Wie schnell gebe ich diesen Monat Geld aus/);assert.match(overview,/Wohin fließt mein Geld/);assert.match(overview,/fin-kpi/);
- const accounts=financeDashboardView({financeTransactions:transactions},'Konten','current',null,0,{today:'2026-10-19'});assert.match(accounts,/Konten im Überblick/);assert.match(accounts,/data-id="Konten"/);
+ const accounts=financeDashboardView({financeTransactions:transactions},'Konten','current',null,0,{today:'2026-10-19'});assert.match(accounts,/Konten im Überblick/);assert.match(accounts,/Aktueller Finanzbereich/);
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');assert.match(source,/finance-account-pick/);assert.match(source,/finance-pace-compare/);
 });
 test('Sankey retains canonical merchant merging with updated richer ribbon geometry',()=>{

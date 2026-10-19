@@ -47,10 +47,10 @@ test('Finance exposes Budget & Ziele as compact navigation with protected escape
  for(const token of ['id="finance-budget-month"','finance-flex-budget-form','finance-savings-goal-form','finance-goal-update','Unregelmäßig','Jahresbudget','35,00'])assert.ok(body.includes(token),token);
  assert.ok(!body.includes('<script>attack</script>'));assert.ok(body.includes('&lt;script&gt;'));
  const html=financeDashboardView(s,'Budget & Ziele','last12',null,0,{account:'all',today:'2026-10-19',budgetMonth:'2026-10'});
- assert.match(html,/fin30-panel/);assert.match(html,/data-id="Budget &amp; Ziele"/);
+ assert.match(html,/fin30-panel/);assert.match(html,/Aktueller Finanzbereich/);
 });
 test('UI event wiring saves manually entered goals and budgets through encrypted mutation, not D1',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  for(const field of ['financeFlexBudgets','financeSavingsGoals','finance-budget-month','finance-budget-edit','finance-goal-remove'])assert.ok(main.includes(field),field);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.36'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.37'/);
 });

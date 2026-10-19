@@ -27,7 +27,7 @@ test('circular flow provides interactive true-transaction inspector and no ficti
 });
 test('finance period is in the SAME nav header; unused filter row omitted',()=>{
  const html=financeDashboardView({financeTransactions:observed},'Überblick','last12',null,0,{today:'2026-10-19'});
- assert.match(html,/<div class="fin32-header"><nav/);
+ assert.match(html,/<div class="fin32-header fin37-header"><span/);
  assert.match(html,/<div class="fin30-topbar fin32-header-tools">/);
  assert.ok(html.indexOf('fin32-header-tools')<html.indexOf('</div></div>'));
  assert.doesNotMatch(html,/<span class="fin30-coverage">/);

@@ -1,6 +1,7 @@
 /** Compass 0.5.17.6 — Observed EUR wealth snapshots; no invented account balances or flatex feed. */
 import {krakenWealthSummary} from './finance-kraken.js';
 import {latestHoldings,holdingValueCents} from './finance-holdings-v19.js';
+import {latestFlatexSnapshot,flatexSnapshotStats} from './finance-flatex-positions-v37.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const euro=c=>(c/100).toLocaleString('de-AT',{style:'currency',currency:'EUR'});
 export const WEALTH_TYPES=[['bank','Bankguthaben'],['flatex','flatex Depotwert inkl. Cash'],['other','Sonstige Vermögenswerte'],['liability','Verbindlichkeit']];
@@ -14,9 +15,11 @@ export function wealthSummary(state={}){
  const liabilities=observed.filter(x=>x.type==='liability').reduce((a,x)=>a+x.cents,0);
  const k=kraken?.covered?Math.round(kraken.totalEur*100):0;
  const flatexAggregate=observed.some(x=>x.type==='flatex');
- const flatexHoldingsIncludedCents=flatexAggregate?0:holdingValueCents(state.financeHoldings||[]);
+ const flatexSnapshot=latestFlatexSnapshot(state.financeFlatexSnapshots||[]);
+ const flatexSnapshotCents=flatexSnapshot?flatexSnapshotStats(flatexSnapshot).overallCents:0;
+ const flatexHoldingsIncludedCents=flatexAggregate?0:(flatexSnapshot?flatexSnapshotCents:holdingValueCents(state.financeHoldings||[]));
  const totalObserved=positive+k+flatexHoldingsIncludedCents-liabilities;
- return {observed,kraken,positiveCents:positive+flatexHoldingsIncludedCents,liabilitiesCents:liabilities,krakenPricedCents:k,totalObservedCents:totalObserved,flatexHoldingsIncludedCents,flatexOverlap:flatexAggregate&&latestHoldings(state.financeHoldings||[]).length>0,partial:!kraken?.complete||!observed.some(x=>x.type==='bank')||(!flatexAggregate&&!flatexHoldingsIncludedCents)};
+ return {observed,kraken,positiveCents:positive+flatexHoldingsIncludedCents,liabilitiesCents:liabilities,krakenPricedCents:k,totalObservedCents:totalObserved,flatexHoldingsIncludedCents,flatexSnapshot,flatexOverlap:(flatexAggregate&&(latestHoldings(state.financeHoldings||[]).length>0||flatexSnapshot!==null))||(flatexSnapshot!==null&&latestHoldings(state.financeHoldings||[]).length>0),partial:!kraken?.complete||!observed.some(x=>x.type==='bank')||(!flatexAggregate&&!flatexHoldingsIncludedCents)};
 }
 function stackedBar(parts){const pos=parts.filter(x=>x.cents>0),total=pos.reduce((a,x)=>a+x.cents,0);if(!total)return '';const colors=['#337C72','#92A7CF','#C6A16B','#9A85B8','#85AB91','#D08B77'];return `<div class="fin-wealth-consol-bar" role="img" aria-label="Anteile an den derzeit bewerteten positiven Vermögenspositionen">${pos.map((x,i)=>`<span style="width:${(100*x.cents/total).toFixed(4)}%;background:${colors[i%colors.length]}" title="${esc(x.label)} · ${esc(euro(x.cents))}"></span>`).join('')}</div>`;}
 export function consolidatedWealthView(state={},today=new Date().toLocaleDateString('sv-SE')){

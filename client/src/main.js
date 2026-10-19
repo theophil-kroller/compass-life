@@ -29,6 +29,7 @@ import {PRIVATE_KINDS,privateSection,privateChanged,applyPrivateSection,newSalt,
 import {financeMerchantEdit} from './finance-merchant-editor.js';
 import {addWealthSnapshot} from './finance-wealth-consolidation.js';
 import {addHoldingSnapshot} from './finance-holdings-v19.js';
+import {parseFlatexPositionsCsv,putFlatexSnapshot} from './finance-flatex-positions-v37.js';
 import {validateWealthPlan,addWealthGoal} from './finance-wealth-planning-v20.js';
 import {validateKrakenSnapshot,mergeKrakenSnapshot,updateKrakenQuotes,krakenWealthSummary} from './finance-kraken.js';
 import {createFinanceTrip,tripDelete,tripCandidateRows,travelAttributable} from './finance-travel.js';
@@ -55,7 +56,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.36';
+const COMPASS_CLIENT_VERSION='0.5.37';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -386,8 +387,7 @@ function chrome(content){
  <div class="calm-nav-group">
  <button type="button" class="calm-group-toggle ${calmNavGroup==='finance'?'is-open':''}" data-action="calm-nav-group" data-id="finance" aria-expanded="${calmNavGroup==='finance'}" aria-controls="calm-nav-finance">${ico('folder',19)}<span>Finanzen</span>${ico('arrow',14)}</button>
  ${calmNavGroup==='finance'?`<div class="calm-subitems" id="calm-nav-finance">
- ${FINANCE_TABS.filter(p=>['Überblick','Konten','Ausgaben','Budget & Ziele','Portfolio','Buchungen','Prüfen'].includes(p.title)).map(p=>`<button type="button" class="nav-item ${tab==='finance'&&financePane===p.title?'is-active':''}" data-action="calm-finance-view" data-id="${h(p.title)}">${ico(({Überblick:'layers',Konten:'folder',Ausgaben:'activity','Budget & Ziele':'target',Portfolio:'folder',Buchungen:'list',Prüfen:'checkSquare'})[p.title],17)}<span>${h(p.title)}</span></button>`).join('')}
- <details class="calm-finance-sidebar-more"><summary>Weitere Analysen</summary>${FINANCE_TABS.filter(p=>!['Überblick','Konten','Ausgaben','Budget & Ziele','Portfolio','Buchungen','Prüfen'].includes(p.title)).map(p=>`<button type="button" class="nav-item ${tab==='finance'&&financePane===p.title?'is-active':''}" data-action="calm-finance-view" data-id="${h(p.title)}"><span>${h(p.title)}</span></button>`).join('')}</details>
+ ${FINANCE_TABS.map(p=>`<button type="button" class="nav-item ${tab==='finance'&&financePane===p.title?'is-active':''}" data-action="calm-finance-view" data-id="${h(p.title)}" aria-current="${tab==='finance'&&financePane===p.title?'page':'false'}">${ico(({Überblick:'layers',Konten:'folder',Cashflow:'sync',Einnahmen:'activity',Ausgaben:'activity','Budget & Ziele':'target',Prognose:'chart',Fixkosten:'calendar',Sparpotenzial:'target',Reisen:'compass',Portfolio:'folder',Geldkreislauf:'sync',Kontenflüsse:'layers','Visual Lab':'spark',Buchungen:'list',Prüfen:'checkSquare'})[p.title]||'layers',17)}<span>${h(p.title)}</span></button>`).join('')}
  </div>`:''}</div>
  ${navItem('review','Wochenreview','sync')}
  <div class="nav-separator"></div>
@@ -1496,6 +1496,16 @@ function bind() {
   app.querySelectorAll('form[data-finance-goal-update]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeGoalUpdate,value=Number(new FormData(form).get('saved'));
     try{if(!Number.isFinite(value)||value<0||value>1e9)throw Error('Ungültiger EUR-Wert.');await mutate(s=>{const old=(s.financeSavingsGoals||[]).find(g=>g.id===id);if(!old)throw Error('Ziel nicht mehr vorhanden.');s.financeSavingsGoals=putSavingsGoal(s.financeSavingsGoals,{...old,savedCents:Math.round(value*100),updatedDay:new Date().toLocaleDateString('sv-SE')});});toast('Bestätigter Fortschritt gespeichert.');}catch(ex){toast(ex.message,true);}
   });
+  const flatexPositionsFile=app.querySelector('#finance-flatex-positions-file');if(flatexPositionsFile)flatexPositionsFile.onchange=async()=>{
+    const file=flatexPositionsFile.files?.[0];if(!file)return;
+    try{
+      if(file.size>1000000)throw Error('Depotdatei zu groß.');
+      const snap=parseFlatexPositionsCsv(await file.text());
+      if(!confirm(`flatex-Momentaufnahme vom ${snap.day} mit ${snap.positions.length} Zeilen lokal übernehmen? Eine gleich datierte Aufnahme wird ersetzt, nicht doppelt angelegt.`))return;
+      await mutate(s=>{s.financeFlatexSnapshots=putFlatexSnapshot(s.financeFlatexSnapshots||[],snap);});
+      toast('flatex-Bestandsübersicht lokal im verschlüsselten Vault gespeichert.');
+    }catch(ex){toast(ex.message,true);}
+  };
   const holdingForm=app.querySelector('#finance-holding-add');if(holdingForm)holdingForm.onsubmit=async ev=>{
     ev.preventDefault();const d=new FormData(holdingForm),price=Number(d.get('price'));
     if(!Number.isFinite(price)||price<0||price>1e9){toast('Bitte gültigen EUR-Kurs eingeben.',true);return;}

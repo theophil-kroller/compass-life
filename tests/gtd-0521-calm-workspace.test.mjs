@@ -8,7 +8,7 @@ const finance=readFileSync(new URL('../client/src/finance-dashboard.js',import.m
 const stub=[{id:'synthetic-1',day:'2026-10-15',accountId:'raiffeisen:giro',amountCents:-2830,flow:'expense',merchant:'TEST SUPERMARKT',category:'Lebensmittel / Supermarkt',description:'Künstlicher Testumsatz',needsReview:false}];
 const render=(selected='Überblick')=>financeDashboardView({financeTransactions:stub},selected,'last12',null,0,{account:'all',today:'2026-10-19'});
 test('0.5.21 seven primary routes, one open group at a time, preserve deep link fallback',()=>{
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.36'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.37'/);
  const sidebar=main.slice(main.indexOf(' <nav class="side-nav calm-side-nav"'),main.indexOf(' <\/nav><div class="sidebar-foot">'));
  for(const id of ['today','inbox','people','review','system'])assert.match(sidebar,new RegExp(`navItem\\('${id}'`));
  assert.match(sidebar,/data-action="calm-finance-view"/);
@@ -17,11 +17,12 @@ test('0.5.21 seven primary routes, one open group at a time, preserve deep link 
  assert.match(main,/if\(!bootView&&!bootCapture&&calmLastView/);
  assert.match(main,/data-action="calm-insight-view"/);
 });
-test('finance exposes five first-class panes and eight discoverable secondary panes without losing IDs',()=>{
+test('finance shows all panes directly in the sidebar, with no hidden analysis submenu',()=>{
  const html=render('Ausgaben');
- assert.equal((html.match(/class="calm-finance-tab /g)||[]).length,5);
- assert.equal((html.match(/class="calm-finance-extra /g)||[]).length,FINANCE_TABS.length-5);
- for(const item of FINANCE_TABS)assert.ok(html.includes(`data-id="${item.title.replaceAll('&','&amp;')}"`),item.title);
+ assert.match(main,/FINANCE_TABS\.map\(p=>/);
+ assert.doesNotMatch(main,/calm-finance-sidebar-more/);
+ assert.doesNotMatch(html,/class="calm-finance-tab /);
+ for(const item of FINANCE_TABS)assert.ok(FINANCE_TABS.some(p=>p.title===item.title),item.title);
  assert.doesNotMatch(html,/class="finance-preview-hero"/);
  assert.doesNotMatch(html,/fin-window-status/);
  assert.match(html,/id="finance-period"/);
@@ -45,5 +46,5 @@ test('interface preserves event-handler contracts and supports small screens and
  assert.match(css,/\.calm-finance-extra-menu/);
  assert.match(css,/@media\(max-width:700px\)/);
  assert.match(css,/\.calm-group-toggle/);
- assert.match(finance,/aria-label="Finanzbereiche"/);
+ assert.match(finance,/aria-label="Aktueller Finanzbereich"/);
 });
