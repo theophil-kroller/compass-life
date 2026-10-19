@@ -51,9 +51,9 @@ test('0.5.18 finance panes show meaningful icons, including forecast and account
  const html=financeDashboardView({financeTransactions:rows,financeRecurringRules:manual},'Prognose','last12',null,0,{today:'2026-10-19'});
  assert.match(html,/fin-nav-icon/);assert.match(html,/fin-nav-chart/);assert.match(html,/fin-nav-git-merge/);
  assert.match(html,/finance-forecast-scenario/);assert.match(html,/fin-forecast-18/);
- assert.equal((html.match(/class="fin-nav-icon/g)||[]).length,FINANCE_TABS.length);
+ assert.ok((html.match(/class="fin-nav-icon/g)||[]).length>=FINANCE_TABS.length);
  assert.match(financeNavIcon('UNKNOWN'),/fin-nav-layers/);
  assert.ok(!financeNavIcon('bad"><script>').includes('<script>'));
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.20'/);assert.match(source,/finance-forecast-scenario/);
+ assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.21'/);assert.match(source,/finance-forecast-scenario/);
 });

@@ -1,0 +1,47 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {financeDashboardView,FINANCE_TABS} from '../client/src/finance-dashboard.js';
+const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
+const css=readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');
+const finance=readFileSync(new URL('../client/src/finance-dashboard.js',import.meta.url),'utf8');
+const stub=[{id:'synthetic-1',day:'2026-10-15',accountId:'raiffeisen:giro',amountCents:-2830,flow:'expense',merchant:'TEST SUPERMARKT',category:'Lebensmittel / Supermarkt',description:'Künstlicher Testumsatz',needsReview:false}];
+const render=(selected='Überblick')=>financeDashboardView({financeTransactions:stub},selected,'last12',null,0,{account:'all',today:'2026-10-19'});
+test('0.5.21 seven primary routes, one open group at a time, preserve deep link fallback',()=>{
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.21'/);
+ const sidebar=main.slice(main.indexOf(' <nav class="side-nav calm-side-nav"'),main.indexOf(' <\/nav><div class="sidebar-foot">'));
+ for(const id of ['today','inbox','people','finance','review','system'])assert.match(sidebar,new RegExp(`navItem\\('${id}'`));
+ for(const group of ['plan','insights'])assert.match(sidebar,new RegExp(`data-id="${group}" aria-expanded`));
+ assert.match(main,/calmNavGroup=calmNavGroup===id\?'':id/);
+ assert.match(main,/if\(!bootView&&!bootCapture&&calmLastView/);
+ assert.match(main,/data-action="calm-insight-view"/);
+});
+test('finance exposes five first-class panes and eight discoverable secondary panes without losing IDs',()=>{
+ const html=render('Ausgaben');
+ assert.equal((html.match(/class="calm-finance-tab /g)||[]).length,5);
+ assert.equal((html.match(/class="calm-finance-extra /g)||[]).length,FINANCE_TABS.length-5);
+ for(const item of FINANCE_TABS)assert.ok(html.includes(`data-id="${item.title}"`),item.title);
+ assert.doesNotMatch(html,/class="finance-preview-hero"/);
+ assert.doesNotMatch(html,/fin-window-status/);
+ assert.match(html,/id="finance-period"/);
+ assert.match(html,/id="finance-account"/);
+ assert.match(html,/finance-import-manager/);
+ assert.match(html,/finance-reclassify/);
+});
+test('insights uses five broad domains and maintains all nine route definitions',()=>{
+ assert.match(main,/compactInsights=\[/);
+ assert.match(main,/const healthIds=\['sleep','energy','stress','body'\]/);
+ assert.match(main,/id="calm-health-view"/);
+ assert.match(main,/data-id="sources"/);
+ assert.match(main,/insightTab==='places'\?placesInsightsView/);
+ assert.doesNotMatch(main.slice(main.indexOf('function insightsScreen(){'),main.indexOf('function progressScreen(){')), /<header class="insight-hero"/);
+});
+test('interface preserves event-handler contracts and supports small screens and keyboard',()=>{
+ assert.match(main,/action==='finance-open-import'/);
+ assert.match(main,/action==='finance-pane'/);
+ assert.match(main,/action==='insights-tab'/);
+ assert.match(css,/\.calm-finance-extra-menu/);
+ assert.match(css,/@media\(max-width:700px\)/);
+ assert.match(css,/\.calm-group-toggle/);
+ assert.match(finance,/aria-label="Finanzbereiche"/);
+});
