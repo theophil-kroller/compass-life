@@ -3,7 +3,7 @@
 // incompatible Worker/D1 database.
 const REQUIRED = {
   items: ['id', 'tags_json'],
-  planning_tasks: ['id', 'workflow', 'flagged', 'project_id', 'tags_json', 'defer_until', 'context_tags_json', 'estimate_minutes', 'parent_task_id', 'sort_order'],
+  planning_tasks: ['id', 'workflow', 'flagged', 'project_id', 'tags_json', 'defer_until', 'context_tags_json', 'estimate_minutes', 'parent_task_id', 'sort_order', 'progress_current', 'progress_target'],
   watch_deleted_sessions: ['owner_sub','session_id','deleted_at'],
   health_pair_codes: ['code_hash','owner_sub','expires_at'],
   health_devices: ['token_hash','owner_sub','revoked'],
@@ -36,6 +36,7 @@ export async function schemaStatus(db) {
       else if(missing.some(x=>x==='planning_projects.is_template'))requiredMigration = '0013';
       else if(missing.some(x=>x.startsWith('private_device_mirror.')))requiredMigration = '0014';
       else if(missing.some(x=>x==='planning_projects.folder_icon'))requiredMigration = '0015';
+      else if(missing.some(x=>x.startsWith('planning_tasks.progress_')))requiredMigration = '0016';
       else requiredMigration = '0007';
     }
     return {ready: missing.length===0, requiredMigration, missing};

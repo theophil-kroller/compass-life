@@ -69,5 +69,5 @@ test('0.5.22 UI wires goals, daily choices and browser public quotes without new
  assert.match(source,/data-action="life-goal-link"/);assert.match(source,/v22-day-energy/);
  assert.match(source,/finance-kraken-public-quotes/);assert.match(source,/fetchPublicEurQuotes/);
  assert.match(finance,/EUR-Marktwert jetzt aktualisieren/);
- assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.41'/);
+ assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.42'/);
 });

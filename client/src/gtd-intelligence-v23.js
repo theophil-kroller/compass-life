@@ -39,7 +39,7 @@ export function waitingReview(state,day=localDate(),thresholdDays=7){
 export function repeatedTask(original,newId,at=new Date().toISOString()){
  if(!original?.completed||original.archived||typeof newId!=='string')throw Error('Nur abgeschlossene, nicht archivierte Aufgaben können wiederholt werden.');
  const t={...original,id:newId,completed:false,archived:false,workflow:'next',flagged:false,
-   plannedDate:null,dueDate:null,deferUntil:null,parentTaskId:null,sortOrder:0,
+   plannedDate:null,dueDate:null,deferUntil:null,parentTaskId:null,sortOrder:0,progressCurrent:0,
    updatedAt:at,version:undefined};
  if(!validLocalTask(t))throw Error('Die wiederholte Aufgabe wäre ungültig.');
  return t;

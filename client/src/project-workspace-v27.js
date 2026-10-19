@@ -81,7 +81,7 @@ export function cloneProjectTemplate(state,id,ids,title){
  const newProject={...source,id:freshId,title:newTitle,isTemplate:false,status:'active',reviewedAt:null,dueDate:null,parentId:source.parentId||null,sortOrder:safeOrder(childProjects(state,source.parentId||null).length),version:undefined,baseVersion:undefined};
  if(!validProject(newProject))throw new Error('Projektvorlage ungültig.');
  const remap=new Map(tasks.map(t=>[t.id,ids()]));
- const copies=tasks.map(t=>({...t,id:remap.get(t.id),projectId:freshId,parentTaskId:remap.get(t.parentTaskId)||null,plannedDate:null,dueDate:null,deferUntil:null,completed:false,flagged:false,archived:false,updatedAt:new Date().toISOString(),version:undefined,baseVersion:undefined}));
+ const copies=tasks.map(t=>({...t,id:remap.get(t.id),projectId:freshId,parentTaskId:remap.get(t.parentTaskId)||null,plannedDate:null,dueDate:null,deferUntil:null,completed:false,progressCurrent:0,flagged:false,archived:false,updatedAt:new Date().toISOString(),version:undefined,baseVersion:undefined}));
  for(const copy of copies)if(!validLocalTask(copy))throw new Error('Vorlage enthält ungültige Aufgaben.');
  state.projects[freshId]=newProject;mark(state,'projects',freshId);
  for(const copy of copies){state.tasks[copy.id]=copy;mark(state,'tasks',copy.id);}
