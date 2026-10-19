@@ -55,7 +55,7 @@ test('0.5.36 finance nav is in left sidebar and top finance tabs hidden on deskt
  const css=readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');
  assert.match(main,/data-action="calm-finance-view"/);assert.match(main,/calmNavGroup==='finance'/);
  assert.match(main,/action==='calm-finance-view'/);assert.match(css,/@media\(min-width:701px\)/);
- const html=financeDashboardView({financeTransactions:[]},'Portfolio','all');
+ const html=financeDashboardView({financeTransactions:[]},'Portfolio','all',null,0,{portfolioTab:'settings'});
  assert.match(html,/flatex Buchungen und Kurse/);assert.match(html,/finance-quote-form/);
  assert.match(html,/fin30-period-select/);
 });

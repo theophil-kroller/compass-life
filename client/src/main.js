@@ -26,6 +26,7 @@ import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectAc
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
 import {fetchTwelveDataQuote} from './finance-market-v36.js';
+import {fetchFlatexMarketHistory} from './flatex-market-history-v41.js';
 import {putBudgetEntry,putSavingsGoal,validateSavingsGoal,flexBudgetModel} from './finance-flex-budget-v30.js';
 import {PRIVATE_KINDS,privateSection,privateChanged,applyPrivateSection,newSalt,syncKeyFromPhrase,encryptSection,decryptSection} from './private-device-sync-v30.js';
 import {financeMerchantEdit} from './finance-merchant-editor.js';
@@ -58,7 +59,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.40';
+const COMPASS_CLIENT_VERSION='0.5.41';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -146,6 +147,9 @@ let financePeriod='last12',financeForecastScenario='basis',financeAccount='all',
 let krakenBridgeToken='',krakenBridgeBusy=false,krakenLocalCheckedAt=0;
 let krakenPublicBusy=false,krakenPublicAttempt=0;
 let krakenChartAsset='',krakenChartPeriod='1m',krakenChartBusy=false,krakenChartError='',krakenChartData=null,krakenChartSettings=technicalSettings();
+let flatexChartIsin='',flatexChartTicker='',flatexChartPeriod='1y',flatexChartBusy=false,flatexChartError='',flatexChartData=null,flatexChartSettings=technicalSettings();
+let flatexPositionSort='market',flatexPositionDescending=true;
+let financePortfolioTab='overview',financePortfolioMarket='flatex';
 let financeOverviewSankeyOpen=false;
 let financeVisualMode='hierarchy',financeCompareMode='month_year',financeMerchantCategory='Lebensmittel';
 let financeLedgerQuery='',financeLedgerFilter='all',financeLedgerPage=0;
@@ -986,7 +990,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form></details>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote,portfolioTab:financePortfolioTab,portfolioMarket:financePortfolioMarket,flatexSort:{key:flatexPositionSort,descending:flatexPositionDescending},flatexChart:{isin:flatexChartIsin,ticker:flatexChartTicker,period:flatexChartPeriod,busy:flatexChartBusy,error:flatexChartError,data:flatexChartData,settings:flatexChartSettings}}));}
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
 const krakenBridgeRequest=async(path,method='GET',body=null)=>{
@@ -1195,7 +1199,8 @@ function render(){
 }
 function bind() {
  if(state)wireSmartTags(app,()=>state);
- if(tab==='finance'&&financePane==='Portfolio'&&krakenChartData?.candles?.length)app.querySelectorAll('.fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,krakenChartData.candles,krakenChartSettings));
+ if(tab==='finance'&&financePane==='Portfolio'&&krakenChartData?.candles?.length)app.querySelectorAll('.fin39-price-card .fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,krakenChartData.candles,krakenChartSettings));
+ if(tab==='finance'&&financePane==='Portfolio'&&flatexChartData?.candles?.length)app.querySelectorAll('.fin41-market-card .fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,flatexChartData.candles,{...flatexChartSettings,currency:flatexChartData.currency}));
   app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;calmNavGroup=['overview','projects','templates','next','forecast','flagged','hold','someday'].includes(tab)?'plan':['insights','activity','progress','recovery'].includes(tab)?'insights':'';if(tab==='finance')calmNavGroup='finance';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery'||tab==='insights')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
@@ -1514,6 +1519,18 @@ function bind() {
   app.querySelectorAll('form[data-finance-goal-update]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeGoalUpdate,value=Number(new FormData(form).get('saved'));
     try{if(!Number.isFinite(value)||value<0||value>1e9)throw Error('Ungültiger EUR-Wert.');await mutate(s=>{const old=(s.financeSavingsGoals||[]).find(g=>g.id===id);if(!old)throw Error('Ziel nicht mehr vorhanden.');s.financeSavingsGoals=putSavingsGoal(s.financeSavingsGoals,{...old,savedCents:Math.round(value*100),updatedDay:new Date().toLocaleDateString('sv-SE')});});toast('Bestätigter Fortschritt gespeichert.');}catch(ex){toast(ex.message,true);}
   });
+  const flatexHistoryForm=app.querySelector('#finance-flatex-chart-form');if(flatexHistoryForm)flatexHistoryForm.onsubmit=async ev=>{
+    ev.preventDefault();if(flatexChartBusy)return;
+    const data=new FormData(flatexHistoryForm),ticker=String(data.get('symbol')||''),key=String(data.get('key')||'');
+    const isin=flatexChartIsin,period=flatexChartPeriod;
+    // Clear password in the form before any page rerender; no key enters Compass state or Vault.
+    const password=flatexHistoryForm.querySelector('[name="key"]');if(password)password.value='';
+    flatexChartBusy=true;flatexChartError='';flatexChartData=null;flatexChartTicker=ticker;render();
+    try{const out=await fetchFlatexMarketHistory(ticker,key,period);if(flatexChartIsin===isin&&flatexChartPeriod===period)flatexChartData=out;}
+    catch(e){if(flatexChartIsin===isin&&flatexChartPeriod===period)flatexChartError=e.message||'Kursdienst nicht verfügbar.';}
+    finally{if(flatexChartIsin===isin&&flatexChartPeriod===period){flatexChartBusy=false;render();}}
+  };
+  const flatexSortSelector=app.querySelector('#finance-flatex-positions-sort');if(flatexSortSelector)flatexSortSelector.onchange=()=>{flatexPositionSort=flatexSortSelector.value;render();};
   const flatexPositionsFile=app.querySelector('#finance-flatex-positions-file');if(flatexPositionsFile)flatexPositionsFile.onchange=async()=>{
     const file=flatexPositionsFile.files?.[0];if(!file)return;
     try{
@@ -2023,7 +2040,7 @@ async function runAction(action,id,stepId=null) {
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
-    if(action==='finance-open-import'){const el=app.querySelector('#finance-import-manager');if(el){el.open=true;el.scrollIntoView?.({behavior:'smooth',block:'start'});}return;}
+    if(action==='finance-open-import'){if(financePane==='Portfolio'){financePortfolioTab='settings';render();}const el=app.querySelector('#finance-import-manager');if(el){el.open=true;el.scrollIntoView?.({behavior:'smooth',block:'start'});}return;}
     if(action==='finance-reclassify'){
       let result={changed:0,closed:0,review:0};
       try{await mutate(s=>{s.financeTransactions??=[];result=updateBankSuggestions(s.financeTransactions,s.financeRules||[],(t,r)=>classifyBankTransaction(t,r,s.financePrivateRules||[]));s.financeTransactions=result.rows;});
@@ -2097,8 +2114,34 @@ async function runAction(action,id,stepId=null) {
        for(const [entry,other] of [[a,b],[b,a]])Object.assign(entry,{category:'Transfer / Eigene Konten',flow:'transfer',needsReview:false,confidence:'confirmed',source:'user',linkedTransferId:other.id,ruleReason:'Von dir bestätigter interner Transfer'});
       });toast('Interner Transfer bestätigt – keine doppelten Ausgaben.');return;
     }
+    if(action==='finance-portfolio-market'){if(['flatex','kraken'].includes(id)){financePortfolioMarket=id;render();}return;}
+    if(action==='finance-portfolio-tab'){if(['overview','positions','analysis','development','settings'].includes(id)){financePortfolioTab=id;render();}return;}
+    if(action==='finance-flatex-sort-direction'){flatexPositionDescending=!flatexPositionDescending;render();return;}
+    if(action==='finance-flatex-chart-select'){
+      const snapshot=state?.financeFlatexSnapshots||[];
+      const holdings=snapshot.find(x=>x.positions?.some(p=>p.isin===id))?.positions||[];
+      if(holdings.some(p=>p.isin===id&&p.kind!=='CASH')){
+        financePortfolioTab='analysis';financePortfolioMarket='flatex';flatexChartIsin=id;flatexChartTicker='';flatexChartData=null;flatexChartError='';flatexChartBusy=false;render();
+        app.querySelector('#fin41-flatex-market')?.scrollIntoView({block:'nearest',behavior:'smooth'});
+      }
+      return;
+    }
+    if(action==='finance-flatex-chart-toggle'){
+      if(id==='mode')flatexChartSettings={...flatexChartSettings,mode:flatexChartSettings.mode==='candles'?'line':'candles'};
+      else if(TECHNICAL_TOGGLES.includes(id))flatexChartSettings={...flatexChartSettings,[id]:!flatexChartSettings[id]};
+      render();return;
+    }
+    if(action==='finance-flatex-chart-zoom'){
+      if(['all','120','60'].includes(id))flatexChartSettings={...flatexChartSettings,zoom:id};
+      render();return;
+    }
+    if(action==='finance-flatex-chart-period'){
+      if(['1m','3m','1y','2y','3y','5y','10y','max'].includes(id)){flatexChartPeriod=id;flatexChartData=null;flatexChartError='';render();}
+      return;
+    }
     if(action==='finance-kraken-chart-select'){
       if(Object.hasOwn(state?.krakenPortfolio?.balances||{},id)){
+        financePortfolioTab='analysis';financePortfolioMarket='kraken';
         const period=['3y','5y','10y','max'].includes(krakenChartPeriod)&&!['BTC','XXBT','XBT'].includes(id.toUpperCase())?'1m':krakenChartPeriod;
         await loadKrakenCoinChart(id,period);
       }

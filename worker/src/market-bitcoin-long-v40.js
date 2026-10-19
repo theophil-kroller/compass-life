@@ -31,11 +31,35 @@ export function aggregateWeekly(bars){
  }
  return out;
 }
+/** Fewer historical requests than Coinbase pagination. Composite price index, explicitly named. */
+export async function cryptoCompareLongHistory(p,{fetchFn=fetch,now=Date.now()}={}){
+ const all=[],startSeconds=Math.floor(p.start/1000),endSeconds=Math.floor(p.end/1000);
+ let cursor=endSeconds,attempts=0;
+ while(cursor>startSeconds&&attempts++<7){
+  const wanted=Math.min(1999,Math.ceil((cursor-startSeconds)/86400));
+  const url=new URL('https://min-api.cryptocompare.com/data/v2/histoday');
+  url.searchParams.set('fsym','BTC');url.searchParams.set('tsym','EUR');url.searchParams.set('limit',String(wanted));url.searchParams.set('toTs',String(cursor));url.searchParams.set('aggregate','1');
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  let raw;try{const r=await fetchFn(url.toString(),{headers:{Accept:'application/json'},signal:controller.signal});if(!r.ok)throw Error('cryptocompare:'+r.status);raw=await r.json();}finally{clearTimeout(timer);}
+  if(raw?.Response!=='Success'||!Array.isArray(raw?.Data?.Data))throw Error('cryptocompare-invalid');
+  const segment=raw.Data.Data.map(x=>({time:Number(x.time),open:Number(x.open),high:Number(x.high),low:Number(x.low),close:Number(x.close),volume:Number(x.volumefrom||0)}))
+   .filter(x=>Number.isSafeInteger(x.time)&&x.time>0&&x.time>=startSeconds&&x.time<endSeconds&&x.low>0&&x.high>=x.low&&x.open>=x.low&&x.open<=x.high&&x.close>=x.low&&x.close<=x.high&&Number.isFinite(x.volume)&&x.volume>=0);
+  all.push(...segment);
+  const earliest=Math.min(...raw.Data.Data.map(x=>Number(x.time)).filter(x=>Number.isSafeInteger(x)&&x>0));
+  if(!Number.isFinite(earliest)||earliest>=cursor)break;
+  cursor=earliest-86400;
+  if(raw.Data.Data.length<2)break;
+ }
+ const bars=[...new Map(all.map(c=>[c.time,c])).values()].sort((a,b)=>a.time-b.time);
+ if(bars.length<2)return json({error:'history-not-available'},404);
+ const output=p.weekly?aggregateWeekly(bars):bars;
+ return json({symbol:'BTC',period:p.period,interval:p.weekly?10080:1440,timeframe:p.weekly?'week':'day',source:'CryptoCompare BTC/EUR · aggregierter Marktindex (nicht Coinbase/Kraken)',asOf:new Date(now).toISOString(),candles:output});
+}
 export async function publicBitcoinLongHistory(request,{fetchFn=fetch,now=Date.now()}={}){
  let p;try{p=bitcoinLongParams(request.url,now);}catch{return json({error:'invalid-market'},400);}
  // Each endpoint request spans at most 299 daily candles; provider limit is 300.
  const windows=[];for(let st=p.start;st<p.end;st+=299*DAY)windows.push([st,Math.min(p.end,st+299*DAY)]);
- if(windows.length>18)return json({error:'range-too-large'},400);
+ if(windows.length>18){try{return await cryptoCompareLongHistory(p,{fetchFn,now});}catch{return json({error:'history-source-unavailable',detail:'Both long-history sources unavailable'},503);}}
  const combined=[];
  try{
   for(let i=0;i<windows.length;i+=3){
@@ -51,7 +75,7 @@ export async function publicBitcoinLongHistory(request,{fetchFn=fetch,now=Date.n
    }));
    for(const batch of part)combined.push(...batch);
   }
- }catch{return json({error:'history-source-unavailable'},503);}
+ }catch{try{return await cryptoCompareLongHistory(p,{fetchFn,now});}catch{return json({error:'history-source-unavailable',detail:'Both long-history sources unavailable'},503);}}
  const bars=[...new Map(combined.filter(b=>b.time*1000>=p.start&&b.time*1000<p.end).map(c=>[c.time,c])).values()].sort((a,b)=>a.time-b.time);
  if(bars.length<2)return json({error:'history-not-available'},404);
  const output=p.weekly?aggregateWeekly(bars):bars;

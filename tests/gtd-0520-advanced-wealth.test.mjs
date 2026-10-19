@@ -53,7 +53,7 @@ test('0.5.20 HTML escapes the user goal label and scenario bands are appropriate
 test('0.5.20 UI is wired locally without any new worker endpoint or cloud transfer',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  const finance=readFileSync(new URL('../client/src/finance-dashboard.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.40'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.41'/);
  assert.match(main,/finance-wealth-goal-remove/);assert.match(main,/financeWealthPlan=plan/);
  assert.match(finance,/wealthPlanningView\(state\)/);
 });

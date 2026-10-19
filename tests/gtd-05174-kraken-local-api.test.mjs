@@ -34,7 +34,7 @@ test('Kraken snapshot rejects keys, malformed and unexpectedly large entries, an
  assert.doesNotMatch(html,/<img/);assert.match(html,/&lt;img/);
 });
 test('Kraken portfolio UI is reachable from Finance and the weekly review, with explicit preview/confirmation and no frontend secret field',()=>{
- const html=financeDashboardView({financeTransactions:[]},'Portfolio','all',null,0,{krakenPreview:validateKrakenSnapshot(fixture)});
+ const html=financeDashboardView({financeTransactions:[]},'Portfolio','all',null,0,{portfolioTab:'settings',krakenPreview:validateKrakenSnapshot(fixture)});
  assert.match(html,/finance-kraken-file/);
  assert.match(html,/finance-kraken-confirm/);
  assert.match(html,/START_WINDOWS\.bat/);
@@ -43,7 +43,7 @@ test('Kraken portfolio UI is reachable from Finance and the weekly review, with 
  assert.match(source,/finance-kraken-confirm/);
  assert.match(source,/mergeKrakenSnapshot/);
  assert.match(source,/id==='kraken'/);
- assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.40'/);
+ assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.41'/);
 });
 test('Local helper only allows read-only Kraken API paths, writes exports to private downloads and avoids Worker',()=>{
  const src=readFileSync(new URL('../tools/kraken/kraken_sync.py',import.meta.url),'utf8');

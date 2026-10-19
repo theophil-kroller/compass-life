@@ -13,7 +13,8 @@ const symbols={
  'git-merge':'<circle cx="6" cy="4" r="2"/><circle cx="6" cy="20" r="2"/><circle cx="18" cy="13" r="2"/><path d="M6 6v12M6 7c0 6 12 0 12 4"/>',
  'aperture':'<circle cx="12" cy="12" r="9"/><path d="m12 3 4 7-4 7-8-1m12-6 5 4m-15 2 3 5m7-11-9 0"/>',
  'list':'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
- 'checkSquare':'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/>'
+ 'checkSquare':'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/>',
+ 'settings':'<circle cx="12" cy="12" r="3"/><path d="M10 2h4l.7 2.5 2.2 1.1 2.5-.8 2 3.5-1.9 1.8v3.8l1.9 1.8-2 3.5-2.5-.8-2.2 1.1L14 22h-4l-.7-2.5-2.2-1.1-2.5.8-2-3.5 1.9-1.8v-3.8L2.6 8.3l2-3.5 2.5.8 2.2-1.1z"/>'
 };
 export function financeNavIcon(icon='layers'){
  const safe=Object.hasOwn(symbols,icon)?icon:'layers';

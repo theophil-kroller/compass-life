@@ -1872,3 +1872,57 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .fin40-chart-footer{border-top:1px solid #e4edeb;margin-top:3px;padding:8px 1px 2px;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;font-size:11px;font-variant-numeric:tabular-nums;color:#47665b}
 .fin40-caveat{font-size:11px;line-height:1.5;color:#73837f;margin:6px 0 0}
 @media(max-width:850px){.fin40-terminal{padding:8px 7px}.fin40-toolstrip{gap:4px}.fin40-toggle{padding:4px 6px}.fin40-chart-footer{font-size:10px}.fin40-indicator-legend span{display:none}}
+
+/* 0.5.41 responsive price axis and flatex study panel */
+.fin40-chart-svg{max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden;aspect-ratio:auto}
+.fin39-price-card,.fin40-terminal,.fin41-market-card{min-width:0;max-width:100%;box-sizing:border-box}
+.fin41-market-card{border:1px solid #d9e6df;background:#fbfdfa;border-radius:14px;margin:18px 0;padding:14px 16px}
+.fin41-market-heading h3{margin:3px 0 6px;font-size:17px}.fin41-market-heading p{color:#637970;font-size:12px;margin:0 0 10px}
+.fin41-instruments,.fin41-periods{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.fin41-position-button,.fin41-periods button{background:#fff;border:1px solid #dae6df;border-radius:7px;padding:6px 9px;color:#335e54;font-size:12px;cursor:pointer}
+.fin41-position-button[aria-pressed=true],.fin41-periods button[aria-pressed=true]{background:#e2f2e9;border-color:#75ad99;font-weight:700}
+.fin41-active-title{display:flex;flex-direction:column;gap:4px;padding:10px 0 5px}.fin41-active-title small{color:#72867d}
+.fin41-market-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:end;margin:10px 0}
+.fin41-market-form label{font-size:11px;color:#4b7267;min-width:0}.fin41-market-form input{display:block;width:100%;min-width:0;box-sizing:border-box;margin-top:4px}
+.fin41-quote-info{display:flex;flex-wrap:wrap;gap:15px;padding:8px 0;color:#2e6154;font-size:12px}
+@media(max-width:760px){.fin41-market-form{grid-template-columns:1fr}.fin41-market-card{padding:10px 8px}}
+
+/* 0.5.41 — professional snapshot visualizations with accessible interactive tiles */
+.fin41-analysis-panels{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:12px;margin:12px 0}
+.fin41-analysis-panels .fin37-card{min-width:0}
+.fin41-mosaic{position:relative;width:100%;height:290px;border-radius:10px;overflow:hidden;background:#f1f6f3}
+.fin41-mosaic-tile{position:absolute;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;color:#fff;border:2px solid #fff;border-radius:5px;overflow:hidden;text-align:left;cursor:pointer;padding:8px 10px;box-sizing:border-box;min-width:0}
+.fin41-mosaic-tile:hover,.fin41-mosaic-tile:focus-visible{outline:3px solid #f4d37a;outline-offset:-3px;filter:brightness(1.12);z-index:2}
+.fin41-mosaic-tile strong{font-weight:650;font-size:11px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fin41-mosaic-tile span{font-size:11px;opacity:.9;white-space:nowrap}
+.fin41-mosaic-tile b{font-size:13px;white-space:nowrap}
+.fin41-mosaic-key{display:flex;gap:13px;flex-wrap:wrap;margin:8px 0 2px;color:#526f65;font-size:10px}
+.fin41-mosaic-key span{display:inline-flex;gap:5px;align-items:center}
+.fin41-mosaic-key i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.fin41-mosaic-legend-green{background:#278c76}.fin41-mosaic-legend-red{background:#c45a62}.fin41-mosaic-legend-grey{background:#718e9e}
+.fin41-mosaic-caption{color:#698177;font-size:10px;line-height:1.45;margin:8px 0 0}
+.fin41-contributions{display:grid;gap:2px}.fin41-contribution{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(85px,1fr) 83px;gap:7px;align-items:center;width:100%;padding:7px 2px;border:0;border-bottom:1px solid #e9eee9;background:transparent;color:#385d50;cursor:pointer;text-align:left;font-size:11px}
+.fin41-contribution:hover,.fin41-contribution:focus-visible{background:#f0f7f2;outline:1px solid #85b7a8}
+.fin41-contribution-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fin41-contribution-bar{height:13px;position:relative;background:#f2f5f3;border-radius:3px;overflow:hidden}
+.fin41-contribution-zero{position:absolute;left:50%;height:100%;width:1px;background:#879d94;z-index:1}
+.fin41-contribution-bar em{display:block;position:absolute;height:100%;border-radius:2px}
+.fin41-contribution strong{text-align:right;font-variant-numeric:tabular-nums;font-size:11px}
+.fin41-contribution strong.positive{color:#117e55}.fin41-contribution strong.negative{color:#b54854}
+.fin41-sort-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:7px;font:11px system-ui,sans-serif;color:#58736a}
+.fin41-sort-controls select,.fin41-sort-controls button{background:#fff;border:1px solid #d6e4dc;border-radius:7px;padding:6px 8px;color:#245d50;font-size:11px;max-width:200px;cursor:pointer}
+@media(max-width:1000px){.fin41-analysis-panels{grid-template-columns:1fr}}
+@media(max-width:590px){.fin41-mosaic{height:230px}.fin41-mosaic-tile{padding:5px}.fin41-mosaic-tile b{font-size:11px}.fin41-contribution{grid-template-columns:minmax(0,1fr) 80px 72px}.fin41-sort-controls{justify-content:flex-start}}
+
+/* 0.5.41 portfolio sub-navigation: short, deliberate workspaces instead of one very long scroll. */
+.fin41-portfolio-tabs{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:5px;margin:0 0 12px;border:1px solid #d9e7de;border-radius:12px;background:#f5f8f5}
+.fin41-portfolio-tab{border:0;background:transparent;color:#517065;border-radius:8px;display:inline-flex;align-items:center;gap:7px;font:600 12px/1.3 system-ui,sans-serif;min-height:35px;padding:8px 13px;cursor:pointer}
+.fin41-portfolio-tab:hover{background:#eaf2ec}.fin41-portfolio-tab.is-active{background:#fff;color:#14654f;box-shadow:0 1px 5px #253d3420}
+.fin41-portfolio-tab svg{width:15px;height:15px;flex:none}
+.fin41-portfolio-panel{min-width:0;max-width:100%;width:100%}
+.fin41-portfolio-panel .fin37-dashboard{margin-bottom:12px}
+@media(max-width:680px){.fin41-portfolio-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.fin41-portfolio-tab{flex-shrink:0;padding:8px 10px;font-size:11px}}
+
+.fin41-market-tabs{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 12px}
+.fin41-market-tabs button{font:600 11px/1.2 system-ui,sans-serif;border-radius:8px;padding:8px 12px;border:1px solid #d9e7de;background:#fff;color:#507467;cursor:pointer}
+.fin41-market-tabs button[aria-pressed="true"]{background:#e0f1e8;color:#165a49;border-color:#89b9a4}

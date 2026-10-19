@@ -52,7 +52,7 @@ test('0.5.26 bulk capture is preview-before-commit, optional, local-first',()=>{
  assert.match(main,/capturePreview\(/);
  assert.match(main,/captureInboxRecord\(/);
  assert.match(main,/makeMutation\(rec\)/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.40'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.41'/);
  const helper=readFileSync(new URL('../tools/capture/local_ai_capture.py',import.meta.url),'utf8');
  assert.match(helper,/127\.0\.0\.1:1234/);
  assert.doesNotMatch(helper,/https:\/\//);
