@@ -1036,3 +1036,21 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .fin-fixed-bar{display:flex;flex-direction:column;justify-content:flex-end;width:min(100%,62px);height:100%;margin:auto;border-radius:7px 7px 0 0;overflow:hidden;background:#F2F5F3}
 .fin-fixed-bar .fixed{background:#338D7A;display:block;min-height:0}.fin-fixed-bar .variable{background:#E9A470;display:block;min-height:0}
 .fin-fixed-month small{text-align:center;font-size:11px;color:#6E8B79;padding:6px 0}.fin-fixed-month.is-missing .fin-fixed-bar{background:repeating-linear-gradient(45deg,#F2F5F3,#F2F5F3 7px,#E4EAE6 7px,#E4EAE6 11px)}
+
+
+/* Compass 0.5.19 · Net worth and manual flatex positions */
+.fin-net-intel{display:grid;gap:17px;min-width:0;margin:22px 0}
+.fin-net-layout{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr);gap:16px}
+.fin-net-panel{background:var(--card,#fff);border:1px solid #DCE9E0;border-radius:18px;padding:20px;min-width:0}
+.fin-net-panel h4,.fin-net-composition h4{margin:0 0 15px;color:#235346;font-size:18px}
+.fin-net-alloc{display:grid;grid-template-columns:minmax(150px,220px) minmax(145px,1fr);align-items:center;gap:8px}
+.fin-net-alloc svg{max-width:230px;width:100%;height:auto}
+.fin-net-legend{display:grid;gap:10px}.fin-net-legend>div{display:grid;grid-template-columns:9px minmax(65px,1fr) auto;gap:5px 8px;align-items:center;font-size:12px}.fin-net-legend i{height:9px;border-radius:5px}.fin-net-legend small{grid-column:2/-1;color:#789184}.fin-net-legend strong{font-size:12px;color:#2B5749}
+.fin-net-chart svg{display:block;width:100%;height:auto;max-height:220px}.fin-net-chart-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#67867A}.fin-net-chart-meta strong{font-size:15px;color:#2F806D}.fin-net-chart-meta .fin-negative{color:#B66D5E}
+.fin-net-composition{border:1px solid #DCE9E0;border-radius:18px;background:white;padding:20px}.fin-net-composition-columns{display:flex;align-items:end;gap:9px;overflow:auto;min-height:140px;padding-bottom:8px}.fin-net-comp-col{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:29px;flex:1}.fin-net-comp-stack{width:100%;max-width:35px;height:110px;display:flex;flex-direction:column-reverse;background:#E7EDEA;border-radius:5px;overflow:hidden}.fin-net-comp-stack span{display:block;width:100%;min-height:0}.fin-net-comp-col small{font-size:10px;white-space:nowrap;color:#799389}
+.fin-net-hold-list{display:grid;gap:2px;margin:12px 0}.fin-net-hold-row{padding:10px 0;border-bottom:1px solid #E6EEE9;display:flex;gap:12px;align-items:center;justify-content:space-between}.fin-net-hold-row strong{font-size:13px;color:#2B5749}.fin-net-hold-row small{display:block;font-size:11px;margin-top:4px;color:#81968A}.fin-wealth-warning{border:1px solid #E1CC9E;background:#FBF6E9;color:#805F32;border-radius:10px;padding:11px;font-size:12px}
+.fin-net-overview{border:1px solid #D7E7E0;background:linear-gradient(120deg,#EAF5EF,#FAFCF9);border-radius:17px;padding:18px 22px;margin:18px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}.fin-net-overview h3{font-size:27px;margin:5px 0;color:#255A4E}.fin-net-overview p{margin:0;color:#718C7D;font-size:12px}
+@media(max-width:1000px){.fin-net-layout{grid-template-columns:1fr}}
+@media(max-width:560px){.fin-net-alloc{grid-template-columns:1fr}.fin-net-overview{align-items:start;flex-direction:column}}
+
+.fin-net-legacy{margin:5px 0 22px;border:1px solid #DCE9E0;border-radius:16px;padding:12px 18px;background:#FBFCFA}.fin-net-legacy>summary{cursor:pointer;color:#306D5B;font-weight:600;padding:8px 3px}.fin-net-legacy[open]>summary{margin-bottom:15px}

@@ -61,5 +61,5 @@ test('dashboard shows new panes period semantics and retains import',()=>{
  assert.ok(FINANCE_TABS.find(t=>t.title==='Einnahmen'));
  assert.ok(FINANCE_TABS.find(t=>t.title==='Prognose'));
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.18'/);assert.match(source,/finance-category-select/);
+ assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.19'/);assert.match(source,/finance-category-select/);
 });

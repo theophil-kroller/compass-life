@@ -12,6 +12,7 @@ import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectAc
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS} from './finance-dashboard.js';
 import {addWealthSnapshot} from './finance-wealth-consolidation.js';
+import {addHoldingSnapshot} from './finance-holdings-v19.js';
 import {validateKrakenSnapshot,mergeKrakenSnapshot,updateKrakenQuotes,krakenWealthSummary} from './finance-kraken.js';
 import {createFinanceTrip,tripDelete,tripCandidateRows,travelAttributable} from './finance-travel.js';
 import {validatePrivateFinancePack} from './finance-private-rules.js';
@@ -37,7 +38,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,nextActions,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.18';
+const COMPASS_CLIENT_VERSION='0.5.19';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -1149,6 +1150,13 @@ function bind() {
   const tripQuery=app.querySelector('#finance-trip-query');if(tripQuery)tripQuery.onchange=()=>{financeTripQuery=tripQuery.value.slice(0,100);financeTripPage=0;render();};
   const tripMode=app.querySelector('#finance-trip-mode');if(tripMode)tripMode.onchange=()=>{financeTripMode=tripMode.value==='all'?'all':'suggested';financeTripPage=0;render();};
   const merchantCategory=app.querySelector('#finance-merchant-category');if(merchantCategory)merchantCategory.onchange=()=>{financeMerchantCategory=merchantCategory.value;render();};
+  const holdingForm=app.querySelector('#finance-holding-add');if(holdingForm)holdingForm.onsubmit=async ev=>{
+    ev.preventDefault();const d=new FormData(holdingForm),price=Number(d.get('price'));
+    if(!Number.isFinite(price)||price<0||price>1e9){toast('Bitte gültigen EUR-Kurs eingeben.',true);return;}
+    const entry={day:String(d.get('day')||''),name:String(d.get('name')||''),symbol:String(d.get('symbol')||''),kind:String(d.get('kind')||''),quantity:String(d.get('quantity')||''),priceCents:Math.round(price*100)};
+    try{await mutate(s=>{s.financeHoldings=addHoldingSnapshot(s.financeHoldings||[],entry);});toast('Wertpapierposition lokal im Vault gespeichert.');}
+    catch(ex){toast(ex.message,true);}
+  };
   const wealthForm=app.querySelector('#finance-wealth-add');if(wealthForm)wealthForm.onsubmit=async ev=>{
     ev.preventDefault();const d=new FormData(wealthForm),amount=Number(d.get('amount'));
     if(!Number.isFinite(amount)||amount<0||amount>1e9){toast('Bitte gültigen EUR-Betrag angeben.',true);return;}
