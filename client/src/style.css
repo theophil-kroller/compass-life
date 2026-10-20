@@ -2239,3 +2239,18 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .health551-foot,.health551-empty,.health551-ai-status{color:#81988b;font-size:10px;line-height:1.5}
 .health551-ai-status{margin:0;background:#f4f8f5;padding:7px;border-radius:6px}
 @media(max-width:650px){.sleep551-metrics-layout{grid-template-columns:minmax(0,1fr) 88px}.sleep551-efficiency-ring{width:74px}.sleep551-night-nav{width:100%;justify-content:space-between}.sleep550-detail-heading{align-items:start}.health551-header h3{font-size:16px}}
+/* 0.5.52 • one annual chart, three resolutions */
+.sleep552-year-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sleep552-year-controls{display:flex;align-items:center;gap:2px;border:1px solid #E0EBE3;border-radius:12px;padding:3px;white-space:nowrap}
+.sleep552-year-controls button{border:0;border-radius:8px;padding:6px 10px;color:#547263;background:transparent;font-size:11px;font-weight:650;cursor:pointer}
+.sleep552-year-controls button.is-active{background:#E1F0E8;color:#1B694E}
+.sleep552-year-controls button:disabled{opacity:.25;cursor:default}
+.sleep552-year-plot{width:100%;overflow-x:auto;scrollbar-width:thin}
+.sleep552-year-plot svg{display:block;width:100%;height:auto;min-width:640px;max-height:320px}
+.sleep552-year-legend{display:flex;align-items:center;flex-wrap:wrap;gap:14px;color:#617D6D;font-size:11px;margin:4px 0 9px}
+.sleep552-year-legend>span{display:inline-flex;align-items:center;gap:5px}
+.sleep552-swatch{display:inline-block;width:8px;height:8px;border-radius:50%;background:#397C68}
+@media(max-width:700px){.sleep552-year-plot svg{min-width:720px}.sleep552-year-controls button{padding:5px 7px}}
+
+.sleep552-year-plot circle[data-action]{cursor:pointer}
+.sleep552-year-plot circle[data-action]:focus{stroke:#174E3C;stroke-width:2;outline:none}

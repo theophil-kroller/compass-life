@@ -7,7 +7,7 @@ export const FINANCE_FIELDS=['financeTransactions','financeRules','financePrivat
 export const HEALTH_FIELDS=['healthImports','manualActivities','activityEdits'];
 const te=new TextEncoder(),td=new TextDecoder(),AAD='compass-private-device-sync-v1/';
 export function bytesTo64(bytes){let s='';for(let i=0;i<bytes.length;i+=4096)s+=String.fromCharCode(...bytes.subarray(i,i+4096));return btoa(s);}
-export function from64(str){if(typeof str!=='string'||str.length>1500000||!/^[A-Za-z0-9+/]*={0,2}$/.test(str))throw Error('Ungültige verschlüsselte Daten.');return Uint8Array.from(atob(str),ch=>ch.charCodeAt(0));}
+export function from64(str){if(typeof str!=='string'||str.length>33000000||!/^[A-Za-z0-9+/]*={0,2}$/.test(str))throw Error('Ungültige verschlüsselte Daten.');return Uint8Array.from(atob(str),ch=>ch.charCodeAt(0));}
 export function privateSection(state,kind){const fields=kind==='finance'?FINANCE_FIELDS:kind==='health'?HEALTH_FIELDS:null;if(!fields)throw Error('Unbekannter Datenbereich.');const data={};for(const field of fields)if(Object.hasOwn(state||{},field))data[field]=state[field];return data;}
 export function privateChanged(before,after){return PRIVATE_KINDS.some(k=>JSON.stringify(privateSection(before,k))!==JSON.stringify(privateSection(after,k)));}
 export function applyPrivateSection(state,kind,payload){const fields=kind==='finance'?FINANCE_FIELDS:kind==='health'?HEALTH_FIELDS:null;if(!fields||!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('Ungültiger Geräte-Abgleich.');const next={...state};for(const key of fields){if(Object.hasOwn(payload,key))next[key]=payload[key];}return next;}

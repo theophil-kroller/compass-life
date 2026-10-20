@@ -46,7 +46,7 @@ test('real insights link uses vault data and has no new worker endpoint',()=>{
  assert.match(html,/HEALTH INTELLIGENCE/);assert.match(html,/Schlaf im Überblick/);
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(main,/health551-local-summary/);assert.match(main,/rankHealthFindingsLocally/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.51'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.52'/);
 });
 
 test('late activity observations require comparison groups and reflect sleep dates rather than calendar guesses',()=>{

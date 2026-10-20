@@ -127,12 +127,12 @@ export function weeklySleepGroups(nights){
  }
  return [...groups.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([week,values])=>({week,count:values.length,mean:values.reduce((a,b)=>a+b,0)/values.length}));
 }
-export function insightsSleepView(model,selectedNight='',ico=()=>'',today='',imported={},healthAi={}){
+export function insightsSleepView(model,selectedNight='',ico=()=>'',today='',imported={},healthAi={},yearMode='month'){
  const {nights,hrv,range}=model;
  const allNights=model.allNights||nights;
  const activeDay=today||range.end||new Date().toISOString().slice(0,10);
  const sleep=renderSleepIntelligence({nights:allNights,selectedNight:allNights.some(n=>n.day===selectedNight)?selectedNight:'',today:activeDay,
-  period:range.days===365?'365':range.days===90?'90':range.days===7?'7':range.days===null?'all':'28',
+  yearMode,period:range.days===365?'365':range.days===90?'90':range.days===7?'7':range.days===null?'all':'28',
   timeZone:model.timeZone,sleepTimeline});
  const findings=healthFindings({nights:allNights,imported,today:activeDay});
  return `<div class="insight-sleep-content">

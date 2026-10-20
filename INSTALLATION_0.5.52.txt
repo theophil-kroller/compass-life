@@ -1,0 +1,27 @@
+COMPASS 0.5.52 – Installation
+
+Voraussetzung: laufende Compass-Installation 0.5.51 oder neues Repository aus dem FULL-SOURCE-Paket.
+
+1. BACKUP: Lokalen Compass Vault sichern. Kein Browser-Storage löschen.
+2. PATCH: Dateien aus Compass_0.5.52_PATCH_FROM_0.5.51.zip ins Repo kopieren, bestehende Dateien ersetzen.
+   Alternativ die Vollversion verwenden.
+3. UNBEDINGT VOR WORKER-DEPLOY: D1-Migration 0017 auf die richtige DB anwenden:
+   npm run db:remote
+   (aus Projektroot; verwendet Wrangler-Konfiguration in worker/)
+4. Neuen Worker deployen:
+   npm run deploy:api
+5. Frontend mit dem bisherigen GitHub-Pages-Workflow veröffentlichen.
+6. App hart neu laden, Versionsanzeige 0.5.52 prüfen.
+7. Privaten Geräteabgleich im Hauptgerät unter Einstellungen → Jetzt abgleichen erneut starten.
+   Bei großem Health-Snapshot sind mehrere verschlüsselte Übertragungsschritte normal.
+8. Auf dem Zweitgerät → Jetzt abgleichen; Health-Daten bleiben Ende-zu-Ende verschlüsselt.
+9. Insights → Schlaf → 1 Jahr → Monat / Woche / Tag testen.
+
+ACHTUNG: Wenn 0017 nicht vorher angewendet wird, kann der Worker die neuen Tabellenspalten nicht lesen.
+          Ein reiner Frontend-Patch genügt NICHT gegen den Sync-Fehler.
+          Bei erneutem Fehler bitte exakte neue Fehlermeldung und Sync-Einstellungen zeigen.
+
+Keine neue Garmin-Datenmigration nötig. Die Cloud-Synchronisierung muss nach Deployment live überprüft werden.
+
+Automatisierte Tests: 553/553 bestanden. Worker-Syntaxprüfung bestanden.
+Produktions-Build (Vite) aufgrund fehlender NPM-Abhängigkeiten hier nicht ausgeführt.

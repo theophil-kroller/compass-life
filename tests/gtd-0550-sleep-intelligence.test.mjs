@@ -44,7 +44,7 @@ test('responsive weekly click target, right hand detail, phase timeline, h:min a
  const html=renderSleepIntelligence({nights:rows,today:'2026-10-20',selectedNight:'2026-10-18',period:'365',sleepTimeline:()=>'<svg id="garmin-phases"></svg>'});
  for(const p of ['Schlaf im Überblick','Letzte 7 Tage','Schlaf über zwölf Monate','365-Tage-Kalender','data-action="insights-night-day"','2026-10-18','6 h 30 min','Schlafphasen im Tagesverlauf','keine medizinische'])assert.ok(html.includes(p),p);
  assert.match(html,/Keine Messung/);assert.doesNotMatch(html,/NaN|Infinity/);
- assert.equal((html.match(/sleep550-year-month/g)||[]).length>=12,true);
+ assert.equal(html.includes('sleep552-year-plot'),true);
 });
 test('Garmin daily detail has night efficiency only if plausible, never invents sleep data',()=>{
  const html=renderSleepIntelligence({nights:[night('2026-10-19',420)],today:'2026-10-20',period:'7',sleepTimeline:()=>'<svg></svg>'});
@@ -59,7 +59,7 @@ test('integrates into insights model without deleting HRV, advanced sleep stats 
  assert.equal(m.nights.length,1);assert.equal(m.allNights.length,2);
  const html=insightsSleepView(m,'',()=>'', '2026-10-20');
  assert.match(html,/Weitere Analysen/);assert.match(html,/Meine beobachtete HRV-Spanne/);assert.match(html,/Garmin-Sleep-Need-Wert/);
- const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.51'/);
+ const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.52'/);
 });
 
 test('stage curve connects real adjacent stages, excludes unknown blocks, and labels local time',()=>{

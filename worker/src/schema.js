@@ -12,7 +12,8 @@ const REQUIRED = {
   widget_pair_codes: ['code_hash','owner_sub','expires_at'],
   widget_devices: ['token_hash','owner_sub','revoked'],
   weekly_review_progress: ['owner_sub','progress_json','version'],
-  private_device_mirror: ['owner_sub','kind','ciphertext','version','salt'],
+  private_device_mirror: ['owner_sub','kind','ciphertext','version','salt','chunk_id','chunk_count'],
+  private_device_mirror_parts: ['owner_sub','kind','transfer_id','part_index','part'],
   planning_projects: ['id', 'review_interval_days', 'reviewed_at', 'kind', 'project_type', 'parent_id', 'sort_order', 'is_template', 'folder_icon'],
 };
 export async function schemaStatus(db) {
@@ -34,9 +35,10 @@ export async function schemaStatus(db) {
       else if(missing.some(x=>x.startsWith('discovery_events.')))requiredMigration = '0011';
       else if(missing.some(x=>x.startsWith('weekly_review_progress.')))requiredMigration = '0012';
       else if(missing.some(x=>x==='planning_projects.is_template'))requiredMigration = '0013';
-      else if(missing.some(x=>x.startsWith('private_device_mirror.')))requiredMigration = '0014';
+      else if(missing.some(x=>['private_device_mirror.owner_sub','private_device_mirror.ciphertext','private_device_mirror.version','private_device_mirror.salt'].includes(x)))requiredMigration = '0014';
       else if(missing.some(x=>x==='planning_projects.folder_icon'))requiredMigration = '0015';
       else if(missing.some(x=>x.startsWith('planning_tasks.progress_')))requiredMigration = '0016';
+      else if(missing.some(x=>x.startsWith('private_device_mirror_parts.')||x==='private_device_mirror.chunk_id'||x==='private_device_mirror.chunk_count'))requiredMigration = '0017';
       else requiredMigration = '0007';
     }
     return {ready: missing.length===0, requiredMigration, missing};

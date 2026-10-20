@@ -39,6 +39,7 @@ import {fetchTwelveDataQuote} from './finance-market-v36.js';
 import {fetchFlatexMarketHistory} from './flatex-market-history-v41.js';
 import {putBudgetEntry,putSavingsGoal,validateSavingsGoal,flexBudgetModel} from './finance-flex-budget-v30.js';
 import {PRIVATE_KINDS,privateSection,privateChanged,applyPrivateSection,newSalt,syncKeyFromPhrase,encryptSection,decryptSection} from './private-device-sync-v30.js';
+import {privateMirrorNeedsChunks,privateMirrorParts,joinMirrorParts} from './private-device-chunks-v552.js';
 import {financeMerchantEdit} from './finance-merchant-editor.js';
 import {addWealthSnapshot} from './finance-wealth-consolidation.js';
 import {addHoldingSnapshot} from './finance-holdings-v19.js';
@@ -71,7 +72,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.51';
+const COMPASS_CLIENT_VERSION='0.5.52';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -152,7 +153,7 @@ let insightWellnessDay='';let insightStressGranularity='week',insightBodyComposi
 let sportsMode='all',sportsAnchor=localDate(),sportsMetric='time',sportsSelected='';
 let financeCycleSelected='';
 let financeMarketQuote=null;
-let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',healthAiOrder=[],healthAiStatus='',financePane='Überblick';
+let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',insightYearMode='month',healthAiOrder=[],healthAiStatus='',financePane='Überblick';
 // Non-sensitive presentation only. Deep links always override the last-view preference.
 const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.calm.lastView')||'null');}catch{return null;}})();
 if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
@@ -1015,7 +1016,31 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-async function mirrorGet(kind){try{return (await request(config.apiUrl,authToken,`/api/private-device/${kind}`)).record;}catch(ex){if(ex.status===404)throw Error('Cloud-Worker zu alt: zuerst Migration 0014 und Worker 0.5.30 installieren.');throw ex;}}
+async function mirrorGet(kind){
+ let record;try{record=(await request(config.apiUrl,authToken,`/api/private-device/${kind}`)).record;}catch(ex){if(ex.status===404)throw Error('Cloud-Worker zu alt: bitte zuerst die neue D1-Migration und Worker-Version installieren.');throw ex;}
+ if(record?.chunked){
+  if(!Number.isInteger(record.chunkCount)||record.chunkCount<2||record.chunkCount>180||!/^[0-9a-f-]{36}$/.test(record.chunkId||''))throw Error('Geräteabgleich: ungültiges Transferverzeichnis.');
+  const chunks=[];
+  for(let index=0;index<record.chunkCount;index++){
+   const payload=await request(config.apiUrl,authToken,`/api/private-device/${kind}/parts?transferId=${record.chunkId}&partIndex=${index}`);
+   chunks.push(payload.part);
+  }
+  record={...record,ciphertext:joinMirrorParts(chunks,record.chunkCount)};
+ }
+ return record;
+}
+async function mirrorPublishEncrypted(kind,encrypted,salt,baseVersion){
+ if(!privateMirrorNeedsChunks(encrypted.ciphertext)){
+  try{return await request(config.apiUrl,authToken,`/api/private-device/${kind}`,{method:'POST',body:JSON.stringify({...encrypted,salt,baseVersion})});}
+  catch(ex){if(String(ex.message).includes('invalid-payload'))throw Error('Cloud-Worker lehnt das verschlüsselte Datenformat ab. Bitte Worker und D1-Migration 0017 aktualisieren.');throw ex;}
+ }
+ const transferId=crypto.randomUUID(),parts=privateMirrorParts(encrypted.ciphertext);
+ for(let index=0;index<parts.length;index++){
+  try{await request(config.apiUrl,authToken,`/api/private-device/${kind}/parts`,{method:'POST',body:JSON.stringify({transferId,partIndex:index,part:parts[index]})});}
+  catch(ex){if(ex.status===404)throw Error('Für große Gesundheitsimporte fehlen noch Worker 0.5.52 und D1-Migration 0017. Lokale Daten sind sicher.');throw ex;}
+ }
+ return request(config.apiUrl,authToken,`/api/private-device/${kind}/commit`,{method:'POST',body:JSON.stringify({transferId,partCount:parts.length,baseVersion,salt,iv:encrypted.iv,compressed:encrypted.compressed})});
+}
 async function publishPrivateMirror(){
  const configMirror=state?.privateDeviceMirror;
  if(!configMirror||configMirror.mode!=='source'||!configMirror.dirty)return;
@@ -1027,7 +1052,7 @@ async function publishPrivateMirror(){
      if(configMirror.versions?.[kind] && remote.version!==configMirror.versions[kind])throw Error('Geräte-Sync: Cloud wurde zwischenzeitlich geändert. Keine Daten überschrieben.');
    }
    const encrypted=await encryptSection(configMirror.key,kind,privateSection(state,kind));
-   const saved=await request(config.apiUrl,authToken,`/api/private-device/${kind}`,{method:'POST',body:JSON.stringify({...encrypted,salt:configMirror.salt,baseVersion:remote?.version||0})});
+   const saved=await mirrorPublishEncrypted(kind,encrypted,configMirror.salt,remote?.version||0);
    configMirror.versions??={};configMirror.versions[kind]=saved.version;
    await persist();
  }
@@ -1254,7 +1279,7 @@ function insightsScreen(){
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus}):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <div class="calm-insight-toolbar" aria-label="Mobile Insights-Navigation"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
  <div class="insight-view-header ${insightTab==='sources'?'insight-source-heading':''}"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
@@ -2671,6 +2696,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='sports-shift'){if(['-1','1'].includes(id)&&sportsMode!=='all'){sportsAnchor=sportsShiftAnchor(sportsMode,sportsAnchor,Number(id),localDate());render();}return;}
     if(action==='sports-metric'){if(['time','count','distance'].includes(id)){sportsMetric=id;render();}return;}
     if(action==='sports-select'){if(['running','cycling','walking','hiking','ski','swimming','paddling','dancing','disc','martial','sauna','other'].includes(id)){sportsSelected=sportsSelected===id?'':id;render();}return;}
+    if(action==='insights-year-mode'){if(['month','week','day'].includes(id)){insightYearMode=id;render();}return;}
     if(action==='insights-period'){if(INSIGHT_PERIODS.some(([v])=>v===id)){insightPeriod=id;render();}return;}
     if(action==='import-health-range'){importHealthSpan=id==='all'?'all':Number(id)||90;render();return;}
     if(action==='health-import-stop'){if(healthImportJob){healthImportStop=true;healthImportJob.message='Wird nach dem aktuellen Stapel angehalten …';render();}return;}
