@@ -62,10 +62,10 @@ export function recoveryCandidates(state,forecast,{kind='za',today=new Date().to
 export function recoveryView(result,evidence,{kind='za',open=false}={}){
  const name=kind==='za'?'ZA':'Urlaub';const fmt=d=>new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric',month:'short'}).format(new Date(d+'T12:00:00'));
  const stateText={feasible:'Rechnerisch machbar',uncertain:'Noch prüfen',risk:'Fristgefährdung'};
- return `<details class="rec554" id="rec554-panel" ${open?'open':''}><summary>🌿 Freien Tag prüfen <span>ZA / Urlaub · Simulation</span></summary><div class="rec554-content">
+ return `<details class="rec554" id="rec554-panel" ${open?'open':''}><summary>🏝️ Freien Tag prüfen <span>ZA / Urlaub · Simulation</span></summary><div class="rec554-content">
  <p class="rec554-signal">${esc(evidence.message)}</p><div class="rec554-controls"><span>Was wäre, wenn ich einen Tag freinehme?</span><button type="button" data-action="rec554-kind" data-id="za" class="${kind==='za'?'selected':''}">ZA</button><button type="button" data-action="rec554-kind" data-id="vacation" class="${kind==='vacation'?'selected':''}">Urlaub</button></div>
  ${result.status!=='ready'?`<p class="rec554-caveat">${esc(result.reason)} Keine belastbaren Terminvorschläge möglich.</p>`:
- `<p class="rec554-balance">${name}-Guthaben: ${esc(workHM(result.availableHours))} · nach einem Tag rechnerisch ${esc(workHM(result.availableHours-result.debit))}</p>
+ `<p class="rec554-balance">${kind==='vacation'?'🏝️':'◷'} ${name}-Guthaben: ${esc(workHM(result.availableHours))} · nach einem Tag rechnerisch ${esc(workHM(result.availableHours-result.debit))}</p>
  <div class="rec554-options">${result.options.map(o=>`<div class="rec554-option"><div><strong>${esc(fmt(o.day))}</strong><small>${esc(o.reason)}${o.newRisks.length?' · '+esc(o.newRisks.map(x=>x.title).join(', ')):''}</small></div><span class="rec554-rating rec554-${o.rating}">${stateText[o.rating]}</span></div>`).join('')||'<p class="muted-line">Keine geeigneten freien Arbeitstage innerhalb der nächsten 14 Tage gefunden.</p>'}</div>`}
  <p class="rec554-disclaimer">Unverbindliche Szenarien mit höchstens 80 % Tagesauslastung. Nur verlässlich geladener primärer Kalender und bekannte Aufwände. Work bleibt verfügbare Arbeitszeit. Keine Buchung, kein Guthabenabzug, keine Kalenderänderung oder Genehmigung. Gesundheitswerte sind keine Diagnose.</p></div></details>`;
 }

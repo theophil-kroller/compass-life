@@ -1,0 +1,23 @@
+Compass 0.5.55 — Installation
+============================
+
+PATCH von 0.5.54:
+  1. Den bestehenden funktionierenden Projektstand sichern.
+  2. Den Inhalt von Compass_0.5.55_PATCH_FROM_0.5.54.zip im Repository-Stammverzeichnis entpacken und gleichnamige Dateien ersetzen.
+  3. Änderungen committen und den üblichen Deployment-Workflow auslösen.
+  4. Nach dem Deployment die Seite neu laden (bei PWA ggf. einmal schließen und neu öffnen).
+
+FULL SOURCE:
+  Compass_0.5.55_FULL_SOURCE.zip enthält den vollständigen aktuellen Quellenstand.
+
+Keine neue D1-Migration erforderlich, falls 0.5.54 vollständig installiert war.
+
+ZUERST TESTEN:
+  - Links: Planen > Projekte öffnet die Projektansicht und vorhandene Projekte lassen sich anklicken.
+  - Auf einem schmalen Smartphone: Die Hauptnavigation besteht wieder aus EINER horizontal wischbaren Leiste. Planen/Insights/Finanzen öffnen eine ebenfalls einzeilige Unterbereichsleiste; »Menü« führt zurück.
+  - Unter Insights > Arbeitszeit den Mehrjahresvergleich Monat/Woche und die Monate/Jahresfarben prüfen.
+  - In der Projektliste den Titel samt kompaktem 0/1-Zähler und nutzbarem +1-Knopf kontrollieren.
+  - Planen > Konferenzen: offizielle Quelle öffnen, merken, Projektentwurf als Vorschau prüfen.
+
+PRÜFSTAND: 580/580 automatisierte Tests + Worker-Syntax erfolgreich.
+Nicht hier ausführbar: Produktions-Vite-Build und visuelle Mobile-/Live-Vault-Abnahme.

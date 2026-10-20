@@ -55,7 +55,9 @@ import {exploreDays,exploreView,EXPLORE_FIELDS} from './insights-explorer.js';
 import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insightsPlannedView} from './insights.js';
 import {healthFindings,rankHealthFindingsLocally} from './health-intelligence-v551.js';
 import {inspectWorktimeFile,mergeWorktime,worktimeView} from './worktime-v553.js';
+import {worktimeYearComparisonView} from './worktime-multiyear-v555.js';
 import {recoveryCandidates,recoveryEvidence,recoveryView} from './recovery-timeoff-v554.js';
+import {conferenceEntries,conferenceRadarView,conferenceProjectPlan,newConference,setConferenceStatus,RADAR_TOPICS,RADAR_REGIONS} from './conference-radar-v555.js';
 import {insightsStressView,insightsEnergyView} from './insights-wellness.js';
 import {fitnessInsightsView} from './insights-fitness.js';
 import {buildProductivityInsights,productivityInsightsView} from './insights-productivity.js';
@@ -74,7 +76,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.54';
+const COMPASS_CLIENT_VERSION='0.5.55';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -87,6 +89,7 @@ let selectedTaskId=null;
 let selectedProjectId=null;
 let exchangePreview=null;
 let exchangeRaw='';
+let radarTopic='all',radarRegion='all';
 let plannerExpanded=false;
 let selectedForecastDay=localDateString(new Date());
 let dailyPlanExpanded=true,dailyPlanPicked='',dailyPlanDuration=60,dailyPlanShowAll=false,dailyPlanShowUndated=false,dailyPlanDateTask='';
@@ -155,13 +158,13 @@ let insightWellnessDay='';let insightStressGranularity='week',insightBodyComposi
 let sportsMode='all',sportsAnchor=localDate(),sportsMetric='time',sportsSelected='';
 let financeCycleSelected='';
 let financeMarketQuote=null;
-let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',insightYearMode='month',insightWeekAnchor='',workYear=new Date().getFullYear(),workThreshold=45,workPreview=null,timeoffKind='za',timeoffOpen=false,healthAiOrder=[],healthAiStatus='',financePane='Überblick';
+let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',insightYearMode='month',insightWeekAnchor='',workYear=new Date().getFullYear(),workThreshold=45,workCompareMode='month',workPreview=null,timeoffKind='za',timeoffOpen=false,healthAiOrder=[],healthAiStatus='',financePane='Überblick';
 // Non-sensitive presentation only. Deep links always override the last-view preference.
 const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.calm.lastView')||'null');}catch{return null;}})();
 if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
 if(!bootView&&!bootCapture&&calmLastView?.insight&&INSIGHT_TABS.some(v=>v.id===calmLastView.insight))insightTab=calmLastView.insight;
 if(!bootView&&!bootCapture&&calmLastView?.finance&&FINANCE_TABS.some(v=>v.title===calmLastView.finance))financePane=calmLastView.finance;
-let calmNavGroup=['projects','overview','next','forecast','flagged','hold','someday'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'||tab==='recovery'?'insights':tab==='finance'?'finance':'';
+let calmNavGroup=['projects','overview','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'||tab==='recovery'?'insights':tab==='finance'?'finance':'';
 let financeSankeyFocus='all',financeMerchantSelected='';
 let financePaceCompare='previous',financeBudgetMonth=new Date().toLocaleDateString('sv-SE').slice(0,7);
 let financeAiSuggestions=[],financeAiOffset=0;
@@ -395,14 +398,18 @@ const rows=()=>inboxRecords(state);
 const disabledButton=(label='Öffnen')=>`<button class="ghost-cta" type="button" disabled aria-label="${h(label)} – noch nicht freigeschaltet">${h(label)} ${ico('arrow',13)}</button>`;
 function navItem(id,label,iconName,{disabled=false,count=null}={}) {
  const attr=disabled?'disabled aria-disabled="true" title="Noch nicht freigeschaltet"':`data-tab="${id}"`;
- return `<button type="button" class="nav-item ${tab===id?'is-active':''} ${disabled?'is-disabled':''}" ${attr}>
-  ${ico(iconName,19)}<span>${h(label)}</span>${count!==null?`<span class="nav-count">${count}</span>`:''}</button>`;
+ // Projects keeps a native deep-link fallback. If JavaScript navigation ever fails,
+ // the browser can still open the projects route instead of leaving a dead item.
+ const tag=id==='projects'&&!disabled?'a':'button';
+ const link=tag==='a'?`href="?view=projects"`: 'type="button"';
+ return `<${tag} ${link} class="nav-item ${tab===id?'is-active':''} ${disabled?'is-disabled':''}" ${attr}>
+  ${ico(iconName,19)}<span>${h(label)}</span>${count!==null?`<span class="nav-count">${count}</span>`:''}</${tag}>`;
 }
 function chrome(content){
  const num=rows().length;
  const today=new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
- const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',projects:'Projekte',templates:'Vorlagen',next:'Next Actions',flagged:'Flagged',hold:'On Hold',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten',people:'Menschen',progress:'Fortschritt',recovery:'Erholung',health:'Gesundheit',insights:'Insights',finance:'Finanzen'})[tab]||'Heute');
- const sub=({activity:'Sessions bearbeiten, zuordnen und verwalten.',people:'Gespräche, offene Punkte und Kontakte.',progress:'Fortschritt bei Projekten und Tätigkeiten.',recovery:'Aktive Erholung und freie Zeit im Blick.',health:'Schlaf, HRV und Körperzusammensetzung – Garmin und Fitdays an einem Ort.',insights:'Personal Analytics · Muster in Schlaf, Energie und Produktivität erkennen.',today:'Was heute wirklich zählt.',forecast:'Termine, Fristen und Agenden auf einer Zeitachse.',projects:'Ergebnisse verfolgen, nächste Schritte verbinden.',next:'Alle ausführbaren nächsten Schritte, auch ohne Datum.',flagged:'Bewusst hervorgehobene Aufgaben.',hold:'Bewusst pausiert oder auf Rückmeldung wartend.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
+ const title=tab==='today'&&selectedDay!==localDateString(new Date())?new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${selectedDay}T12:00:00`)):(({today:'Heute',forecast:'Forecast',radar:'Konferenzen',projects:'Projekte',templates:'Vorlagen',next:'Next Actions',flagged:'Flagged',hold:'On Hold',someday:'Dreams',review:'Wochenreview',overview:'Übersicht',inbox:'Inbox',system:'System & Synchronisation',activity:'Aktivitäten',people:'Menschen',progress:'Fortschritt',recovery:'Erholung',health:'Gesundheit',insights:'Insights',finance:'Finanzen'})[tab]||'Heute');
+ const sub=({activity:'Sessions bearbeiten, zuordnen und verwalten.',people:'Gespräche, offene Punkte und Kontakte.',progress:'Fortschritt bei Projekten und Tätigkeiten.',recovery:'Aktive Erholung und freie Zeit im Blick.',health:'Schlaf, HRV und Körperzusammensetzung – Garmin und Fitdays an einem Ort.',insights:'Personal Analytics · Muster in Schlaf, Energie und Produktivität erkennen.',today:'Was heute wirklich zählt.',forecast:'Termine, Fristen und Agenden auf einer Zeitachse.',radar:'Forschungsmöglichkeiten und verifizierbare Einreichfristen.',projects:'Ergebnisse verfolgen, nächste Schritte verbinden.',next:'Alle ausführbaren nächsten Schritte, auch ohne Datum.',flagged:'Bewusst hervorgehobene Aufgaben.',hold:'Bewusst pausiert oder auf Rückmeldung wartend.',someday:'Someday / Maybe · Ein Raum für Ideen ohne Verpflichtung.',review:'Gedanken klären, Verpflichtungen prüfen und bewusst wählen.',overview:'Alle Lebensbereiche auf einen Blick.',inbox:'Alles erfassen. Später in Ruhe klären.',system:'Deine Geräteverbindung und Datensicherheit.'})[tab]||'';
  return `<div class="shell"><aside class="sidebar" aria-label="Navigation">
  <div class="brand"><span class="brand-icon">${ico('compass',24)}</span><span class="brand-name">Compass<small>Personal Life Manager · ${COMPASS_CLIENT_VERSION}</small></span></div>
  <nav class="side-nav calm-side-nav" aria-label="Hauptnavigation">
@@ -411,11 +418,13 @@ function chrome(content){
  <div class="calm-nav-group">
  <button type="button" class="calm-group-toggle ${calmNavGroup==='plan'?'is-open':''}" data-action="calm-nav-group" data-id="plan" aria-expanded="${calmNavGroup==='plan'}" aria-controls="calm-nav-plan">${ico('folder',19)}<span>Planen</span>${ico('arrow',14)}</button>
  ${calmNavGroup==='plan'?`<div class="calm-subitems" id="calm-nav-plan">
+ <button type="button" class="calm-mobile-nav-back" data-action="calm-nav-group" data-id="plan" aria-label="Zur Hauptnavigation zurück">${ico('arrow',15)}<span>Menü</span></button>
  ${navItem('overview','Übersicht','layers')}
  ${navItem('next','Next Actions','target')}
  ${navItem('projects','Projekte','folder')}
  ${navItem('templates','Vorlagen','bookmark')}
  ${navItem('forecast','Kalender & Forecast','calendar')}
+ ${navItem('radar','Konferenzen','book')}
  ${navItem('flagged','Flagged','flag')}
  ${navItem('hold','On Hold','pause')}
  ${navItem('someday','Dreams · Someday','spark')}
@@ -425,6 +434,7 @@ function chrome(content){
  <div class="calm-nav-group">
  <button type="button" class="calm-group-toggle ${calmNavGroup==='insights'?'is-open':''}" data-action="calm-nav-group" data-id="insights" aria-expanded="${calmNavGroup==='insights'}" aria-controls="calm-nav-insights">${ico('layers',19)}<span>Insights</span>${ico('arrow',14)}</button>
  ${calmNavGroup==='insights'?`<div class="calm-subitems" id="calm-nav-insights">
+ <button type="button" class="calm-mobile-nav-back" data-action="calm-nav-group" data-id="insights" aria-label="Zur Hauptnavigation zurück">${ico('arrow',15)}<span>Menü</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&['sleep','energy','stress','body'].includes(insightTab)?'is-active':''}" data-action="calm-insight-view" data-id="sleep">${ico('moon',19)}<span>Gesundheit</span></button>
  ${navItem('activity','Aktivitäten','activity')}
  ${navItem('recovery','Erholung','heart')}
@@ -439,6 +449,7 @@ function chrome(content){
  <div class="calm-nav-group">
  <button type="button" class="calm-group-toggle ${calmNavGroup==='finance'?'is-open':''}" data-action="calm-nav-group" data-id="finance" aria-expanded="${calmNavGroup==='finance'}" aria-controls="calm-nav-finance">${ico('folder',19)}<span>Finanzen</span>${ico('arrow',14)}</button>
  ${calmNavGroup==='finance'?`<div class="calm-subitems" id="calm-nav-finance">
+ <button type="button" class="calm-mobile-nav-back" data-action="calm-nav-group" data-id="finance" aria-label="Zur Hauptnavigation zurück">${ico('arrow',15)}<span>Menü</span></button>
  ${FINANCE_GROUPS.map(group=>`<button type="button" class="nav-item fin43-side-item ${tab==='finance'&&financeGroupForPane(financePane).title===group.title?'is-active':''}" data-action="calm-finance-group" data-id="${h(group.title)}" aria-current="${tab==='finance'&&financeGroupForPane(financePane).title===group.title?'page':'false'}">${ico(({Überblick:'layers',Ausgaben:'activity',Vermögen:'folder',Planung:'target',Werkzeuge:'settings'})[group.title],17)}<span>${h(group.title)}</span></button>`).join('')}
  </div>`:''}</div>
  ${navItem('review','Wochenreview','sync')}
@@ -658,6 +669,10 @@ function todayWork(locked=false){
  <section class="work-card person-preview"><div class="work-heading"><span>${ico('people',18)} Offene Gesprächsthemen</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Person auswählen → alle offenen Agenda-Punkte sehen. Personen-Agendas folgen im GTD-Ausbau.</div></section>
  <button type="button" class="overview-nudge" data-tab="overview">${ico('layers',17)} Große Übersicht ansehen ${ico('arrow',14)}</button></aside></div>`;
 }
+function radarScreen(){
+ const forecast=localCapacity(localDate(),30);
+ return chrome(conferenceRadarView(conferenceEntries(state),{topic:radarTopic,region:radarRegion,today:localDate(),forecast,state}));
+}
 function forecastScreen(){
  const list=dueTasks(state,600),planned=Object.values(state?.tasks||{}).filter(t=>!t.archived&&!state.projects?.[t.projectId]?.isTemplate&&!t.completed&&t.plannedDate),today=localDate();
  const days=Array.from({length:14},(_,i)=>{const d=new Date(today+'T12:00:00');d.setDate(d.getDate()+i);return localDate(d);});
@@ -813,7 +828,13 @@ function folderIconPicker(project){
 }
 function treeProjectRows(parentId=null,depth=0,visited=new Set()){
  if(depth>15)return '';
- return childProjects(state,parentId).filter(p=>!p.isTemplate&&!visited.has(p.id)).map(p=>{
+ // Older/imported records may reference a parent which no longer exists. Keep
+ // those projects accessible instead of making the entire tree look empty.
+ const candidates=parentId===null?[
+   ...childProjects(state,null),
+   ...Object.values(state?.projects||{}).filter(p=>p.parentId&&(!state.projects?.[p.parentId]||p.parentId===p.id||state.projects[p.parentId]?.isTemplate))
+ ]:childProjects(state,parentId);
+ return candidates.filter(p=>!p.isTemplate&&!visited.has(p.id)).map(p=>{
   visited.add(p.id);
   const children=childProjects(state,p.id).filter(c=>!c.isTemplate),taskRoots=p.kind==='project'?taskChildren(state,p.id,null):[];
   const expand=children.length||taskRoots.length,collapsed=projectCollapsed.has(p.id);
@@ -1284,7 +1305,7 @@ function insightsScreen(){
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <div class="calm-insight-toolbar" aria-label="Mobile Insights-Navigation"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
  <div class="insight-view-header ${insightTab==='sources'?'insight-source-heading':''}"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
@@ -1405,7 +1426,16 @@ async function reloadWatchSessions(){
 function render(){
  if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
- app.innerHTML=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen() ;bind();
+ let html;
+ try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
+ catch(ex){if(tab!=='projects'&&tab!=='templates')throw ex;
+   console.error('Compass Projektnavigation: Anzeige fehlgeschlagen',ex);
+   // A broken older project hierarchy must never leave the sidebar inert.
+   // Keep the navigation visible and offer a safe way to inspect the next action.
+   const rows=Object.values(state?.projects||{}).filter(p=>p&&!p.isTemplate).slice(0,200);
+   html=chrome(`<section class="work-card" role="alert"><h2>Projektansicht eingeschränkt</h2><p>Ein Projektdatensatz konnte nicht vollständig angezeigt werden. Die Daten wurden nicht verändert.</p><p>${rows.length} Projekte/Ordner gefunden.</p><button type="button" class="secondary-btn" data-tab="next">Next Actions öffnen</button></section>`);
+ }
+ app.innerHTML=html;bind();
  if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto!==false&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
    requestAnimationFrame(()=>refreshPublicKrakenPrices(false));
  }
@@ -1418,7 +1448,7 @@ function bind() {
  if(state)wireSmartTags(app,()=>state);
  if(tab==='finance'&&financePane==='Portfolio'&&krakenChartData?.candles?.length)app.querySelectorAll('.fin39-price-card .fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,krakenChartData.candles,krakenChartSettings));
  if(tab==='finance'&&financePane==='Portfolio'&&flatexChartData?.candles?.length)app.querySelectorAll('.fin41-market-card .fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,flatexChartData.candles,{...flatexChartSettings,currency:flatexChartData.currency}));
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;calmNavGroup=['overview','projects','templates','next','forecast','flagged','hold','someday'].includes(tab)?'plan':['insights','activity','progress','recovery'].includes(tab)?'insights':'';if(tab==='finance')calmNavGroup='finance';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery'||tab==='insights')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=ev=>{ev?.preventDefault?.();const target=el.dataset.tab;if(!target)return;tab=target;calmNavGroup=['overview','projects','templates','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':['insights','activity','progress','recovery'].includes(tab)?'insights':'';if(tab==='finance')calmNavGroup='finance';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery'||tab==='insights')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
@@ -1594,6 +1624,15 @@ function bind() {
       await mutate(s=>{s.uiPreferences??={};s.uiPreferences[key]=normalize(ctrl.value);});
     };
   }
+  for(const [selector,name,allowed] of [['#radar555-topic','topic',['all',...RADAR_TOPICS]],['#radar555-region','region',['all',...RADAR_REGIONS]]]){
+    const control=app.querySelector(selector);if(control)control.onchange=()=>{if(!allowed.includes(control.value))return;if(name==='topic')radarTopic=control.value;else radarRegion=control.value;render();};
+  }
+  const radarForm=app.querySelector('#radar555-form');if(radarForm)radarForm.onsubmit=async ev=>{
+    ev.preventDefault();const v=new FormData(radarForm);
+    try{const item=newConference({title:v.get('title'),source:v.get('source'),location:v.get('location'),region:v.get('region'),topics:[String(v.get('topic'))],deadline:v.get('deadline'),note:v.get('note')},'cfp-'+crypto.randomUUID());
+      await mutate(s=>{s.conferenceRadar??=[];s.conferenceRadar.push(item);});toast('Call im lokalen Tresor vorgemerkt. Quelle und Frist bitte vor Einreichung prüfen.');
+    }catch(ex){toast('Call nicht gespeichert: '+ex.message,true);}
+  };
   const capacityForm=app.querySelector('#capacity-settings-form');if(capacityForm)capacityForm.onsubmit=async ev=>{
     ev.preventDefault();const fd=new FormData(capacityForm);
     const p=capacitySettings({startHour:Number(fd.get('startHour')),endHour:Number(fd.get('endHour')),bufferMinutes:Number(fd.get('bufferMinutes')),minSlotMinutes:Number(fd.get('minSlotMinutes')),weekends:fd.has('weekends'),availabilityTitles:String(fd.get('availabilityTitles')||'')});
@@ -2080,6 +2119,19 @@ async function placeInDailyPlan(taskId,start,moveId=null){
 async function runAction(action,id,stepId=null,plannerDay=null) {
   lastActivity=Date.now();
   try {
+    if(['radar555-save','radar555-ignore','radar555-restore'].includes(action)){
+      const entry=conferenceEntries(state).find(x=>x.id===id);if(!entry)return;
+      const status=action==='radar555-ignore'?'ignorieren':action==='radar555-restore'?'neu':entry.status==='merken'?'neu':'merken';
+      await mutate(s=>{s.conferenceRadar=setConferenceStatus(s,id,status);});return;
+    }
+    if(action==='radar555-project'){
+      const entry=conferenceEntries(state).find(x=>x.id===id);if(!entry)return;
+      const duplicate=Object.values(state.projects||{}).some(p=>p.title===`CFP · ${entry.title}`.slice(0,140));
+      if(duplicate&&!confirm('Ein gleichnamiges Konferenzprojekt existiert bereits. Trotzdem einen weiteren Entwurf zur Prüfung öffnen?'))return;
+      exchangePreview=conferenceProjectPlan(entry);exchangeBaseline={};exchangeRaw='';
+      tab='projects';calmNavGroup='plan';toast('Konferenzprojekt als Vorschau vorbereitet. Bitte Arbeitsschritte und Schätzungen prüfen – noch nichts gespeichert.');
+      const el=app.querySelector('#project-exchange-details');if(el){el.open=true;el.scrollIntoView?.({block:'nearest'});}return;
+    }
     if(action==='rec554-kind'){if(id==='za'||id==='vacation'){timeoffKind=id;timeoffOpen=true;render();}return;}
     if(action==='daily-plan-day'){
       const range=localCapacity(localDateString(new Date()),14);
@@ -2721,6 +2773,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='sports-shift'){if(['-1','1'].includes(id)&&sportsMode!=='all'){sportsAnchor=sportsShiftAnchor(sportsMode,sportsAnchor,Number(id),localDate());render();}return;}
     if(action==='sports-metric'){if(['time','count','distance'].includes(id)){sportsMetric=id;render();}return;}
     if(action==='sports-select'){if(['running','cycling','walking','hiking','ski','swimming','paddling','dancing','disc','martial','sauna','other'].includes(id)){sportsSelected=sportsSelected===id?'':id;render();}return;}
+    if(action==='worktime-compare-mode'){if(id==='month'||id==='week'){workCompareMode=id;render();}return;}
     if(action==='worktime-year'){const n=Number(id);if(Number.isInteger(n)&&n>=2023&&n<=new Date().getFullYear()+1){workYear=n;render();}return;}
     if(action==='worktime-confirm'){if(!workPreview)return;const preview=workPreview;await mutate(s=>{s.workTime=mergeWorktime(s.workTime||{},preview);if(!s.workTime.vacation)s.workTime.vacation={balanceHours:192,asOf:'2026-10-20',hoursPerDay:8};});workPreview=null;toast(`${preview.days.length} Arbeitszeittage übernommen. Überzeit: ${preview.lastBalance?.hours?.toFixed(2)||'–'} h.`);return;}
     if(action==='insights-week-shift'){

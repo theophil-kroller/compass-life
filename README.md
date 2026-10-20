@@ -99,3 +99,7 @@ Details: [Release Notes](docs/COMPASS_0.5.30_RELEASE.md).
 ### 0.5.54 · Projektaufgaben mit „Heute“-Kästchen vormerken
 
 Unter **Planen → Projekte** können verfügbare konkrete Aufgaben einzeln für **Heute** ausgewählt werden. Die Auswahl ist getrennt vom Erledigt-Kreis und verändert keine Fälligkeit. Die gleiche Aufgabe erscheint daraufhin unter **Heute → Meine Aufgaben**, einschließlich des bereits vorhandenen Stückzählers für Prüfungskorrekturen. Erneut anklicken hebt die Vormerkung auf. Einzelheiten im `CHANGELOG_0.5.53.1.md`.
+
+## 0.5.55 (Conference Radar, Arbeitszeitvergleich, Mobile Navigation)
+
+Siehe [CHANGELOG_0.5.55.md](CHANGELOG_0.5.55.md) und [INSTALLATION_0.5.55.txt](INSTALLATION_0.5.55.txt). Der Conference Radar ist kuratiert, noch kein autonomer CFP-Scanner.

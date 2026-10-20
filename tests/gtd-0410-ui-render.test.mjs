@@ -34,6 +34,7 @@ import * as reviewHubModule from '../client/src/review-import-hub.js';
 import * as smartImportHubModule from '../client/src/smart-import-hub-v49.js';
 import * as healthCoverage494 from '../client/src/health-data-coverage-v494.js';
 import * as timeoff554 from '../client/src/recovery-timeoff-v554.js';
+import * as radar555 from '../client/src/conference-radar-v555.js';
 const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
 const compiled=source.replace(/^import .*;\r?\n/gm,'').replace('registerSW({immediate:true});','').split("document.addEventListener('keydown'")[0]+`
  globalThis.testUI=(current,mode,events=[])=>{state=current;tab=mode;calendarEvents=events;render();return app.innerHTML;};
@@ -50,7 +51,7 @@ function context(){
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
- Object.assign(ctx,smartImportHubModule,healthCoverage494,timeoff554);
+ Object.assign(ctx,smartImportHubModule,healthCoverage494,timeoff554,radar555);
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.
  runInNewContext(compiled,ctx,{filename:'compass-main-browser-smoke.js',timeout:2000});
  return ctx;
