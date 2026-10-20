@@ -3,6 +3,7 @@
  */
 import {sleepTimeline} from './health-dashboard.js';
 import {renderSleepIntelligence} from './sleep-intelligence-v550.js';
+import {healthFindings,healthFindingsView} from './health-intelligence-v551.js';
 import {sleepDistributionChart,hrvReferenceView,sleepHrvScatter} from './insights-stats.js';
 
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -126,14 +127,16 @@ export function weeklySleepGroups(nights){
  }
  return [...groups.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([week,values])=>({week,count:values.length,mean:values.reduce((a,b)=>a+b,0)/values.length}));
 }
-export function insightsSleepView(model,selectedNight='',ico=()=>'',today=''){
+export function insightsSleepView(model,selectedNight='',ico=()=>'',today='',imported={},healthAi={}){
  const {nights,hrv,range}=model;
  const allNights=model.allNights||nights;
  const activeDay=today||range.end||new Date().toISOString().slice(0,10);
- const sleep=renderSleepIntelligence({nights:allNights,selectedNight:(nights.some(n=>n.day===selectedNight)||([365,null].includes(range.days)&&allNights.some(n=>n.day===selectedNight)))?selectedNight:'',today:activeDay,
+ const sleep=renderSleepIntelligence({nights:allNights,selectedNight:allNights.some(n=>n.day===selectedNight)?selectedNight:'',today:activeDay,
   period:range.days===365?'365':range.days===90?'90':range.days===7?'7':range.days===null?'all':'28',
   timeZone:model.timeZone,sleepTimeline});
+ const findings=healthFindings({nights:allNights,imported,today:activeDay});
  return `<div class="insight-sleep-content">
+ ${healthFindingsView(findings,healthAi.order||[],healthAi.status||'')}
  ${sleep}
  <div class="insight-data-note">${ico('shield',16)} <span><strong>${model.validSleepNights} gemessene Nächte</strong> im ausgewählten Zeitraum · <strong>${model.totalHrvDays} HRV-Tage</strong>. Die Uhrzeiten werden in <strong>${escapeHtml(model.timeZone)}</strong> angezeigt, nicht nachträglich in Reise-Ortszeiten umgerechnet. Fehlende Messungen sind keine Nullwerte.</span></div>
  <details class="sleep550-extra sleep550-extended"><summary>Weitere Analysen: Schlafkonsistenz, Boxplots & HRV</summary>

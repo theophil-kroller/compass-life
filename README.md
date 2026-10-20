@@ -1,147 +1,95 @@
-**Neu: Compass 0.5.8 – Insights Schlaf/HRV + eine gemeinsame Gesundheitsnavigation; Finanzen vorerst als Export-Roadmap.** Anleitung: [`docs/COMPASS_0.5.8_RELEASE.md`](docs/COMPASS_0.5.8_RELEASE.md). Keine neue Migration, Worker-Änderung oder Android-APK nötig.
+> **Aktuell: 0.5.51 · Sleep UX & Health Intelligence.** Siehe `CHANGELOG_0.5.51.md` und `INSTALLATION_0.5.51.txt`.
 
-**Neu: Compass 0.5.7 – Personal Analytics (Insights).** GitHub-/PWA-Installationshinweise und Ausbauphasen: [`docs/COMPASS_0.5.7_RELEASE.md`](docs/COMPASS_0.5.7_RELEASE.md). Keine neue Cloudflare-Migration oder Android-APK nötig.
+**0.5.50:** Sleep Intelligence – 7-night visual overview with click-through phase timeline, h:min durations, fair week/month comparisons, personal descriptive reference, 12-month sleep trend and expandable coverage heatmap. See `CHANGELOG_0.5.50.md` and `INSTALLATION_0.5.50.txt`.
 
-**Aktueller Stand: Compass 0.5.3 – Event-Sync / Wochenansicht.** Installationshinweise unter `docs/COMPASS_0.5.3_RELEASE.md`.
+**0.5.49.4:** Smart Import UX & Data Coverage – Scan unmittelbar nach Ordnerfreigabe, Garmin-Vorschau im Hub, datierter Datei-Zeitraum und nach Messart aufgeschlüsselter Vault-Zeitraum (inklusive einklappbarer Monatsabdeckung). Siehe `CHANGELOG_0.5.49.4.md` und `INSTALLATION_0.5.49.4.txt`.
 
-# Compass 0.4.6 (kombinierter Patch)
+**0.5.49.3:** Gesundheits-Backfill: ein bestätigter Import verarbeitet alle Archive in gespeicherten Stapeln, mit Fortsetzung und konkretem Vault-Status. Siehe `CHANGELOG_0.5.49.3.md`.
 
-Aktueller Release-Hinweis und Upgrade inkl. der D1-Migration 0007: [`docs/COMPASS_0.4.6_RELEASE.md`](docs/COMPASS_0.4.6_RELEASE.md).
+**0.5.49.2:** Importdeckung/aktuelle Tage transparent, neueste Tagesarchive zuerst. Siehe `CHANGELOG_0.5.49.2.md`.
+**0.5.49.1:** ZIP-Gruppenerkennung und Sammelzuordnung im Smart Import Hub. Siehe `CHANGELOG_0.5.49.1.md`.
 
----
+> **Compass 0.5.49:** Zentraler Smart Import Hub mit Drag & Drop, sicherer Format-Erkennung, zwei freigebbaren Windows-Ordnerquellen, Wiedererkennung bestätigter Dateiimporte und Weiterleitung zu den vorhandenen Importvorschauen. Ohne Hintergrundüberwachung, ohne automatische Übernahme. Siehe [Änderungen](CHANGELOG_0.5.49.md) und [Installation](INSTALLATION_0.5.49.txt).
 
-> **Neu 0.4.4 (GTD-Perspektiven-Bugfix):** Flagged/Next Actions/On Hold sowie Dreams und Forecast-Inspector repariert. **Keine neue Datenbankmigration.** Anleitung: [`docs/COMPASS_0.4.4_HANDOFF.md`](docs/COMPASS_0.4.4_HANDOFF.md).
+> **Compass 0.5.48:** Kompakte Tagesplanung (Heute/Morgen und Forecast-Tage) mit Drag & Drop, Dringlichkeit, Tagesabschluss und bewusstem Umgang mit Aufgaben ohne Datum. Siehe [Release-Hinweise](docs/COMPASS_0.5.48_DAY_PLANNING.md) und [Installation](INSTALLATION_0.5.48.txt).
 
-> **Neu 0.4.3 (Prüfbuild auf Basis 0.4.2):** Defer Until, Kontexte, Aufwandsschätzungen, Projekt-Review-Zyklen und Inbox-Klärung im Weekly Review. **Migration 0006 vor Worker-/Web-Update anwenden!** Siehe [`docs/COMPASS_0.4.3_GITHUB_UPDATE.md`](docs/COMPASS_0.4.3_GITHUB_UPDATE.md).
+> **Compass 0.5.46:** Lokale intelligente Stapelprüfung für Finanzbuchungen, optional mit LM Studio (nur explizit und über Loopback). Bestätigte Regeln bleiben führend; keine automatische Buchungsänderung. Siehe [Release-Hinweise](docs/COMPASS_0.5.46_LOCAL_FINANCE_AI.md) und [Installation](INSTALLATION_0.5.46.txt).
 
-> Neu 0.4.2: GTD Next Actions, Flagged, On Hold, Projekte und Agenda-Tags. Installationsreihenfolge siehe [`docs/COMPASS_0.4.2_GTD_PROJEKTE_AGENDAS.md`](docs/COMPASS_0.4.2_GTD_PROJEKTE_AGENDAS.md).
+> **Compass 0.5.45.1:** Kalenderblock `Work` als verfügbare Arbeitszeit statt Terminblocker. Konfigurierbare exakte Titel. Siehe [`docs/COMPASS_0.5.45.1_WORK_AVAILABILITY_FIX.md`](docs/COMPASS_0.5.45.1_WORK_AVAILABILITY_FIX.md).
 
-# Compass 0.4.0 — Heute, Forecast & Garmin Offline-First
+> **Compass 0.5.45:** Deadline Intelligence & Project Exchange – ruhige Fristwarnungen im Forecast, offline Projekt-JSON-Export, Vorschau und bestätigter Bulk-Import. Siehe [`docs/COMPASS_0.5.45_DEADLINES_PROJECT_EXCHANGE.md`](docs/COMPASS_0.5.45_DEADLINES_PROJECT_EXCHANGE.md).
 
-Neue PWA-Aufgaben, echte Deadlines, versionierte D1-Synchronisierung, Watch-Planungsabruf, Timeout/Offline-Fallback.
-Vor dem Deployment **Migration `worker/migrations/0004_planning_tasks.sql`** anwenden. Vollständige Installationsanleitung: [`docs/COMPASS_0.4.0_HEUTE_FORECAST_GARMIN.md`](docs/COMPASS_0.4.0_HEUTE_FORECAST_GARMIN.md).
+> **Compass 0.5.44:** Read-only Capacity Engine mit kompakter 14-Tage-Ansicht unter Forecast und optionalen Next-Action-Vorschlägen; Details: [`docs/COMPASS_0.5.44_CAPACITY_ENGINE.md`](docs/COMPASS_0.5.44_CAPACITY_ENGINE.md).
 
----
+## Compass 0.5.43 — Finance Simplified
 
-# Compass 0.3.1 — Garmin Focus UI
+Finanzen ist jetzt in fünf Hauptbereiche mit kontextuellen Unterreitern gegliedert: **Überblick, Ausgaben, Vermögen, Planung, Werkzeuge**. Alle bisherigen Finanzanalysen und Importfunktionen bleiben erhalten. Auf dem Überblick stehen kompakte Kennzahlen, der kumulierte Ausgabenvergleich und wichtige Kategorien; große Zusatzauswertungen sind einklappbar. Unter **Ausgaben → Pflicht & Luxus** lassen sich persönliche Kostenarten selbst zuordnen, mit einem vorsichtigen Drei-Monats-Durchschnitt und einer nur bei belastbaren Bankständen berechneten Liquiditätsreichweite. Projektordner und Projekte sind visuell stärker differenziert.
 
-**Garmin fēnix 7S (240×240):** Farben/Symbole nach Kategorie, rundes UI,
-Pomodoro-Countdown, Uhrzeit/Datum, Pomodoros heute, HR/Body-Battery-Symbole,
-Session-Aktionsmenü und Sammelkategorien Lehre/Prüfungen.
-
-**Abnahme:** Der neue Garmin-Code muss lokal mit dem Connect IQ SDK gebaut
-und im Simulator getestet werden; ein Garmin-Build wurde in dieser Umgebung
-nicht durchgeführt. Die bestehenden Compass-Web-/Worker-Tests liefen durch.
-
-**Unbedingt beachten:** Neue Uhr-Kategorien `Lehre`/`Pruefungen` werden erst
-nach Update und erfolgreichem Deployment von `worker/src/watch.js` vom Backend
-angenommen. Keine neue D1-Migration gegenüber 0.3.0.
-
-Anleitung: [`docs/GARMIN_FOCUS_0.3.1.md`](docs/GARMIN_FOCUS_0.3.1.md).
+**Keine neue D1-Migration** gegenüber 0.5.42. Bitte vor dem Upgrade den lokalen Vault sichern. [Installation](INSTALLATION_0.5.43.txt) · [Änderungen](CHANGELOG_0.5.43.md). Produktions-Build und Live-Browserabnahme stehen noch aus.
 
 ---
 
-# Compass 0.2.1 — Reliable Sync & Login
+## Compass 0.5.42 — Stückfortschritt für Aufgaben
 
-**Release-Hinweis:** Bei einem bestehenden Compass-Repository ausschließlich den **PATCH** verwenden. **Vor Upload zuerst** die D1-Migration `worker/migrations/0002_auth_sessions.sql` auf `compass-db` anwenden. Anleitung: [`docs/RELIABLE_SYNC_LOGIN_0.2.1.md`](docs/RELIABLE_SYNC_LOGIN_0.2.1.md).
-
-Dieser Build enthält verschlüsselt gespeicherte 30-Tage-Gerätesitzungen, sparsamen Auto-Sync und korrigierte Konfliktauflösung. Google-Client-ID und OWNER_EMAIL werden **nicht** neu eingerichtet. Für die Produktivabnahme ist ein tatsächlicher Sync-Test auf Laptop und Samsung erforderlich.
+Ein optionaler Stückzähler pro Aufgabe (z. B. 12 von 36 Prüfungen): ein Klick auf +1 direkt in Projekten/Next Actions, Fortschrittsbalken und Korrektur −1 im Inspector. Maximalwert wird individuell festgelegt, das Ziel schließt die Aufgabe nicht automatisch. Speicherung im lokalen verschlüsselten Vault und versionierte Aufgaben-Synchronisierung. **D1-Migration 0016 erforderlich** vor Worker-Deployment. [Installation](INSTALLATION_0.5.42.txt) · [Details](docs/COMPASS_0.5.42_RELEASE.md).
 
 ---
 
-# Compass — Personal Life Manager
+## Compass 0.5.41 — Portfolio-Reiter, Wertpapieranalysen & Langfristcharts
 
-**Phase A / Today-first UI Alpha 0.1.3** · 16 October 2026
+Fünf Reiter statt langer vertikaler Portfolio-Seite: **Übersicht, Positionen, Analyse, Entwicklung, Einstellungen & Import**. Innerhalb der Analyse separate Wahl **Flatex/Kraken**. Positionssortierung, Performance-Treemap, Beitragsanalyse, OHLC-Charts für Flatex mit verifiziertem Twelve-Data-Ticker; BTC/EUR-Langfrist-Fallback über öffentliche Daten; korrigierter rechter Achsenrand. Keine historischen Bestandswerte erfunden. [Installation](INSTALLATION_0.5.41.txt) · [Details](docs/COMPASS_0.5.41_RELEASE.md).
 
-> Weniger im Kopf behalten. Besser entscheiden. Mehr Zeit für das, was wichtig ist.
+---
 
-This is a **Phase A prototype with a future-state UI foundation**, not a full GTD product. It gives you a local AES-GCM-encrypted Inbox (add/edit/archive), a standalone Cloudflare Worker + D1 sync API, Google-account authentication, explicit edit-conflict handling, an installable PWA, migrations, tests, and a GitHub Pages deployment workflow. It can be used locally without connecting Cloudflare.
+## Compass 0.5.40 — Advanced Market Charts & Bitcoin-Langfristhistorie
 
-**UI preview in 0.1.3:** Today, Forecast, Dreams, a guided Weekly Review and Inbox classification fields are visible but mostly inactive; capturing with optional note works. See `docs/PHASE_A_3_INBOX_REVIEW_DREAMS.md`.
+TradingView-inspirierter, interaktiver OHLC-Marktchart mit optionalen technischen Indikatoren,
+Volumen, Fadenkreuz und Zoom. Für BTC/EUR erweitert um 3 Jahre (Tageskerzen), 5/10 Jahre
+und MAX (Wochenkerzen) über öffentliche Coinbase-Exchange-Daten. Kürzere Zeiträume
+bleiben über Kraken Spot. Keine privaten Bestände gehen an den Kursdienst.
+[Installation](INSTALLATION_0.5.40.txt) · [Release Notes](docs/COMPASS_0.5.40_RELEASE.md).
 
-**Not built in Phase A:** Projects, GTD Next Actions, contexts, Weekly Review, Google Calendar integration, timers, AI, Android native widget, Garmin Connect IQ and Health Connect. These belong to the next phases.
+---
 
-## GitHub repository
+## Compass 0.5.37 – Portfolio Professional & vollständige Finanznavigation
 
-https://github.com/theophil-kroller/compass-life
+- Finanzen: Alle 16 Unterbereiche in der **linken** ausklappbaren Sidebar, ohne verstecktes „Weitere Analysen“ und ohne doppelte obere Tab-Leiste.
+- Portfolio: Neue kompakte Kennzahlen, Flatex-Positionsübersicht mit gewichteter Allokation, Gewinn/Verlust gegenüber dokumentierten Einstandswerten, datierte Bestandsentwicklung (nur mit mindestens 2 Beobachtungen) und Klickdetails.
+- Flatex Classic: Datierter **lokaler Depot-CSV-Import** mit ISIN, Stückzahl, Kurs, Marktwert, Einstandswert und Verrechnungsguthaben. Ein Snapshot pro Stichtag; keine doppelte Vermögensbewertung bei bestehenden manuellen Flatex-Gesamtsummen.
+- Sensible Bestände bleiben im Vault; bei aktiviertem privatem Geräteabgleich ausschließlich als verschlüsselter Finanzbereich. **Keine persönlichen Depotbestände im öffentlichen Programmcode oder Release-ZIP.** Die aus dem Nutzerscreenshot erstellte CSV muss separat lokal importiert werden.
+- **Keine neue D1-Migration gegenüber 0.5.36.** Die automatische Kursaktualisierung sämtlicher Flatex-Titel ist noch nicht implementiert. Einzelkurse über Twelve Data bleiben freiwillig; Schlusskurse dürfen nicht als Echtzeitwerte ausgegeben werden.
+- [Installationshinweise](INSTALLATION_0.5.37.txt). `npm test` und Worker-Syntaxprüfung laufen. `npm run build` muss nach Installation der Vite-Abhängigkeiten im CI erfolgen.
 
-GitHub Pages after deployment: https://theophil-kroller.github.io/compass-life/
+---
 
-## Start here
+## Compass 0.5.35 – Aufgeräumte Datenquellen, kompakte Menschenansicht & Ordnersymbole
 
-Read **[`docs/CAPTURE_MVP_0.2.0.md`](docs/CAPTURE_MVP_0.2.0.md)** and **[`docs/EINRICHTUNG_DE.md`](docs/EINRICHTUNG_DE.md)**. It contains the step-by-step instructions for your new Cloudflare account, GitHub repository, Google OAuth client, D1 database and Worker.
+Weniger visuelles Gewicht bei Health-Importen, eine klare Primäraktion, verborgene seltene Verwaltungsoptionen sowie eine eigenständige Health-Connect-Kopplungsverwaltung. Die Menschenansicht verwendet auf breiten Bildschirmen etwa 1:2 Spalten, der Aufgaben-Inspector erhält dezente Grauflächen bei weißen Datumsfeldern, Ordnersymbole werden über die synchronisierte Projekt-API gespeichert.
 
-### Capture Everywhere – 0.2.0
+**Wichtig: Neue D1-Migration 0015 ist verpflichtend.** Vor Worker-/Pages-Deployment: [Installation 0.5.35](INSTALLATION_0.5.35.txt) und [Release Notes](docs/COMPASS_0.5.35_RELEASE.md) lesen.
 
-The main entry remains Today. Use the top-bar quick capture, `Ctrl/⌘+K`, or the mobile capture button to add a thought instantly. The Inbox is searchable and allows editing the title and optional note, plus archiving. Android PWA shortcuts are advertised through the manifest. Google login and end-to-end sync remain **unconfigured** until your OAuth client and Worker `OWNER_EMAIL` secret are set and tested. Calendar integration is **not active**; the provided calendar was verified through a separate ChatGPT connector only. See `docs/CAPTURE_MVP_0.2.0.md`.
+---
 
-### Local frontend, without cloud
+## Compass 0.5.30 – Finanzübersicht, Flex Budget & privater Geräteabgleich
 
-```bash
-npm install
-npm run dev:web
-```
+Neu gegenüber 0.5.29: Die Finanzstartseite beginnt mit der kompakten Monatsausgabenkurve,
+vier kleinen Kennzahlen und den wichtigsten Kategorien. Fixe, flexible und unregelmäßige
+Budgets sowie manuelle Sparziele ergänzen die bestehenden Finanzanalysen.
 
-Open `http://127.0.0.1:5173/`. Create a 12+ character local vault passphrase and capture a first item. You can work without an API configuration; sync remains disabled until connected.
+**Wichtige Korrektur der Synchronisationsannahme:** Bisher wurden Bank-CSV- und Garmin/Fitdays-
+Importe ausschließlich lokal gespeichert und daher nicht automatisch auf dem Handy angezeigt.
+0.5.30 ergänzt einen freiwilligen **Ende-zu-Ende-verschlüsselten Geräteabgleich**.
+Der PC ist das Hauptgerät; das Handy erhält eine lokale, offline verfügbare, schreibgeschützte
+Kopie dieser privaten Daten. Die Planung synchronisiert weiterhin separat in beide Richtungen.
 
-### Local API (after configuring `worker/wrangler.jsonc`)
+**Neue D1-Migration 0014 und neuer Worker erforderlich.** Unbedingt zuerst das verschlüsselte
+Vault-Backup erstellen und die [Installationsanleitung](INSTALLATION_0.5.30.txt) lesen.
 
-```bash
-npm run db:local
-npm run dev:api
-```
+Details: [Release Notes](docs/COMPASS_0.5.30_RELEASE.md).
 
-Add a `worker/.dev.vars` with the development values shown in `.dev.vars.example` (do not commit it), and set `client/public/runtime-config.json` accordingly. Run web and API in separate terminals.
-
-### Tests
-
-```bash
-npm run check
-npm run build
-```
-
-### Deployment
-
-- GitHub Pages publishes `client/dist` from the `main` branch via `.github/workflows/deploy-pages.yml`.
-- Deploy the API separately through `npm run deploy:api` after applying D1 remote migrations.
-- **Never** store Cloudflare API tokens, D1 backups, private tasks, Google ID tokens or local vault passphrases in GitHub.
-
-## Architecture
-
-```text
-client/                           vite PWA, static GitHub Pages
-  src/main.js                     UI, quick capture, vault + sync coordinator
-  src/vault.js                    WebCrypto AES-256-GCM encrypted IndexedDB
-  src/sync.js                     immutable mutation IDs, conflict-aware merge
-  public/runtime-config.json      public API URL and Google OAuth client ID
-worker/                           Cloudflare Worker; verifies Google JWT via JWKS
-  src/index.js                    authenticated API /me /sync/push /sync/pull
-  src/validation.js               strict input validation
-  migrations/0001_core.sql        D1 schema, journal + idempotency receipts
-.github/workflows/               GitHub Pages CI/CD
-tests/                           model/validation protocol tests
-docs/                            German setup, security and acceptance tests
-```
-
-## Sync guarantees and constraints
-
-- Each item has UUID, logical version, mutation receipt (idempotency) and change-log sequence.
-- Changes are queued offline and pushed sequentially per item. Other items can be batched.
-- The backend uses conditional version updates; when a concurrent edit occurs, the app **does not silently overwrite it**, but shows a conflict choice.
-- Encrypted local data is stored in IndexedDB; the encryption key is held only in memory and cleared when the vault is locked.
-- Session Google ID tokens are also held **only in memory**. After token expiry, log in again to sync. The local vault remains usable offline.
-- The server stores the item text unencrypted in private D1 (HTTPS/API guarded). **This is not end-to-end encryption.** A future E2EE design requires a new threat-model and key-management strategy.
-- No push notification, background sync or multi-tab write coordination in this release. App must be opened to sync, with a valid Google session. Prototypes need end-to-end testing on both actual devices before production use.
-- Google and Cloudflare configurations are not prefilled with live account information; user setup is required.
-
-## License
-
-Private prototype; no license for redistribution has been declared.
-
-## UI Foundation 0.1.1
-
-Dashboard, left navigation, preview cards, empty states and disabled future features are now visible from first launch. The local vault, real Inbox and System & Sync are functional; all other modules are inert visual placeholders, not demo datasets. The existing D1 database and Worker schema remain unchanged. See `docs/UI_FOUNDATION_0.1.1.md`.
-
-## UI Foundation 0.1.2 — Today-first
-
-„Heute“ ist jetzt die Startansicht mit Kalender-Seitenleiste, leeren Tagesaufgaben, rechts dem Aufgaben-/Personenkontext und einer funktionierenden Quick-Capture-Eingabe in die verschlüsselte Inbox. Forecast und die bisherige Modul-Übersicht sind eigene Ansichten. Eine optionale Wetteranzeige wird nur auf Klick von Open-Meteo geladen. Wunschdatum, harte Deadline und frühester Start sind in dieser UI-Version nur Datenmodell-Vorschau; Speichern/Planen folgen in Phase B. Details: `docs/PHASE_A_2_TODAY_WORKSPACE.md`.
+## 0.5.36 – Flatex Kontoumsätze und Navigation
+- Flatex Österreich `Kontoumsätze.csv` (Windows-1252 / UTF-8, 8 Spalten) lokal in den bestehenden Bankimport eingebunden. Händler- oder Dateinamen werden nicht als Formatdetektor verwendet.
+- Börsentransaktionen, Handelsabrechnungen und Dividenden/Fondsausschüttungen getrennt. Keine automatische Portfoliobewertung aus Kontoumsätzen.
+- Finanzen als linke aufklappbare Navigationsgruppe, analog zu Planen und Insights. Die bisherigen Finanz-Tabs bleiben auf schmalen Displays erreichbar.
+- Freiwillige, einmalige Einzelkurs-Abfrage bei Twelve Data im Portfolio; eigenes API-Key-Feld, keine Speicherung, kein automatisches Repricing.
+- Upgrade und Einschränkungen: `INSTALLATION_0.5.36.txt`.

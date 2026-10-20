@@ -2209,3 +2209,33 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 @media(max-width:650px){.sleep550-summary{gap:6px}.sleep550-summary-main,.sleep550-metric{padding:10px}.sleep550-summary-main>strong,.sleep550-metric>strong{font-size:19px}.sleep550-year-columns{gap:2px}.sleep550-year-month>span,.sleep550-year-month>small{font-size:8px}.sleep550-year-month>strong{font-size:8px}.sleep550-calendar-months{grid-template-columns:repeat(2,minmax(0,1fr))}.sleep550-lead{align-items:flex-start;flex-direction:column}.sleep550-detail{padding:13px}.sleep550-detail-metrics strong{font-size:12px}}
 
 .sleep550-stage-curve svg{display:block;width:100%;height:auto;max-height:200px}.sleep550-stage-curve{margin:4px 0 12px;overflow:hidden}
+
+/* 0.5.51 • one-night navigation, circular efficiency and local Health Intelligence */
+.sleep551-night-nav{display:flex;align-items:center;justify-content:flex-end;gap:9px;min-width:0}
+.sleep551-night-nav strong{font-size:11px;text-align:center}
+.sleep551-night-nav button{width:29px;height:29px;border-radius:8px;border:1px solid #3d5468;background:#243747;color:#e5f2f9;font-size:17px;cursor:pointer;flex-shrink:0;line-height:1}
+.sleep551-night-nav button:hover:not(:disabled),.sleep551-night-nav button:focus-visible{background:#36526a;outline:2px solid #a3d2ec;outline-offset:1px}
+.sleep551-night-nav button:disabled{opacity:.25;cursor:default}
+.sleep551-metrics-layout{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:8px;margin-bottom:10px}
+.sleep551-metrics-layout .sleep550-detail-metrics{margin:0;grid-template-columns:repeat(2,minmax(0,1fr))}
+.sleep551-metrics-layout .sleep550-detail-metrics>div:last-child{grid-column:1/-1}
+.sleep551-efficiency-tile{border-radius:8px;background:#213243;display:flex;flex-direction:column;align-items:center;padding:8px 4px;min-width:0;gap:3px;color:#aac4d5}
+.sleep551-efficiency-tile>span{font-size:9px;text-align:center}
+.sleep551-efficiency-ring{display:block;width:87px;max-width:100%;height:auto}
+.sleep551-efficiency-na{padding:17px;color:#8b9ca9}
+.sleep551-rounded-path{filter:drop-shadow(0 0 2px rgba(130,175,223,.20))}
+.health551-panel{border:1px solid #E1EBE4;background:#fff;border-radius:12px;padding:12px 15px;display:grid;gap:8px}
+.health551-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.health551-header span{color:#8b9e95;font-size:9px;letter-spacing:1px;font-weight:700}
+.health551-header h3{font:normal 18px Georgia,serif;color:#2b5845;margin:2px 0 0}
+.health551-ai-button{padding:7px 10px;border:1px solid #dae6dd;border-radius:8px;background:#f4f8f5;color:#416c58;font-size:10px;cursor:pointer}
+.health551-ai-button:disabled{opacity:.45;cursor:default}
+.health551-finding{border-top:1px solid #edf1ed;padding-top:9px;font-size:11px;color:#445e50;line-height:1.5}
+.health551-finding-title{display:flex;gap:6px 12px;align-items:center;flex-wrap:wrap}
+.health551-finding-title strong{font-size:12px;color:#2b624b}.health551-finding-title span{font-size:10px;color:#869b8d}
+.health551-finding>p{margin:4px 0 0}.health551-finding details{margin-top:4px}
+.health551-finding summary{color:#367658;cursor:pointer;font-size:10px}.health551-finding details>div{margin:7px 0 0;padding:7px 10px;background:#f5f9f6;border-radius:7px}
+.health551-finding b{color:#315a48}
+.health551-foot,.health551-empty,.health551-ai-status{color:#81988b;font-size:10px;line-height:1.5}
+.health551-ai-status{margin:0;background:#f4f8f5;padding:7px;border-radius:6px}
+@media(max-width:650px){.sleep551-metrics-layout{grid-template-columns:minmax(0,1fr) 88px}.sleep551-efficiency-ring{width:74px}.sleep551-night-nav{width:100%;justify-content:space-between}.sleep550-detail-heading{align-items:start}.health551-header h3{font-size:16px}}

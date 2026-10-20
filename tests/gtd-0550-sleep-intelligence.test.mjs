@@ -48,7 +48,7 @@ test('responsive weekly click target, right hand detail, phase timeline, h:min a
 });
 test('Garmin daily detail has night efficiency only if plausible, never invents sleep data',()=>{
  const html=renderSleepIntelligence({nights:[night('2026-10-19',420)],today:'2026-10-20',period:'7',sleepTimeline:()=>'<svg></svg>'});
- assert.match(html,/Schlafphasen-Verteilung/);assert.match(html,/Effizienz\*/);assert.match(html,/Letzte 7 Tage/);
+ assert.match(html,/Schlafphasen-Verteilung/);assert.match(html,/Schlafeffizienz\*/);assert.match(html,/Letzte 7 Tage/);
  assert.doesNotMatch(html,/Schlaf über zwölf Monate/);
  const none=renderSleepIntelligence({nights:[],today:'2026-10-20',period:'365'});
  assert.match(none,/Noch keine Schlafmessungen/);assert.doesNotMatch(none,/NaN|Infinity/);
@@ -59,7 +59,7 @@ test('integrates into insights model without deleting HRV, advanced sleep stats 
  assert.equal(m.nights.length,1);assert.equal(m.allNights.length,2);
  const html=insightsSleepView(m,'',()=>'', '2026-10-20');
  assert.match(html,/Weitere Analysen/);assert.match(html,/Meine beobachtete HRV-Spanne/);assert.match(html,/Garmin-Sleep-Need-Wert/);
- const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.50'/);
+ const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.51'/);
 });
 
 test('stage curve connects real adjacent stages, excludes unknown blocks, and labels local time',()=>{
@@ -68,6 +68,6 @@ test('stage curve connects real adjacent stages, excludes unknown blocks, and la
   {stage:2,start:'2026-10-19T01:00:00Z',end:'2026-10-19T02:00:00Z'},
   {stage:4,start:'2026-10-19T03:00:00Z',end:'2026-10-19T04:00:00Z'}];
  const html=sleepStageCurve(day,'UTC');assert.match(html,/Schlafphasen im Tagesverlauf/);
- assert.match(html,/Tief/);assert.match(html,/REM/);assert.match(html,/Leicht/);assert.ok((html.match(/<line /g)||[]).length>5);
+ assert.match(html,/Tief/);assert.match(html,/REM/);assert.match(html,/Leicht/);assert.ok((html.match(/<path /g)||[]).length>=3);
  assert.match(sleepStageCurve({stages:[]}),/Keine detaillierten/);
 });

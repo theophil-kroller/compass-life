@@ -79,7 +79,8 @@ function metricsCard(title,period,field='sleepMinutes'){
  const m=mean(period.current.map(n=>field==='sleepMinutes'?n.sleepMinutes:n.totals?.[field]));
  return `<div class="sleep550-metric"><span>${esc(title)}</span><strong>${esc(sleepHM(m))}</strong><small>${period.current.length} Nächte erfasst</small></div>`;
 }
-/** Garmin-like, continuous stepped stage timeline. Breaks represent unobserved intervals. */
+/** Rounded, time-faithful Garmin-like steps. Missing data remain disconnected.
+ * A Bézier bend is visual only: observed stage timestamps remain exact. */
 export function sleepStageCurve(night,timeZone){
  if(!Array.isArray(night?.stages)||!night.stages.length)return '<p class="sleep550-no-data">Keine detaillierten Schlafphasen in dieser Nacht gespeichert.</p>';
  const from=Date.parse(night.start),to=Date.parse(night.end);
@@ -93,19 +94,38 @@ export function sleepStageCurve(night,timeZone){
  const records=night.stages.filter(s=>definitions.some(x=>x[1]===s.stage)&&Number.isFinite(Date.parse(s.start))&&Number.isFinite(Date.parse(s.end)))
   .map(s=>({...s,a:Math.max(from,Date.parse(s.start)),b:Math.min(to,Date.parse(s.end))}))
   .filter(s=>s.b>s.a).sort((a,b)=>a.a-b.a);
- let last=null,plot='';
- for(const s of records){
-  const ya=yFor(s.stage),xa=xFor(s.a),xb=xFor(s.b),paint=definitions.find(x=>x[1]===s.stage)[2];
-  if(last&&s.a-last.b>=0&&s.a-last.b<=60000){
-   const xc=xFor(s.a),yp=yFor(last.stage);
-   if(yp!==ya)plot+=`<line x1="${xc.toFixed(1)}" x2="${xc.toFixed(1)}" y1="${yp.toFixed(1)}" y2="${ya.toFixed(1)}" stroke="#749BBA" stroke-width="2.2"/>`;
+ const groups=[];let current=[];
+ for(const s of records){if(current.length&&Math.abs(s.a-current.at(-1).b)>60000){groups.push(current);current=[];}current.push(s);}
+ if(current.length)groups.push(current);
+ const n=v=>Number(v).toFixed(2);
+ const stageColor=v=>definitions.find(x=>x[1]===v)[2];
+ let plot='';
+ for(const group of groups){
+  if(!group.length)continue;
+  let outline=`M ${n(xFor(group[0].a))} ${n(yFor(group[0].stage))}`;
+  for(let i=0;i<group.length;i++){
+   const s=group[i],next=group[i+1],y=yFor(s.stage),stop=xFor(s.b);
+   if(!next||next.stage===s.stage){outline+=` L ${n(stop)} ${n(y)}`;continue;}
+   const ny=yFor(next.stage),r=Math.min(11,(stop-xFor(s.a))*.32,(xFor(next.b)-stop)*.32),v=Math.min(14,Math.abs(ny-y)*.35),dir=Math.sign(ny-y);
+   if(r<.3){outline+=` L ${n(stop)} ${n(y)} L ${n(stop)} ${n(ny)}`;continue;}
+   outline+=` L ${n(stop-r)} ${n(y)} Q ${n(stop)} ${n(y)} ${n(stop)} ${n(y+dir*v)} L ${n(stop)} ${n(ny-dir*v)} Q ${n(stop)} ${n(ny)} ${n(stop+r)} ${n(ny)}`;
   }
-  plot+=`<line x1="${xa.toFixed(1)}" x2="${xb.toFixed(1)}" y1="${ya.toFixed(1)}" y2="${ya.toFixed(1)}" stroke="${paint}" stroke-width="5" stroke-linecap="round"><title>${esc(definitions.find(x=>x[1]===s.stage)[0])} · ${esc(clock(s.start))}–${esc(clock(s.end))}</title></line>`;
-  last=s;
+  // Continuous rounded backbone; horizontal overlays preserve the phase identity.
+  plot+=`<path d="${outline}" fill="none" stroke="#83AACA" stroke-width="4.8" stroke-linejoin="round" stroke-linecap="round" class="sleep551-rounded-path"/>`;
+  for(const s of group){const x1=xFor(s.a),x2=xFor(s.b),y=yFor(s.stage);
+   const trim=Math.min(4,(x2-x1)*.18);
+   if(x2-x1<.6)continue;
+   plot+=`<path d="M ${n(x1+trim)} ${n(y)} L ${n(x2-trim)} ${n(y)}" fill="none" stroke="${stageColor(s.stage)}" stroke-width="5" stroke-linecap="round"><title>${esc(definitions.find(x=>x[1]===s.stage)[0])} · ${esc(clock(s.start))}–${esc(clock(s.end))}</title></path>`;
+  }
  }
  if(!plot)return '<p class="sleep550-no-data">Keine gültigen Schlafphasen innerhalb der Nacht.</p>';
  const axis=[0,.25,.5,.75,1].map(t=>{const at=new Date(from+(to-from)*t).toISOString();return `<text x="${L+w*t}" y="${H-9}" font-size="10" text-anchor="${t===0?'start':t===1?'end':'middle'}" fill="#ADBECA">${esc(clock(at))}</text>`;}).join('');
- return `<div class="sleep550-stage-curve"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Schlafphasen im Tagesverlauf; ungemessene Zeiträume bleiben getrennt">${grid}${plot}${axis}</svg></div>`;
+ return `<div class="sleep550-stage-curve"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Schlafphasen im Tagesverlauf mit abgerundeten Übergängen; fehlende Zeiträume sind getrennt">${grid}${plot}${axis}</svg></div>`;
+}
+export function sleepEfficiencyRing(percent){
+ if(!Number.isFinite(percent)||percent<0||percent>100)return '<div class="sleep551-efficiency-na" aria-label="Schlafeffizienz nicht berechenbar">–</div>';
+ const C=2*Math.PI*32;
+ return `<svg class="sleep551-efficiency-ring" viewBox="0 0 100 100" role="img" aria-label="Schlafeffizienz ${Math.round(percent)} Prozent"><circle cx="50" cy="50" r="32" fill="none" stroke="#3A5063" stroke-width="8"/><circle cx="50" cy="50" r="32" fill="none" stroke="#A5CDED" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(C*percent/100).toFixed(2)} ${C.toFixed(2)}" transform="rotate(-90 50 50)"/><text x="50" y="56" text-anchor="middle" fill="#F5F9FD" font-size="22" font-weight="700">${Math.round(percent)}%</text></svg>`;
 }
 function nightDetails(night,nights,sleepTimeline,timezone){
  if(!night)return `<aside class="sleep550-detail"><h3>Nacht auswählen</h3><p>Noch keine Schlafmessungen für diesen Zeitraum. Leere Tage bleiben fehlende Daten.</p></aside>`;
@@ -115,7 +135,8 @@ function nightDetails(night,nights,sleepTimeline,timezone){
  const zone=timezone||undefined;const clock=iso=>{if(!iso||!Number.isFinite(Date.parse(iso)))return '–';try{return new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit',timeZone:zone}).format(new Date(iso));}catch{return '–';}};
  const refNote=ref.status==='unknown'?`Noch keine belastbare persönliche Referenz · ${ref.count}/14 vorangegangene Nächte in 60 Tagen`:
   `Schlafdauer ${ref.status==='below'?'unter':ref.status==='above'?'über':'innerhalb'} der eigenen beobachteten 10.–90.-Perzentil-Spanne (${sleepHM(ref.low)}–${sleepHM(ref.high)}, ${ref.count} Nächte)`;
- return `<aside class="sleep550-detail" aria-label="Schlafnacht ${esc(night.day)}"><div class="sleep550-detail-heading"><span>DETAIL EINER NACHT</span><strong>${esc(new Date(time(night.day)).toLocaleDateString('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}))}</strong></div><div class="sleep550-detail-metrics"><div><span>Gesamtschlaf</span><strong>${esc(sleepHM(night.sleepMinutes))}</strong></div><div><span>Zeit im Bett</span><strong>${esc(sleepHM(inBed))}</strong></div><div><span>Effizienz*</span><strong>${eff===null?'–':eff+' %'}</strong></div><div><span>Einschlafen / Aufwachen</span><strong>${esc(clock(night.start))} – ${esc(clock(night.end))}</strong></div></div>${sleepStageCurve(night,timezone)}<div class="sleep550-detail-phases">${segmentParts(night).map(([,label,color,val])=>`<span><i style="background:${color}"></i>${esc(label)} ${esc(sleepHM(val))}</span>`).join('')}</div><div class="sleep550-reference">${esc(refNote)}</div><small class="sleep550-detail-note">*Zeit im Bett und Effizienz nur bei plausiblen Start-/Endzeiten; Garmin-Schlafstadien sind Schätzungen. Die persönliche Spanne ist keine medizinische Norm. Uhrzeiten: ${esc(timezone||'Gerät')}.</small></aside>`;
+ const available=nights.filter(validNight).sort((a,b)=>a.day.localeCompare(b.day)),idx=available.findIndex(n=>n.day===night.day),prev=idx>0?available[idx-1].day:null,next=idx>=0&&idx<available.length-1?available[idx+1].day:null;
+ return `<aside class="sleep550-detail" aria-label="Schlafnacht ${esc(night.day)}"><div class="sleep550-detail-heading"><span>DETAIL EINER NACHT</span><div class="sleep551-night-nav"><button type="button" data-action="insights-night-day" ${prev?`data-id="${esc(prev)}"`:'disabled'} aria-label="Vorherige gemessene Nacht" title="Vorherige gemessene Nacht">←</button><strong>${esc(new Date(time(night.day)).toLocaleDateString('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}))}</strong><button type="button" data-action="insights-night-day" ${next?`data-id="${esc(next)}"`:'disabled'} aria-label="Nächste gemessene Nacht" title="Nächste gemessene Nacht">→</button></div></div><div class="sleep551-metrics-layout"><div class="sleep550-detail-metrics"><div><span>Gesamtschlaf</span><strong>${esc(sleepHM(night.sleepMinutes))}</strong></div><div><span>Zeit im Bett</span><strong>${esc(sleepHM(inBed))}</strong></div><div><span>Einschlafen / Aufwachen</span><strong>${esc(clock(night.start))} – ${esc(clock(night.end))}</strong></div></div><div class="sleep551-efficiency-tile"><span>Schlafeffizienz*</span>${sleepEfficiencyRing(eff)}</div></div>${sleepStageCurve(night,timezone)}<div class="sleep550-detail-phases">${segmentParts(night).map(([,label,color,val])=>`<span><i style="background:${color}"></i>${esc(label)} ${esc(sleepHM(val))}</span>`).join('')}</div><div class="sleep550-reference">${esc(refNote)}</div><small class="sleep550-detail-note">*Effizienz ist Schlafdauer geteilt durch plausible Zeit im Bett; nicht vorhanden bei unvollständigen Zeitstempeln. Garmin-Schlafstadien sind Schätzungen. Eigene Spanne ist keine medizinische Norm. Uhrzeiten: ${esc(timezone||'Gerät')}.</small></aside>`;
 }
 function sleepTrendSvg(nights,today,period){
  const cap=period==='7'?7:period==='28'?28:period==='90'?90:90,start=shift(today,1-cap);

@@ -1,0 +1,26 @@
+COMPASS 0.5.51 – Installation
+=============================
+AUSGANGSBASIS: Compass 0.5.50
+
+PATCH: Dateien aus Compass_0.5.51_PATCH_FROM_0.5.50.zip ins bestehende
+Compass-Repository übernehmen (Ordnerstruktur beibehalten; vorhandene
+Dateien überschreiben; neu hinzugekommene Dateien anlegen).
+
+FULL SOURCE: Compass_0.5.51_FULL_SOURCE.zip enthält den vollständigen
+Code. Nicht den FULL-Ordner zusätzlich in dein bestehendes Repository
+hineinkopieren.
+
+Keine D1-Migration; keine neue Worker-API; keine Änderung an importierten
+Gesundheitsdaten. Deployment wie bisher via GitHub/Vite-Workflow.
+
+TEST: npm test (549 erfolgreich in dieser Umgebung), npm run check -w worker.
+PRODUKTIONSBUILD: npm install && npm run build (hier nicht durchgeführt,
+da Vite/node_modules in der Originalquelle fehlen).
+
+Abnahme:
+1. Insights > Schlaf öffnen, gemessene Nacht anklicken, Datumspfeile testen.
+2. Abgerundete Stufen und Schlafeffizienz-Kreis prüfen (auch fehlende Daten).
+3. „Was sagen meine Daten?“ öffnen und Belege / mögliche Erklärungen prüfen.
+4. Optional LM Studio lokal starten und „Lokal priorisieren“ anklicken;
+   es findet keine automatische Cloud-KI-Abfrage statt.
+5. Auf dem Handy prüfen, ob Metriken/Diagramme lesbar bleiben.
