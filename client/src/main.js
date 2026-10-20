@@ -18,6 +18,8 @@ import {CONTACT_TYPES,CONTACT_REVIEW_DAYS,contactTypeLabel,addContactEntry,conta
 import {FEELINGS,feelingWord,newFeelingDraft,chooseFeeling,intensityFor,validatedCheckin,appendCheckin,feelingOverlay,feelingInsights,feelingReview} from './feeling-wheel-v565.js';
 import {personalConnections,personalConnectionsView} from './personal-connections-v566.js';
 import {relationshipMapView,MAP567,closenessAt} from './relationship-map-v567.js';
+import {CONTACT_MODES,careMode,relationshipReview,activeCare} from './relationship-intelligence-v568.js';
+import {deadlineSuggestions,contactSuggestions} from './calendar-intelligence-v568.js';
 import {RELATION_KINDS,GENDER_MARKERS,CADENCE_DAYS,preference,contactImpulse,impulseQueue,pauseContact,mapPosition,mapDrop,safePersonDetails,relatedProjectIds,contactWeight} from './relationship-radar-v564.js';
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {linkedPersonTasks,linkedPersonInbox} from './person-links.js';
@@ -85,7 +87,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.67.2';
+const COMPASS_CLIENT_VERSION='0.5.68';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -150,6 +152,9 @@ async function resumeSession(){
 
 let feelingOverlayOpen=false,feelingDraft=newFeelingDraft(),feelingDays=30,connectionEmotion='anger',connectionDays=30;
 let captureOverlayOpen=false;
+let sealedCaptureAvailable=false,contactSaveStatus='',contactSaving=false;
+let contactSettingsOpen=false,calendarSuggestionsOpen=true;
+let peopleScrollRestoration=null;
 // Keep unsent captures in memory across unrelated UI renders (sync, weather, etc.).
 // Never put plaintext capture drafts into localStorage/sessionStorage.
 let captureDraft={title:'',note:'',noteOpen:false};
@@ -524,7 +529,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${state&&captureOverlayOpen?captureOverlay():``}${state&&feelingOverlayOpen?feelingOverlay(feelingDraft,state.feelingCheckins||[]):``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${state&&feelingOverlayOpen?feelingOverlay(feelingDraft,state.feelingCheckins||[]):``}</div>`;
 }
 
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
@@ -744,7 +749,7 @@ function forecastScreen(){
   const combined=[...tasks.map(t=>({type:'task',sort:'0',obj:t})),...plannedTasks.map(t=>({type:'planned',sort:'0b',obj:t})),...ev.map(e=>({type:'event',sort:e.start?.dateTime||'1',obj:e}))].sort((a,b)=>a.sort.localeCompare(b.sort));
   return `<div class="forecast-date-group"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(day+'T12:00:00')))}</h3><div class="timeline-day">${combined.map(x=>x.type==='task'?`<div class="timeline-item deadline-event">${ico('flag',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · harte Deadline · ${h(CATEGORY_LABELS[x.obj.category]||x.obj.category)}</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:x.type==='planned'?`<div class="timeline-item planned-event">${ico('calendar',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · Planned (Wunschtermin, keine Deadline)</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:`<button type="button" class="timeline-item calendar-event" data-action="agenda-open" data-id="${h(x.obj.id)}"><span class="forecast-event-emoji">${h(eventAppearance(x.obj).emoji)}</span><div><strong>${h(eventAppearance(x.obj).displayTitle||'Kalendertermin')}</strong><small>Google Calendar · ${h(eventAppearance(x.obj).category)} · ${h(calendarTime(x.obj))}${x.obj.start?.date?' · Ganztagsmarker':''}${eventAppearance(x.obj).hidden?' · ausgeblendet':''}</small></div>${agendaEvent(x.obj)}${ico('arrow',15)}</button>`).join('')}</div></div>`;
  };
- return chrome(`<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Deadlines, Planung & Termine</span><span class="quiet-tag">14 Tage</span></div>
+ return chrome(`${calendarDeadlinePanel()}<div class="forecast-layout">${calendarRail()}<section class="forecast-full work-card"><div class="work-heading"><span>${ico('calendar',21)} Forecast · Deadlines, Planung & Termine</span><span class="quiet-tag">14 Tage</span></div>
  ${capacityPanel()}
  ${dailyPlanPanel()}
  ${proactivePlannerPanel()}
@@ -980,15 +985,27 @@ async function loadWeather(city){
   render();
  }catch(ex){weather={city,status:'idle',temperature:null,label:''};toast(`Wetter konnte nicht geladen werden: ${ex.message}`,true);}
 }
+function calendarContactPanel(person){
+ if(!calendarToken||!person)return '';
+ const suggestions=contactSuggestions(calendarEvents,{[person.id]:person},localDate(),state?.calendarSuggestionDismissed||{}).slice(0,5);
+ if(!suggestions.length)return '';
+ return `<section class="work-card v568-calendar-hints"><h3>📅 Mögliche Treffen bestätigen</h3><p class="muted-line">Kalendertermine belegen nicht, dass ein Treffen tatsächlich stattgefunden hat.</p>${suggestions.map(s=>`<div class="v568-suggestion"><div><strong>${h(s.title)}</strong><small>${h(s.day)} · ${h(s.personName)}</small></div><div><button type="button" class="secondary-btn" data-action="calendar-contact-confirm" data-id="${h(s.id)}" data-person="${h(s.personId)}">Hat stattgefunden ✓</button><button type="button" data-action="calendar-contact-dismiss" data-id="${h(s.id)}">Ignorieren</button></div></div>`).join('')}</section>`;
+}
+function calendarDeadlinePanel(){
+ if(!state||!calendarToken)return '';
+ const suggestions=deadlineSuggestions(calendarEvents,state.projects||{},state.calendarSuggestionDismissed||{},localDate());
+ if(!suggestions.length)return '';
+ return `<section class="work-card v568-calendar-hints"><div class="work-heading"><span>🎓 Prüfung & Deadlines aus Google Kalender</span><span class="quiet-tag">${suggestions.length} Vorschläge</span></div><p class="muted-line">Kein passendes Vorbereitungsprojekt erkannt. Kalendertermine sind unverbindliche Hinweise – bitte prüfen.</p>${suggestions.slice(0,5).map(s=>`<div class="v568-suggestion"><div><strong>${h(s.title)}</strong><small>${h(s.day)} · Noch kein passendes aktives Projekt erkannt</small></div><div><button type="button" class="primary-btn" data-action="calendar-deadline-create" data-id="${h(s.id)}">Vorbereitungsprojekt anlegen</button><button type="button" class="secondary-btn" data-action="calendar-deadline-dismiss" data-id="${h(s.id)}">Passt nicht</button></div></div>`).join('')}<small>Automatische Textzuordnung kann ähnliche Projekte übersehen. Vor dem Anlegen bestehende Projekte prüfen.</small></section>`;
+}
 function vaultScreen(){
  tab=['inbox','forecast','overview','someday','review','activity','projects','templates','next','flagged','hold'].includes(tab)?'today':tab;
  return chrome(`<section class="vault-compact" aria-label="Lokalen Tresor einrichten"><div class="vault-copy"><span class="vault-icon">${ico('lock',18)}</span><div><h2>${hasVault?'Tresor entsperren':'Lokalen Tresor einrichten'}</h2><p>${hasVault?'Deine Daten bleiben verborgen, bis du sie entsperrst.':'Einmalig eine Passphrase festlegen; deine lokalen Daten werden verschlüsselt gespeichert.'}</p></div></div>
  <form class="vault-form" id="vault-form" autocomplete="off"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" placeholder="Passphrase (mindestens 12 Zeichen)" autocomplete="off" />
  ${!hasVault?'<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" minlength="12" required autocomplete="off" placeholder="Passphrase wiederholen"/>':''}
  <button class="primary-btn" type="submit">${hasVault?'Entsperren':'Einrichten'} ${ico('arrow',15)}</button>
- ${!hasVault?'<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/>':''}</form></section>${todayWork(true)}`);
+ ${!hasVault?'<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/>':''}</form>${hasVault?`<div class="locked-capture-help"><button type="button" class="primary-btn" data-action="capture-focus" ${!sealedCaptureAvailable?'disabled':''}>⚡ Gedanken erfassen – ohne Entsperren</button><small>${sealedCaptureAvailable?'Schreibgeschützt verschlüsselter Eingangspuffer · wird nach Entsperren übernommen':'Einmal entsperren, um die verschlüsselte Schnellerfassung für dieses Gerät einzurichten.'}</small></div>`:''}</section>${todayWork(true)}`);
 }
-function todayScreen(){return chrome(`${occasionPanel()}${todayWork()}`);}
+function todayScreen(){return chrome(`${calendarDeadlinePanel()}${occasionPanel()}${todayWork()}`);}
 function homeScreen(){
  const k=state?.krakenPortfolio,valuation=k?.balances?krakenWealthSummary(k):null;
  const kraken=valuation?`<section class="work-card compass-kraken-home"><div><span class="page-overline">WEALTH / KRAKEN</span><strong>${valuation.covered?((valuation.totalEur).toLocaleString('de-AT',{style:'currency',currency:'EUR'})):'Noch nicht bewertet'}</strong><small>${valuation.complete?'Kraken Spot · EUR-Marktwert':'Nur teilweise bewertete Kraken-Positionen · keine Gesamtvermögenssumme'}</small></div><button type="button" data-tab="finance" class="secondary-btn">Finanz-Dashboard öffnen →</button></section>`:'';
@@ -998,11 +1015,11 @@ function homeScreen(){
 function captureOverlay(){
  return `<div class="capture-modal-layer" data-action="capture-close-backdrop">
  <section class="capture-modal" role="dialog" aria-modal="true" aria-labelledby="capture-modal-title" tabindex="-1">
- <div class="capture-modal-heading"><div><p class="capture-eyebrow">QUICK CAPTURE · INBOX</p><h2 id="capture-modal-title">Aus dem Kopf. In Compass.</h2></div><button type="button" class="capture-modal-close" data-action="capture-close" aria-label="Schnellerfassung schließen">${ico('plus',20)}</button></div>
+ <div class="capture-modal-heading"><div><p class="capture-eyebrow">${state?'QUICK CAPTURE · INBOX':'VERSCHLÜSSELTER EINGANG · TRESOR GESPERRT'}</p><h2 id="capture-modal-title">Aus dem Kopf. In Compass.</h2></div><button type="button" class="capture-modal-close" data-action="capture-close" aria-label="Schnellerfassung schließen">${ico('plus',20)}</button></div>
  <form id="capture-modal-form"><label for="capture-modal-input" class="sr-only">Neuer Gedanke</label>
  <textarea autofocus id="capture-modal-input" name="title" rows="3" maxlength="1000" required placeholder="Was möchtest du nicht vergessen?"></textarea>
  <details class="optional-capture"><summary>${ico('plus',15)} Notiz oder Link ergänzen <span>optional</span></summary><label for="capture-modal-note" class="sr-only">Zusätzliche Notiz</label><textarea id="capture-modal-note" name="note" maxlength="10000" rows="3" placeholder="Zusätzliche Informationen …"></textarea></details>
- <div class="capture-modal-foot"><span>${ico('lock',14)} Verschlüsselt und offline gespeichert</span><button class="primary-btn" type="submit">In Inbox erfassen ${ico('arrow',15)}</button></div></form>
+ <div class="capture-modal-foot"><span>${ico('lock',14)} ${state?'Im Tresor':'Sealed Capture · verschlüsselt, nur nach Entsperren lesbar'}</span><button class="primary-btn" type="submit">In Inbox erfassen ${ico('arrow',15)}</button></div></form>
  <p class="capture-modal-hint">Kein Projekt, keine Deadline · Entwurf bleibt beim Schließen bis zur Erfassung erhalten · Esc zum Schließen</p><button type="button" class="capture-bulk-shortcut" data-action="capture-bulk-open">Mehrere Folgepunkte erfassen →</button></section></div>`;
 }
 function captureBulkPanel(){
@@ -1267,7 +1284,7 @@ function timelinePanel(){
 function peopleMapMarkup(people,selected){
  const inspector=selected?`${relationshipInspectorMarkup(selected,state?.projects||{},localDate())}
  <section class="rel567-log"><h3>Kontakt dokumentieren</h3><div class="relationship-contact-quick">${CONTACT_TYPES.filter(([kind])=>['meeting','call','video','message','email'].includes(kind)).map(([kind,label])=>`<button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="${h(kind)}">${kind==='meeting'?'☕':kind==='call'?'☎':kind==='video'?'▣':kind==='message'?'💬':'✉'} ${h(label)}</button>`).join('')}</div>
- <form id="person-contact-form" class="compact-stack" data-id="${h(selected.id)}"><label>Datum<input type="date" name="day" max="${h(localDate())}" value="${h(localDate())}" required></label><label>Kontaktart<select name="type">${CONTACT_TYPES.map(([key,label])=>`<option value="${h(key)}" ${quickContactType===key?'selected':''}>${h(label)}</option>`).join('')}</select></label><label>Notiz (optional)<input name="note" maxlength="1200" placeholder="Was möchte ich behalten?"></label><button type="submit" class="secondary-btn">Kontakt bestätigen</button></form></section>`:'';
+ <form id="person-contact-form" class="compact-stack" data-id="${h(selected.id)}"><label>Datum<input type="date" name="day" max="${h(localDate())}" value="${h(localDate())}" required></label><label>Kontaktart<select name="type">${CONTACT_TYPES.map(([key,label])=>`<option value="${h(key)}" ${quickContactType===key?'selected':''}>${h(label)}</option>`).join('')}</select></label><label>Notiz (optional)<input name="note" maxlength="1200" placeholder="Was möchte ich behalten?"></label><button type="submit" class="secondary-btn" ${contactSaving?'disabled':''}>${contactSaving?'Speichert …':'Kontakt bestätigen'}</button></form>${contactSaveStatus?`<p class="contact-save-confirmation" role="status">${h(contactSaveStatus)}</p>`:''}</section>`:'';
  return relationshipMapView(people,selected,{focus:relationshipMapFocus,filter:relationshipMapFilter,today:localDate(),projects:state?.projects||{},inspector});
 }
 
@@ -1279,8 +1296,9 @@ function relationshipInspectorMarkup(person,projects,today){
  <form id="relationship-preferences-form" data-id="${h(person.id)}" class="relationship-pref-form">
  <div class="relationship-inline-fields"><label>Beziehungsart<select name="relationKind">${RELATION_KINDS.map(([key,label])=>`<option value="${key}" ${p.kind===key?'selected':''}>${label}</option>`).join('')}</select></label><label>Darstellung auf Karte<select name="genderMarker">${GENDER_MARKERS.map(([key,label])=>`<option value="${key}" ${p.gender===key?'selected':''}>${label}</option>`).join('')}</select></label></div>
  <label for="rel-closeness">Persönliche Nähe <strong id="rel-closeness-value">${p.closeness}/100</strong></label><div class="relationship-slider-line"><span aria-hidden="true">❄️</span><input id="rel-closeness" class="relationship-closeness-slider" type="range" name="closeness" min="0" max="100" step="1" value="${p.closeness}" aria-label="Persönliche Nähe"/><span aria-hidden="true">❤️</span></div>
- <label for="rel-cadence">Gewünschter Kontaktrhythmus <strong id="rel-cadence-value">${p.cadence?`${p.cadence} Tage`:'Nach Bedarf'}</strong></label><div class="relationship-slider-line"><span aria-hidden="true">💬</span><input id="rel-cadence" class="relationship-cadence-slider" type="range" name="cadenceIndex" min="0" max="8" step="1" value="${Math.max(0,CADENCE_DAYS.indexOf(p.cadence))}" aria-label="Kontaktrhythmus"/><span aria-hidden="true">🗓️</span></div>
+<label for="rel-cadence">Gewünschter Kontaktrhythmus <strong id="rel-cadence-value">${p.cadence?`${p.cadence} Tage`:'Nach Bedarf'}</strong></label><div class="relationship-slider-line"><span aria-hidden="true">💬</span><input id="rel-cadence" class="relationship-cadence-slider" type="range" name="cadenceIndex" min="0" max="8" step="1" value="${Math.max(0,CADENCE_DAYS.indexOf(p.cadence))}" aria-label="Kontaktrhythmus"/><span aria-hidden="true">🗓️</span></div>
  <div class="relationship-score-line"><span>${p.paused?'⏸ Kontaktimpulse pausiert':impulse.hasHistory&&p.cadence?`Kontaktimpuls ${impulse.score}/100 · letzter Kontakt ${impulse.daysSince} Tage her`:'Noch kein automatischer Kontaktimpuls'}</span><button type="submit" class="secondary-btn">Speichern</button></div><small>Der Rhythmus ist ein Wunsch, keine Verpflichtung. Treffen (5), Video (4), Telefon (3), Chat (2), E-Mail (1): unterschiedliche Kontaktgewichte, keine Bewertung der Beziehung.</small></form>
+ <details class="contact-care-settings" ${contactSettingsOpen?'open':''}><summary>⚙ Erweiterte Kontaktpflege</summary><form id="contact-care-form" data-id="${h(person.id)}"><label>Kontaktmodus<select name="mode">${CONTACT_MODES.map(([key,label])=>`<option value="${key}" ${careMode(person)===key?'selected':''}>${label}</option>`).join('')}</select></label><label class="contact-care-checkbox"><input type="checkbox" name="sharesHousehold" ${person.sharesHousehold?'checked':''}/> Lebt mit mir im selben Haushalt</label><small>Gemeinsamer Haushalt aktiviert automatisch Alltagskontakt. Bei Kollegen mit regelmäßigem Kontakt kannst du Alltagskontakt auswählen. Nähe bleibt unabhängig davon.</small><button type="submit" class="secondary-btn">Kontaktmodus speichern</button></form></details>
  <details class="relationship-personal" ${person.personalDetailsOpen?'open':''}><summary>Persönliches & Gemeinsamkeiten</summary><form id="relationship-details-form" data-id="${h(person.id)}" class="compact-stack"><label>Partner:in (falls bekannt)<input name="partnerName" maxlength="400" value="${h(person.partnerName||'')}"/></label><label>Kinder / Familie (optional)<input name="childrenInfo" maxlength="400" value="${h(person.childrenInfo||'')}" placeholder="Namen oder Merkpunkte"/></label><label>Gemeinsame Hobbys<input name="sharedHobbies" maxlength="400" value="${h(person.sharedHobbies||'')}"/></label><label>Wichtige Ereignisse<textarea name="importantEvents" rows="2" maxlength="1200">${h(person.importantEvents||'')}</textarea></label><label>Fürs nächste Catch-up merken<textarea name="catchUpNotes" rows="2" maxlength="1200">${h(person.catchUpNotes||'')}</textarea></label><button type="submit" class="secondary-btn">Merkpunkte speichern</button></form></details>
  <div class="relationship-projects"><div class="work-heading"><span>Verbundene Projekte</span><span class="quiet-tag">${linked.length}</span></div>${linked.map(id=>`<div class="relationship-project-row"><button type="button" data-action="person-project-open" data-id="${h(id)}">${h(projects[id].title)} ↗</button><button type="button" class="secondary-btn" data-action="person-project-unlink" data-id="${h(id)}" title="Verknüpfung lösen">×</button></div>`).join('')||'<p class="muted-line">Noch keine gemeinsamen Projekte verknüpft.</p>'}<form id="person-project-link-form" data-id="${h(person.id)}" class="relationship-project-link"><select name="projectId" aria-label="Projekt verknüpfen"><option value="">Projekt auswählen …</option>${usable.filter(x=>!linked.includes(x.id)).map(x=>`<option value="${h(x.id)}">${h(x.title)}</option>`).join('')}</select><button type="submit" class="secondary-btn">Verbinden</button></form><form id="person-project-create-form" data-id="${h(person.id)}" class="relationship-project-link"><input name="title" maxlength="140" placeholder="Neues Projekt, z. B. Urlaub gemeinsam planen" aria-label="Neues Projekt anlegen"/><button type="submit" class="secondary-btn">Projekt anlegen</button></form></div></section>`;
 }
@@ -1300,12 +1318,13 @@ function peopleScreen(){
  ${relationshipInspectorMarkup(selected,state?.projects||{},localDate())}
  <section class="people-agenda-first"><div class="work-heading"><span>${ico('list',17)} Jetzt zu besprechen</span><span class="quiet-tag">${related.length} Aufgaben · ${relatedInbox.length} Inbox</span></div><div class="people-agendas">${related.map(t=>`<div class="person-point-row"><button type="button" class="person-quick-check" data-action="person-task-done" data-id="${h(t.id)}" aria-label="${h(t.title)} als erledigt markieren" title="Aufgabe erledigen" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)}</button><details class="person-point" data-point="task" data-id="${h(t.id)}" ${personOpenPointId===t.id?'open':''}><summary><span class="person-point-symbol">${ico('checkSquare',16)}</span><span class="person-point-title"><strong>${h(t.title)}</strong><small>${h(t.workflow==='waiting'?'Waiting For':'Aufgabe / Agenda')}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="task" data-id="${h(t.id)}"><label>Notiz zu diesem Punkt<textarea name="note" maxlength="3000" rows="3" placeholder="Was haben wir besprochen?">${h(t.note||'')}</textarea></label>${state?.taskConflicts?.[t.id]?'<p class="person-point-warning">Bearbeitungskonflikt: Bitte zuerst in der Aufgabenansicht auflösen.</p>':''}<div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>Notiz speichern</button><button type="submit" name="intent" value="done" class="primary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)} Erledigt</button></div></form></details></div>`).join('')||'<p class="muted-line">Keine offenen Aufgaben mit diesem Personentag.</p>'}</div>${relatedInbox.length?`<section class="people-linked-inbox"><h3>${ico('inbox',16)} Noch in der Inbox · ${relatedInbox.length}</h3>${relatedInbox.map(r=>`<details class="person-point" data-point="inbox" data-id="${h(r.id)}" ${personOpenPointId===r.id?'open':''}><summary><span class="person-point-symbol">${ico('inbox',16)}</span><span class="person-point-title"><strong>${h(r.title)}</strong><small>Noch zu klären · kein erledigbarer Task</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="inbox" data-id="${h(r.id)}"><label>Gesprächsnotiz<textarea name="note" maxlength="10000" rows="3" placeholder="Was ist dazu besprochen worden?">${h(r.note||'')}</textarea></label><div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn">Notiz speichern</button><button type="submit" name="intent" value="discussed" class="primary-btn">${ico('check',15)} Besprochen &amp; archivieren</button></div><small>Archivieren ist keine Erledigung einer Aufgabe. Später kannst du aus der Inbox bei Bedarf eine Next Action erstellen.</small></form></details>`).join('')}</section>`:''}<form id="person-agenda-form" data-id="${h(selected.id)}" class="people-agenda-capture"><label>Gesprächsthema ergänzen<input name="title" required maxlength="180" placeholder="Was möchte ich mit dieser Person besprechen?"/></label><button type="submit" class="secondary-btn">${ico('plus',15)} Hinzufügen</button></form></section>
  <section class="people-relationship-card"><div class="work-heading"><span>${ico('people',17)} Kontaktverlauf</span><span class="quiet-tag">${contact?.items.length||0} bestätigt</span></div><div class="people-last-contact"><strong>${h(contactLabel)}</strong><small>${contact?.daysSince!==null?`${contact.daysSince} Tage seit dem letzten dokumentierten Kontakt`:'Noch keine Kontakte dokumentiert'}</small></div>
- ${contactImpulse(selected,localDate()).due?`<p class="people-contact-reminder">${ico('calendar',15)} Freiwilliger Kontaktimpuls: ${contact.daysSince} Tage seit dem letzten bestätigten Kontakt. Keine Verpflichtung.</p>`:''}
- <div class="relationship-contact-quick"><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="meeting">☕ Treffen</button><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="call">☎ Telefonat</button><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="video">▣ Video</button><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="message">💬 Nachricht</button><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="email">✉ E-Mail</button></div>${quickContactType?`<p class="relationship-log-hint">${h(contactTypeLabel(quickContactType))} gewählt – Datum und Notiz prüfen, dann ausdrücklich bestätigen.</p>`:''}<form id="person-contact-form" class="compact-stack" data-id="${h(selected.id)}"><div class="people-contact-fields"><label>Kontaktdatum<input name="day" type="date" required max="${h(localDate())}" value="${h(localDate())}"/></label><label>Art<select name="type">${CONTACT_TYPES.map(([value,label])=>`<option value="${h(value)}" ${quickContactType===value?'selected':''}>${h(label)}</option>`).join('')}</select></label></div><label>Kurze Notiz (optional)<input name="note" maxlength="1200" placeholder="Was möchte ich behalten?"/></label><button class="secondary-btn" type="submit">${ico('check',15)} Kontakt festhalten</button></form>
+ ${activeCare(selected)&&contactImpulse(selected,localDate()).due?`<p class="people-contact-reminder">${ico('calendar',15)} Freiwilliger Kontaktimpuls: ${contact.daysSince} Tage seit dem letzten bestätigten Kontakt. Keine Verpflichtung.</p>`:''}
+ <div class="relationship-contact-quick"><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="meeting">☕ Treffen</button><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="call">☎ Telefonat</button><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="video">▣ Video</button><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="message">💬 Nachricht</button><button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="email">✉ E-Mail</button></div>${quickContactType?`<p class="relationship-log-hint">${h(contactTypeLabel(quickContactType))} gewählt – Datum und Notiz prüfen, dann ausdrücklich bestätigen.</p>`:''}<form id="person-contact-form" class="compact-stack" data-id="${h(selected.id)}"><div class="people-contact-fields"><label>Kontaktdatum<input name="day" type="date" required max="${h(localDate())}" value="${h(localDate())}"/></label><label>Art<select name="type">${CONTACT_TYPES.map(([value,label])=>`<option value="${h(value)}" ${quickContactType===value?'selected':''}>${h(label)}</option>`).join('')}</select></label></div><label>Kurze Notiz (optional)<input name="note" maxlength="1200" placeholder="Was möchte ich behalten?"/></label><button class="secondary-btn" type="submit" ${contactSaving?'disabled':''}>${contactSaving?'Speichert …':ico('check',15)+' Kontakt festhalten'}</button></form>${contactSaveStatus?`<p class="contact-save-confirmation" role="status">${h(contactSaveStatus)}</p>`:''}
  <div class="people-contact-log">${contact?.items.slice(0,8).map(entry=>`<div class="people-contact-row"><div><strong>${h(entry.day)} · ${h(contactTypeLabel(entry.type))}</strong><small>Kontaktgewicht: ${contactWeight(entry.type)} / 5</small>${entry.note?`<small>${h(entry.note)}</small>`:''}</div><button type="button" class="people-delete-entry" data-action="person-contact-delete" data-id="${h(entry.id)}" aria-label="Kontakteintrag vom ${h(entry.day)} entfernen" title="Eintrag löschen">${ico('x',15)}</button></div>`).join('')||'<p class="muted-line">Hier erscheinen ausschließlich Kontakte, die du selbst bestätigst. Kalendertermine gelten nicht automatisch als Treffen.</p>'}${(contact?.items.length||0)>8?`<details><summary>Alle ${contact.items.length} Kontakte</summary>${contact.items.slice(8).map(entry=>`<div class="people-contact-row"><div><strong>${h(entry.day)} · ${h(contactTypeLabel(entry.type))}</strong><small>Kontaktgewicht: ${contactWeight(entry.type)} / 5</small>${entry.note?`<small>${h(entry.note)}</small>`:''}</div><button type="button" data-action="person-contact-delete" data-id="${h(entry.id)}" aria-label="Kontakteintrag entfernen">${ico('x',15)}</button></div>`).join('')}</details>`:''}</div>
  <p class="muted-line">Kontaktimpulse werden über den Rhythmus im Relationship Radar gesteuert, ausschließlich anhand selbst bestätigter Kontakte.</p></section>
  <div class="people-calendar"><div class="work-heading"><span>${ico('calendar',16)} Gemeinsame Google-Termine</span><span class="quiet-tag">${personEvents.upcoming.length} kommende</span></div>${personEvents.upcoming.slice(0,5).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · geplant</small></div>`).join('')||'<p class="muted-line">Keine zugeordneten künftigen Kalendertermine.</p>'}${personEvents.past.length?`<details><summary>${personEvents.past.length} vergangene Termine</summary>${personEvents.past.slice(0,6).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · Durchführung nicht bestätigt</small></div>`).join('')}</details>`:''}<small class="muted-line">Google Kalender wird nur im angemeldeten Browser gelesen. Vergangene Termine sind kein bestätigter Kontakt.</small></div>
 
+ ${calendarContactPanel(selected)}
  <details class="people-admin-details"><summary>Weitere Kontaktangaben und Einstellungen</summary> <form id="person-tag-form" class="compact-stack" data-id="${h(selected.id)}"><label>Personen-Tag<input name="tag" data-smart-tags maxlength="50" value="${h(selected.tag)}" required/></label><label>Namensvarianten für Kalender (optional)<input name="aliases" maxlength="200" value="${h(selected.aliases||'')}" placeholder="Spitzname, Kurzform …"/></label><button class="secondary-btn" type="submit">Zuordnung speichern</button><small>Das Tag verbindet offene Aufgaben und ungeklärte Inbox-Einträge mit dieser Person. Die Inbox-Einträge werden nicht automatisch zu Aufgaben. Kalendertermine werden anhand des Namens oder der angegebenen Varianten erkannt.</small></form>
  <form id="person-birthday-form" data-id="${h(selected.id)}" class="compact-stack person-birthday-form"><div class="work-heading"><span>${ico('calendar',16)} Geburtstag</span><span class="quiet-tag">${selected.birthdayMonthDay?`${h(selected.birthdayMonthDay.slice(3))}.${h(selected.birthdayMonthDay.slice(0,2))}.${selected.birthdayYear||''}`:'Nicht eingetragen'}</span></div>
  <div class="birthday-fields"><label>Tag<select name="day"><option value="">–</option>${Array.from({length:31},(_,i)=>i+1).map(n=>`<option value="${n}" ${Number(selected.birthdayMonthDay?.slice(3))===n?'selected':''}>${n}</option>`).join('')}</select></label><label>Monat<select name="month"><option value="">–</option>${Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}" ${Number(selected.birthdayMonthDay?.slice(0,2))===n?'selected':''}>${new Intl.DateTimeFormat('de-AT',{month:'long'}).format(new Date(2000,n-1,1))}</option>`).join('')}</select></label><label>Geburtsjahr (optional)<input type="number" name="year" min="1850" max="${new Date().getFullYear()}" placeholder="Unbekannt" value="${h(selected.birthdayYear??'')}"/></label></div>
@@ -1515,10 +1534,13 @@ async function reloadWatchSessions(){
  try{const [data,dev]=await Promise.all([request(config.apiUrl,authToken,'/api/watch/sessions'),request(config.apiUrl,authToken,'/api/watch/devices')]);watchSessions=data.sessions||[];watchDevices=dev.devices||[];watchError='';render();}
  catch(ex){watchError='Uhr-Daten derzeit nicht erreichbar ('+ex.message+').';render();}
 }
+function rememberPeopleScroll(){if(tab!=='people'||!state)return null;const selectors=['.content','.people-grid','.people-list','.rel567-overlay','.rel567-map-wrap','.people-contact-log'];return {windowY:window.scrollY||0,items:selectors.map(sel=>[sel,app.querySelector(sel)?.scrollTop||0]),selected:selectedPersonId};}
+function restorePeopleScroll(position){if(!position||tab!=='people'||position.selected!==selectedPersonId||typeof requestAnimationFrame!=='function')return;requestAnimationFrame(()=>{for(const [sel,value] of position.items){const el=app.querySelector(sel);if(el)el.scrollTop=value;}window.scrollTo?.({top:position.windowY,behavior:'instant'});});}
 function render(){
+ const scrollBeforeRender=rememberPeopleScroll();
  const feelingFocused=feelingOverlayOpen&&typeof document!=='undefined'&&document.activeElement?.closest?.('#fw65-dialog')?{id:document.activeElement.id||'',name:document.activeElement.dataset?.id||'',intensity:document.activeElement.dataset?.feelingIntensity||'',start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;
  const captureFocus=snapshotCaptureDraft();
- if(!state){feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';app.innerHTML=vaultScreen();bind();return;}
+ if(!state){feelingOverlayOpen=false;feelingDraft=newFeelingDraft();app.innerHTML=vaultScreen();bind();restoreCaptureDraft(captureFocus);return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  let html;
  try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
@@ -1529,7 +1551,7 @@ function render(){
    const rows=Object.values(state?.projects||{}).filter(p=>p&&!p.isTemplate).slice(0,200);
    html=chrome(`<section class="work-card" role="alert"><h2>Projektansicht eingeschränkt</h2><p>Beim Darstellen der Projekte ist ein Fehler aufgetreten. Deine Projektdaten wurden nicht verändert.</p><p>${rows.length} Projekte/Ordner gefunden.</p><button type="button" class="secondary-btn" data-tab="next">Next Actions öffnen</button></section>`);
  }
- app.innerHTML=html;bind();restoreCaptureDraft(captureFocus);
+ app.innerHTML=html;bind();restoreCaptureDraft(captureFocus);restorePeopleScroll(scrollBeforeRender);
  if(feelingFocused){let field=feelingFocused.id?app.querySelector('#'+feelingFocused.id):null;if(!field&&feelingFocused.name)field=app.querySelector('.fw65-emotion[data-id="'+feelingFocused.name+'"]');if(field?.focus){field.focus({preventScroll:true});if(Number.isInteger(feelingFocused.start)&&Number.isInteger(feelingFocused.end)&&typeof field.setSelectionRange==='function')try{field.setSelectionRange(feelingFocused.start,feelingFocused.end);}catch{}}}
  if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto!==false&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
    requestAnimationFrame(()=>refreshPublicKrakenPrices(false));
@@ -1549,7 +1571,18 @@ function bind() {
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
       prepareTasks(state);eventState(state);prunePastEvents(state,localDate());await persist();
-      if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit.');
+      let recoveryMessage='';
+      try {
+        await vault.setupSealedCapture();sealedCaptureAvailable=true;
+        const pending=await vault.readSealedCaptures();
+        if(pending.length){
+          for(const capture of pending){if(state.records[capture.id])continue;const record={id:capture.id,title:capture.title,note:capture.note||'',tags:[],deleted:false,updatedAt:capture.createdAt||stamp()};state.records[record.id]=record;state.pending.push(makeMutation(record));state.history.push({type:'captured',at:record.updatedAt,id:record.id});}
+          await persist(); // Only acknowledge after durable encrypted vault write.
+          await vault.acknowledgeSealedCaptures(pending.map(x=>x.id));
+          recoveryMessage=` · ${pending.length} verschlüsselte Schnellnotiz(en) übernommen`;
+        }
+      }catch(captureError){recoveryMessage=' · Schnellerfassung prüfen: '+captureError.message;}
+      if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
 
@@ -1665,11 +1698,19 @@ function bind() {
     }
    });}
 
+  const careForm=app.querySelector('#contact-care-form');if(careForm){careForm.closest('details')?.addEventListener('toggle',ev=>{contactSettingsOpen=ev.currentTarget.open;});careForm.onsubmit=async ev=>{ev.preventDefault();const id=careForm.dataset.id;const fd=new FormData(careForm);if(!state?.people?.[id])return;const mode=String(fd.get('mode')||'occasional');if(!CONTACT_MODES.some(([k])=>k===mode))return;await mutate(s=>{s.people[id].contactMode=fd.has('sharesHousehold')?'regular':mode;s.people[id].sharesHousehold=fd.has('sharesHousehold');s.people[id].contactPaused=mode==='paused';});contactSettingsOpen=true;contactSaveStatus='Kontaktmodus gespeichert ✓';render();};}
   const contactForm=app.querySelector('#person-contact-form');if(contactForm)contactForm.onsubmit=async ev=>{
     ev.preventDefault();const id=contactForm.dataset.id;if(!state?.people?.[id])return;
     const fd=new FormData(contactForm),entry={id:crypto.randomUUID(),day:String(fd.get('day')||''),type:String(fd.get('type')||''),note:String(fd.get('note')||'').trim()};
-    try {await mutate(s=>{s.people[id]=addContactEntry(s.people[id],entry,localDate()).person;});quickContactType='';toast('Bestätigter Kontakt im lokalen Tresor gespeichert.');}
-    catch(ex){toast(ex.message,true);}
+    if(contactSaving)return;
+    if((state.people[id].contactLog||[]).some(x=>x.day===entry.day&&x.type===entry.type&&(x.note||'')===entry.note)){
+      contactSaveStatus='Dieser Kontakt ist bereits dokumentiert ✓';render();return;
+    }
+    contactSaving=true;contactSaveStatus='Speichert …';
+    const scroll=rememberPeopleScroll();
+    try {await mutate(s=>{s.people[id]=addContactEntry(s.people[id],entry,localDate()).person;});quickContactType='';contactSaveStatus='✓ Kontakt gespeichert – im Verlauf sichtbar';contactSaving=false;render();restorePeopleScroll(scroll);}
+    catch(ex){contactSaving=false;contactSaveStatus='Speichern fehlgeschlagen · bitte erneut versuchen';render();restorePeopleScroll(scroll);const f=app.querySelector('#person-contact-form');if(f){f.elements.day.value=entry.day;f.elements.type.value=entry.type;f.elements.note.value=entry.note;}error=ex.message;}
+
   };
   const reviewDaysForm=app.querySelector('#person-review-days-form');if(reviewDaysForm)reviewDaysForm.onsubmit=async ev=>{
     ev.preventDefault();const id=reviewDaysForm.dataset.id;if(!state?.people?.[id])return;
@@ -1704,9 +1745,9 @@ function bind() {
   app.querySelectorAll('#capture-form, #capture-modal-form').forEach(form=>form.onsubmit=async ev=>{
     ev.preventDefault();
     const submit=form.querySelector('[type=submit]');if(submit)submit.disabled=true;
-    try {const data=new FormData(form);await addCapture(data.get('title'),data.get('note'));captureOverlayOpen=false;
+    try {const data=new FormData(form);if(state)await addCapture(data.get('title'),data.get('note'));else await vault.appendSealedCapture(data.get('title'),data.get('note'));captureOverlayOpen=false;
       captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;
-      notice='Sicher in deiner Inbox gespeichert'+(authToken?' · Cloud-Abgleich vorgemerkt':' · nur auf diesem Gerät')+'.';error='';render();
+      notice=state?'Sicher in deiner Inbox gespeichert'+(authToken?' · Cloud-Abgleich vorgemerkt':' · nur auf diesem Gerät')+'.':'Verschlüsselt vorgemerkt. Nach dem Entsperren gelangt der Eintrag in deine Inbox.';error='';render();
     }catch(ex){if(submit)submit.disabled=false;toast(ex.message,true);}
   });
   const bulkDetails=app.querySelector('#capture-bulk-details');if(bulkDetails)bulkDetails.ontoggle=()=>{captureBulkOpen=bulkDetails.open;};
@@ -2629,11 +2670,11 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='people-tab'){if(['list','map'].includes(id)){peopleTab=id;relationshipMapFocus=false;render();}return;}
     if(action==='rel567-focus'){relationshipMapFocus=!relationshipMapFocus;render();app.querySelector('.rel567-overlay')?.focus?.();return;}
     if(action==='rel567-filter'){if(['all','family','friend','colleague','partner','impulse','project'].includes(id)){relationshipMapFilter=id;render();}return;}
-    if(action==='person-quick-log'){if(!state?.people?.[id])return;selectedPersonId=id;quickContactType=quickContactType||'call';render();const form=app.querySelector('#person-contact-form');form?.querySelector('[name="note"]')?.focus?.();return;}
-    if(action==='person-pause-toggle'){if(!state?.people?.[id])return;await mutate(s=>{s.people[id]=pauseContact(s.people[id],s.people[id].contactPaused!==true,localDate());});toast(state.people[id].contactPaused?'Kontaktimpulse pausiert.':'Kontaktimpulse wieder aktiv.');return;}
+    if(action==='person-quick-log'){if(!state?.people?.[id])return;contactSaveStatus='';selectedPersonId=id;quickContactType=quickContactType||'call';render();const form=app.querySelector('#person-contact-form');form?.querySelector('[name="note"]')?.focus?.();return;}
+    if(action==='person-pause-toggle'){if(!state?.people?.[id])return;await mutate(s=>{s.people[id]=pauseContact(s.people[id],s.people[id].contactPaused!==true,localDate());s.people[id].contactMode=s.people[id].contactPaused?'paused':'intentional';});toast(state.people[id].contactPaused?'Kontaktimpulse pausiert.':'Kontaktimpulse wieder aktiv.');return;}
     if(action==='person-project-open'){if(!state?.projects?.[id])return;selectedProjectId=id;tab='projects';render();return;}
     if(action==='person-project-unlink'){if(!state?.people?.[selectedPersonId])return;await mutate(s=>{s.people[selectedPersonId].relatedProjectIds=(s.people[selectedPersonId].relatedProjectIds||[]).filter(x=>x!==id);});toast('Projektverknüpfung gelöst.');return;}
-    if(action==='person-select'){selectedPersonId=id;personOpenPointId='';quickContactType='';render();return;}
+    if(action==='person-select'){contactSaveStatus='';selectedPersonId=id;personOpenPointId='';quickContactType='';render();return;}
     if(action==='person-contact-delete'){
       const person=state?.people?.[selectedPersonId]||Object.values(state?.people||{}).find(p=>p.contactLog?.some(x=>x.id===id));
       if(!person?.contactLog?.some(x=>x.id===id)||!confirm('Diesen dokumentierten Kontakt entfernen?'))return;
@@ -2773,6 +2814,27 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       await mutate(s=>{if(action==='project-conflict-remote'&&conflict.remote){s.projects[id]=conflict.remote;s.projectVersions[id]=conflict.remote.version;delete s.projectPending[id];}
         else {s.projectVersions[id]=conflict.remote?.version||0;s.projectPending[id]=true;}delete s.projectConflicts[id];});return;
     }
+    if(action==='calendar-contact-confirm'){
+      const personId=[...app.querySelectorAll('[data-action="calendar-contact-confirm"]')].find(el=>el.dataset.id===id)?.dataset.person;
+      const e=calendarEvents.find(x=>x.id===id),p=state?.people?.[personId];if(!e||!p)return;
+      const entry={id:crypto.randomUUID(),day:calendarDate(e),type:'meeting',note:`Kalender: ${String(e.summary||'Termin').slice(0,140)}`,sourceEventId:e.id};
+      if(!confirm(`Hat das Treffen „${e.summary||'Termin'}“ mit ${p.name} tatsächlich stattgefunden?`))return;
+      await mutate(s=>{s.people[personId]=addContactEntry(s.people[personId],entry,localDate()).person;});contactSaveStatus='✓ Kalender-Treffen bestätigt und gespeichert';return;
+    }
+    if(action==='calendar-contact-dismiss'||action==='calendar-deadline-dismiss'){
+      await mutate(s=>{s.calendarSuggestionDismissed??={};s.calendarSuggestionDismissed[id]=localDate();});return;
+    }
+    if(action==='calendar-deadline-create'){
+      const e=calendarEvents.find(x=>x.id===id);if(!e||!state)return;
+      const found=deadlineSuggestions([e],state.projects||{},state.calendarSuggestionDismissed||{},localDate()).length;
+      if(!found)return toast('Projekt vorhanden oder Termin kein gültiger Vorschlag.',true);
+      const title=String(e.summary||'Prüfungsvorbereitung').trim().slice(0,140);
+      if(!confirm(`Vorbereitungsprojekt für „${title}“ am ${calendarDate(e)} anlegen? Bitte Termin und bestehende Projekte prüfen.`))return;
+      const project={id:crypto.randomUUID(),title:`Vorbereitung: ${title}`.slice(0,140),outcome:`Vorbereitet für den Kalendertermin am ${calendarDate(e)}`,category:'Allgemein',status:'active',dueDate:calendarDate(e),reviewIntervalDays:7,reviewedAt:null,kind:'project',folderIcon:null,isTemplate:false,projectType:'parallel',parentId:null,sortOrder:0,calendarSourceId:id};
+      if(!validProject(project))return toast('Ungültige Projektdaten.',true);
+      await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;s.calendarSuggestionDismissed??={};s.calendarSuggestionDismissed[id]=localDate();});
+      selectedProjectId=project.id;toast('Vorbereitungsprojekt bestätigt und angelegt. Bitte nächste Schritte ergänzen.');return;
+    }
     if(action==='calendar-connect'){await connectCalendar();return;}
     if(action==='calendar-refresh'){await fetchCalendar();return;}
     if(action==='project-exchange-export'){
@@ -2782,7 +2844,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='capture-bulk-open'){captureOverlayOpen=false;captureBulkOpen=true;tab='inbox';render();return;}
     if(action==='capture-bulk-clear'){captureBulkPreview=null;captureBulkRaw='';captureBulkOpen=false;render();return;}
     if(action==='capture-focus'){
-      if(!state){captureAfterUnlock=true;document.querySelector('#passphrase')?.focus();return;}
+      if(!state&&!sealedCaptureAvailable){captureAfterUnlock=true;document.querySelector('#passphrase')?.focus();return;}
       captureNeedsInitialFocus=!captureOverlayOpen;
       captureOverlayOpen=true;render();return;
     }
@@ -3085,7 +3147,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
       await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
     }
-    if(action==='lock'){feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){
@@ -3378,9 +3440,9 @@ setInterval(()=>{
 },60000);
 window.addEventListener('offline',render);
 for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();},{passive:true});
-setInterval(()=>{if(state&&Date.now()-lastActivity>15*60*1000){feelingOverlayOpen=false;feelingDraft=newFeelingDraft();smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
+setInterval(()=>{if(state&&Date.now()-lastActivity>15*60*1000){feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
 (async()=>{
   try{config=await fetch(`${import.meta.env.BASE_URL}runtime-config.json`,{cache:'no-store'}).then(r=>r.json());}
   catch{config={};}
-  hasVault=await vault.exists();if(bootCapture&&hasVault){captureAfterUnlock=true;}render();if(bootCapture)history.replaceState(null,'',location.pathname);
+  hasVault=await vault.exists();sealedCaptureAvailable=hasVault?await vault.sealedCaptureReady():false;if(bootCapture&&hasVault&&sealedCaptureAvailable){captureAfterUnlock=false;captureOverlayOpen=true;captureNeedsInitialFocus=true;}render();if(bootCapture)history.replaceState(null,'',location.pathname);
 })().catch(ex=>{app.innerHTML=`<div class="fatal">Lokaler Speicher nicht verfügbar: ${h(ex.message)}. Bitte einen sicheren Browserkontext verwenden.</div>`;});

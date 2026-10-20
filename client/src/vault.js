@@ -70,13 +70,14 @@ export async function save(state) {
 }
 export function lock(){key=null;}
 export async function exportEncrypted() {
-  return {application:'Compass',vaultVersion:1,meta:await kvGet('meta'),payload:await kvGet('payload')};
+  return {application:'Compass',vaultVersion:1,meta:await kvGet('meta'),payload:await kvGet('payload'),sealedCapture:{publicKey:await kvGet(publicCaptureKey),privateKey:await kvGet(privateCaptureKey),queue:await kvGet(lockedQueueKey)}};
 }
 export async function importEncrypted(bundle) {
   if(await exists())throw new Error('Import nur in einem neuen, leeren Browser-Tresor möglich.');
   if(bundle?.application!=='Compass'||bundle?.vaultVersion!==1||!bundle.meta?.salt||!bundle.payload?.data)
     throw new Error('Ungültiger Compass-Tresorexport.');
   await kvPut('meta',bundle.meta);await kvPut('payload',bundle.payload);
+  if(bundle.sealedCapture?.publicKey&&bundle.sealedCapture?.privateKey){await kvPut(privateCaptureKey,bundle.sealedCapture.privateKey);await kvPut(publicCaptureKey,bundle.sealedCapture.publicKey);if(Array.isArray(bundle.sealedCapture.queue))await kvPut(lockedQueueKey,bundle.sealedCapture.queue);}
 }
 
 // Compass bearer credentials are encrypted using the active local vault key.
@@ -100,3 +101,70 @@ export async function loadSession() {
   }catch{return null;}
 }
 export async function clearSession() {await kvDelete('auth_session');}
+
+// Write-only quick capture. RSA private key is AES-GCM-wrapped by the vault key.
+// Nothing in the public-key queue can be decrypted while the vault is locked.
+// IndexedDB holds ciphertext only, and the plaintext never leaves this device.
+const lockedQueueKey='sealed_capture_queue_v568';
+const publicCaptureKey='sealed_capture_public_v568';
+const privateCaptureKey='sealed_capture_private_v568';
+let captureQueueSerial=Promise.resolve();
+export async function setupSealedCapture(){
+ if(!key)throw Error('Tresor muss zum Einrichten entsperrt sein.');
+ const priorPublic=await kvGet(publicCaptureKey),priorPrivate=await kvGet(privateCaptureKey);
+ if(priorPublic&&priorPrivate)return;
+ if(priorPublic||priorPrivate)throw Error('Unvollständiger Schnellerfassungsschlüssel – bitte Backup prüfen.');
+ const pair=await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['encrypt','decrypt']);
+ const pkcs8=await crypto.subtle.exportKey('pkcs8',pair.privateKey);
+ const spki=await crypto.subtle.exportKey('spki',pair.publicKey);
+ const iv=crypto.getRandomValues(new Uint8Array(12));
+ const wrapped=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,pkcs8);
+ // Persist private key before making the public key available.
+ await kvPut(privateCaptureKey,{iv:to64(iv),data:to64(new Uint8Array(wrapped))});
+ await kvPut(publicCaptureKey,to64(new Uint8Array(spki)));
+}
+export async function sealedCaptureReady(){return !!(await kvGet(publicCaptureKey)&&await kvGet(privateCaptureKey));}
+export async function appendSealedCapture(title,note=''){
+ const cleanTitle=String(title||'').trim(),cleanNote=String(note||'').trim();
+ if(!cleanTitle||cleanTitle.length>1000||cleanNote.length>10000)throw Error('Titel oder Notiz ist ungültig.');
+ const run=async()=>{
+  const encoded=await kvGet(publicCaptureKey);if(!encoded)throw Error('Einmal den Tresor entsperren, um die sichere Schnellerfassung zu aktivieren.');
+  const publicKey=await crypto.subtle.importKey('spki',from64(encoded),{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);
+  const aesBytes=crypto.getRandomValues(new Uint8Array(32)),aesKey=await crypto.subtle.importKey('raw',aesBytes,'AES-GCM',false,['encrypt']);
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const id=crypto.randomUUID();
+  const payload=enc.encode(JSON.stringify({id,title:cleanTitle,note:cleanNote,createdAt:new Date().toISOString()}));
+  const encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv},aesKey,payload);
+  const wrappedKey=await crypto.subtle.encrypt({name:'RSA-OAEP'},publicKey,aesBytes);
+  const queue=await kvGet(lockedQueueKey)||[];
+  if(queue.length>=100)throw Error('Sicherer Eingangspuffer voll. Bitte den Tresor entsperren.');
+  queue.push({id,iv:to64(iv),data:to64(new Uint8Array(encrypted)),wrapped:to64(new Uint8Array(wrappedKey))});
+  await kvPut(lockedQueueKey,queue);
+  return queue.length;
+ };
+ const result=captureQueueSerial.then(run);captureQueueSerial=result.catch(()=>{});return result;
+}
+export async function readSealedCaptures(){
+ if(!key)throw Error('Tresor gesperrt.');
+ await captureQueueSerial;
+ const wrapped=await kvGet(privateCaptureKey);if(!wrapped)return [];
+ const decrypted=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(wrapped.iv)},key,from64(wrapped.data));
+ const privateKey=await crypto.subtle.importKey('pkcs8',decrypted,{name:'RSA-OAEP',hash:'SHA-256'},false,['decrypt']);
+ const queue=await kvGet(lockedQueueKey)||[];
+ const entries=[];
+ for(const item of queue){
+  const secret=await crypto.subtle.decrypt({name:'RSA-OAEP'},privateKey,from64(item.wrapped));
+  const aes=await crypto.subtle.importKey('raw',secret,'AES-GCM',false,['decrypt']);
+  const plaintext=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(item.iv)},aes,from64(item.data));
+  const parsed=JSON.parse(dec.decode(plaintext));
+  if(parsed.id!==item.id)throw Error('Sichere Erfassung: Integritätsprüfung fehlgeschlagen.');
+  entries.push(parsed);
+ }
+ return entries;
+}
+export async function acknowledgeSealedCaptures(ids){
+ if(!key)throw Error('Tresor gesperrt.');
+ const selected=new Set(ids);await captureQueueSerial;
+ const queue=await kvGet(lockedQueueKey)||[];
+ await kvPut(lockedQueueKey,queue.filter(item=>!selected.has(item.id)));
+}

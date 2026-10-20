@@ -7,6 +7,7 @@ import {sleepMinutes} from './insights.js';
 import {joinedFitnessDays} from './insights-fitness.js';
 import {financialHealthEvidence} from './financial-health-v5672.js';
 import {contactImpulse,preference} from './relationship-radar-v564.js';
+import {activeCare,relationshipReview} from './relationship-intelligence-v568.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp=x=>Math.max(0,Math.min(100,Math.round(x)));
@@ -135,12 +136,17 @@ export function buildLifeBalanceRadar(state={}, {today='2026-10-20',period=7,hea
  finance.evidence=ledger;
  // The 0.5.64 relationship cadence and pause state are authoritative. A paused
  // contact is excluded; no one is scored for distance or closeness alone.
- const participants=!historicalOnly?Object.values(state.people||{}).filter(p=>preference(p).cadence>0&&!preference(p).paused).map(p=>contactImpulse(p,today)).filter(p=>p.hasHistory):[];
+ const participants=!historicalOnly?Object.values(state.people||{}).filter(p=>activeCare(p)&&!preference(p).paused).map(p=>contactImpulse(p,today)).filter(p=>p.hasHistory):[];
  const due=participants.filter(p=>p.due).length;
  const people=axis('people','Kontakte',participants.length?100-due/participants.length*100:null,
   participants.length?`${participants.length-due} von ${participants.length} im gewünschten Kontaktrhythmus · ${due} Kontaktimpulse fällig`:'Noch keine aktiven Kontaktintervalle mit bestätigtem Verlauf',
   'Relationship Radar 0.5.64: individueller Kontaktrhythmus und Pause/Play berücksichtigt; kein Beziehungsqualitäts- oder Nähe-Score.','people',null,participants.length,null);
- people.evidence={covered:participants.length-due,total:participants.length,due};
+ const contactReview=!historicalOnly?relationshipReview(state.people||{},today):null;
+ people.evidence={covered:participants.length-due,total:participants.length,due,
+  latest:(contactReview?.recent||[]).slice(0,5).map(x=>({person:x.personName,day:x.day,type:x.type})),
+  reachOut:(contactReview?.due||[]).slice(0,6).map(x=>({person:x.person?.name||'',days:x.daysSince,threshold:x.threshold})),
+  noLog:(contactReview?.forgotten||[]).slice(0,5).map(x=>x.name),
+  drift:(contactReview?.drift||[]).map(x=>({person:x.person?.name||'',days:x.daysSince,usual:x.usualDays}))};
  const axes=[sleep,activity,gtd,finance,people,body,recovery,work];
  const known=axes.filter(x=>x.score!=null);
  return {axes,period:n,start,today,goals:g,coverage:known.length,total:axes.length,mean:known.length?Math.round(mean(known.map(x=>x.score))):null};
@@ -176,8 +182,10 @@ export function balanceAxisInspector(axis,model){
    <p class="lbr672-fine">${e.excluded} Eigen-/Kapitaltransfers ausgeschlossen (davon ${e.excludedBy?.invest||0} Sparen/Anlagen), ${e.pending} ungeprüfte und ${e.unknown} unklar zugeordnete Buchungen. ${e.wealth.available?'Vermögensvergleich '+esc(e.wealth.first)+'–'+esc(e.wealth.last)+': keine Renditeberechnung.':'Noch kein vollständiger Vermögenszeitvergleich.'}</p>`;
  }else if(axis.key==='people'){
   const p=axis.evidence||{};
-  computation='Score = Anteil der aktuell im selbst gewählten Kontaktrhythmus befindlichen Kontakte × 100. Eine pausierte Person wird nicht mitgerechnet. Das bewertet keine Beziehungsqualität.';
-  evidence=`${p.covered??0} von ${p.total??0} im gewünschten Rhythmus · ${p.due??0} Kontaktimpulse fällig.`;
+  computation='Score = Anteil aktiver, selbst gewählter Kontaktziele, deren Rhythmus noch nicht fällig ist. Haushalt, alltägliche Arbeitskontakte, Pausen und Beziehungen ohne Kontaktziel sind ausgeschlossen. Keine Bewertung von Nähe oder Beziehungsqualität.';
+  evidence=`${p.covered??0} von ${p.total??0} im gewünschten Rhythmus · ${p.due??0} Kontaktimpulse fällig. Nur ausdrücklich dokumentierte Kontakte zählen.`;
+  const list=(xs,formatter)=>xs.map(formatter).join('');
+  breakdown=`<div class="lbr568-contact-insights"><h4>Letzte dokumentierte Interaktionen</h4>${p.latest?.length?list(p.latest,x=>`<div class="lbr568-contact-row"><strong>${esc(x.person)}</strong><small>${esc(x.day)} · ${esc(x.type)}</small></div>`):'<p class="lbr672-fine">Noch keine Interaktionen dokumentiert.</p>'}<h4>Wieder einmal melden?</h4>${p.reachOut?.length?list(p.reachOut,x=>`<div class="lbr568-contact-row"><strong>${esc(x.person)}</strong><small>Letzter Kontakt vor ${Number(x.days)||0} Tagen · Wunschintervall etwa ${Number(x.threshold)||0} Tage</small></div>`):'<p class="lbr672-fine">Aktuell kein Kontaktimpuls fällig.</p>'}${p.drift?.length?`<h4>Aus dem Blick geraten?</h4>${list(p.drift,x=>`<div class="lbr568-contact-row"><strong>${esc(x.person)}</strong><small>Letzter Eintrag vor ${Number(x.days)||0} Tagen · davor etwa alle ${Number(x.usual)||0} Tage dokumentiert</small></div>`)}`:''}${p.noLog?.length?`<h4>Noch kein Kontakt dokumentiert</h4>${list(p.noLog,x=>`<div class="lbr568-contact-row"><strong>${esc(x)}</strong><small>Keine dokumentierte Interaktion · keine Aussage darüber, ob ihr euch gesehen habt</small></div>`)}`:''}<p class="lbr672-fine">Fehlende Protokolle beweisen keinen fehlenden Kontakt. Vorschläge sind freiwillig.</p></div>`;
  }else if(axis.key==='gtd'){
   computation='Start bei 100; je offenem Inbox-Eintrag −7, je aktivem Projekt ohne Next Action −12 und je überfälliger Aufgabe −9 Punkte; begrenzt auf 0–100. Nur ein Organisationsindikator.';
  }else if(axis.key==='sleep'){

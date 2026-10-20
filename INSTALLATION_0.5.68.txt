@@ -1,0 +1,18 @@
+Compass 0.5.68 – Installation
+===========================
+
+Voraussetzung: installiertes Compass 0.5.67.2 (für Patch). Alle anderen Versionen: Full Source verwenden.
+
+1. Bestehende lokale Daten: Vor Änderungen unter System den VERSCHLÜSSELTEN Tresorexport erstellen und sicher aufbewahren.
+2. Patch: Inhalt von Compass_0.5.68_PATCH_FROM_0.5.67.2.zip im bisherigen Source-Repository an denselben relativen Pfaden überschreiben; neue Dateien hinzufügen.
+   Oder Full: Compass_0.5.68_FULL_SOURCE.zip in ein neues Verzeichnis entpacken.
+3. Anwendungsabhängigkeiten mit `npm ci` (oder bei fehlendem Lockfile entsprechend `npm install`) installieren; `npm run build` durchführen; erzeugtes Frontend wie gewohnt deployen. Dieser Release liegt als Source-ZIP vor, nicht als vorkompiliertes dist/. In dieser Prüf-Umgebung war Vite nicht vorhanden.
+4. Kein D1-Schema-Update erforderlich. Bestehende Tresordaten werden nicht manuell migriert oder gelöscht.
+5. Nach dem ersten Entsperren richtet Compass die verschlüsselte Schnellerfassung im Hintergrund ein. Danach Tresor sperren und die Schnellerfassung über die + Schaltfläche prüfen. Beim nächsten Entsperren sollte die Notiz in der Inbox sein.
+6. Unter Menschen -> Person -> Erweiterte Kontaktpflege ggf. „Regelmäßiger Alltagskontakt“ bzw. „Gemeinsamer Haushalt“ wählen. Ein vorhandener Rhythmus bleibt ansonsten erhalten.
+7. Google Calendar in Compass verbinden und aktualisieren. Unter Heute und Forecast erscheinen mögliche Prüfungs-/Abgabetermin-Vorschläge; im Personen-Inspector mögliche vergangene Treffen. Diese Vorschläge grundsätzlich überprüfen und manuell bestätigen.
+8. Unter Insights -> Life Balance Radar -> Kontakte Details öffnen und neue Einträge bzw. Kontaktimpulse prüfen.
+
+SICHERHEIT: Bitte die alte Installationskopie und das verschlüsselte Backup aufbewahren, bis Captures, Inbox, Kalender und Kontakte getestet wurden. Quick-Capture-Schlüssel und gepufferte Ciphertexte werden durch den neuen Vollbackup-Export eingeschlossen; ein Backup aus einer älteren Version enthält sie nicht.
+
+QUALITÄT: 682/682 Node-Tests bestanden; JavaScript und Worker Syntaxchecks bestanden. Vite-Produktionsbuild, Browsertest und Live-Test mit deinem eigenen Vault noch offen.

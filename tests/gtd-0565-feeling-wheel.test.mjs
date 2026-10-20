@@ -61,6 +61,6 @@ test('0.5.65 safely escapes user note content in HTML, never interpolates as mar
 test('0.5.65 browser routes feeling wheel globally and stores it only through encrypted vault mutation',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  const css=readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');
- for(const token of ['COMPASS_CLIENT_VERSION=\'0.5.67.2\'','fw65-top-trigger','feeling-open','feeling-save','validatedCheckin','appendCheckin(s,entry)','feelingReview','feelingInsights','feelingOverlay','feelingDraft=newFeelingDraft()'])assert.ok(main.includes(token),token);
+ for(const token of ['COMPASS_CLIENT_VERSION=\'0.5.68\'','fw65-top-trigger','feeling-open','feeling-save','validatedCheckin','appendCheckin(s,entry)','feelingReview','feelingInsights','feelingOverlay','feelingDraft=newFeelingDraft()'])assert.ok(main.includes(token),token);
  assert.match(css,/fw65-wheel/);assert.ok(!main.includes('/api/feelings'));
 });

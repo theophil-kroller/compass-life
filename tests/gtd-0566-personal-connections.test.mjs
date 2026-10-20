@@ -55,7 +55,7 @@ test('0.5.66 global integration and mobile Insights tab remain available',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  const insights=readFileSync(new URL('../client/src/insights.js',import.meta.url),'utf8');
  const css=readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0.5.67.2'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0.5.68'/);
  assert.match(main,/insightTab==='connections'/);
  assert.match(main,/action==='connection-emotion'/);
  assert.match(main,/action==='connection-period'/);
