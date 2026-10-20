@@ -1,0 +1,24 @@
+Compass 0.5.66 – Personal Intelligence / Radar-Korrektur
+======================================================
+
+PATCH von 0.5.65:
+  1. Den funktionierenden Stand und den lokalen verschlüsselten Vault sichern.
+  2. Compass_0.5.66_PATCH_FROM_0.5.65.zip im Repository-Stammverzeichnis entpacken und gleichnamige Dateien ersetzen.
+  3. Mit installierten Abhängigkeiten npm ci (falls nötig) und npm run build ausführen.
+  4. Änderungen committen und den bestehenden Deployment-Workflow auslösen.
+  5. Neu laden, bei einer PWA gegebenenfalls die Anwendung neu starten.
+
+FULL SOURCE:
+  Compass_0.5.66_FULL_SOURCE.zip enthält den vollständigen aktuellen Quellenstand.
+
+TESTEN:
+  - Insights → Life Balance Radar: Finanzachse sollte die Bankhistorie erkennen und entweder einen (ggf. vorläufigen) historischen Cashflow-Score oder einen konkret begründeten Datenmangel anzeigen.
+  - Auf der Startseite: Falls Achsen leer sind, „Warum fehlen Werte?“ öffnen.
+  - Prüfen, dass bekannte Eigenüberträge nicht als Einkommen/Verbrauch erscheinen.
+  - Insights → Zusammenhänge: Gefühle, Zeitraum und Messdaten vergleichen. Ohne freiwillige Check-ins keine fiktiven Beobachtungstage.
+  - Weekly Review: Zugang zu „Zusammenhänge“ prüfen.
+  - Kontakte, Fitdays und bestehende Aufgaben-/Finanzdaten müssen unverändert erhalten bleiben.
+
+KEINE D1-MIGRATION, KEIN VAULT-RESET.
+
+Tests: 663/663 erfolgreich; Worker-Syntax erfolgreich. Vite konnte hier mangels installierter Abhängigkeit nicht ausgeführt werden. Live-Browser-/Vault-Abnahme noch offen.

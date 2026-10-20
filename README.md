@@ -1,3 +1,5 @@
+> **Aktueller Stand: Compass 0.5.66 – Zusammenhänge (Feeling Wheel × Alltag) und verbesserte Datenabdeckung im Life Balance Radar.** Siehe [Changelog](CHANGELOG_0.5.66.md) und [Installation](INSTALLATION_0.5.66.txt).
+
 > **Aktueller Stand: Compass 0.5.63 – Life Balance Radar (inkl. Zeitspuren, Details siehe CHANGELOG_0.5.63.md).**
 
 <!-- Compass 0.5.54: See CHANGELOG_0.5.54.md and INSTALLATION_0.5.54.txt for new UX and Recovery simulation. -->
