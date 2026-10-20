@@ -9,7 +9,7 @@ function night(day,minutes=420){return {day,sleepMinutes:minutes,totals:{deep:90
 test('smooth sleep stage SVG has curved Q transitions, genuine gaps disconnected, and all measured times remain',()=>{
  const n=night('2026-10-19');
  n.stages=[{start:'2026-10-19T01:00:00Z',end:'2026-10-19T01:25:00Z',stage:2},{start:'2026-10-19T01:25:00Z',end:'2026-10-19T02:00:00Z',stage:3},{start:'2026-10-19T02:20:00Z',end:'2026-10-19T03:00:00Z',stage:4}];
- const html=sleepStageCurve(n,'UTC');assert.match(html,/sleep551-rounded-path/);assert.match(html,/ Q /);assert.equal((html.match(/sleep551-rounded-path/g)||[]).length,2);assert.match(html,/01:25/);
+ const html=sleepStageCurve(n,'UTC');assert.match(html,/sleep553-single-path/);assert.match(html,/ Q /);assert.equal((html.match(/sleep553-single-path/g)||[]).length,2);assert.match(html,/01:25/);
 });
 test('sleep efficiency SVG renders a ring only for plausible numeric percentages',()=>{
  assert.match(sleepEfficiencyRing(84),/circle/);assert.match(sleepEfficiencyRing(84),/84%/);assert.match(sleepEfficiencyRing(84),/stroke-dasharray/);assert.match(sleepEfficiencyRing(null),/nicht berechenbar/);assert.match(sleepEfficiencyRing(101),/nicht berechenbar/);
@@ -46,7 +46,7 @@ test('real insights link uses vault data and has no new worker endpoint',()=>{
  assert.match(html,/HEALTH INTELLIGENCE/);assert.match(html,/Schlaf im Überblick/);
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(main,/health551-local-summary/);assert.match(main,/rankHealthFindingsLocally/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.52'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.53'/);
 });
 
 test('late activity observations require comparison groups and reflect sleep dates rather than calendar guesses',()=>{

@@ -4,7 +4,7 @@
  */
 export const PRIVATE_KINDS=['finance','health'];
 export const FINANCE_FIELDS=['financeTransactions','financeRules','financePrivateRules','financeCostClasses','financeTrips','financeTripAssignments','financeTripExcluded','financeRecurringRules','financeFlexBudgets','financeSavingsGoals','financeHoldings','financeFlatexSnapshots','financeWealthSnapshots','financeWealthPlan','financeWealthGoals','krakenPortfolio'];
-export const HEALTH_FIELDS=['healthImports','manualActivities','activityEdits'];
+export const HEALTH_FIELDS=['healthImports','manualActivities','activityEdits','workTime'];
 const te=new TextEncoder(),td=new TextDecoder(),AAD='compass-private-device-sync-v1/';
 export function bytesTo64(bytes){let s='';for(let i=0;i<bytes.length;i+=4096)s+=String.fromCharCode(...bytes.subarray(i,i+4096));return btoa(s);}
 export function from64(str){if(typeof str!=='string'||str.length>33000000||!/^[A-Za-z0-9+/]*={0,2}$/.test(str))throw Error('Ungültige verschlüsselte Daten.');return Uint8Array.from(atob(str),ch=>ch.charCodeAt(0));}

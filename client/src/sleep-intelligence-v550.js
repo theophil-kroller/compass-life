@@ -64,8 +64,8 @@ export function sleepCoverageWeek(nights,today){
  return Array.from({length:7},(_,i)=>{const day=shift(today,i-6);return {day,night:map.get(day)||null};});
 }
 function segmentParts(n){return stages.map(([key,label,color])=>[key,label,color,Number.isFinite(n.totals?.[key])&&n.totals[key]>=0?n.totals[key]:0]);}
-function phasesBars(nights,today,selected){
- const rows=sleepCoverageWeek(nights,today),max=Math.max(540,...rows.map(x=>x.night?.sleepMinutes||0));
+function phasesBars(nights,anchor,selected){
+ const rows=sleepCoverageWeek(nights,anchor),max=Math.max(540,...rows.map(x=>x.night?.sleepMinutes||0));
  return `<div class="sleep550-week-list" aria-label="Schlafphasen der letzten sieben Kalendertage">${rows.map(({day,night})=>{
   const measured=Boolean(night),segments=measured?segmentParts(night):[];
   const bars=measured?segments.map(([k,label,color,duration])=>`<span class="sleep550-stage-segment" style="width:${(duration/max*100).toFixed(2)}%;background:${color}" title="${esc(label)}: ${esc(sleepHM(duration))}"></span>`).join(''):'<span class="sleep550-missing-bar">Keine Messung</span>';
@@ -111,13 +111,20 @@ export function sleepStageCurve(night,timeZone){
    if(r<.3){outline+=` L ${n(stop)} ${n(y)} L ${n(stop)} ${n(ny)}`;continue;}
    outline+=` L ${n(stop-r)} ${n(y)} Q ${n(stop)} ${n(y)} ${n(stop)} ${n(y+dir*v)} L ${n(stop)} ${n(ny-dir*v)} Q ${n(stop)} ${n(ny)} ${n(stop+r)} ${n(ny)}`;
   }
-  // Continuous rounded backbone; horizontal overlays preserve the phase identity.
-  plot+=`<path d="${outline}" fill="none" stroke="#83AACA" stroke-width="4.8" stroke-linejoin="round" stroke-linecap="round" class="sleep551-rounded-path"/>`;
-  for(const s of group){const x1=xFor(s.a),x2=xFor(s.b),y=yFor(s.stage);
-   const trim=Math.min(4,(x2-x1)*.18);
-   if(x2-x1<.6)continue;
-   plot+=`<path d="M ${n(x1+trim)} ${n(y)} L ${n(x2-trim)} ${n(y)}" fill="none" stroke="${stageColor(s.stage)}" stroke-width="5" stroke-linecap="round"><title>${esc(definitions.find(x=>x[1]===s.stage)[0])} · ${esc(clock(s.start))}–${esc(clock(s.end))}</title></path>`;
+  // Exactly one visible stroke per continuous interval. A horizontal SVG gradient
+  // colors the SAME curve rather than painting a second path on top of a backbone.
+  const gid=`sleep553-stage-${groups.indexOf(group)}`;
+  const stops=[];const rel=ms=>Math.max(0,Math.min(100,(ms-from)/(to-from)*100));
+  for(let i=0;i<group.length;i++){
+   const part=group[i],next=group[i+1],color=stageColor(part.stage);
+   if(i===0)stops.push(`<stop offset="${n(rel(part.a))}%" stop-color="${color}"/>`);
+   const at=rel(part.b),half=Math.min(.75,Math.max(.1,(rel(part.b)-rel(part.a))*.12));
+   stops.push(`<stop offset="${n(at-half)}%" stop-color="${color}"/>`);
+   if(next&&next.stage!==part.stage)stops.push(`<stop offset="${n(at+half)}%" stop-color="${stageColor(next.stage)}"/>`);
+   else if(next)stops.push(`<stop offset="${n(at)}%" stop-color="${color}"/>`);
   }
+  plot+=`<defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${L}" y1="0" x2="${W-R}" y2="0">${stops.join('')}</linearGradient></defs><path d="${outline}" fill="none" stroke="url(#${gid})" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" class="sleep553-single-path"><title>${group.map(s=>`${definitions.find(x=>x[1]===s.stage)[0]} ${clock(s.start)}–${clock(s.end)}`).join(' · ')}</title></path>`;
+
  }
  if(!plot)return '<p class="sleep550-no-data">Keine gültigen Schlafphasen innerhalb der Nacht.</p>';
  const axis=[0,.25,.5,.75,1].map(t=>{const at=new Date(from+(to-from)*t).toISOString();return `<text x="${L+w*t}" y="${H-9}" font-size="10" text-anchor="${t===0?'start':t===1?'end':'middle'}" fill="#ADBECA">${esc(clock(at))}</text>`;}).join('');
@@ -178,7 +185,7 @@ function sleepPhaseBoxDots(nights,today){
  }).join('');
  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Boxplot und einzelne Schlafphasenwerte der letzten 30 Nächte in Minuten">${elements}<text x="${L}" y="${H-5}" font-size="11" fill="#7B9287">0 min</text><text x="${W-R}" y="${H-5}" text-anchor="end" font-size="11" fill="#7B9287">${esc(sleepHM(max))}</text></svg><p class="sleep550-subnote">Punkte = einzelne Nächte, Box = mittlere 50 % (IQR), dunkler Strich = Median. Kein medizinischer Grenzbereich.</p>`;
 }
-export function renderSleepIntelligence({nights=[],selectedNight='',today='',period='28',yearMode='month',timeZone='',sleepTimeline=()=>''}={}){
+export function renderSleepIntelligence({nights=[],selectedNight='',today='',period='28',yearMode='month',weekAnchor='',timeZone='',sleepTimeline=()=>''}={}){
  const valid=nights.filter(validNight).sort((a,b)=>a.day.localeCompare(b.day));
  const latest=valid.find(n=>n.day===selectedNight)||valid.at(-1)||null;
  const weekly=compareSleepWindows(valid,today,'week'),monthly=compareSleepWindows(valid,today,'month');
@@ -186,7 +193,7 @@ export function renderSleepIntelligence({nights=[],selectedNight='',today='',per
  const recentAvg=mean(recent.map(n=>n.sleepMinutes)),baselineAvg=baseline.length>=10?mean(baseline.map(n=>n.sleepMinutes)):null;
  const change=recent.length>=3&&Number.isFinite(baselineAvg)?recentAvg-baselineAvg:null;
  const insight=change===null?'Für einen belastbareren Verlauf fehlen noch Vergleichsnächte.':change<=-30?`In den letzten 7 Tagen lag deine gemessene Schlafdauer im Mittel ${Math.abs(Math.round(change))} Minuten unter dem Vergleichszeitraum. Das kann Anlass sein, Schlafbedarf und Tagesmüdigkeit zu beachten.`:change>=30?`Die mittlere Schlafdauer lag ${Math.round(change)} Minuten über deinem vorherigen Verlauf.`:'Deine mittlere Schlafdauer liegt derzeit nahe deinem vorherigen Verlauf.';
- const showYear=period==='365'||period==='all';
+ const showYear=period==='365'||period==='all';const anchor=weekAnchor&&weekAnchor<=today?weekAnchor:today;const weekStart=shift(anchor,-6);const isLatest=anchor===today;
  return `<section class="sleep550" aria-label="Sleep Intelligence – persönliche Schlaftrends">
   <header class="sleep550-lead"><div><span>SLEEP INTELLIGENCE</span><h3>Schlaf im Überblick</h3></div><small>Stunden & Minuten · nur gemessene Nächte</small></header>
   <div class="sleep550-summary">
@@ -195,7 +202,7 @@ export function renderSleepIntelligence({nights=[],selectedNight='',today='',per
    ${metricsCard('Ø Tiefschlaf · Woche',weekly,'deep')}${metricsCard('Ø REM · Woche',weekly,'rem')}
   </div>
   <div class="sleep550-insight-note"><span>${esc(insight)}</span><small>Vergleich: letzte 7 Tage zu den 30 Tagen davor (${recent.length}/${baseline.length} Nächte). Kein Nachweis einer Übermüdung.</small></div>
-  <div class="sleep550-primary"><article class="sleep550-week insight-chart-card"><div class="insight-figure-title"><div><small>01 · SLEEP STAGES</small><h3>Letzte 7 Tage</h3></div></div><div class="sleep550-phases-legend">${stages.map(([,name,color])=>`<span><i style="background:${color}"></i>${esc(name)}</span>`).join('')}</div>${phasesBars(valid,today,latest?.day)}<p class="sleep550-subnote">Die Balkenlänge entspricht der gesamten Schlafdauer. Fehlende Tage sind keine Null-Stunden-Nächte. Tag anklicken für Details.</p></article>
+  <div class="sleep550-primary"><article class="sleep550-week insight-chart-card"><div class="insight-figure-title"><div><small>01 · SLEEP STAGES</small><h3>${esc(dateLabel(weekStart))} – ${esc(dateLabel(anchor))}</h3></div><div class="sleep553-week-nav"><button type="button" data-action="insights-week-shift" data-id="-7" aria-label="Vorige sieben Tage">←</button><button type="button" data-action="insights-week-shift" data-id="today" ${isLatest?'disabled':''}>Heute</button><button type="button" data-action="insights-week-shift" data-id="7" ${isLatest?'disabled':''} aria-label="Nächste sieben Tage">→</button></div></div><div class="sleep550-phases-legend">${stages.map(([,name,color])=>`<span><i style="background:${color}"></i>${esc(name)}</span>`).join('')}</div>${phasesBars(valid,anchor,latest?.day)}<p class="sleep550-subnote">Die Balkenlänge entspricht der gesamten Schlafdauer. Fehlende Tage sind keine Null-Stunden-Nächte. Tag anklicken für Details.</p></article>
   ${nightDetails(latest,valid,sleepTimeline,timeZone)}</div>
   <article class="insight-chart-card sleep550-trend"><div class="insight-figure-title"><div><small>02 · SLEEP TREND</small><h3>Schlafdauer im Verlauf</h3></div></div>${sleepTrendSvg(valid,today,period)}</article>
   ${showYear?sleepAnnualView(valid,today,yearMode):`<div class="sleep550-year-teaser"><span>Langfristige Trends, Monate & mögliche Saisoneffekte</span><button type="button" data-action="insights-period" data-id="365">Jahresübersicht ansehen →</button></div>`}

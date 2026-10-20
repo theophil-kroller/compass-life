@@ -1,0 +1,31 @@
+COMPASS 0.5.53 – INSTALLATION
+
+Voraussetzung: Compass 0.5.52 vollständig installiert, inklusive bereits ausgeführter D1-Migration 0017 und aktuellem Worker.
+
+1. Lokalen Vault sichern. Browser-/Website-Daten nicht löschen.
+2. PATCH Compass_0.5.53_PATCH_FROM_0.5.52.zip über die vorhandenen Projektdateien kopieren,
+   oder alternativ das vollständige Quellcodepaket verwenden.
+3. Im Repository-Root npm install, anschließend npm run build ausführen.
+4. Das fertige Frontend über den bestehenden GitHub-Pages-Workflow deployen.
+5. Nach einem harten Reload Versionsanzeige 0.5.53 prüfen.
+6. Insights → Arbeitszeit öffnen. Die Originaldatei time-tracking-template.xlsx aus
+   C:\Users\kroll\Nextcloud2\Archive MASTER auswählen.
+7. Importvorschau prüfen: letzter bestätigter Überzeitsaldo 125 h 46 min bis 19.10.2026
+   (für Uploadstand vom 20.10.). Einmal „Geprüfte Daten übernehmen“ drücken.
+8. Urlaubsguthaben: Standard 192 Stunden / Stichtag 20.10.2026.
+   Diesen Wert ändern, falls das aktuelle bestätigte Guthaben inzwischen abweicht.
+9. Insights → Schlaf: Wochenpfeile, Jahr → Monat/Woche/Tag, Schlafphasen-Nachtgrafik testen.
+
+Keine neue D1-Migration und kein neuer Worker-Deploy gegenüber 0.5.52.
+Bereits vorhandene ältere D1-Migrationen sind weiterhin Voraussetzung.
+
+SICHERHEIT / FACHLICHE GRENZEN
+- Excel selbst wird nicht in die Cloud hochgeladen; Tage werden verschlüsselt lokal gespeichert.
+- Zukunft und nicht abgeschlossene Arbeitstage werden nicht als Ist-Arbeit eingebucht.
+- Überzeitguthaben stammt aus dem fortlaufenden Excel-Konto, ZA nicht doppelt abziehen.
+- Urlaubsguthaben ist ein bestätigter Stichtagswert, nicht aus Excel-Restsaldo übernommen.
+- Arbeitsstunden aus offizieller Zeiterfassung sind keine vollständige Messung subjektiver Arbeitslast.
+- Der Zeitausgleich-/Urlaubsvorschlagsrechner wird erst in 0.5.54 umgesetzt.
+
+TESTS: 561/561 bestanden; Worker-Syntaxprüfung bestanden.
+Produktions-Build und tatsächliche Browser-Liveprüfung hier noch nicht bestätigt.

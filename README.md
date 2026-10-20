@@ -1,3 +1,5 @@
+> **Aktuell: 0.5.53 · Arbeitszeit & Sleep Trends.** Siehe `CHANGELOG_0.5.53.md` und `INSTALLATION_0.5.53.txt`.
+
 > **Aktuell: 0.5.52 · Sleep Year Distributions & Secure Mirror Repair.** Siehe `CHANGELOG_0.5.52.md` und `INSTALLATION_0.5.52.txt`.
 
 **0.5.50:** Sleep Intelligence – 7-night visual overview with click-through phase timeline, h:min durations, fair week/month comparisons, personal descriptive reference, 12-month sleep trend and expandable coverage heatmap. See `CHANGELOG_0.5.50.md` and `INSTALLATION_0.5.50.txt`.

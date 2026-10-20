@@ -54,6 +54,7 @@ import {transferCandidates,accountMatches} from './finance-revolut.js';
 import {exploreDays,exploreView,EXPLORE_FIELDS} from './insights-explorer.js';
 import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insightsPlannedView} from './insights.js';
 import {healthFindings,rankHealthFindingsLocally} from './health-intelligence-v551.js';
+import {inspectWorktimeFile,mergeWorktime,worktimeView} from './worktime-v553.js';
 import {insightsStressView,insightsEnergyView} from './insights-wellness.js';
 import {fitnessInsightsView} from './insights-fitness.js';
 import {buildProductivityInsights,productivityInsightsView} from './insights-productivity.js';
@@ -72,7 +73,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.52';
+const COMPASS_CLIENT_VERSION='0.5.53';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -153,7 +154,7 @@ let insightWellnessDay='';let insightStressGranularity='week',insightBodyComposi
 let sportsMode='all',sportsAnchor=localDate(),sportsMetric='time',sportsSelected='';
 let financeCycleSelected='';
 let financeMarketQuote=null;
-let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',insightYearMode='month',healthAiOrder=[],healthAiStatus='',financePane='Überblick';
+let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',insightYearMode='month',insightWeekAnchor='',workYear=new Date().getFullYear(),workThreshold=45,workPreview=null,healthAiOrder=[],healthAiStatus='',financePane='Überblick';
 // Non-sensitive presentation only. Deep links always override the last-view preference.
 const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.calm.lastView')||'null');}catch{return null;}})();
 if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
@@ -429,6 +430,7 @@ function chrome(content){
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='places'?'is-active':''}" data-action="calm-insight-view" data-id="places">${ico('compass',19)}<span>Orte & Weltkarte</span></button>
  ${navItem('progress','Fortschritt','target')}
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='focus'?'is-active':''}" data-action="calm-insight-view" data-id="focus">${ico('target',19)}<span>Produktivität</span></button>
+ <button type="button" class="nav-item ${tab==='insights'&&insightTab==='worktime'?'is-active':''}" data-action="calm-insight-view" data-id="worktime">${ico('clock',19)}<span>Arbeitszeit</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='explore'?'is-active':''}" data-action="calm-insight-view" data-id="explore">${ico('spark',19)}<span>Explore</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='sources'?'is-active':''}" data-action="calm-insight-view" data-id="sources">${ico('settings',19)}<span>Datenquellen</span></button>
  </div>`:''}
@@ -1274,12 +1276,12 @@ function insightsScreen(){
  const model=buildSleepInsights(state?.healthImports||{},today,insightPeriod);
  const healthIds=['sleep','energy','stress','body'];
  const healthMode=healthIds.includes(insightTab);
- const compactInsights=[['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['explore','Explore','spark']];
+ const compactInsights=[['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
  const tabs=compactInsights.map(([id,label,icon])=>`<button type="button" class="calm-insight-tab ${(id==='sleep'?healthMode:insightTab===id)?'selected':''}" data-action="insights-tab" data-id="${id}" aria-pressed="${id==='sleep'?healthMode:insightTab===id}">${ico(icon,16)}<span>${label}</span></button>`).join('');
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <div class="calm-insight-toolbar" aria-label="Mobile Insights-Navigation"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
  <div class="insight-view-header ${insightTab==='sources'?'insight-source-heading':''}"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
@@ -1917,7 +1919,18 @@ function bind() {
     }catch(ex){toast(ex.message,true);}
   };
   const calmHealthSelect=app.querySelector('#calm-health-view');if(calmHealthSelect)calmHealthSelect.onchange=()=>{if(['sleep','energy','stress','body'].includes(calmHealthSelect.value)){insightTab=calmHealthSelect.value;render();}};
-  const insightSelect=app.querySelector('#insights-night-select');if(insightSelect)insightSelect.onchange=()=>{insightNight=insightSelect.value;render();};
+  const workFile=app.querySelector('#work553-file');if(workFile)workFile.onchange=async()=>{
+  if(!workFile.files?.length)return;
+  try{workPreview=await inspectWorktimeFile(workFile.files[0],{today:localDate(),nowMinutes:new Date().getHours()*60+new Date().getMinutes()});toast(`${workPreview.days.length} Arbeitszeittage erkannt. Bitte Vorschau prüfen und übernehmen.`);}
+  catch(ex){workPreview=null;toast(`Excel-Import: ${ex.message}`,true);}
+ };
+ const workVacationForm=app.querySelector('#work553-vacation-form');if(workVacationForm)workVacationForm.onsubmit=async ev=>{
+  ev.preventDefault();const f=new FormData(workVacationForm),h=Number(f.get('balanceHours')),asOf=String(f.get('asOf')||'');
+  if(!Number.isFinite(h)||h<0||h>10000||!/^(20\d{2})-(\d{2})-(\d{2})$/.test(asOf)){toast('Bitte gültigen Urlaubssaldo und Stichtag eingeben.',true);return;}
+  await mutate(s=>{s.workTime={...(s.workTime||{}),vacation:{balanceHours:h,asOf,hoursPerDay:8}};});toast('Urlaubsguthaben als Stichtagswert gespeichert.');
+ };
+ const workThresholdEl=app.querySelector('#work553-threshold');if(workThresholdEl)workThresholdEl.onchange=()=>{workThreshold=Number(workThresholdEl.value)||45;render();};
+ const insightSelect=app.querySelector('#insights-night-select');if(insightSelect)insightSelect.onchange=()=>{insightNight=insightSelect.value;render();};
   const wellnessSelect=app.querySelector('#insights-wellness-select');if(wellnessSelect)wellnessSelect.onchange=()=>{insightWellnessDay=wellnessSelect.value;render();};
   const taskMoveForm=app.querySelector('#tree-move-task-form');if(taskMoveForm)taskMoveForm.onsubmit=async ev=>{
     ev.preventDefault();const taskId=taskMoveForm.dataset.id,to=String(new FormData(taskMoveForm).get('target')||'');const [type,targetId]=to.split(':');
@@ -2696,6 +2709,14 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='sports-shift'){if(['-1','1'].includes(id)&&sportsMode!=='all'){sportsAnchor=sportsShiftAnchor(sportsMode,sportsAnchor,Number(id),localDate());render();}return;}
     if(action==='sports-metric'){if(['time','count','distance'].includes(id)){sportsMetric=id;render();}return;}
     if(action==='sports-select'){if(['running','cycling','walking','hiking','ski','swimming','paddling','dancing','disc','martial','sauna','other'].includes(id)){sportsSelected=sportsSelected===id?'':id;render();}return;}
+    if(action==='worktime-year'){const n=Number(id);if(Number.isInteger(n)&&n>=2023&&n<=new Date().getFullYear()+1){workYear=n;render();}return;}
+    if(action==='worktime-confirm'){if(!workPreview)return;const preview=workPreview;await mutate(s=>{s.workTime=mergeWorktime(s.workTime||{},preview);if(!s.workTime.vacation)s.workTime.vacation={balanceHours:192,asOf:'2026-10-20',hoursPerDay:8};});workPreview=null;toast(`${preview.days.length} Arbeitszeittage übernommen. Überzeit: ${preview.lastBalance?.hours?.toFixed(2)||'–'} h.`);return;}
+    if(action==='insights-week-shift'){
+      if(!['-7','7','today'].includes(id))return;
+      const today=localDate();const base=insightWeekAnchor||today;
+      const shifted=id==='today'?today:new Date(Date.parse(base+'T12:00:00Z')+Number(id)*86400000).toISOString().slice(0,10);
+      insightWeekAnchor=shifted>today?today:shifted;render();return;
+    }
     if(action==='insights-year-mode'){if(['month','week','day'].includes(id)){insightYearMode=id;render();}return;}
     if(action==='insights-period'){if(INSIGHT_PERIODS.some(([v])=>v===id)){insightPeriod=id;render();}return;}
     if(action==='import-health-range'){importHealthSpan=id==='all'?'all':Number(id)||90;render();return;}

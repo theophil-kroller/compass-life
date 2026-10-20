@@ -74,7 +74,7 @@ test('block bootstrap 95% CI requires enough paired observations and nondegenera
 
 test('0.5.13 keeps bank data local, activates Explorer and avoids worker writes',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.52'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.53'/);
  assert.match(main,/previewBankFiles/);assert.match(main,/financeTransactions/);assert.match(main,/exploreView\(exploreDays/);
  assert.doesNotMatch(main,/\/api\/finance/);
 });

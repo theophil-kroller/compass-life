@@ -19,6 +19,7 @@ export const INSIGHT_TABS=[
  {id:'energy',label:'Body Battery',icon:'bolt',state:'live',subtitle:'Energiereserven, Tageskurven und langfristige Verläufe'},
  {id:'stress',label:'Stress',icon:'activity',state:'live',subtitle:'Garmin-Stress, Belastungszonen und Tagesmuster'},
  {id:'activity',label:'Aktivität',icon:'heart',state:'live',subtitle:'Garmin-Schritte und Aktivitätsdateien sowie Health-Connect-Training'},
+ {id:'worktime',label:'Arbeitszeit',icon:'clock',state:'live',subtitle:'Arbeitszeit, Überstunden, Zeitausgleich & Urlaub'},
  {id:'focus',label:'Produktivität',icon:'target',state:'live',subtitle:'Arbeitsphasen, Meetings und Gesundheitsdaten · lokale Zusammenhänge'},
  {id:'body',label:'Körper',icon:'layers',state:'live',subtitle:'Fitdays-Report · Körpergewicht, Körperfett und Segmente'},
  {id:'places',label:'Orte',icon:'compass',state:'live',subtitle:'Weltkarte, Aufenthaltsverlauf und Schlaf nach Ort · lokal im Vault'},
@@ -127,12 +128,12 @@ export function weeklySleepGroups(nights){
  }
  return [...groups.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([week,values])=>({week,count:values.length,mean:values.reduce((a,b)=>a+b,0)/values.length}));
 }
-export function insightsSleepView(model,selectedNight='',ico=()=>'',today='',imported={},healthAi={},yearMode='month'){
+export function insightsSleepView(model,selectedNight='',ico=()=>'',today='',imported={},healthAi={},yearMode='month',weekAnchor=''){
  const {nights,hrv,range}=model;
  const allNights=model.allNights||nights;
  const activeDay=today||range.end||new Date().toISOString().slice(0,10);
  const sleep=renderSleepIntelligence({nights:allNights,selectedNight:allNights.some(n=>n.day===selectedNight)?selectedNight:'',today:activeDay,
-  yearMode,period:range.days===365?'365':range.days===90?'90':range.days===7?'7':range.days===null?'all':'28',
+  yearMode,weekAnchor,period:range.days===365?'365':range.days===90?'90':range.days===7?'7':range.days===null?'all':'28',
   timeZone:model.timeZone,sleepTimeline});
  const findings=healthFindings({nights:allNights,imported,today:activeDay});
  return `<div class="insight-sleep-content">

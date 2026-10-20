@@ -16,8 +16,8 @@ const fixture={
  fitdays:[{day:'2026-09-25',at:'2026-09-25T06:56:00',weightKg:86.9}]
 };
 test('nine icon tabs include sleep, body and data sources as active',()=>{
- assert.deepEqual(INSIGHT_TABS.map(x=>x.id),['sleep','energy','stress','activity','focus','body','places','explore','sources']);
- assert.equal(INSIGHT_TABS.filter(x=>x.state==='live').length,9);
+ assert.deepEqual(INSIGHT_TABS.map(x=>x.id),['sleep','energy','stress','activity','worktime','focus','body','places','explore','sources']);
+ assert.equal(INSIGHT_TABS.filter(x=>x.state==='live').length,10);
 });
 test('sleep minutes exclude awake time, missing data are null, invalid zero is not fabricated',()=>{
  assert.equal(sleepMinutes(fixture.garminNights[0]),400);
@@ -70,7 +70,7 @@ test('planned panes remain clearly nonfunctional and now open consolidated sourc
 });
 test('navigation and 0.5.8 actions are wired into actual client, without cloud migration',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.52'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.53'/);
  assert.match(main,/data-action=\"calm-insight-view\"/);assert.match(main,/calm-nav-group/);
  assert.match(main,/insightTab==='sleep'\?insightsSleepView/);
  assert.match(main,/action==='insights-period'/);
