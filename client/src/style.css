@@ -2425,3 +2425,62 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .import558-current{color:#46775d}.import558-check{color:#AB6D39}.import558-never,.import558-undocumented{color:#788A7F}
 .review558-actions{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}.review558-legacy{margin:12px 0;color:#54715f;font-size:12px}.review558-legacy summary,.smart558-coverage summary{cursor:pointer;padding:5px 0}.smart558-coverage{margin:9px 0}
 @media(max-width:680px){.import558-head{display:none}.import558-row{grid-template-columns:minmax(120px,1fr) minmax(120px,1fr);gap:5px}.import558-row>span:nth-child(2):before{content:'Import: ';font-weight:600}.import558-row>span:nth-child(3):before{content:'Daten bis: ';font-weight:600}.import558-row small{justify-self:end}.work553-kpis .work558-vacation svg{width:26px;height:26px}}
+
+/* Compass 0.5.59 – one compact Inspector 2.0, shared by task screens. */
+.v559-inspector-form{margin:5px 0 0;gap:0;min-width:0;font-size:12px}
+.v559-inspector-form>.v559-progress-row,.v559-inspector-form>.v559-compact-field,.v559-inspector-form>.v559-note,.v559-inspector-form>.v559-progress-options,.v559-inspector-form>.v559-metadata{border-bottom:1px solid #e7eee9}
+.v559-progress-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;color:#3a5e4d;font-size:12px;font-weight:650}
+.v559-progress-actions{display:flex;align-items:center;gap:5px;color:#365845;font-variant-numeric:tabular-nums}
+.v559-progress-actions strong{font-size:11px;margin-right:4px}.v559-progress-actions small{font-size:10px;color:#8a9c91;font-weight:450}
+.v559-progress-actions button,.v559-date-tools button{display:inline-flex;justify-content:center;align-items:center;border:1px solid #dbe8df;background:#f8fbf8;border-radius:6px;color:#356b54;cursor:pointer;font-size:10px;min-height:25px;padding:3px 6px;white-space:nowrap}
+.v559-progress-actions button:hover,.v559-date-tools button:hover{background:#e7f3eb}
+.v559-progress-actions button:disabled{opacity:.32;cursor:default}
+.v559-main-dates{display:grid;gap:2px;margin:7px 0;padding:0;border-bottom:1px solid #e7eee9}
+.v559-date-row{min-width:0;display:grid;grid-template-columns:minmax(47px,66px) minmax(105px,1fr);gap:3px 6px;align-items:center;padding:5px 0}
+.v559-date-label{font-size:11px;font-weight:650;color:#476b56}
+.v559-date-row input[type=date]{display:block;min-height:29px;max-width:100%;width:100%;min-width:0;margin:0!important;padding:4px 6px!important;font-size:11px;background:#fff;color:#335847;border:1px solid #dfe9e1;border-radius:7px;color-scheme:light}
+.v559-date-tools{display:flex;gap:3px;grid-column:2;flex-wrap:wrap}
+.v559-date-tools button{min-height:23px;padding:2px 7px}
+.v559-date-tools .v559-date-clear{font-size:14px;color:#778e80;padding:0 8px}
+.v559-compact-field{display:grid;grid-template-columns:minmax(85px,1fr) minmax(85px,1.2fr);align-items:center;gap:7px;padding:7px 0}
+.v559-inspector-form .v559-compact-field label{display:flex;align-items:center;gap:6px;font-size:11px;margin:0;font-weight:650}
+.v559-inspector-form .v559-compact-field input{min-width:0;min-height:30px;padding:4px 8px;margin:0;font-size:11px}
+.v559-inspector-form details{border:0;background:transparent;border-radius:0;margin:0;padding:0}
+.v559-inspector-form details>summary,.v559-project-metadata>summary{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#4f7260;padding:10px 0;font-weight:650;line-height:1.4;list-style:none}
+.v559-inspector-form details>summary::-webkit-details-marker,.v559-project-metadata>summary::-webkit-details-marker{display:none}
+.v559-inspector-form details>summary:after,.v559-project-metadata>summary:after{content:'▸';margin-left:auto;color:#78958a;font-size:13px}
+.v559-inspector-form details[open]>summary:after,.v559-project-metadata[open]>summary:after{content:'▾'}
+.v559-note-preview{margin-left:auto;min-width:0;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:450;font-size:10px;color:#809589}
+.v559-inspector-form .v559-note>summary:after{margin-left:2px}
+.v559-inspector-form .v559-note textarea{width:100%;min-width:0;resize:vertical;min-height:65px;margin-bottom:9px;padding:8px;font-size:11px}
+.v559-inspector-form .v559-progress-options{border-bottom:1px solid #e7eee9}
+.v559-inspector-form .v42-progress-edit-grid{margin:3px 0 7px}
+.v559-inspector-form .v42-progress-edit-grid input{min-width:0;padding:5px 7px;margin:0;height:31px}
+.v559-inspector-form .v42-progress-help{margin:0 0 8px}
+.v559-meta-fields{display:grid;gap:8px;padding:1px 0 10px}
+.v559-inspector-form .v559-meta-fields label{display:grid;gap:4px;font-size:11px}
+.v559-inspector-form .v559-meta-fields input,.v559-inspector-form .v559-meta-fields select{margin:0;padding:6px 8px;min-height:32px}
+.v559-inspector-form .v559-metadata{border-bottom:0}
+.v559-inspector-form .v559-sticky-actions{position:sticky;bottom:0;z-index:3;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:3px 0 0;padding:10px 0 4px;border-top:1px solid #e7eee9;background:#fff}
+.v559-inspector-form .v559-sticky-actions button{padding:7px 10px;font-size:11px}
+.tree-inspector .v559-inspector-form,.task-inspector .v559-inspector-form{margin:2px 0}
+.v559-title-cell{display:flex;flex:1 1 0;min-width:0;align-items:center;gap:4px}
+.v559-title-cell .task-title-button,.v559-title-cell .tree-label{flex:1 1 0;min-width:0;text-align:left}
+.v559-title-cell .task-title-button>span{display:block;min-width:0}
+.v559-title-pencil{border:0;background:transparent;color:#83998c;display:inline-flex;align-items:center;justify-content:center;padding:3px;cursor:pointer;flex:none;border-radius:5px;opacity:.75}
+.v559-title-pencil:hover,.v559-title-pencil:focus-visible{opacity:1;color:#236950;background:#edf5ee}
+.v559-rename-editor{display:flex;align-items:center;flex:1;min-width:0;gap:4px}
+.v559-rename-editor .v559-rename-input{width:100%;min-width:0;flex:1 1 0;border:1px solid #85b69a;outline-offset:2px;background:#fff;border-radius:6px;padding:6px 7px;font-size:12px;color:#285843}
+.v559-rename-editor button{border:1px solid #dce9df;background:#f5faf6;color:#2e7156;cursor:pointer;flex:none;padding:3px 7px;min-height:29px;border-radius:6px;font-size:14px}
+.v559-rename-editor button:hover{background:#e2f2e9}
+.tree-task .v559-title-cell{flex:1 1 auto;min-width:85px}
+.tree-task .v559-title-cell .tree-label{min-width:0}
+.v559-project-metadata{margin-top:5px;border-top:1px solid #e6eee7}
+.v559-project-metadata .v559-meta-fields{display:grid;gap:8px;padding:8px 0}
+.project-properties form .v559-date-row{border-bottom:1px solid #e6eee7}
+.inbox-quiet-inspector .v559-inbox-metadata{padding:5px 0;border-top:1px solid #e7eee9;margin:5px 0}
+.inbox-quiet-inspector .v559-inbox-metadata>summary{font-size:11px;font-weight:650;color:#4d715e;cursor:pointer}
+.inbox-quiet-inspector .v559-inbox-metadata .inbox-promote-fields{margin-top:10px}
+.review-plan-fields .v559-date-row,.assistant-form-grid .v559-date-row{grid-template-columns:64px minmax(105px,1fr)}
+@media(min-width:520px){.v559-inspector-form .v559-date-row{grid-template-columns:minmax(45px,58px) minmax(105px,1fr) auto}.v559-inspector-form .v559-date-tools{grid-column:3}.v559-date-tools{flex-wrap:nowrap}}
+@media(max-width:440px){.v559-progress-actions{gap:3px}.v559-date-tools{gap:2px}.v559-date-tools button{padding:2px 5px}.v559-title-pencil{padding:2px}.v559-inspector-form .v559-sticky-actions{padding-bottom:8px}}

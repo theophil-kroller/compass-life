@@ -1,0 +1,31 @@
+Compass 0.5.59 — Installation
+================================
+
+PATCH ab Compass 0.5.58:
+  1. Aktuelles Repository und verschlüsselten Vault sichern.
+  2. Inhalt von Compass_0.5.59_PATCH_FROM_0.5.58.zip in das
+     Repository-Stammverzeichnis entpacken, gleichnamige Dateien ersetzen.
+  3. Änderungen committen und den üblichen GitHub-Pages-Deploy auslösen.
+  4. Seite vollständig neu laden (ggf. die PWA einmal schließen und erneut starten).
+
+FULL SOURCE:
+  Compass_0.5.59_FULL_SOURCE.zip enthält den gesamten aktuellen Quellstand.
+
+BITTE ZUERST PRÜFEN:
+  1. Heute/Next Actions/Projektbaum: Beim Titel erscheint ein Stift. Ändern,
+     mit ✓ oder Enter speichern, mit × oder Escape abbrechen.
+  2. Inspector: Defer, Geplant und Due sind sichtbar. +1d, +1w, +1m
+     verschieben das zugehörige Datum; Speichern übernimmt die Änderungen.
+  3. Titel, Projekt und GTD-Status sind unten aufklappbar.
+  4. Quick Capture öffnen und mehrere Wörter tippen; dabei Synchronisation
+     oder Wetter aktualisieren lassen. Text und Cursor sollen bleiben.
+  5. Quick Capture mit Escape schließen und neu öffnen; Entwurf bleibt.
+     Nach erfolgreicher Inbox-Erfassung ist der Entwurf leer.
+  6. Auf Tablet/Mobilgerät das schmale Inspector-Layout und Buttons prüfen.
+
+KEINE D1-MIGRATION, KEIN VAULT-RESET.
+
+QUALITÄT: 604/604 Node-Tests und Worker-Syntax erfolgreich.
+NICHT DURCHGEFÜHRT: Vite-Produktionskompilierung (vite hier nicht installiert),
+Live-Browser- und PWA-Abnahme. Nicht erfasste Quick-Capture-Entwürfe werden
+nur im laufenden Speicher gehalten und nicht unverschlüsselt persistiert.

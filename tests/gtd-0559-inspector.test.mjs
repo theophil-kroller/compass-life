@@ -1,0 +1,61 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {inspectorDateShift,inspectorTitle} from '../client/src/inspector-v559.js';
+const src=fs.readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
+const css=fs.readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');
+test('Inspector 2.0 date shortcuts preserve month end, leap day and existing Defer',()=>{
+ assert.equal(inspectorDateShift(null,'day','2026-10-20'),'2026-10-21');
+ assert.equal(inspectorDateShift('2026-10-29','week','2026-10-20'),'2026-11-05');
+ assert.equal(inspectorDateShift('2026-01-31','month','2026-10-20'),'2026-02-28');
+ assert.equal(inspectorDateShift('2028-01-31','month','2026-10-20'),'2028-02-29');
+ assert.equal(inspectorDateShift('2026-12-31','month','2026-10-20'),'2027-01-31');
+ assert.equal(inspectorDateShift('2026-03-31','day','2026-10-20'),'2026-04-01');
+ assert.equal(inspectorDateShift('2026-03-29','day','2026-10-20'),'2026-03-30');
+ assert.equal(inspectorDateShift('2026-10-20','unexpected','2026-10-20'),null);
+ assert.equal(inspectorDateShift('2026-02-30','day','2026-10-20'),null);
+});
+test('Inline rename trims and rejects empty/overlength while retaining 180-character tasks',()=>{
+ assert.equal(inspectorTitle('  Umfrage Learnly  '),'Umfrage Learnly');
+ assert.equal(inspectorTitle(' '),null);
+ assert.equal(inspectorTitle('a'.repeat(181)),null);
+ assert.equal(inspectorTitle('a'.repeat(180)).length,180);
+});
+test('Shared task inspector prioritizes three dates, progress and tags above collapsed title/project/status',()=>{
+ const start=src.indexOf('function taskEditor(){');
+ const end=src.indexOf('\nfunction gtdTodaySummary(){',start);
+ const editor=src.slice(start,end);
+ assert.ok(start>0&&end>start);
+ assert.match(editor,/v559-progress-row/);
+ assert.match(editor,/compactInspectorDate\('deferUntil','Defer'/);
+ assert.match(editor,/compactInspectorDate\('plannedDate','Geplant'/);
+ assert.match(editor,/compactInspectorDate\('dueDate','Due'/);
+ assert.match(editor,/class="inspector-extra v559-metadata"/);
+ assert.ok(editor.indexOf('v559-main-dates')<editor.indexOf('v559-metadata'));
+ assert.match(editor,/name="progressTarget"/);
+ assert.match(editor,/name="progressCurrent"/);
+ assert.match(editor,/class="task-edit-actions v559-sticky-actions"/);
+ assert.match(css,/\.v559-inspector-form/);
+ assert.match(css,/\.v559-title-cell/);
+});
+test('Inline title pencil, check and cancel are wired to persistent task mutation in both list and tree',()=>{
+ assert.match(src,/function inlineTaskTitle\(t,content,selectAction/);
+ assert.match(src,/inlineTaskTitle\(t,`<span /);
+ assert.match(src,/inlineTaskTitle\(t,`<span>\$\{h\(t\.title\)\}/);
+ assert.match(src,/data-action="task-rename-start"/);
+ assert.match(src,/data-action="task-rename-save"/);
+ assert.match(src,/data-action="task-rename-cancel"/);
+ assert.match(src,/ev\.key==='Enter'/);
+ assert.match(src,/ev\.key==='Escape'/);
+ assert.match(src,/s\.tasks\[id\]\.title=title/);
+ assert.match(src,/s\.taskPending\[id\]=true/);
+});
+test('Other inspectors use shared compact date controls and keep Inbox capture title visible',()=>{
+ assert.match(src,/compactInspectorDate\('dueDate','Projekt-Deadline'/);
+ assert.match(src,/class="inbox-inspector-extra v559-inbox-metadata"/);
+ assert.match(src,/compactInspectorDate\('deferUntil','Defer',draft\.deferUntil\)/);
+ assert.match(src,/compactInspectorDate\('plannedDate','Geplant',draft\.plannedDate\)/);
+ assert.match(src,/compactInspectorDate\('dueDate','Due',draft\.dueDate\)/);
+ assert.match(src,/function compactInspectorDate\(field,label/);
+ assert.match(src,/inspectorDateShift\(field\.value,el\.dataset\.offset,localDate\(\)\)/);
+});

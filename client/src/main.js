@@ -9,6 +9,7 @@ import {parseCaptureLines,parseAiCaptureJson,capturePreview,captureInboxRecord,C
 import {moveProjectHierarchy,moveTaskHierarchy,cloneProjectTemplate,taskDescendants,isTemplateProject} from './project-workspace-v27.js';
 import {inboxTaskDraft} from './inbox-promotion-v27.js';
 import {inboxTodayTaskDraft} from './inbox-today-v557.js';
+import {inspectorDateShift,inspectorTitle} from './inspector-v559.js';
 import {inboxFlagged,visibleInboxTags,setInboxFlag} from './inbox-flags-v27.js';
 import {inboxOrdered,inboxMove,inboxNudge} from './inbox-order-v34.js';
 import {FOLDER_ICONS,folderIcon} from './folder-icons-v35.js';
@@ -78,7 +79,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.58';
+const COMPASS_CLIENT_VERSION='0.5.59';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -88,6 +89,7 @@ let selectedDay=localDateString(new Date());
 let selectedInboxId=null;
 let selectedDreamId=null;
 let selectedTaskId=null;
+let inlineEditingTaskId=null;
 let selectedProjectId=null;
 let exchangePreview=null;
 let exchangeRaw='';
@@ -141,6 +143,53 @@ async function resumeSession(){
 }
 
 let captureOverlayOpen=false;
+// Keep unsent captures in memory across unrelated UI renders (sync, weather, etc.).
+// Never put plaintext capture drafts into localStorage/sessionStorage.
+let captureDraft={title:'',note:'',noteOpen:false};
+let dashboardCaptureDraft='';
+let captureNeedsInitialFocus=false;
+let captureSkipNextSnapshot=false;
+function snapshotCaptureDraft(){
+ const focused=document.activeElement;
+ let focus=null;
+ if(!captureSkipNextSnapshot){
+  const form=app.querySelector('#capture-modal-form');
+  if(form){
+   captureDraft={title:form.elements.title?.value??captureDraft.title,
+    note:form.elements.note?.value??captureDraft.note,
+    noteOpen:!!form.querySelector('.optional-capture')?.open};
+   if(focused?.id==='capture-modal-input'||focused?.id==='capture-modal-note'){
+    focus={id:focused.id,start:focused.selectionStart,end:focused.selectionEnd};
+   }
+  }
+  const dashboard=app.querySelector('#capture-form textarea[name="title"]');
+  if(dashboard){dashboardCaptureDraft=dashboard.value;
+   if(focused===dashboard)focus={id:'capture',start:dashboard.selectionStart,end:dashboard.selectionEnd};}
+ }else{captureSkipNextSnapshot=false;}
+ return focus;
+}
+function restoreCaptureDraft(focus){
+ const modal=app.querySelector('#capture-modal-form');
+ if(modal){
+  modal.elements.title.value=captureDraft.title;
+  modal.elements.note.value=captureDraft.note;
+  const noteDetails=modal.querySelector('.optional-capture');
+  if(noteDetails)noteDetails.open=captureDraft.noteOpen||!!captureDraft.note;
+ }
+ const dashboard=app.querySelector('#capture-form textarea[name="title"]');
+ if(dashboard)dashboard.value=dashboardCaptureDraft;
+ if(focus?.id&&app.querySelector('#'+focus.id)){
+  requestAnimationFrame(()=>{
+   const field=app.querySelector('#'+focus.id);
+   if(!field)return;
+   field.focus({preventScroll:true});
+   if(Number.isInteger(focus.start)&&Number.isInteger(focus.end))field.setSelectionRange(focus.start,focus.end);
+  });
+ }else if(captureOverlayOpen&&captureNeedsInitialFocus){
+  requestAnimationFrame(()=>app.querySelector('#capture-modal-input')?.focus({preventScroll:true}));
+ }
+ captureNeedsInitialFocus=false;
+}
 let captureAfterUnlock=false;
 let inboxQuery='';
 let captureBulkOpen=false,captureBulkMode='lines',captureBulkRaw='',captureBulkPreview=null;
@@ -721,6 +770,15 @@ function taskParentOptions(projectId,selected='',self=''){
 }
 function dateButtons(field){return `<div class="date-shortcuts" data-date-target="${field}"><button type="button" data-action="date-adjust" data-field="${field}" data-offset="day">+1d</button><button type="button" data-action="date-adjust" data-field="${field}" data-offset="week">+1w</button><button type="button" data-action="date-adjust" data-field="${field}" data-offset="month">+1m</button><button type="button" data-action="date-clear" data-field="${field}">Löschen</button></div>`;}
 function dateControl(field,label,value='',hint=''){return `<label class="date-control">${label}<input name="${field}" type="date" lang="de-AT" aria-label="${h(label)} (Tag, Monat, Jahr)" value="${h(value||'')}">${dateButtons(field)}${hint?`<small>${h(hint)}</small>`:''}</label>`;}
+// Inspector 2.0: one shared date row for every task inspector.
+// The native date input remains available; +1m uses calendar-month arithmetic.
+function compactInspectorDate(field,label,value='',hint=''){
+ return `<div class="v559-date-row"><span class="v559-date-label">${h(label)}</span><input type="date" lang="de-AT" name="${field}" value="${h(value||'')}" aria-label="${h(label)}" title="${h(hint||label)}"/><div class="v559-date-tools">${[['day','+1d'],['week','+1w'],['month','+1m']].map(([key,text])=>`<button type="button" data-action="date-adjust" data-field="${field}" data-offset="${key}" title="${h(label)} um ${text} verschieben">${text}</button>`).join('')}<button type="button" class="v559-date-clear" data-action="date-clear" data-field="${field}" aria-label="${h(label)} löschen" title="Datum entfernen">×</button></div></div>`;
+}
+function inlineTaskTitle(t,content,selectAction='task-select'){
+ const editing=inlineEditingTaskId===t.id;
+ return `<span class="v559-title-cell" data-task-id="${h(t.id)}">${editing?`<span class="v559-rename-editor" data-task-id="${h(t.id)}"><input class="v559-rename-input" type="text" maxlength="180" required value="${h(t.title)}" aria-label="Aufgabentitel direkt bearbeiten"/><button type="button" data-action="task-rename-save" data-id="${h(t.id)}" aria-label="Titel speichern" title="Titel speichern (Enter)">✓</button><button type="button" data-action="task-rename-cancel" data-id="${h(t.id)}" aria-label="Bearbeitung abbrechen" title="Abbrechen (Escape)">×</button></span>`:`<button class="${selectAction==='tree-task-select'?'tree-label':'task-title-button'} ${t.completed&&selectAction==='tree-task-select'?'tree-done':''}" type="button" data-action="${selectAction}" data-id="${h(t.id)}">${content}</button><button type="button" class="v559-title-pencil" data-action="task-rename-start" data-id="${h(t.id)}" aria-label="${h(t.title)} umbenennen" title="Titel direkt bearbeiten">${ico('pencil',14)}</button>`}</span>`;
+}
 function moveOrder(state,collection,id,direction){
  const current=state[collection][id];if(!current)return false;
  const peers=collection==='projects'?childProjects(state,current.parentId||null):taskChildren(state,current.projectId,current.parentTaskId||null);
@@ -760,21 +818,22 @@ function taskProgressInline(t){
 }
 function taskList(items,scope,hideEmpty=false){
  const nextScope=scope==='next';
- return items.length?`<div class="task-list ${nextScope?'next38-list':''}" data-scope="${h(scope)}">${items.map((t,i)=>`<div class="task-row ${nextScope?'next38-row':''} ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}" ${nextScope?`data-next-row="${h(t.id)}"`:''}>${nextScope?`<span class="next38-drag" draggable="true" data-next-drag="${h(t.id)}" role="img" aria-label="${h(t.title)} zum Sortieren ziehen" title="Ziehen zum Sortieren, alternativ Pfeiltasten">⠿</span>`:''}<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button><button class="task-title-button" type="button" data-action="task-select" data-id="${h(t.id)}" ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`: ''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}${nextScope&&t.plannedDate===localDate()?' · Für heute vorgemerkt':''}</small>${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</button>${taskProgressInline(t)}${nextScope?`<button type="button" class="next38-today ${t.plannedDate===localDate()?'is-planned':''}" data-action="next-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" title="${t.plannedDate===localDate()?'Heute-Vormerkung entfernen':'Ohne Fälligkeitsdatum für heute vormerken'}">${ico('calendar',14)} <span>${t.plannedDate===localDate()?'Heute ✓':'Heute'}</span></button><span class="next38-move"><button type="button" data-action="next-move-up" data-id="${h(t.id)}" aria-label="${h(t.title)} nach oben" title="Nach oben" ${i===0?'disabled':''}>↑</button><button type="button" data-action="next-move-down" data-id="${h(t.id)}" aria-label="${h(t.title)} nach unten" title="Nach unten" ${i===items.length-1?'disabled':''}>↓</button></span>`:''}${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;
+ return items.length?`<div class="task-list ${nextScope?'next38-list':''}" data-scope="${h(scope)}">${items.map((t,i)=>`<div class="task-row ${nextScope?'next38-row':''} ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}" ${nextScope?`data-next-row="${h(t.id)}"`:''}>${nextScope?`<span class="next38-drag" draggable="true" data-next-drag="${h(t.id)}" role="img" aria-label="${h(t.title)} zum Sortieren ziehen" title="Ziehen zum Sortieren, alternativ Pfeiltasten">⠿</span>`:''}<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button>${inlineTaskTitle(t,`<span ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`:''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}${nextScope&&t.plannedDate===localDate()?' · Für heute vorgemerkt':''}</small>${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</span>`)}${taskProgressInline(t)}${nextScope?`<button type="button" class="next38-today ${t.plannedDate===localDate()?'is-planned':''}" data-action="next-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" title="${t.plannedDate===localDate()?'Heute-Vormerkung entfernen':'Ohne Fälligkeitsdatum für heute vormerken'}">${ico('calendar',14)} <span>${t.plannedDate===localDate()?'Heute ✓':'Heute'}</span></button><span class="next38-move"><button type="button" data-action="next-move-up" data-id="${h(t.id)}" aria-label="${h(t.title)} nach oben" title="Nach oben" ${i===0?'disabled':''}>↑</button><button type="button" data-action="next-move-down" data-id="${h(t.id)}" aria-label="${h(t.title)} nach unten" title="Nach unten" ${i===items.length-1?'disabled':''}>↓</button></span>`:''}${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;
 }
 function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)return '<div class="task-empty">Wähle eine Aufgabe, um ihre Details zu bearbeiten.</div>';
- return `<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="3">${h(t.note||'')}</textarea></label>
- <div class="inspector-main-fields"><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label></div>
- <details class="v42-progress-editor" ${t.progressTarget!=null?'open':''}><summary>Stückfortschritt ${t.progressTarget!=null?`· ${t.progressCurrent??0} von ${t.progressTarget}`:'(optional)'}</summary><div class="v42-progress-edit-grid"><label>Gesamtzahl (Max.)<input name="progressTarget" type="number" min="1" max="100000" step="1" value="${t.progressTarget??''}" placeholder="z. B. 36"/></label><label>Bereits erledigt<input name="progressCurrent" type="number" min="0" max="${t.progressTarget??100000}" step="1" value="${t.progressCurrent??0}"/></label></div>${t.progressTarget!=null?`<div class="v42-editor-bar"><progress value="${t.progressCurrent??0}" max="${t.progressTarget}" aria-label="Stückfortschritt"></progress><strong>${Math.round(100*(t.progressCurrent??0)/t.progressTarget)} %</strong><button type="button" data-action="task-progress-minus" data-id="${h(t.id)}" ${!(t.progressCurrent>0)?'disabled':''} aria-label="Ein Stück zurücknehmen">−1</button><button type="button" data-action="task-progress-plus" data-id="${h(t.id)}" ${t.completed||(t.progressCurrent??0)>=t.progressTarget?'disabled':''} aria-label="Ein Stück hinzufügen">+1</button></div>${(t.progressCurrent??0)>=t.progressTarget?'<small class="v42-progress-reached">Ziel erreicht! Du kannst die Aufgabe über das Kreissymbol selbst abschließen.</small>':''}`:''}<small class="v42-progress-help">Zählt einzelne korrigierte Prüfungen. Keine automatische Fälligkeit oder Erledigung.</small></details>
- <details class="inspector-extra"><summary>Weitere Einstellungen</summary>
- <div class="inspector-dates">${dateControl('deferUntil','Defer · frühestens ab',t.deferUntil,'Verfügbarkeit; keine Deadline')}${dateControl('plannedDate','Planned · Wunschtermin',t.plannedDate,'Für Heute und Forecast')}${dateControl('dueDate','Due · harte Deadline',t.dueDate,'Fälligkeit und Überfälligkeit')}</div>
- <label>Duration · geschätzter Aufwand (Min.)<input name="estimateMinutes" type="number" min="5" max="1440" step="5" value="${t.estimateMinutes??''}"/></label>
- <label>Bereich<select name="category">${categoryOptions(t.category)}</select></label>${t.projectId?`<label>Hierarchie · Unteraufgabe von<select name="parentTaskId">${taskParentOptions(t.projectId,t.parentTaskId,t.id)}</select></label>`:''}
- <label>Agenda-Tags<input name="tags" data-smart-tags value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label><label>Kontexte<input name="contextTags" data-smart-tags value="${h((t.contextTags||[]).join(', '))}" placeholder="büro, laptop"/></label>
- <label class="flag-check"><input type="checkbox" name="flagged" ${t.flagged?'checked':''}/> Flagged</label>
- </details>
- <div class="task-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button>${t.completed?`<button type="button" class="secondary-btn" data-action="gtd-repeat-task" data-id="${h(t.id)}">${ico('sync',15)} Erneut als Aufgabe anlegen</button>`:''}</div></form>${state.taskConflicts[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Die Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
+ const progress=t.progressTarget!=null&&Number.isSafeInteger(t.progressTarget)&&t.progressTarget>0;
+ const current=t.progressCurrent??0,locked=!!t.completed||!!state?.projects?.[t.projectId]?.isTemplate;
+ return `<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form v559-inspector-form">
+ <div class="v559-progress-row"><span>Stückfortschritt</span><span class="v559-progress-actions">${progress?`<strong>${current}/${t.progressTarget}</strong><button type="button" data-action="task-progress-minus" data-id="${h(t.id)}" ${locked||current<=0?'disabled':''} aria-label="Ein Stück zurücknehmen">−1</button><button type="button" data-action="task-progress-plus" data-id="${h(t.id)}" ${locked||current>=t.progressTarget?'disabled':''} aria-label="Ein Stück hinzufügen">+1</button>`:'<small>Kein Zählziel</small>'}</span></div>
+ <div class="v559-main-dates" aria-label="Aufgabenplanung">${compactInspectorDate('deferUntil','Defer',t.deferUntil,'Frühestens verfügbar; keine Deadline')}${compactInspectorDate('plannedDate','Geplant',t.plannedDate,'Gewünschter Planungstag; keine Deadline')}${compactInspectorDate('dueDate','Due',t.dueDate,'Tatsächliche Fälligkeit')}</div>
+ <div class="v559-compact-field"><label for="v559-task-duration">${ico('clock',15)} Dauer (Min.)</label><input id="v559-task-duration" name="estimateMinutes" type="number" min="5" max="1440" step="5" value="${t.estimateMinutes??''}" placeholder="Optional"/></div>
+ <div class="v559-compact-field"><label for="v559-task-context">${ico('tag',15)} Kontexte</label><input id="v559-task-context" name="contextTags" data-smart-tags maxlength="300" value="${h((t.contextTags||[]).join(', '))}" placeholder="@büro, @laptop"/></div>
+ <details class="v559-note" ${t.note?'open':''}><summary>${ico('pencil',15)} Notiz ${t.note?`<span class="v559-note-preview">${h(t.note.slice(0,42))}${t.note.length>42?'…':''}</span>`:'<span class="v559-note-preview">Hinzufügen</span>'}</summary><textarea name="note" maxlength="3000" rows="3" placeholder="Optional">${h(t.note||'')}</textarea></details>
+ <details class="v42-progress-editor v559-progress-options"><summary>${ico('settings',14)} Fortschrittsziel festlegen ${progress?'· '+current+'/'+t.progressTarget:''}</summary><div class="v42-progress-edit-grid"><label>Gesamtzahl (Max.)<input name="progressTarget" type="number" min="1" max="100000" step="1" value="${t.progressTarget??''}" placeholder="z. B. 36"/></label><label>Bereits erledigt<input name="progressCurrent" type="number" min="0" max="${t.progressTarget??100000}" step="1" value="${current}"/></label></div><small class="v42-progress-help">Fortschritt zählt Stücke, schließt die Aufgabe aber nicht automatisch ab.</small></details>
+ <details class="inspector-extra v559-metadata"><summary>${ico('settings',14)} Titel, Projekt & GTD-Status</summary><div class="v559-meta-fields"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Bereich<select name="category">${categoryOptions(t.category)}</select></label>${t.projectId?`<label>Unteraufgabe von<select name="parentTaskId">${taskParentOptions(t.projectId,t.parentTaskId,t.id)}</select></label>`:''}<label>Agenda-Tags<input name="tags" data-smart-tags maxlength="300" value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label><label class="flag-check"><input type="checkbox" name="flagged" ${t.flagged?'checked':''}/> Flagged</label></div></details>
+ <div class="task-edit-actions v559-sticky-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button>${t.completed?`<button type="button" class="secondary-btn" data-action="gtd-repeat-task" data-id="${h(t.id)}">${ico('sync',15)} Erneut anlegen</button>`:''}</div></form>${state.taskConflicts?.[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Die Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
 }
+
 function gtdTodaySummary(){
  const hlt=projectHealth(state),waiting=waitingReview(state);
  return `<div class="gtd-quick-overview"><span>${hlt.dueReviews} Projekt-Reviews fällig</span><span>${hlt.withoutAction} Projekte ohne nächste Aktion</span><span>${waiting.attention} Waiting For zur Durchsicht</span></div><button type="button" class="text-link" data-tab="review">Wochenreview öffnen →</button><small>Hinweise aus vorhandenen Daten; keine automatisch erzeugten Termine.</small>`;
@@ -816,7 +875,7 @@ function treeTaskRows(projectId,parentTaskId=null,depth=0,visited=new Set()){
    ${hasChildren?`<button type="button" class="tree-expander" data-action="tree-task-toggle" data-id="${h(t.id)}" aria-label="Unteraufgaben ${collapsed?'anzeigen':'verbergen'}" aria-expanded="${!collapsed}">${collapsed?'▸':'▾'}</button>`:'<span class="tree-expander-space"></span>'}
    <span class="tree-drag-handle" draggable="true" data-drag-type="task" data-drag-id="${h(t.id)}" title="Ziehen zum Verschieben" aria-label="Aufgabe ziehen">⋮⋮</span>
    <button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button>
-   <button class="tree-label ${t.completed?'tree-done':''}" type="button" data-action="tree-task-select" data-id="${h(t.id)}"><span>${h(t.title)}</span>${due}</button>
+   ${inlineTaskTitle(t,`<span>${h(t.title)}</span>${due}`,'tree-task-select')}
    ${taskProgressInline(t)}
    ${!t.completed&&!isTemplateTask(state,t)?`<button type="button" class="tree-today-check ${t.plannedDate===localDate()?'is-planned':''}" data-action="tree-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" aria-label="${h(t.title)}: ${t.plannedDate===localDate()?'Aus Heute entfernen':'Für Heute auswählen'}" title="${t.plannedDate===localDate()?'Aus Heute entfernen':'Für Heute auswählen – keine Deadline'}" ${!isActionAvailable(state,t,localDate())&&t.plannedDate!==localDate()?'disabled':''}><span class="tree-today-box" aria-hidden="true">${t.plannedDate===localDate()?'✓':''}</span><span>Heute</span></button>`:''}
    <button type="button" class="tree-flag-toggle ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" aria-label="${t.flagged?'Flagge entfernen':'Flagge setzen'}" aria-pressed="${!!t.flagged}" title="${t.flagged?'Flagge entfernen':'Flagge setzen'}">${ico('flag',15)}</button>
@@ -881,7 +940,7 @@ function projectScreen(){
  const templateProjects=projects.filter(isTemplateProject).sort((a,b)=>a.title.localeCompare(b.title,'de'));
  const selection=selectedProjectId&&state.projects?.[selectedProjectId]||null;
  const selectedTask=selectedTaskId&&state.tasks?.[selectedTaskId]||null;
- const settings=selection?`<details class="project-properties" open><summary>${selection.kind==='folder'?'Ordner':'Projekt'} bearbeiten</summary><form id="project-edit-form" class="task-edit-form" data-id="${h(selection.id)}"><label>Name<input name="title" required maxlength="140" value="${h(selection.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(selection.outcome||'')}</textarea></label><label>Bereich<select name="category">${categoryOptions(selection.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${selection.status===v?'selected':''}>${l}</option>`).join('')}</select></label>${selection.kind==='folder'?folderIconPicker(selection):''}<label>Art<select name="kind"><option value="project" ${selection.kind!=='folder'?'selected':''}>Projekt</option><option value="folder" ${selection.kind==='folder'?'selected':''}>Ordner</option></select></label><label>Typ<select name="projectType">${[['parallel','Parallel'],['sequential','Sequential'],['single','Single Actions']].map(([v,l])=>`<option value="${v}" ${(selection.projectType||'parallel')===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Übergeordnet<select name="parentId">${projectParentOptions(selection.parentId,selection.id)}</select></label>${selection.kind==='project'?`<label class="template-property"><input type="checkbox" name="isTemplate" ${selection.isTemplate?'checked':''}/> Als wiederverwendbare Vorlage verwenden</label>`:''}${dateControl('dueDate','Projekt-Deadline',selection.dueDate)}<label>Review alle Tage<input name="reviewIntervalDays" type="number" min="1" max="90" value="${selection.reviewIntervalDays||7}"/></label><div class="project-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(selection.id)}">Jetzt geprüft</button></div></form></details>`:'';
+ const settings=selection?`<details class="project-properties" open><summary>${selection.kind==='folder'?'Ordner':'Projekt'} bearbeiten</summary><form id="project-edit-form" class="task-edit-form" data-id="${h(selection.id)}">${compactInspectorDate('dueDate','Projekt-Deadline',selection.dueDate)}<details class="v559-project-metadata"><summary>Projektangaben bearbeiten</summary><div class="v559-meta-fields"><label>Name<input name="title" required maxlength="140" value="${h(selection.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(selection.outcome||'')}</textarea></label><label>Bereich<select name="category">${categoryOptions(selection.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${selection.status===v?'selected':''}>${l}</option>`).join('')}</select></label>${selection.kind==='folder'?folderIconPicker(selection):''}<label>Art<select name="kind"><option value="project" ${selection.kind!=='folder'?'selected':''}>Projekt</option><option value="folder" ${selection.kind==='folder'?'selected':''}>Ordner</option></select></label><label>Typ<select name="projectType">${[['parallel','Parallel'],['sequential','Sequential'],['single','Single Actions']].map(([v,l])=>`<option value="${v}" ${(selection.projectType||'parallel')===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Übergeordnet<select name="parentId">${projectParentOptions(selection.parentId,selection.id)}</select></label>${selection.kind==='project'?`<label class="template-property"><input type="checkbox" name="isTemplate" ${selection.isTemplate?'checked':''}/> Als wiederverwendbare Vorlage verwenden</label>`:''}</div></details><label>Review alle Tage<input name="reviewIntervalDays" type="number" min="1" max="90" value="${selection.reviewIntervalDays||7}"/></label><div class="project-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(selection.id)}">Jetzt geprüft</button></div></form></details>`:'';
  return chrome(`<div class="tree-workspace ${selectedTask||selection?'has-inspector':''}"><section class="work-card tree-work-card"><div class="tree-toolbar"><strong>${templates?'Vorlagen':`${active} aktive Projekte`}</strong><div class="tree-toolbar-actions">${templates?'':`<button type="button" class="secondary-btn" data-action="tree-add-folder">${ico('plus',15)} Ordner</button><button type="button" class="secondary-btn" data-action="tree-add-project">${ico('plus',15)} Projekt</button>`}</div></div>
  ${templates?`${templateProjects.length?templateProjects.map(p=>`<div class="tree-line template-line ${selection?.id===p.id?'selected':''}"><span class="tree-node-icon">${ico('bookmark',17)}</span><button type="button" class="tree-label" data-action="project-select" data-id="${h(p.id)}"><span>${h(p.title)}</span><span class="tree-muted">${projectTasks(state,p.id).length} Einträge</span></button><button type="button" class="secondary-btn" data-action="tree-template-use" data-id="${h(p.id)}">Neue Liste</button></div>${selection?.id===p.id?`<div class="template-task-summary">${treeTaskRows(p.id)}</div>`:''}`).join(''):'<div class="tree-empty">Noch keine Vorlagen. Öffne ein Projekt und aktiviere in dessen Einstellungen „Als Vorlage verwenden“.</div>'}`:`<div class="unified-tree" role="tree" aria-label="Ordner, Projekte und Aufgaben">${treeProjectRows()||'<div class="tree-empty">Noch keine Projekte. Lege dein erstes Projekt oder einen Ordner an.</div>'}<div class="tree-root-drop" data-drop-type="project-root" data-drop-id="">${ico('folder',14)} Auf oberste Ebene ziehen</div></div>`}
  ${treeCreateKind?`<details open class="tree-quick-create"><summary>${treeCreateKind==='task'?'Neue Aufgabe':treeCreateKind==='folder'?'Neuer Ordner':'Neues Projekt'}<button type="button" class="tree-close" data-action="tree-create-close" aria-label="Schließen">×</button></summary>${treeCreateKind==='task'?taskCreateForm('',treeCreateParent||'',treeTaskParent||''):`<form class="project-form" id="project-create-form"><label>Name<input required autofocus name="title" maxlength="140" placeholder="${treeCreateKind==='folder'?'Ordnername':'Projektname'}"/></label><input type="hidden" name="kind" value="${treeCreateKind}"/><label>Unterhalb von<select name="parentId">${projectParentOptions(treeCreateParent||'')}</select></label><details class="tree-advanced"><summary>Weitere Einstellungen</summary><label>Typ<select name="projectType"><option value="parallel">Parallel</option><option value="sequential">Sequential</option><option value="single">Single Actions</option></select></label><label>Ergebnis<input name="outcome" maxlength="800" placeholder="Optional"/></label></details><button class="primary-btn" type="submit">Anlegen</button></form>`}</details>`:''}
@@ -935,7 +994,7 @@ function captureOverlay(){
  <textarea autofocus id="capture-modal-input" name="title" rows="3" maxlength="1000" required placeholder="Was möchtest du nicht vergessen?"></textarea>
  <details class="optional-capture"><summary>${ico('plus',15)} Notiz oder Link ergänzen <span>optional</span></summary><label for="capture-modal-note" class="sr-only">Zusätzliche Notiz</label><textarea id="capture-modal-note" name="note" maxlength="10000" rows="3" placeholder="Zusätzliche Informationen …"></textarea></details>
  <div class="capture-modal-foot"><span>${ico('lock',14)} Verschlüsselt und offline gespeichert</span><button class="primary-btn" type="submit">In Inbox erfassen ${ico('arrow',15)}</button></div></form>
- <p class="capture-modal-hint">Kein Projekt, keine Deadline, keine Priorität nötig · Esc zum Schließen</p><button type="button" class="capture-bulk-shortcut" data-action="capture-bulk-open">Mehrere Folgepunkte erfassen →</button></section></div>`;
+ <p class="capture-modal-hint">Kein Projekt, keine Deadline · Entwurf bleibt beim Schließen bis zur Erfassung erhalten · Esc zum Schließen</p><button type="button" class="capture-bulk-shortcut" data-action="capture-bulk-open">Mehrere Folgepunkte erfassen →</button></section></div>`;
 }
 function captureBulkPanel(){
  const proposals=captureBulkPreview||[];
@@ -968,10 +1027,10 @@ function inboxScreen(){
  `<div class="inbox-detail-top"><span class="capture-eyebrow">INSPECTOR</span><span class="inbox-detail-date">${date(current.updatedAt)}</span><button class="inbox-inspector-flag ${inboxFlagged(current)?'is-flagged':''}" data-action="inbox-flag" data-id="${h(current.id)}" type="button" aria-pressed="${inboxFlagged(current)}" aria-label="${inboxFlagged(current)?'Flagge entfernen':'Flagge setzen'}" title="Flagged umschalten">${ico('flag',17)}</button></div>
  <form id="inbox-edit-form" data-id="${h(current.id)}" class="inbox-quiet-inspector">
  <label for="inbox-edit-title">Titel</label><textarea id="inbox-edit-title" name="title" maxlength="1000" rows="2" required>${h(current.title)}</textarea>
- <div class="inbox-promote-fields"><label for="inbox-project-select">Projekt<select id="inbox-project-select" name="projectId">${projectOptions()}</select></label><label for="inbox-workflow-select">Status<select id="inbox-workflow-select" name="workflow"><option value="next">Next Action</option><option value="waiting">Waiting For</option><option value="hold">On Hold</option></select></label></div>
+ 
  <p class="inbox-project-hint">Mit „Als Aufgabe übernehmen“ wird der Eintrag einem Projekt zugeordnet und aus der Inbox entfernt. Ohne Projekt bleibt er eine Einzelaktion.</p>
  <label for="inbox-edit-note">Notiz</label><textarea id="inbox-edit-note" name="note" maxlength="10000" rows="3" placeholder="Optional">${h(current.note||'')}</textarea>
- <details class="inbox-inspector-extra"><summary>Weitere Angaben</summary><label for="inbox-edit-tags">Personen / Agenda-Tags</label><input id="inbox-edit-tags" name="tags" data-smart-tags value="${h(visibleInboxTags(current).join(', '))}" placeholder="UKO, Martin"/></details>
+ <details class="inbox-inspector-extra v559-inbox-metadata"><summary>Projekt & GTD-Status</summary><div class="inbox-promote-fields"><label for="inbox-project-select">Projekt<select id="inbox-project-select" name="projectId">${projectOptions()}</select></label><label for="inbox-workflow-select">Status<select id="inbox-workflow-select" name="workflow"><option value="next">Next Action</option><option value="waiting">Waiting For</option><option value="hold">On Hold</option></select></label></div></details><details class="inbox-inspector-extra"><summary>Weitere Angaben</summary><label for="inbox-edit-tags">Personen / Agenda-Tags</label><input id="inbox-edit-tags" name="tags" data-smart-tags value="${h(visibleInboxTags(current).join(', '))}" placeholder="UKO, Martin"/></details>
  <div class="inbox-detail-actions"><button type="submit" name="intent" value="promote" class="primary-btn">${ico('arrow',15)} Als Aufgabe übernehmen</button><button type="submit" name="intent" value="save" class="secondary-btn">Notiz speichern</button><button type="button" class="secondary-btn" data-action="remove" data-id="${h(current.id)}">Archivieren</button></div>
  </form>`:
  `<div class="inbox-mvp-empty detail-empty">${ico('pencil',32)}<strong>Ein Gedanke genügt.</strong><span>Öffne die Schnellerfassung und halte fest, was dich beschäftigt.</span></div>`}</aside></div>`);
@@ -993,7 +1052,7 @@ function reviewTaskRow(t,mode='next'){
 }
 function reviewInlineEditor(){
  const t=state?.tasks?.[reviewEditingTaskId];if(!t||t.archived)return '';
- return `<form id="review-inline-task" data-id="${h(t.id)}" class="assistant-inline-form"><div class="work-heading"><span>${ico('pencil',16)} Aufgabe bearbeiten</span><button type="button" class="secondary-btn" data-action="assistant-task-cancel">Schließen</button></div><label>Titel<input name="title" required maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="2">${h(t.note||'')}</textarea></label><div class="assistant-form-grid"><label>Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>Geplant<input name="plannedDate" type="date" value="${h(t.plannedDate||'')}"/></label><label>Defer (keine Deadline)<input name="deferUntil" type="date" value="${h(t.deferUntil||'')}"/></label><label>Due (harte Frist)<input name="dueDate" type="date" value="${h(t.dueDate||'')}"/></label><label>Agenda-Tags<input data-smart-tags name="tags" maxlength="300" value="${h((t.tags||[]).join(', '))}"/></label></div><button type="submit" class="primary-btn">Aufgabe speichern</button></form>`;
+ return `<form id="review-inline-task" data-id="${h(t.id)}" class="assistant-inline-form"><div class="work-heading"><span>${ico('pencil',16)} Aufgabe bearbeiten</span><button type="button" class="secondary-btn" data-action="assistant-task-cancel">Schließen</button></div><label>Titel<input name="title" required maxlength="180" value="${h(t.title)}"/></label><label>Notiz<textarea name="note" maxlength="3000" rows="2">${h(t.note||'')}</textarea></label><div class="assistant-form-grid"><label>Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label>${compactInspectorDate('deferUntil','Defer',t.deferUntil)}${compactInspectorDate('plannedDate','Geplant',t.plannedDate)}${compactInspectorDate('dueDate','Due',t.dueDate)}<label>Agenda-Tags<input data-smart-tags name="tags" maxlength="300" value="${h((t.tags||[]).join(', '))}"/></label></div><button type="submit" class="primary-btn">Aufgabe speichern</button></form>`;
 }
 function reviewQuickAction(defaultProject=null){
  return `<form id="review-quick-action" class="assistant-quick-action"><label>Nächste Aktion direkt hier erfassen<input name="title" required maxlength="180" placeholder="Konkreter, ausführbarer nächster Schritt …"/></label><div class="assistant-form-grid"><label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label><label>Status<select name="workflow">${workflowOptions('next')}</select></label><label>Personen- / Agenda-Tags<input name="tags" data-smart-tags maxlength="300" placeholder="Tag eingeben …"/></label></div><button class="secondary-btn" type="submit">${ico('plus',14)} Aktion anlegen</button></form>`;
@@ -1006,7 +1065,7 @@ function reviewStepBody(step,queue){
  if(step==='collect')return `<div class="assistant-help"><strong>Was ist noch im Kopf?</strong><p>Erfasse einzelne Gedanken schnell, bevor du die Inbox klärst. Auch Papiernotizen und Nachrichten-Postfächer bewusst berücksichtigen.</p></div><form id="review-capture" class="assistant-quick-action"><label>Gedanke, Erinnerung oder Zusage<input name="title" maxlength="1000" required placeholder="Was beschäftigt dich gerade?"/></label><button class="primary-btn" type="submit">Zur Inbox hinzufügen</button></form>`;
  if(step==='inbox'){
   const list=queue.inbox,current=list.find(r=>r.id===selectedInboxId)||list[0]||null;const draft=current?reviewDrafts.get(current.id)||{}:{};
-  return `<div class="assistant-kpi">${list.length} ungeklärte Einträge</div><div class="review-cards-layout"><nav class="review-inbox-list">${list.map(r=>`<button type="button" class="review-inbox-item ${r.id===current?.id?'selected':''}" data-action="review-select" data-id="${h(r.id)}"><strong>${h(r.title)}</strong></button>`).join('')||'<p class="muted-line">Inbox leer – dieser Teil ist abgeschlossen.</p>'}</nav><div class="review-detail">${current?`<strong>${h(current.title)}</strong><p class="review-item-note">${h(current.note||'')}</p>${clarifyControls(current.id)}<form id="review-commit-form" data-id="${h(current.id)}"><div class="review-plan-fields"><label>Projekt<select name="projectId">${projectOptions(draft.projectId)}</select></label><label>Bereich<select name="category">${categoryOptions(draft.category||'Allgemein')}</select></label>${dateControl('deferUntil','Defer',draft.deferUntil)}${dateControl('plannedDate','Planned',draft.plannedDate)}${dateControl('dueDate','Due',draft.dueDate)}<label>Aufwand in Minuten<input type="number" name="estimateMinutes" min="5" max="1440" step="5" value="${h(draft.estimateMinutes||'')}"/></label></div><button class="primary-btn" type="submit">Als ${h(({next:'Next Action',waiting:'Waiting For',hold:'On Hold',dreams:'Dream'})[reviewWorkflow])} übernehmen</button></form><button type="button" class="secondary-btn assistant-remove" data-action="assistant-inbox-remove" data-id="${h(current.id)}">Eintrag archivieren</button>`:'<p class="muted-line">Die Inbox ist vollständig geklärt.</p>'}</div></div>`;
+  return `<div class="assistant-kpi">${list.length} ungeklärte Einträge</div><div class="review-cards-layout"><nav class="review-inbox-list">${list.map(r=>`<button type="button" class="review-inbox-item ${r.id===current?.id?'selected':''}" data-action="review-select" data-id="${h(r.id)}"><strong>${h(r.title)}</strong></button>`).join('')||'<p class="muted-line">Inbox leer – dieser Teil ist abgeschlossen.</p>'}</nav><div class="review-detail">${current?`<strong>${h(current.title)}</strong><p class="review-item-note">${h(current.note||'')}</p>${clarifyControls(current.id)}<form id="review-commit-form" data-id="${h(current.id)}"><div class="review-plan-fields"><label>Projekt<select name="projectId">${projectOptions(draft.projectId)}</select></label><label>Bereich<select name="category">${categoryOptions(draft.category||'Allgemein')}</select></label>${compactInspectorDate('deferUntil','Defer',draft.deferUntil)}${compactInspectorDate('plannedDate','Geplant',draft.plannedDate)}${compactInspectorDate('dueDate','Due',draft.dueDate)}<label>Aufwand in Minuten<input type="number" name="estimateMinutes" min="5" max="1440" step="5" value="${h(draft.estimateMinutes||'')}"/></label></div><button class="primary-btn" type="submit">Als ${h(({next:'Next Action',waiting:'Waiting For',hold:'On Hold',dreams:'Dream'})[reviewWorkflow])} übernehmen</button></form><button type="button" class="secondary-btn assistant-remove" data-action="assistant-inbox-remove" data-id="${h(current.id)}">Eintrag archivieren</button>`:'<p class="muted-line">Die Inbox ist vollständig geklärt.</p>'}</div></div>`;
  }
  if(step==='calendar-past')return reviewCalendarEntries(queue.calendarPast,'past');
  if(step==='calendar-future')return reviewCalendarEntries(queue.calendarFuture,'future');
@@ -1426,7 +1485,8 @@ async function reloadWatchSessions(){
  catch(ex){watchError='Uhr-Daten derzeit nicht erreichbar ('+ex.message+').';render();}
 }
 function render(){
- if(!state){captureOverlayOpen=false;app.innerHTML=vaultScreen();bind();return;}
+ const captureFocus=snapshotCaptureDraft();
+ if(!state){captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';app.innerHTML=vaultScreen();bind();return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  let html;
  try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
@@ -1437,11 +1497,10 @@ function render(){
    const rows=Object.values(state?.projects||{}).filter(p=>p&&!p.isTemplate).slice(0,200);
    html=chrome(`<section class="work-card" role="alert"><h2>Projektansicht eingeschränkt</h2><p>Beim Darstellen der Projekte ist ein Fehler aufgetreten. Deine Projektdaten wurden nicht verändert.</p><p>${rows.length} Projekte/Ordner gefunden.</p><button type="button" class="secondary-btn" data-tab="next">Next Actions öffnen</button></section>`);
  }
- app.innerHTML=html;bind();
+ app.innerHTML=html;bind();restoreCaptureDraft(captureFocus);
  if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto!==false&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
    requestAnimationFrame(()=>refreshPublicKrakenPrices(false));
  }
- if(captureOverlayOpen)requestAnimationFrame(()=>app.querySelector('#capture-modal-input')?.focus());
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
@@ -1569,6 +1628,7 @@ function bind() {
     ev.preventDefault();
     const submit=form.querySelector('[type=submit]');if(submit)submit.disabled=true;
     try {const data=new FormData(form);await addCapture(data.get('title'),data.get('note'));captureOverlayOpen=false;
+      captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;
       notice='Sicher in deiner Inbox gespeichert'+(authToken?' · Cloud-Abgleich vorgemerkt':' · nur auf diesem Gerät')+'.';error='';render();
     }catch(ex){if(submit)submit.disabled=false;toast(ex.message,true);}
   });
@@ -2062,13 +2122,18 @@ function bind() {
       if(next)try{await mutate(s=>{s.uiPreferences??={};s.uiPreferences.inboxManualOrder=next;});}catch(ex){toast(ex.message,true);}
     });
   });
+  app.querySelectorAll('.v559-rename-input').forEach(field=>field.onkeydown=ev=>{
+    const id=field.closest('[data-task-id]')?.dataset.taskId;
+    if(ev.key==='Enter'){ev.preventDefault();if(id)runAction('task-rename-save',id);}
+    if(ev.key==='Escape'){ev.preventDefault();inlineEditingTaskId=null;render();}
+  });
   app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
     if(el.dataset.action==='capture-close-backdrop'&&ev.target!==el)return;
     if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
       const field=el.closest('form')?.querySelector(`[name="${el.dataset.field}"]`);
       if(!field)return;
       if(el.dataset.action==='date-clear')field.value='';
-      else {const from=field.value||localDate();const dt=new Date(from+'T12:00:00');if(el.dataset.offset==='day')dt.setDate(dt.getDate()+1);else if(el.dataset.offset==='week')dt.setDate(dt.getDate()+7);else if(el.dataset.offset==='month'){const day=dt.getDate();dt.setDate(1);dt.setMonth(dt.getMonth()+1);dt.setDate(Math.min(day,new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate()));}field.value=localDate(dt);}
+      else {const next=inspectorDateShift(field.value,el.dataset.offset,localDate());if(next)field.value=next;}
       field.focus();return;
     }
     runAction(el.dataset.action,el.dataset.id,el.dataset.step,el.dataset.day);
@@ -2582,6 +2647,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='capture-bulk-clear'){captureBulkPreview=null;captureBulkRaw='';captureBulkOpen=false;render();return;}
     if(action==='capture-focus'){
       if(!state){captureAfterUnlock=true;document.querySelector('#passphrase')?.focus();return;}
+      captureNeedsInitialFocus=!captureOverlayOpen;
       captureOverlayOpen=true;render();return;
     }
     if(action==='capture-close'||action==='capture-close-backdrop'){captureOverlayOpen=false;render();return;}
@@ -2868,7 +2934,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
       await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
     }
-    if(action==='lock'){smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){
@@ -2910,6 +2976,21 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
         toast('Compass-Sitzung auf diesem Gerät beendet. Lokale Daten bleiben geschützt.');}
       catch {toast('Lokal abgemeldet. Serverseitiger Widerruf gerade nicht erreichbar – bitte bei Gelegenheit erneut verbinden und abmelden.',true);}
       return;
+    }
+    if(action==='task-rename-start'){
+      if(!state?.tasks?.[id]||state.tasks[id].archived||state.projects?.[state.tasks[id].projectId]?.isTemplate)return;
+      if(state.taskConflicts?.[id]){toast('Zuerst den Änderungskonflikt dieser Aufgabe klären.',true);return;}
+      inlineEditingTaskId=id;render();requestAnimationFrame(()=>{const field=app.querySelector('.v559-rename-input');field?.focus();field?.select();});return;
+    }
+    if(action==='task-rename-cancel'){inlineEditingTaskId=null;render();return;}
+    if(action==='task-rename-save'){
+      const existing=state?.tasks?.[id];const editor=[...app.querySelectorAll('.v559-rename-editor')].find(el=>el.dataset.taskId===id);
+      const title=inspectorTitle(editor?.querySelector('input')?.value);
+      if(!existing||existing.archived||state.projects?.[existing.projectId]?.isTemplate)return;
+      if(state.taskConflicts?.[id]){toast('Zuerst den Änderungskonflikt dieser Aufgabe klären.',true);return;}
+      if(!title){toast('Titel muss zwischen 1 und 180 Zeichen lang sein.',true);editor?.querySelector('input')?.focus();return;}
+      if(title!==existing.title){await mutate(s=>{s.tasks[id].title=title;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});}
+      inlineEditingTaskId=null;render();return;
     }
     if(action==='task-select'){if(!state?.tasks?.[id])return;selectedTaskId=id;render();return;}
     if(action==='flag-existing'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].flagged=true;s.taskPending??={};s.taskPending[id]=true;});return;}

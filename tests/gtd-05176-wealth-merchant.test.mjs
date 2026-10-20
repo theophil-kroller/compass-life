@@ -29,5 +29,5 @@ test('kraken partial cannot be silently counted as complete wealth',()=>{
 });
 test('0.5.17.6 is wired to finance UX without private data',()=>{
  const dash=readFileSync(new URL('../client/src/finance-dashboard.js',import.meta.url),'utf8');const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.58'/);assert.match(dash,/merchantInsightsView\(filtered/);assert.match(dash,/consolidatedWealthView\(state/);assert.match(main,/finance-wealth-add/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.59'/);assert.match(dash,/merchantInsightsView\(filtered/);assert.match(dash,/consolidatedWealthView\(state/);assert.match(main,/finance-wealth-add/);
 });
