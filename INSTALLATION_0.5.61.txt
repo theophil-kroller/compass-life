@@ -1,0 +1,33 @@
+Compass 0.5.61 — Installation
+================================
+
+PATCH ab Compass 0.5.60:
+  1. Bestehenden Repository-Stand und verschlüsselten Vault sichern.
+  2. Inhalt von Compass_0.5.61_PATCH_FROM_0.5.60.zip im
+     Repository-Stammverzeichnis entpacken; gleichnamige Dateien ersetzen.
+  3. Committen; GitHub Pages / CI neu deployen.
+  4. Im CI npm run check UND npm run build erfolgreich abschließen lassen.
+  5. Browser / installierte PWA neu laden.
+
+FULL SOURCE:
+  Compass_0.5.61_FULL_SOURCE.zip enthält den vollständigen aktuellen Quellenstand.
+
+ZUERST PRÜFEN:
+  - Finanzen > Planung > Prognose öffnen, nach Bankimporten.
+  - Ist ein wiederkehrender GEHALT-Zahlungspartner bekannt, wird die vorsichtige
+    Gehaltsbasis gezeigt. Saisonale höhere Beträge sind in derselben Zahlung;
+    es darf keine zweite Sonderzahlungs-Buchung erscheinen.
+  - Regelmäßige Betriebskosten / Hausverwaltung samt letztem Betrag und
+    ungefährem nächsten Zahlungstag prüfen.
+  - Bei korrekt kategorisierten Zahlungspartnern Tagesmodell / 45-Tage-Graph
+    und Liste der folgenden Zahlungstage prüfen.
+  - Beispiel: Ausgabe vor nächstem Gehalt simulieren. Der berechnete Tages-
+    Tiefststand darf nicht durch ein gutes Monatsende verdeckt werden.
+  - Bei unsicheren Eingängen und fehlendem heutigen Anfangsbestand muss
+    Compass vorsichtig bleiben und keine Zahlungsfähigkeitsgarantie ausgeben.
+  - Vergleich mit tatsächlichen Bankbuchungen; die Erkennung ist eine
+    prüfbare Schätzung, keine automatische Bankverbindung.
+
+Keine D1-Migration; kein Zurücksetzen oder Neuerstellen des Vault.
+622/622 automatisierte Node-Tests; Worker- und Client-Syntax geprüft.
+Nicht vor Ort ausgeführt: Vite-Produktionsbuild (vite fehlt) und Live-Vault-Test.
