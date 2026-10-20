@@ -2266,3 +2266,28 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .tree-today-check:disabled{opacity:.38;cursor:not-allowed}
 .tree-today-check:focus-visible{outline:2px solid #3c946f;outline-offset:1px}
 @media(max-width:700px){.tree-today-check{padding:4px 3px}.tree-today-check span:last-child{font-size:9px}}
+
+/* 0.5.54: readable project selection and quietly integrated time-off simulation. */
+.tree-line.fin43-project-row .tree-label,.tree-line.fin43-folder-row .tree-label{position:relative;z-index:1;flex:1 1 0;min-width:0}
+.tree-line.fin43-project-row .tree-label:hover,.tree-line.fin43-folder-row .tree-label:hover{color:#22654e;text-decoration:underline;text-decoration-color:#b3cfc0;text-underline-offset:3px}
+.tree-inspector .project-properties[open] > summary{color:#315d48}
+.rec554{margin:9px 0 13px;background:#fbfdfb;border:1px solid #e0eae3;border-radius:12px;padding:10px 13px;min-width:0}
+.rec554>summary{font-size:12px;font-weight:650;color:#3b6351;cursor:pointer;display:flex;gap:9px;align-items:center}
+.rec554>summary span{margin-left:auto;color:#8a9c91;font-size:10px;font-weight:450}
+.rec554-content{border-top:1px solid #e9eee9;margin-top:10px;padding-top:9px}
+.rec554-content p{margin:6px 0;font-size:11px;line-height:1.5;color:#527365}
+.rec554-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:9px 0}
+.rec554-controls>span{margin-right:auto;font-size:11px;color:#3d5a4c}
+.rec554-controls button{background:white;border:1px solid #dce9e0;border-radius:7px;color:#527365;cursor:pointer;font-size:11px;padding:6px 11px}
+.rec554-controls button.selected{background:#dcefe5;border-color:#96c5ad;font-weight:650;color:#235942}
+.rec554-content .rec554-balance{font-weight:600}
+.rec554-options{display:grid;gap:4px;margin-top:7px}
+.rec554-option{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #e7eee9;border-radius:9px;padding:8px 10px}
+.rec554-option>div{display:grid;gap:3px;min-width:0}
+.rec554-option strong{font-size:11px;color:#2e5746}
+.rec554-option small{font-size:10px;line-height:1.4;color:#73897c}
+.rec554-rating{flex:none;font-size:10px;border-radius:20px;padding:4px 7px;background:#e9f4ea;color:#31704c}
+.rec554-rating.rec554-uncertain{background:#f7f0df;color:#89652b}
+.rec554-rating.rec554-risk{background:#f9e9e5;color:#a65041}
+.rec554-content .rec554-disclaimer{font-size:10px;color:#8a9a91;line-height:1.5;margin-top:10px}
+@media(max-width:650px){.rec554-option{align-items:flex-start;flex-wrap:wrap}.rec554-rating{margin-left:auto}}

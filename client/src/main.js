@@ -55,6 +55,7 @@ import {exploreDays,exploreView,EXPLORE_FIELDS} from './insights-explorer.js';
 import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insightsPlannedView} from './insights.js';
 import {healthFindings,rankHealthFindingsLocally} from './health-intelligence-v551.js';
 import {inspectWorktimeFile,mergeWorktime,worktimeView} from './worktime-v553.js';
+import {recoveryCandidates,recoveryEvidence,recoveryView} from './recovery-timeoff-v554.js';
 import {insightsStressView,insightsEnergyView} from './insights-wellness.js';
 import {fitnessInsightsView} from './insights-fitness.js';
 import {buildProductivityInsights,productivityInsightsView} from './insights-productivity.js';
@@ -73,7 +74,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.53.1';
+const COMPASS_CLIENT_VERSION='0.5.54';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -154,7 +155,7 @@ let insightWellnessDay='';let insightStressGranularity='week',insightBodyComposi
 let sportsMode='all',sportsAnchor=localDate(),sportsMetric='time',sportsSelected='';
 let financeCycleSelected='';
 let financeMarketQuote=null;
-let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',insightYearMode='month',insightWeekAnchor='',workYear=new Date().getFullYear(),workThreshold=45,workPreview=null,healthAiOrder=[],healthAiStatus='',financePane='Überblick';
+let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep',insightPeriod=bootView==='places'?'all':'28',insightNight='',insightYearMode='month',insightWeekAnchor='',workYear=new Date().getFullYear(),workThreshold=45,workPreview=null,timeoffKind='za',timeoffOpen=false,healthAiOrder=[],healthAiStatus='',financePane='Überblick';
 // Non-sensitive presentation only. Deep links always override the last-view preference.
 const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.calm.lastView')||'null');}catch{return null;}})();
 if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
@@ -672,6 +673,7 @@ function forecastScreen(){
  ${capacityPanel()}
  ${dailyPlanPanel()}
  ${proactivePlannerPanel()}
+ ${recoveryView(recoveryCandidates(state,localCapacity(localDate(),14),{kind:timeoffKind,today:localDate()}),recoveryEvidence(state?.workTime||{},state?.healthImports?.garminNights||[],localDate(),workThreshold),{kind:timeoffKind,open:timeoffOpen})}
  ${deadlineCompact({inForecast:true})}
  <div class="forecast-tools">${calendarToken?calendarFilterToggle():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · ${planned.length} geplante Aufgaben · ${days.reduce((sum,d)=>sum+recoveryEvents(d).length,0)} Erholungstermine · Google Calendar nur lesend</span></div>
  ${overdue.length?`<div class="forecast-date-overdue"><strong>Überfällig</strong>${taskList(overdue,'forecast')}</div>`:''}
@@ -851,12 +853,12 @@ function projectScreen(){
  const templates=tab==='templates';
  const projects=Object.values(state?.projects||{});
  const current=selectedProjectId&&state?.projects?.[selectedProjectId]||null;
- if(current&&current.isTemplate!==templates){selectedProjectId=null;selectedTaskId=null;}
+ if(current&&Boolean(current.isTemplate)!==templates){selectedProjectId=null;selectedTaskId=null;}
  const active=projects.filter(p=>p.kind==='project'&&!p.isTemplate&&p.status==='active').length;
  const templateProjects=projects.filter(isTemplateProject).sort((a,b)=>a.title.localeCompare(b.title,'de'));
  const selection=selectedProjectId&&state.projects?.[selectedProjectId]||null;
  const selectedTask=selectedTaskId&&state.tasks?.[selectedTaskId]||null;
- const settings=selection?`<details class="project-properties"><summary>${selection.kind==='folder'?'Ordner':'Projekt'} bearbeiten</summary><form id="project-edit-form" class="task-edit-form" data-id="${h(selection.id)}"><label>Name<input name="title" required maxlength="140" value="${h(selection.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(selection.outcome||'')}</textarea></label><label>Bereich<select name="category">${categoryOptions(selection.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${selection.status===v?'selected':''}>${l}</option>`).join('')}</select></label>${selection.kind==='folder'?folderIconPicker(selection):''}<label>Art<select name="kind"><option value="project" ${selection.kind!=='folder'?'selected':''}>Projekt</option><option value="folder" ${selection.kind==='folder'?'selected':''}>Ordner</option></select></label><label>Typ<select name="projectType">${[['parallel','Parallel'],['sequential','Sequential'],['single','Single Actions']].map(([v,l])=>`<option value="${v}" ${(selection.projectType||'parallel')===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Übergeordnet<select name="parentId">${projectParentOptions(selection.parentId,selection.id)}</select></label>${selection.kind==='project'?`<label class="template-property"><input type="checkbox" name="isTemplate" ${selection.isTemplate?'checked':''}/> Als wiederverwendbare Vorlage verwenden</label>`:''}${dateControl('dueDate','Projekt-Deadline',selection.dueDate)}<label>Review alle Tage<input name="reviewIntervalDays" type="number" min="1" max="90" value="${selection.reviewIntervalDays||7}"/></label><div class="project-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(selection.id)}">Jetzt geprüft</button></div></form></details>`:'';
+ const settings=selection?`<details class="project-properties" open><summary>${selection.kind==='folder'?'Ordner':'Projekt'} bearbeiten</summary><form id="project-edit-form" class="task-edit-form" data-id="${h(selection.id)}"><label>Name<input name="title" required maxlength="140" value="${h(selection.title)}"/></label><label>Ergebnis<textarea name="outcome" rows="2" maxlength="800">${h(selection.outcome||'')}</textarea></label><label>Bereich<select name="category">${categoryOptions(selection.category)}</select></label><label>Status<select name="status">${[['active','Aktiv'],['hold','On Hold'],['completed','Abgeschlossen']].map(([v,l])=>`<option value="${v}" ${selection.status===v?'selected':''}>${l}</option>`).join('')}</select></label>${selection.kind==='folder'?folderIconPicker(selection):''}<label>Art<select name="kind"><option value="project" ${selection.kind!=='folder'?'selected':''}>Projekt</option><option value="folder" ${selection.kind==='folder'?'selected':''}>Ordner</option></select></label><label>Typ<select name="projectType">${[['parallel','Parallel'],['sequential','Sequential'],['single','Single Actions']].map(([v,l])=>`<option value="${v}" ${(selection.projectType||'parallel')===v?'selected':''}>${l}</option>`).join('')}</select></label><label>Übergeordnet<select name="parentId">${projectParentOptions(selection.parentId,selection.id)}</select></label>${selection.kind==='project'?`<label class="template-property"><input type="checkbox" name="isTemplate" ${selection.isTemplate?'checked':''}/> Als wiederverwendbare Vorlage verwenden</label>`:''}${dateControl('dueDate','Projekt-Deadline',selection.dueDate)}<label>Review alle Tage<input name="reviewIntervalDays" type="number" min="1" max="90" value="${selection.reviewIntervalDays||7}"/></label><div class="project-edit-actions"><button class="primary-btn" type="submit">Speichern</button><button type="button" class="secondary-btn" data-action="project-reviewed" data-id="${h(selection.id)}">Jetzt geprüft</button></div></form></details>`:'';
  return chrome(`<div class="tree-workspace ${selectedTask||selection?'has-inspector':''}"><section class="work-card tree-work-card"><div class="tree-toolbar"><strong>${templates?'Vorlagen':`${active} aktive Projekte`}</strong><div class="tree-toolbar-actions">${templates?'':`<button type="button" class="secondary-btn" data-action="tree-add-folder">${ico('plus',15)} Ordner</button><button type="button" class="secondary-btn" data-action="tree-add-project">${ico('plus',15)} Projekt</button>`}</div></div>
  ${templates?`${templateProjects.length?templateProjects.map(p=>`<div class="tree-line template-line ${selection?.id===p.id?'selected':''}"><span class="tree-node-icon">${ico('bookmark',17)}</span><button type="button" class="tree-label" data-action="project-select" data-id="${h(p.id)}"><span>${h(p.title)}</span><span class="tree-muted">${projectTasks(state,p.id).length} Einträge</span></button><button type="button" class="secondary-btn" data-action="tree-template-use" data-id="${h(p.id)}">Neue Liste</button></div>${selection?.id===p.id?`<div class="template-task-summary">${treeTaskRows(p.id)}</div>`:''}`).join(''):'<div class="tree-empty">Noch keine Vorlagen. Öffne ein Projekt und aktiviere in dessen Einstellungen „Als Vorlage verwenden“.</div>'}`:`<div class="unified-tree" role="tree" aria-label="Ordner, Projekte und Aufgaben">${treeProjectRows()||'<div class="tree-empty">Noch keine Projekte. Lege dein erstes Projekt oder einen Ordner an.</div>'}<div class="tree-root-drop" data-drop-type="project-root" data-drop-id="">${ico('folder',14)} Auf oberste Ebene ziehen</div></div>`}
  ${treeCreateKind?`<details open class="tree-quick-create"><summary>${treeCreateKind==='task'?'Neue Aufgabe':treeCreateKind==='folder'?'Neuer Ordner':'Neues Projekt'}<button type="button" class="tree-close" data-action="tree-create-close" aria-label="Schließen">×</button></summary>${treeCreateKind==='task'?taskCreateForm('',treeCreateParent||'',treeTaskParent||''):`<form class="project-form" id="project-create-form"><label>Name<input required autofocus name="title" maxlength="140" placeholder="${treeCreateKind==='folder'?'Ordnername':'Projektname'}"/></label><input type="hidden" name="kind" value="${treeCreateKind}"/><label>Unterhalb von<select name="parentId">${projectParentOptions(treeCreateParent||'')}</select></label><details class="tree-advanced"><summary>Weitere Einstellungen</summary><label>Typ<select name="projectType"><option value="parallel">Parallel</option><option value="sequential">Sequential</option><option value="single">Single Actions</option></select></label><label>Ergebnis<input name="outcome" maxlength="800" placeholder="Optional"/></label></details><button class="primary-btn" type="submit">Anlegen</button></form>`}</details>`:''}
@@ -1411,6 +1413,7 @@ function render(){
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
+ const recPanel=app.querySelector('#rec554-panel');if(recPanel)recPanel.addEventListener('toggle',()=>{if(recPanel.isConnected)timeoffOpen=recPanel.open;});
  const plannerElement=app.querySelector('#v47-plan');if(plannerElement)plannerElement.addEventListener('toggle',()=>{plannerExpanded=plannerElement.open;});
  if(state)wireSmartTags(app,()=>state);
  if(tab==='finance'&&financePane==='Portfolio'&&krakenChartData?.candles?.length)app.querySelectorAll('.fin39-price-card .fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,krakenChartData.candles,krakenChartSettings));
@@ -2077,6 +2080,7 @@ async function placeInDailyPlan(taskId,start,moveId=null){
 async function runAction(action,id,stepId=null,plannerDay=null) {
   lastActivity=Date.now();
   try {
+    if(action==='rec554-kind'){if(id==='za'||id==='vacation'){timeoffKind=id;timeoffOpen=true;render();}return;}
     if(action==='daily-plan-day'){
       const range=localCapacity(localDateString(new Date()),14);
       if(!range.days.some(d=>d.day===id))return;
@@ -2473,7 +2477,14 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
         await mutate(s=>{s.tasks[newId]=copy;s.taskPending[newId]=true;});selectedTaskId=newId;toast('Neue Next Action angelegt. Eine automatische Wiederholung wurde nicht eingerichtet.');
       }catch(ex){toast(ex.message,true);}return;
     }
-    if(action==='project-select'){selectedProjectId=id;selectedTaskId=null;const p=state.projects?.[id];if(p?.isTemplate)tab='templates';else if(tab==='templates')tab='projects';render();return;}
+    if(action==='project-select'){
+      const p=state?.projects?.[id];if(!p)return;
+      // The title must both navigate to the inspector and reveal a collapsed project's children.
+      // Today's task toggle is a separate control and must never intercept navigation.
+      projectCollapsed.delete(id);selectedProjectId=id;selectedTaskId=null;
+      if(p.isTemplate)tab='templates';else if(tab==='templates')tab='projects';
+      render();const details=app.querySelector('.project-properties');if(details)details.open=true;return;
+    }
     if(action==='project-reviewed'){if(!state?.projects?.[id])return;await mutate(s=>{s.projects[id].reviewedAt=stamp();s.projectPending[id]=true;});toast('Projekt-Review dokumentiert.');return;}
     if(action==='project-conflict-local'||action==='project-conflict-remote'){
       const conflict=state?.projectConflicts[id];if(!conflict)return;

@@ -33,6 +33,7 @@ import * as sportsModule from '../client/src/sports-insights.js';
 import * as reviewHubModule from '../client/src/review-import-hub.js';
 import * as smartImportHubModule from '../client/src/smart-import-hub-v49.js';
 import * as healthCoverage494 from '../client/src/health-data-coverage-v494.js';
+import * as timeoff554 from '../client/src/recovery-timeoff-v554.js';
 const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
 const compiled=source.replace(/^import .*;\r?\n/gm,'').replace('registerSW({immediate:true});','').split("document.addEventListener('keydown'")[0]+`
  globalThis.testUI=(current,mode,events=[])=>{state=current;tab=mode;calendarEvents=events;render();return app.innerHTML;};
@@ -49,7 +50,7 @@ function context(){
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
- Object.assign(ctx,smartImportHubModule,healthCoverage494);
+ Object.assign(ctx,smartImportHubModule,healthCoverage494,timeoff554);
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.
  runInNewContext(compiled,ctx,{filename:'compass-main-browser-smoke.js',timeout:2000});
  return ctx;
@@ -140,4 +141,18 @@ test('0.5.38 Today shortcut never changes an existing dueDate',async()=>{
  ui.testUI(st,'next');await ui.testAction('next-plan-today',id);
  assert.equal(ui.readState().tasks[id].plannedDate,tasks.localDate());
  assert.equal(ui.readState().tasks[id].dueDate,'2026-11-09');
+});
+
+test('0.5.54 regression: project title really opens a collapsed project, inspector and its tasks',async()=>{
+ const ui=context(),p='10000000-0000-4000-8000-000000000031',t='10000000-0000-4000-8000-000000000032';
+ const st=tasks.prepareTasks({format:1,records:{},projects:{[p]:{id:p,kind:'project',title:'Prüfungen',status:'active',projectType:'parallel'}},tasks:{[t]:{id:t,projectId:p,title:'Korrekturen PME',category:'Allgemein',workflow:'next',completed:false,archived:false}},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
+ let html=ui.testUI(st,'projects');assert.match(html,/data-action="project-select"/);
+ await ui.testAction('project-toggle-expand',p);html=ui.testUI(ui.readState(),'projects');
+ assert.doesNotMatch(html,/Korrekturen PME/);
+ await ui.testAction('project-select',p);html=ui.testUI(ui.readState(),'projects');
+ assert.match(html,/Korrekturen PME/);
+ assert.match(html,/tree-inspector/);
+ assert.match(html,/<details class="project-properties" open>/);
+ await ui.testAction('tree-task-select',t);html=ui.testUI(ui.readState(),'projects');
+ assert.match(html,/Aufgabendetails/);
 });

@@ -1,0 +1,23 @@
+Compass 0.5.54 – Projektklick repariert, Wochenmonate, ZA-/Urlaubsvorschau
+
+AUSGANGSVERSION: 0.5.53.1
+
+PATCH:
+1. Ein Backup deines bestehenden GitHub-Repositories und insbesondere des lokalen Vaults sicherstellen.
+2. Compass_0.5.54_PATCH_FROM_0.5.53.1.zip in das Stammverzeichnis des bestehenden Repositories entpacken; Dateien überschreiben.
+3. Frontend wie gewohnt über den GitHub-Pages-Workflow oder nach npm install mit npm run build -w client veröffentlichen.
+4. Compass komplett neu laden; bei PWA-Cache alte Version auslaufen lassen. Die Versionsanzeige muss 0.5.54 sein.
+
+FULL:
+Alternativ Compass_0.5.54_FULL_SOURCE.zip als vollständigen Quellstand verwenden.
+
+KEINE NEUE MIGRATION: Für 0.5.54 kein Worker-/D1-Update erforderlich, sofern 0.5.52 (inkl. Migration 0017) bereits ordnungsgemäß installiert ist.
+
+MANUELLE ABNAHME:
+A) Planen > Projekte: Projektnamen anklicken. Die Projektdetails müssen rechts sofort sichtbar sein. Ein zuvor zugeklapptes Projekt muss sich öffnen; das Kästchen „Heute“ bei einer Aufgabe darf den Projektklick nicht beeinflussen.
+B) Insights > Arbeitszeit: Wochenbelastung aufrufen. Jan–Dez sind entlang der Zeitachse sichtbar; beim Zeigen eines Balkens erscheinen KW, Wochenzeitraum und Stunden. Schwellenwert umstellen.
+C) Planen > Forecast: „Freien Tag prüfen“ aufklappen, zwischen ZA und Urlaub wechseln. Bei vollständigem und frischem Kalender sowie eingelesener Arbeitszeit zeigt Compass potenziell machbare Tage und Risiken; ohne diese Daten einen nachvollziehbaren Hinweis. NICHTS davon bucht einen echten Urlaubstag.
+
+SICHERHEIT: Alle Vorschläge bleiben simuliert, Arbeitszeit- und Urlaubsstände werden nur gelesen. Keine Kalender-Schreibrechte nötig.
+
+TESTS: npm test (573 Tests) und npm run check -w worker erfolgreich. npm run build -w client in dieser Umgebung nicht ausführbar, da Vite nicht installiert war. Visuelle Browser-Live-Abnahme ist noch offen.
