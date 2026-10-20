@@ -74,6 +74,39 @@ export function financeRadarEvidence(transactions=[], today='2026-10-20'){
  return {score,monthCount,income,expense,supported,pending,excluded,invalid,latest:newest,provisional,cause,source:'Bankbuchungen'};
 }
 function cashflowMonthForRadar(today,offset){const [y,m]=today.slice(0,7).split('-').map(Number);return new Date(Date.UTC(y,m-1+offset,1)).toISOString().slice(0,7);}
+
+/** Worktime is imported as individual documented calendar dates. An arbitrary rolling
+ * 7-day slice almost always straddles TWO calendar weeks; requiring three rows in
+ * each half discards otherwise complete weeks. Use finished ISO weeks instead.
+ * The boundary may reach at most six days outside the radar's labeled interval
+ * to include the whole preceding week. Unrecorded days are never imputed as zero.
+ */
+export function workBalanceEvidence(work={}, {start='2026-10-15',today='2026-10-21',period=7,weeklyLimit=45}={}){
+ if(!validDay(start)||!validDay(today)||start>today||![7,30].includes(Number(period)))throw Error('Ungültiger Arbeitszeit-Zeitraum.');
+ const monday=d=>shift(d,-((new Date(d+'T12:00:00Z').getUTCDay()+6)%7));
+ const from=monday(start);
+ const all=Array.isArray(work?.days)?work.days:[];
+ const groups=new Map();
+ for(const row of all){
+  if(!validDay(row?.day)||row.day<from||row.day>today||!Number.isFinite(row.hours)||row.hours<0||row.hours>24)continue;
+  const key=monday(row.day),days=groups.get(key)||new Map();
+  days.set(row.day,row.hours);groups.set(key,days);
+ }
+ const complete=[...groups].map(([week,days])=>({start:week,end:shift(week,6),count:days.size,hours:[...days.values()].reduce((a,b)=>a+b,0)}))
+  .filter(w=>w.end<=today).sort((a,b)=>a.start.localeCompare(b.start));
+ const eligible=complete.filter(w=>w.count>=3);
+ // A seven-day radar measures one finished week, a 30-day radar their average.
+ const used=Number(period)===7?eligible.slice(-1):eligible;
+ const recentEnough=used.length&&used.at(-1).end>=shift(today,Number(period)===7?-14:-21);
+ const average=recentEnough?mean(used.map(w=>w.hours)):null;
+ const observed=[...groups.values()].reduce((n,days)=>n+days.size,0);
+ const detail=average!==null?`Ø ${dec(average,1)} h · ${used.length} abgeschlossene ISO-${used.length===1?'Woche':'Wochen'} (${used[0].start}–${used.at(-1).end}; ${used.reduce((n,w)=>n+w.count,0)} dokumentierte Tage)`:
+  !all.length?'Keine Arbeitszeitdaten importiert':
+  !groups.size?'Keine Arbeitszeit-Einträge im gewählten Zeitraum':
+  !eligible.length?`${observed} dokumentierte Tage, aber keine abgeschlossene ISO-Woche mit mindestens 3 Einträgen`:
+  'Die letzten ausreichend dokumentierten Wochen liegen zu weit zurück';
+ return {score:average===null?null:clamp(100-Math.max(0,average-weeklyLimit)*5),average,detail,observed,weeks:used,latest:used.at(-1)?.end??null};
+}
 export function buildLifeBalanceRadar(state={}, {today='2026-10-20',period=7,healthDays=[],historicalOnly=false}={}){
  if(!validDay(today)||![7,30].includes(Number(period)))throw Error('Ungültiger Zeitraum des Life Balance Radars.');
  const n=Number(period),start=shift(today,1-n),g=balanceGoals(state.lifeBalanceGoals),data=state.healthImports||{};
@@ -97,14 +130,10 @@ export function buildLifeBalanceRadar(state={}, {today='2026-10-20',period=7,hea
  const gtd=axis('gtd','GTD-Klarheit',!historicalOnly&&gtdPresent?100-Math.min(100,inbox.length*7+stalled*12+overdue*9):null,
   gtdPresent?`${inbox.length} Inbox · ${stalled} Projekte ohne Next Action`:'Noch keine Aufgaben-/Projektdaten',
   'Ein organisatorischer Hygiene-Indikator, kein Maß für Leistung oder persönlichen Wert.','review',null,inbox.length+openTasks.length,null);
- const wRows=recent(state.workTime?.days,start,today).filter(r=>Number.isFinite(r.hours)&&r.hours>=0&&r.hours<=24);
- // Assess documented seven-day chunks instead of treating holidays or missing days as zero work.
- const weeklyGroups=new Map();for(const row of wRows){const day=new Date(row.day+'T12:00:00Z');const monday=shift(row.day,-((day.getUTCDay()+6)%7));const group=weeklyGroups.get(monday)||[];group.push(row);weeklyGroups.set(monday,group);}
- const weeks=[...weeklyGroups.values()].filter(r=>r.length>=3).map(rows=>({hours:rows.reduce((s,x)=>s+x.hours,0),day:freshest(rows)}));
- const averageHours=mean(weeks.map(x=>x.hours));
- const work=axis('work','Arbeitsbalance',weeks.length&&freshest(wRows)>=shift(today,-14)?100-Math.max(0,averageHours-g.weeklyHours)*5:null,
-  averageHours===null?'Keine ausreichenden Wochenprotokolle':`Ø ${dec(averageHours,1)} h · ${weeks.length} erfasste Wochen`,
-  `Wöchentlicher Grenzwert ${g.weeklyHours} h. Unter dem Grenzwert bedeutet nicht automatisch gute Erholung.`, 'insights','worktime',wRows.length,freshest(wRows));
+ const workload=workBalanceEvidence(state.workTime||{},{start,today,period:n,weeklyLimit:g.weeklyHours});
+ const work=axis('work','Arbeitsbalance',workload.score,workload.detail,
+  `Letzte abgeschlossene, ausreichend dokumentierte ISO-Woche(n) als Referenz. Richtwert ${g.weeklyHours} h/Woche; fehlende Tage werden nicht als Freizeit gezählt. Unter dem Richtwert bedeutet nicht automatisch gute Erholung.`,
+  'insights','worktime',workload.observed,workload.latest);
  const byDay=new Map();for(const row of Array.isArray(data.garminWellness)?data.garminWellness:[]){
   const day=typeof row?.at==='string'&&Number.isFinite(Date.parse(row.at))?row.at.slice(0,10):null;
   if(!validDay(day)||day<start||day>today||!Number.isFinite(row.bodyBattery)||row.bodyBattery<0||row.bodyBattery>100)continue;

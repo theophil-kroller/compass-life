@@ -1,0 +1,20 @@
+Compass 0.5.67.1 – Arbeitsbalance-Hotfix
+==========================================
+
+PATCH VON 0.5.67:
+1. Bestehenden funktionierenden Repository-Stand sichern.
+2. Inhalt von Compass_0.5.67.1_PATCH_FROM_0.5.67.zip im Repository-Stammverzeichnis entpacken und vorhandene Dateien ersetzen.
+3. Änderungen committen und wie üblich deployen.
+4. Browser/PWA neu laden. Kein erneuter Arbeitszeit-Import notwendig.
+
+FULL SOURCE:
+Compass_0.5.67.1_FULL_SOURCE.zip enthält den vollständigen Quellenstand.
+
+PRÜFEN:
+- Insights > Life Balance Radar: Arbeitsbalance sollte für einen vollständig dokumentierten
+  vorherigen ISO-Wochenabschnitt auch dann erscheinen, wenn der Tag mitten in der Woche liegt.
+- Radar 7T und 30T sowie historische Zeitspuren prüfen.
+- Über Details > Arbeitszeit die Quellwochenstunden vergleichen.
+- Wenn die Achse leer bleibt, in 'Warum fehlen Werte?' die konkrete Begründung lesen.
+
+Keine D1-Migration, kein Vault-Reset, keine Änderung importierter Excel-Arbeitszeiten.
