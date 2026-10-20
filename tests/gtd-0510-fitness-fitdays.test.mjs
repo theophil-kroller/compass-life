@@ -69,7 +69,7 @@ test('Fitdays human silhouette labels five authentic regions, kg vs reference pe
 });
 test('0.5.10 routes activity tab to Garmin+Health Connect and leaves cloud and worker untouched',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.62'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.63'/);
  assert.match(main,/fitnessInsightsView\(state\?\.healthImports/);
  assert.equal(INSIGHT_TABS.find(x=>x.id==='activity').state,'live');
 });

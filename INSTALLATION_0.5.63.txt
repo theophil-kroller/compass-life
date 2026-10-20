@@ -1,0 +1,26 @@
+Compass 0.5.63 — Life Balance Radar + Zeitvergleich
+===================================================
+
+PATCH (ausgehend von 0.5.62):
+  1. Bestehendes Repository und lokalen Vault sichern.
+  2. Compass_0.5.63_PATCH_FROM_0.5.62.zip im Repository-Stammverzeichnis entpacken (Dateien ersetzen).
+  3. Commit / üblichen Deployment-Workflow ausführen.
+  4. Nach Veröffentlichung Seite neu laden, PWA ggf. schließen und erneut öffnen.
+
+FULL:
+  Compass_0.5.63_FULL_SOURCE.zip enthält den gesamten Quellenstand.
+
+ABNAHME:
+  - In der Startansicht Life Balance Radar prüfen.
+  - Insights -> Life Balance Radar öffnen, Zeitraum 7/30 Tage wechseln.
+  - Zeitspuren Aus / 2 / 3 auswählen; die Legende zeigt die echten Zeiträume.
+  - Hover auf farbige Punkte: Datum, Dimensionsscore und Dateninfo.
+  - Alte Perioden ohne Daten müssen offen bleiben; keine erfundenen Polygonflächen.
+  - Fehlende persönliche Gewichtsziele/Finanzanfangsbestände dürfen keine falschen Scores liefern.
+  - Zu Details navigieren; danach wieder Life Balance Radar öffnen.
+
+TECHNISCH:
+  Keine D1-Migration, kein Vault-Reset.
+  632/632 automatisierte Tests, Worker- und JavaScript-Syntax erfolgreich.
+  Produktionskompilierung hier NICHT abgeschlossen (Vite fehlt); im üblichen
+  Deployment prüfen. Live-Browser-Abnahme mit echten Daten noch offen.

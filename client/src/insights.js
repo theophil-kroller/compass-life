@@ -15,6 +15,7 @@ const readableMinutes=v=>Number.isFinite(v)?`${Math.floor(v/60)} h ${String(Math
 const dayShift=(day,n)=>new Date(dateUTC(day)+n*86400000).toISOString().slice(0,10);
 const fmtClock=m=>Number.isFinite(m)?`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(Math.round(m%60)).padStart(2,'0')}`:'–';
 export const INSIGHT_TABS=[
+ {id:'balance',label:'Life Balance Radar',icon:'compass',state:'live',subtitle:'Persönliche Zielnähe über mehrere Lebensbereiche'},
  {id:'sleep',label:'Schlaf',icon:'moon',state:'live',subtitle:'Schlafdauer, -konsistenz und nächtliche HRV'},
  {id:'energy',label:'Body Battery',icon:'bolt',state:'live',subtitle:'Energiereserven, Tageskurven und langfristige Verläufe'},
  {id:'stress',label:'Stress',icon:'activity',state:'live',subtitle:'Garmin-Stress, Belastungszonen und Tagesmuster'},

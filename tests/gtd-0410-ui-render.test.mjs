@@ -1,3 +1,4 @@
+import * as lifeBalance63 from '../client/src/life-balance-radar-v563.js';
 import * as dailyPlanning from '../client/src/daily-planning-v48.js';
 import * as deadline from '../client/src/deadline-intelligence-v45.js';
 import * as projectExchange from '../client/src/project-exchange-v45.js';
@@ -51,7 +52,7 @@ function context(){
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
- Object.assign(ctx,smartImportHubModule,healthCoverage494,timeoff554,radar555);
+ Object.assign(ctx,smartImportHubModule,healthCoverage494,timeoff554,radar555,lifeBalance63);
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.
  runInNewContext(compiled,ctx,{filename:'compass-main-browser-smoke.js',timeout:2000});
  return ctx;
