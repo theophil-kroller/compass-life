@@ -1,0 +1,25 @@
+Compass 0.5.57 — Installation
+================================
+
+PATCH ab Compass 0.5.56:
+  1. Bestehenden Repository-Stand und verschlüsselten Vault sichern. Datenbank NICHT zurücksetzen.
+  2. Inhalt von Compass_0.5.57_PATCH_FROM_0.5.56.zip im Repository-Stammverzeichnis entpacken; gleichnamige Dateien ersetzen.
+  3. Wie bisher committen und GitHub Pages / Worker Workflow deployen.
+  4. Browser/PWA neu laden; ggf. PWA schließen und neu starten.
+
+FULL SOURCE:
+  Compass_0.5.57_FULL_SOURCE.zip enthält den vollständigen Quellenstand inklusive der 0.5.56 Änderungen.
+
+KEINE neue D1-Migration, kein Vault-Reset.
+
+NACH DER INSTALLATION PRÜFEN:
+  - Inbox: Jede Zeile zeigt rechts „Heute“ mit Kalendericon, auch nach Filter/Suche.
+  - Klick auf „Heute“: Eingang verschwindet aus Inbox, als Next Action in Heute vorhanden.
+  - Eintrag behält Titel, Notiz, Tags und Flagged. Die Aufgabe hat ein Planned-Date für den heutigen Tag und KEINE neue Due-Date.
+  - Eintrag lässt sich nicht mehrfach übernehmen; andere Inbox-Einträge bleiben unverändert.
+  - Längere Inbox-Einträge >180 Zeichen / Notizen >3.000 Zeichen zeigen eine Fehlermeldung, statt Daten zu verlieren.
+  - Mobile: Die Schaltfläche zeigt nur das Kalendericon, ist aber mit Screenreader-Label und Tooltip beschriftet.
+  - Projekte/Insights/Konferenzen aus 0.5.56 weiterhin erreichbar und unverändert.
+
+TESTSTAND: 591/591 Node-Tests, Worker-Syntax erfolgreich.
+Noch offen: Vite-Produktionsbuild und echte Live-Browser-/PWA-Abnahme.

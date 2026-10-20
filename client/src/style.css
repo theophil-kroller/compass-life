@@ -2406,3 +2406,10 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .radar555-toolbar label{min-width:0}
 .radar555-toolbar select{max-width:230px}
 @media(max-width:580px){.radar555-toolbar label{width:100%;justify-content:space-between}.radar555-toolbar select{width:min(64%,260px)}.radar555-top{gap:5px}}
+
+/* Compass 0.5.57 — Inbox quick Today promotion, readable without overlap. */
+.inbox-row-wrap .inbox-quick-today{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;min-height:30px;white-space:nowrap;padding:5px 8px;border:1px solid #dae7df;border-radius:8px;background:#fff;color:#396d5b;cursor:pointer;font:500 11px/1.2 system-ui,sans-serif}
+.inbox-row-wrap .inbox-quick-today:hover{background:#e8f5ee;border-color:#accfb9}
+.inbox-row-wrap .inbox-quick-today:focus-visible{outline:2px solid #387d63;outline-offset:2px}
+.inbox-row-wrap .inbox-quick-today svg{flex:none}
+@media(max-width:580px){.inbox-row-wrap .inbox-quick-today{min-width:32px;padding:5px 7px}.inbox-row-wrap .inbox-quick-today span{display:none}}

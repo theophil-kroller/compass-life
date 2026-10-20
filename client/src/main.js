@@ -8,6 +8,7 @@ import {technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair} from './krak
 import {parseCaptureLines,parseAiCaptureJson,capturePreview,captureInboxRecord,CAPTURE_KINDS} from './capture-triage-v26.js';
 import {moveProjectHierarchy,moveTaskHierarchy,cloneProjectTemplate,taskDescendants,isTemplateProject} from './project-workspace-v27.js';
 import {inboxTaskDraft} from './inbox-promotion-v27.js';
+import {inboxTodayTaskDraft} from './inbox-today-v557.js';
 import {inboxFlagged,visibleInboxTags,setInboxFlag} from './inbox-flags-v27.js';
 import {inboxOrdered,inboxMove,inboxNudge} from './inbox-order-v34.js';
 import {FOLDER_ICONS,folderIcon} from './folder-icons-v35.js';
@@ -76,7 +77,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.56';
+const COMPASS_CLIENT_VERSION='0.5.57';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -959,7 +960,7 @@ function inboxScreen(){
  ${captureBulkPanel()}
  <div class="inbox-search-box">${ico('search',17)}<input id="inbox-query" type="search" placeholder="Einträge durchsuchen …" value="${h(inboxQuery)}" autocomplete="off" aria-label="Inbox durchsuchen"/></div>
  <div class="inbox-mvp-list" aria-label="Manuell sortierbare Inbox-Einträge">
- ${list.length?list.map((r,i)=>`<div class="inbox-row-wrap fin34-sortable" data-inbox-row="${h(r.id)}"><span class="inbox-drag-handle" draggable="${!query}" data-inbox-drag="${h(r.id)}" role="img" aria-label="${h(r.title)} verschieben" title="Anfassen und ziehen · alternativ Pfeiltasten rechts">⠿</span><button type="button" class="inbox-row-flag ${inboxFlagged(r)?'is-flagged':''}" data-action="inbox-flag" data-id="${h(r.id)}" aria-label="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}" aria-pressed="${inboxFlagged(r)}" title="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}">${ico('flag',16)}</button><button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}${visibleInboxTags(r).length?' · '+visibleInboxTags(r).map(x=>'#'+h(x)).join(' '):''}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button><span class="inbox-reorder-controls"><button type="button" data-action="inbox-move-up" data-id="${h(r.id)}" aria-label="${h(r.title)} nach oben" title="Nach oben" ${i===0||query?'disabled':''}>↑</button><button type="button" data-action="inbox-move-down" data-id="${h(r.id)}" aria-label="${h(r.title)} nach unten" title="Nach unten" ${i===list.length-1||query?'disabled':''}>↓</button></span></div>`).join(''):
+ ${list.length?list.map((r,i)=>`<div class="inbox-row-wrap fin34-sortable" data-inbox-row="${h(r.id)}"><span class="inbox-drag-handle" draggable="${!query}" data-inbox-drag="${h(r.id)}" role="img" aria-label="${h(r.title)} verschieben" title="Anfassen und ziehen · alternativ Pfeiltasten rechts">⠿</span><button type="button" class="inbox-row-flag ${inboxFlagged(r)?'is-flagged':''}" data-action="inbox-flag" data-id="${h(r.id)}" aria-label="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}" aria-pressed="${inboxFlagged(r)}" title="${inboxFlagged(r)?'Flagge entfernen':'Flagge setzen'}">${ico('flag',16)}</button><button type="button" class="inbox-mvp-row ${current?.id===r.id?'is-current':''}" data-action="select-inbox" data-id="${h(r.id)}"><span class="inbox-list-mark">${ico('inbox',16)}</span><span class="inbox-list-copy"><strong>${h(r.title)}</strong>${r.note?`<small class="item-preview">${h(r.note)}</small>`:''}<small>${date(r.updatedAt)}${visibleInboxTags(r).length?' · '+visibleInboxTags(r).map(x=>'#'+h(x)).join(' '):''}</small></span><span class="inbox-list-sync ${state.pending.some(p=>p.id===r.id)?'needs-sync':''}" title="${state.pending.some(p=>p.id===r.id)?'Noch nicht synchronisiert':'Keine lokalen Änderungen ausstehend'}">${state.pending.some(p=>p.id===r.id)?ico('cloud',14):ico('check',14)}</span></button><button type="button" class="inbox-quick-today" data-action="inbox-plan-today" data-id="${h(r.id)}" title="Als Next Action für heute übernehmen · aus der Inbox entfernen · keine Deadline" aria-label="${h(r.title)} als Next Action für heute übernehmen und aus der Inbox entfernen">${ico('calendar',14)} <span>Heute</span></button><span class="inbox-reorder-controls"><button type="button" data-action="inbox-move-up" data-id="${h(r.id)}" aria-label="${h(r.title)} nach oben" title="Nach oben" ${i===0||query?'disabled':''}>↑</button><button type="button" data-action="inbox-move-down" data-id="${h(r.id)}" aria-label="${h(r.title)} nach unten" title="Nach unten" ${i===list.length-1||query?'disabled':''}>↓</button></span></div>`).join(''):
  `<div class="inbox-mvp-empty">${ico(query?'search':'inbox',32)}<strong>${query?'Keine passenden Einträge':'Dein Kopf darf leerer werden.'}</strong><span>${query?'Versuche einen anderen Suchbegriff.':'Halte hier alles fest, was dir im Alltag begegnet.'}</span></div>`}
  </div><div class="inbox-mvp-bottom"><span>${state.pending.length} ausstehende Änderungen</span><button type="button" class="review-link" data-tab="review">Wochenreview ${ico('arrow',14)}</button></div></section>
  <aside class="module-card module-active inbox-mvp-detail">${current?
@@ -2189,6 +2190,26 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       const setDate=current.plannedDate===today?null:today;
       await mutate(s=>{s.tasks[id].plannedDate=setDate;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
       toast(setDate?'Für heute vorgemerkt – ohne neue Deadline.':current.dueDate===today?'Heute-Vormerkung entfernt. Wegen der heutigen Deadline bleibt die Aufgabe unter Heute sichtbar.':'Heute-Vormerkung entfernt.');return;
+    }
+    if(action==='inbox-plan-today'){
+      // Inbox captures are not tasks: promoting for today must be atomic and
+      // idempotent, otherwise the same capture would be shown twice.
+      const record=state?.records?.[id];
+      if(!record||record.deleted||record.tags?.includes('dreams'))return toast('Inbox-Eintrag ist nicht mehr verfügbar.',true);
+      try{
+        const today=localDate();
+        const task=inboxTodayTaskDraft(state,id,crypto.randomUUID(),today,stamp());
+        await mutate(s=>{
+          const original=s.records?.[id];
+          if(!original||original.deleted||s.tasks[task.id])throw new Error('Dieser Eingang wurde bereits verarbeitet. Bitte Ansicht aktualisieren.');
+          s.tasks[task.id]=task;s.taskPending[task.id]=true;
+          original.deleted=true;original.updatedAt=stamp();s.pending.push(makeMutation(original));
+          for(const tag of task.tags)rememberTag(s,tag);
+        });
+        selectedInboxId=null;
+        toast('Für heute als Next Action vorgemerkt und aus der Inbox entfernt. Keine Deadline gesetzt.');
+      }catch(ex){toast(ex.message,true);}
+      return;
     }
     if(action==='inbox-move-up'||action==='inbox-move-down'){
       if(inboxQuery.trim())return;
