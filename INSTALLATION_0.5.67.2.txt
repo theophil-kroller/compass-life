@@ -1,0 +1,23 @@
+Compass 0.5.67.2 – Financial Health & Radar Inspector
+=====================================================
+
+PATCH (nur von vollständig installiertem 0.5.67.1):
+1. Den bestehenden funktionsfähigen Quellstand / das Repository sichern.
+2. Inhalt von Compass_0.5.67.2_PATCH_FROM_0.5.67.1.zip in das Repository-Stammverzeichnis entpacken und geänderte Dateien ersetzen.
+3. Änderungen committen und den gewohnten Build-/Deployment-Workflow auslösen.
+4. Nach dem Deployment die Seite einmal hart neu laden (ggf. PWA neu öffnen).
+
+FULL SOURCE:
+Compass_0.5.67.2_FULL_SOURCE.zip enthält den kompletten aktuellen Quellenstand.
+
+ABNAHME:
+- Die Übersicht unter Planen/Start enthält kein Life Balance Radar mehr.
+- Insights > Life Balance Radar zeigt weiterhin alle acht Dimensionen.
+- Radarpunkt oder Dimensionsnamen anklicken: rechts erscheint ein Inspector, ohne Scrollen zur alten Detailkartenliste.
+- Finanzen: Prüfen, ob Sparen/Depot/Krypto als Transfer ausgeschlossen und tatsächliche laufende Ausgaben gezählt werden.
+- Kontakte: Bei keinem fälligen Kontaktimpuls steht z. B. „4 von 4 im gewünschten Kontaktrhythmus“ – nicht „0 von 4 erreicht“.
+- Für den optionalen Reserve-Teilscore muss ein Kontostand mit heutigem Bestätigungsstichtag gespeichert sein.
+
+Keine D1-Migration, keine erforderliche Neueinspielung von Bank- oder Arbeitszeitdaten.
+Teststatus: 676/676 Node-Tests und JavaScript-Syntax bestanden.
+Vite-Produktionsbuild, visueller Browsertest und Live-Vault-Abnahme hier nicht verfügbar.

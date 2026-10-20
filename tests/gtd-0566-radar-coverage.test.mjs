@@ -15,7 +15,7 @@ test('Radar counts imported, unreviewed mixed bank ledger even when cashflow mod
  const fin=axis(model,'finance');
  assert.ok(Number.isFinite(fin.score));
  assert.match(fin.detail,/vorläufig/);
- assert.match(fin.detail,/Bank-Cashflow/);
+ assert.match(fin.detail,/Laufender Cashflow/);
  assert.match(fin.hint,/ungeprüft/);
  assert.ok(fin.observed>=3);
  assert.match(lifeBalanceRadarView(model),/vorläufig/);

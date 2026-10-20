@@ -1,4 +1,4 @@
-> Aktueller Release: **Compass 0.5.67.1 – Life Balance Radar Arbeitszeit-Hotfix**. Siehe `CHANGELOG_0.5.67.1.md` und `INSTALLATION_0.5.67.1.txt`.
+> Aktueller Release: **Compass 0.5.67.2 – Financial Health & erklärbarer Life Balance Radar**. Siehe `CHANGELOG_0.5.67.2.md` und `INSTALLATION_0.5.67.2.txt`.
 
 > **Aktueller Stand: Compass 0.5.66 – Zusammenhänge (Feeling Wheel × Alltag) und verbesserte Datenabdeckung im Life Balance Radar.** Siehe [Changelog](CHANGELOG_0.5.66.md) und [Installation](INSTALLATION_0.5.66.txt).
 

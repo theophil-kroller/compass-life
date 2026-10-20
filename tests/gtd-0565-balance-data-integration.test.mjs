@@ -25,8 +25,8 @@ test('Historical cashflow generates a financial indicator without claiming a ver
  }
  const m=buildLifeBalanceRadar({financeTransactions:transactions},{today:day});
  assert.ok(metric(m,'finance').score!==null);
- assert.match(metric(m,'finance').detail,/Einnahmenbasis/);
- assert.match(metric(m,'finance').hint,/keine Aussage zur aktuellen Zahlungsfähigkeit/);
+ assert.match(metric(m,'finance').detail,/Ø Einnahmen/);
+ assert.match(metric(m,'finance').hint,/Ohne heute bestätigten Bankbestand/);
  assert.equal(metric(buildLifeBalanceRadar({financeTransactions:transactions},{today:day,historicalOnly:true}),'finance').score,null);
 });
 test('Relationship Radar 0.5.64 cadence and pause are respected in Life Balance',()=>{

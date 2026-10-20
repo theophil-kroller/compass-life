@@ -5,7 +5,7 @@
  */
 import {sleepMinutes} from './insights.js';
 import {joinedFitnessDays} from './insights-fitness.js';
-import {cashflowModel} from './finance-cashflow-v560.js';
+import {financialHealthEvidence} from './financial-health-v5672.js';
 import {contactImpulse,preference} from './relationship-radar-v564.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -37,44 +37,9 @@ const freshest=rows=>rows.length?rows.map(r=>r.day).sort().at(-1):null;
  * Unreviewed entries are explicitly provisional; known own-account/capital transfers never
  * become income or spending. No live bank balances are inferred.
  */
-export function financeRadarEvidence(transactions=[], today='2026-10-20'){
- const rows=Array.isArray(transactions)?transactions:[];
- const earliest=cashflowMonthForRadar(today,-36), current=today.slice(0,7);
- const groups=new Map();let supported=0,pending=0,invalid=0,excluded=0;
- const ownTransfer=new Set(['Transfer / Eigene Konten','Transfer / Kreditkartenabrechnung','Transfer / Sparen','Transfer / Krypto','Transfer / Depot & Wertpapiere']);
- for(const tx of rows){
-  const day=String(tx?.day||''),cents=tx?.amountCents;
-  if(!validDay(day)||day>today||!Number.isSafeInteger(cents)||!cents||tx?.currency&&tx.currency!=='EUR'){invalid++;continue;}
-  const month=day.slice(0,7);
-  if(month<earliest||month>=current)continue; // closed months only; never partial current month
-  if(tx.linkedTransferId||ownTransfer.has(tx.category)||tx.flow==='transfer'&&tx.category!=='Transfer / Private Überweisung'){
-   excluded++;continue;
-  }
-  if(tx.flow==='income'&&cents<0||tx.flow==='expense'&&cents>0){invalid++;continue;}
-  const item=groups.get(month)||{month,income:0,expense:0,rows:0,pending:0};
-  if(cents>0)item.income+=cents;else item.expense+=-cents;
-  item.rows++;supported++;
-  if(tx.needsReview){pending++;item.pending++;}
-  groups.set(month,item);
- }
- const complete=[...groups.values()].filter(x=>x.income>0&&x.expense>0).sort((a,b)=>a.month.localeCompare(b.month)).slice(-12);
- const monthCount=complete.length;
- const income=complete.reduce((a,x)=>a+x.income,0);
- const expense=complete.reduce((a,x)=>a+x.expense,0);
- const provisional=monthCount<3||complete.some(x=>x.pending>0);
- const newest=[...groups.keys()].sort().at(-1)||null;
- const late=!!newest&&newest<cashflowMonthForRadar(today,-12);
- // At least two paired bank months support a *provisional* historical cashflow.
- // It is not a solvency, wealth or credit score; fresh individual balances remain unknown.
- const score=monthCount>=2&&income>0&&expense>0&&!late?clamp(50+250*(income-expense)/income):null;
- const cause=!rows.length?'Noch keine Bankbuchungen importiert':
-  !supported?'Bankbuchungen vorhanden, aber keine geeigneten abgeschlossenen EUR-Monate im Betrachtungsfenster':
-  late?'Letzter auswertbarer Monat liegt mehr als zwölf Monate zurück':
-  monthCount<2?`${supported} auswertbare Buchungen von ${rows.length} insgesamt, jedoch nur ${monthCount} Monate mit Ein- und Ausgängen (mindestens 2 benötigt). ${excluded} Eigen-/Kapitaltransfers ausgeschlossen, ${invalid} unlesbar oder ohne EUR-Betrag.`:null;
- return {score,monthCount,income,expense,supported,pending,excluded,invalid,latest:newest,provisional,cause,source:'Bankbuchungen'};
+export function financeRadarEvidence(transactions=[],today='2026-10-20'){
+ return financialHealthEvidence({financeTransactions:transactions},today);
 }
-function cashflowMonthForRadar(today,offset){const [y,m]=today.slice(0,7).split('-').map(Number);return new Date(Date.UTC(y,m-1+offset,1)).toISOString().slice(0,7);}
-
 /** Worktime is imported as individual documented calendar dates. An arbitrary rolling
  * 7-day slice almost always straddles TWO calendar weeks; requiring three rows in
  * each half discards otherwise complete weeks. Use finished ISO weeks instead.
@@ -155,33 +120,27 @@ export function buildLifeBalanceRadar(state={}, {today='2026-10-20',period=7,hea
  const body=axis('body','Körper',fatScore??weightScore,
   bodyDetail,
   fatTarget!=null?'Abstand zum selbst festgelegten Körperfett-Richtwert '+dec(fatTarget,1)+' %. Fitdays-BIA ist eine Schätzung, keine Diagnose.':g.weightKg?'Abstand zum selbst festgelegten Gewichtsrichtwert. Fitdays-Werte sind Schätzungen.':'Für einen 0–100-Zielnähe-Score bitte optional einen persönlichen Körperfett- oder Gewichtsrichtwert setzen. Der Messwert selbst wird auch ohne Ziel angezeigt.','insights','body',fit.length,weight?.day||null);
- // Two distinct questions: historical cashflow coverage can be scored from imported
- // income/outflows; current solvency REQUIRES a manually confirmed today's cash balance.
- // We never pretend the first indicator proves the second.
- let financial=null,financeError=null;
- try{if(!historicalOnly&&state.financeTransactions?.length){financial=cashflowModel({transactions:state.financeTransactions,settings:state.financeCashflowSettings||{},planned:state.financePlannedCashflows||[],recurringRules:state.financeRecurringRules||{},today});}}
- catch(err){financeError=String(err?.message||err||'Berechnung fehlgeschlagen').slice(0,130);}
- const complete=(financial?.recent||[]).filter(r=>r.rows>0&&r.income>0&&r.spent>0);
- const inflow=complete.length>=3?financial.monthlyIncome:null;
- const outflow=complete.length>=3?financial.monthlyExpense:null;
- const ready=!historicalOnly&&inflow>0&&outflow>0;
- const ledger=!historicalOnly?financeRadarEvidence(state.financeTransactions||[],today):null;
- const financeScore=ready?clamp(50+250*(inflow-outflow)/inflow):ledger?.score??null;
- const financeMonths=ready?complete.length:ledger?.monthCount||0;
- const financeDetail=ready?`Historischer Cashflow · Ø Einnahmenbasis ${dec(inflow/100)} € · Ø Ausgaben ${dec(outflow/100)} € · ${financeMonths} Monate`:
-  ledger?.score!=null?`Historischer Bank-Cashflow${ledger.provisional?' (vorläufig; geringe Abdeckung oder ungeprüfte Buchungen)':''} · ${financeMonths} Monate · ${ledger.latest} · ${ledger.supported} von ${(state.financeTransactions||[]).length} Buchungen`:
+ // The financial signal uses everyday income/expenses, excluding capital transfers.
+ // A verified reserve is an independent input; portfolio growth remains descriptive.
+ const ledger=!historicalOnly?financialHealthEvidence(state,today):null;
+ const financeScore=ledger?.score??null;
+ const financeDetail=ledger?.score!=null?
+  `Laufender Cashflow${ledger.provisional?' (vorläufig)':''} · ${ledger.monthCount} Monate · Ø Einnahmen ${dec(ledger.incomeMonthly/100)} € · Ø laufende Ausgaben ${dec(ledger.expenseMonthly/100)} €`:
   ledger?.cause||'Keine auswertbare Bankhistorie';
- const finance=axis('finance','Finanzen',financeScore,
-  financeDetail,
-  'Cashflow-Indikator aus importierten Bankbewegungen, keine Vermögens- oder Liquiditätsdiagnose. Datenbasis und Monatsabdeckung bei den Finanzdetails prüfen. '+(ledger?.pending?`${ledger.pending} Buchungen ungeprüft. `:'')+(financeError?`Prognosemodul: ${financeError}. `:'')+(financial?.opening==null?'Ohne heute bestätigten Bankbestand keine Aussage zur aktuellen Zahlungsfähigkeit.':'Die tatsächliche Liquiditätsprognose findest du unter Finanzen.'),
-  'finance',null,financeMonths,ready?complete.at(-1)?.month:ledger?.latest||null);
+ const financeHint=ledger?.score!=null?
+  `${ledger.supported} von ${ledger.total} Buchungen auswertbar; ${ledger.excluded} Eigen-/Anlagetransfers ausgeschlossen, ${ledger.pending} ungeprüft. ${ledger.verifiedBalance?'Bestätigte Tagesreserve enthalten.':'Ohne heute bestätigten Bankbestand keine Reservedeckung.'} Kein Bonitäts- oder Vermögensrating.`:
+  'Für einen Finanzindikator sind mindestens zwei geeignete abgeschlossene Monate mit Einnahmen und Ausgaben nötig.';
+ const finance=axis('finance','Finanzen',financeScore,financeDetail,financeHint,
+  'finance',null,ledger?.monthCount??0,ledger?.latest??null);
+ finance.evidence=ledger;
  // The 0.5.64 relationship cadence and pause state are authoritative. A paused
  // contact is excluded; no one is scored for distance or closeness alone.
  const participants=!historicalOnly?Object.values(state.people||{}).filter(p=>preference(p).cadence>0&&!preference(p).paused).map(p=>contactImpulse(p,today)).filter(p=>p.hasHistory):[];
  const due=participants.filter(p=>p.due).length;
  const people=axis('people','Kontakte',participants.length?100-due/participants.length*100:null,
-  participants.length?`${due} von ${participants.length} selbst gewählten Kontaktintervallen erreicht`:'Noch keine aktiven Kontaktintervalle mit bestätigtem Verlauf',
+  participants.length?`${participants.length-due} von ${participants.length} im gewünschten Kontaktrhythmus · ${due} Kontaktimpulse fällig`:'Noch keine aktiven Kontaktintervalle mit bestätigtem Verlauf',
   'Relationship Radar 0.5.64: individueller Kontaktrhythmus und Pause/Play berücksichtigt; kein Beziehungsqualitäts- oder Nähe-Score.','people',null,participants.length,null);
+ people.evidence={covered:participants.length-due,total:participants.length,due};
  const axes=[sleep,activity,gtd,finance,people,body,recovery,work];
  const known=axes.filter(x=>x.score!=null);
  return {axes,period:n,start,today,goals:g,coverage:known.length,total:axes.length,mean:known.length?Math.round(mean(known.map(x=>x.score))):null};
@@ -201,7 +160,42 @@ export function buildLifeBalanceHistory(state={}, {today='2026-10-20',period=7,h
 const geom=(index,radius)=>{const a=(index/8)*Math.PI*2-Math.PI/2;return [195+Math.cos(a)*radius,195+Math.sin(a)*radius];};
 const points=pts=>pts.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
 const target=axis=>axis.tab==='insights'?{tab:'insights',insight:axis.insight}:{tab:axis.tab,insight:null};
-export function lifeBalanceRadarView(model,{compact=false,history=[]}={}){
+const money=c=>Number.isFinite(c)?(c/100).toLocaleString('de-AT',{style:'currency',currency:'EUR'}):'–';
+/** Explain an axis in-place; details never require scrolling below the chart. */
+export function balanceAxisInspector(axis,model){
+ if(!axis)return `<div class="lbr672-welcome"><span class="lbr672-kicker">DIMENSIONEN VERSTEHEN</span><h3>Wähle einen Bereich</h3><p>Klicke im Radar auf einen Datenpunkt oder einen Namen. Hier erscheinen Messwerte, Richtwert, Berechnung und Datenqualität – direkt neben der Grafik.</p><small>${model.coverage} von ${model.total} Dimensionen bewertet</small></div>`;
+ const e=axis.evidence;
+ const val=axis.score==null?'Nicht bewertbar':axis.score+' / 100';
+ let computation=axis.hint;
+ let evidence='Datenbasis: '+(axis.observed||0)+' Beobachtungen'+(axis.latest?' · letzter Stand '+axis.latest:'');
+ let breakdown='';
+ if(axis.key==='finance'&&e){
+  computation=e.scoreMethod;
+  evidence=`Bankbuchungen: ${e.supported} / ${e.total} geeignet · ${e.monthCount} vergleichbare Monate${e.provisional?' · vorläufig':''}.`;
+  breakdown=`<div class="lbr672-accounting"><div><span>Ø Einnahmen / Monat</span><strong>${money(e.incomeMonthly)}</strong></div><div><span>Ø laufende Ausgaben</span><strong>${money(e.expenseMonthly)}</strong></div><div><span>Cashflow-Teilscore</span><strong>${e.cashflowScore==null?'–':e.cashflowScore+'/100'}</strong></div><div><span>Liquiditätsreserve</span><strong>${e.reserveMonths==null?'Nicht bestätigt':dec(e.reserveMonths,1)+' Monate'}</strong></div><div><span>Beobachtete Vermögensentwicklung</span><strong>${e.wealth.available?money(e.wealth.changeCents):'Keine vergleichbaren Stichtage'}</strong></div></div>
+   <p class="lbr672-fine">${e.excluded} Eigen-/Kapitaltransfers ausgeschlossen (davon ${e.excludedBy?.invest||0} Sparen/Anlagen), ${e.pending} ungeprüfte und ${e.unknown} unklar zugeordnete Buchungen. ${e.wealth.available?'Vermögensvergleich '+esc(e.wealth.first)+'–'+esc(e.wealth.last)+': keine Renditeberechnung.':'Noch kein vollständiger Vermögenszeitvergleich.'}</p>`;
+ }else if(axis.key==='people'){
+  const p=axis.evidence||{};
+  computation='Score = Anteil der aktuell im selbst gewählten Kontaktrhythmus befindlichen Kontakte × 100. Eine pausierte Person wird nicht mitgerechnet. Das bewertet keine Beziehungsqualität.';
+  evidence=`${p.covered??0} von ${p.total??0} im gewünschten Rhythmus · ${p.due??0} Kontaktimpulse fällig.`;
+ }else if(axis.key==='gtd'){
+  computation='Start bei 100; je offenem Inbox-Eintrag −7, je aktivem Projekt ohne Next Action −12 und je überfälliger Aufgabe −9 Punkte; begrenzt auf 0–100. Nur ein Organisationsindikator.';
+ }else if(axis.key==='sleep'){
+  computation='100 minus prozentuale Abweichung deiner mittleren Schlafdauer vom selbst gesetzten Schlafziel. Der Vergleich misst nur die Dauer, nicht die gesamte Schlafqualität.';
+ }else if(axis.key==='activity'){
+  computation='Schritte im betrachteten Zeitraum im Verhältnis zu deinem persönlichen Tagesziel. Trainingsminuten sind eine zusätzliche Information, nicht automatisch Garmin-Intensitätsminuten.';
+ }else if(axis.key==='body'){
+  computation='Abstand zu deinem optional selbst gesetzten Körperfett- oder Gewichtsrichtwert. Fitdays-BIA-Schätzungen sind keine medizinische Diagnose.';
+ }else if(axis.key==='recovery'){
+  computation='Durchschnittlicher beobachteter Tageshöchstwert der Garmin Body Battery (0–100); kein medizinisch validierter Erholungsscore.';
+ }else if(axis.key==='work'){
+  computation='100 minus 5 Punkte je Arbeitsstunde über deinem persönlichen Wochenrichtwert, bezogen auf ausreichend dokumentierte abgeschlossene Kalenderwochen. Kein Wert für Erholung an sich.';
+ }
+ const dest=target(axis);
+ return `<div class="lbr672-explanation" aria-live="polite"><div class="lbr672-panel-head"><span class="lbr672-kicker">DIMENSION VERSTEHEN</span><button type="button" class="lbr672-panel-clear" data-action="balance-select" data-id="" aria-label="Auswahl schließen">×</button></div><h3>${esc(axis.label)}</h3><strong class="lbr672-score">${esc(val)}</strong><p class="lbr672-period">${esc(model.start)} – ${esc(model.today)}</p><div class="lbr672-panel-scroll"><div class="lbr672-stat"><small>BEOBACHTUNG</small><p>${esc(axis.detail)}</p></div><div class="lbr672-stat"><small>DATENQUELLE / ABDECKUNG</small><p>${esc(evidence)}</p></div>${breakdown}<div class="lbr672-stat"><small>WIE WIRD GERECHNET?</small><p>${esc(computation)}</p></div>${axis.hint&&computation!==axis.hint?`<p class="lbr672-fine">${esc(axis.hint)}</p>`:''}</div><button type="button" class="lbr672-deeplink" data-action="balance-drill" data-id="${esc(dest.tab)}" data-step="${esc(dest.insight||'')}">Detailansicht öffnen ↗</button></div>`;
+}
+
+export function lifeBalanceRadarView(model,{compact=false,history=[],activeAxis=null}={}){
  const {axes,period,coverage,total}=model,selected=axes.filter(x=>x.score!=null);
  const segments=[25,50,75,100].map(r=>`<polygon points="${points(axes.map((_,i)=>geom(i,r*1.26)))}" fill="none" stroke="#416071" stroke-opacity="${r===100?'.64':'.42'}" stroke-width="1"/>`).join('');
  const spokes=axes.map((_,i)=>{const [x,y]=geom(i,126);return `<line x1="195" y1="195" x2="${x}" y2="${y}" stroke="#527384" stroke-opacity=".43"/>`;}).join('');
@@ -219,14 +213,14 @@ export function lifeBalanceRadarView(model,{compact=false,history=[]}={}){
   return `<g class="lbr63-history-trace" data-history-index="${h+1}" aria-label="${esc(m.label)} ${esc(m.start)} bis ${esc(m.today)}">${lines}${dots}</g>`;
  }).join('');
  const legend=[{label:'Aktuell',color:'#A5F2DB',start:model.start,end:model.today,coverage:model.coverage},...history.map((m,i)=>({label:m.label,color:i===0?'#B7A2F5':'#E8BD73',start:m.start,end:m.today,coverage:m.coverage}))].map((entry,i)=>`<span class="lbr63-temporal-item"><i style="--trace-color:${entry.color};${i?'border-top-style:dashed;':''}"></i><span>${esc(entry.label)}<small>${esc(entry.start)} – ${esc(entry.end)} · ${entry.coverage}/8</small></span></span>`).join('');
- const nodes=axes.map((a,i)=>{const [x,y]=geom(i,a.score==null?126:a.score*1.26);return `<circle cx="${x}" cy="${y}" r="${a.score==null?3.2:5}" fill="${a.score==null?'#6F8896':'#A5F2DB'}" stroke="#163345" stroke-width="2"><title>${esc(a.label)}: ${a.score==null?'Keine Bewertung':a.score+' / 100'} · ${esc(a.detail)}</title></circle>`;}).join('');
- const axisLabels=axes.map((a,i)=>{const [x,y]=geom(i,159);return `<text x="${x}" y="${y+4}" text-anchor="middle" fill="${a.score==null?'#8097A6':'#CBDCE4'}" font-size="11.5">${esc(a.label)}</text>`;}).join('');
- const details=axes.map(a=>{const destination=target(a);return `<button type="button" class="lbr63-metric ${a.score==null?'lbr63-unknown':''}" data-action="balance-drill" data-id="${esc(destination.tab)}" data-step="${esc(destination.insight||'')}" aria-label="${esc(a.label)} Details öffnen"><span class="lbr63-dot"></span><span class="lbr63-metric-title">${esc(a.label)}</span><strong>${a.score==null?'–':a.score+' / 100'}</strong><small>${esc(a.detail)}</small></button>`;}).join('');
+ const nodes=axes.map((a,i)=>{const [x,y]=geom(i,a.score==null?126:a.score*1.26);return `<circle data-action="balance-select" data-id="${esc(a.key)}" class="lbr672-chart-node" tabindex="0" role="button" aria-label="${esc(a.label)} Details anzeigen" cx="${x}" cy="${y}" r="${a.score==null?5:7}" fill="${a.score==null?'#6F8896':'#A5F2DB'}" stroke="#163345" stroke-width="2"><title>${esc(a.label)}: ${a.score==null?'Keine Bewertung':a.score+' / 100'} · ${esc(a.detail)}</title></circle>`;}).join('');
+ const axisLabels=axes.map((a,i)=>{const [x,y]=geom(i,159);return `<text class="lbr672-axis-name" data-action="balance-select" data-id="${esc(a.key)}" x="${x}" y="${y+4}" text-anchor="middle" fill="${a.score==null?'#8097A6':'#CBDCE4'}" font-size="11.5">${esc(a.label)}</text>`;}).join('');
+ const details=axes.map(a=>{const destination=target(a);return `<button type="button" class="lbr63-metric ${a.score==null?'lbr63-unknown':''}" data-action="balance-select" data-id="${esc(a.key)}" aria-label="${esc(a.label)} Erklärung anzeigen"><span class="lbr63-dot"></span><span class="lbr63-metric-title">${esc(a.label)}</span><strong>${a.score==null?'–':a.score+' / 100'}</strong><small>${esc(a.detail)}</small></button>`;}).join('');
  const coverageNote=axes.filter(a=>a.score==null).map(a=>`<li><strong>${esc(a.label)}</strong> · ${esc(a.detail)}</li>`).join('');
  return `<section class="lbr63 ${compact?'lbr63-compact':''}" aria-label="Life Balance Radar" data-version="0.5.63">
  <header class="lbr63-top"><div><div class="lbr63-eyebrow">COMPASS · PERSONAL INTELLIGENCE</div><h2>Life Balance Radar</h2><p>${period===7?'Letzte 7 Tage':'Letzte 30 Tage'} · Deine persönlichen Richtwerte</p></div><div class="lbr63-header-actions"><div class="lbr63-period" role="group" aria-label="Zeitraum des Life Balance Radars">${[7,30].map(n=>`<button type="button" class="${period===n?'chosen':''}" data-action="balance-period" data-id="${n}" aria-pressed="${period===n}">${n} T</button>`).join('')}</div><div class="lbr63-history-choose" role="group" aria-label="Vergleich mit früheren Zeiträumen"><span>Zeitspuren</span>${[0,1,2].map(n=>`<button type="button" data-action="balance-history" data-id="${n}" class="${history.length===n?'chosen':''}" aria-pressed="${history.length===n}">${n===0?'Aus':n===1?'2':'3'}</button>`).join('')}</div>${compact?'<button type="button" class="lbr63-details-link" data-action="balance-open">Details ↗</button>':''}</div></header>
- <div class="lbr63-layout"><div class="lbr63-chart"><svg viewBox="0 0 390 390" role="img" aria-label="Radar mit acht Achsen; ${coverage} davon mit ausreichender Datengrundlage. Fehlende Werte bleiben offen."><defs><linearGradient id="lbr63area" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#84D9C9" stop-opacity=".30"/><stop offset="1" stop-color="#829DE0" stop-opacity=".05"/></linearGradient><radialGradient id="lbr63halo"><stop stop-color="#2D7E85" stop-opacity=".22"/><stop offset="1" stop-color="#122132" stop-opacity="0"/></radialGradient></defs><circle cx="195" cy="195" r="166" fill="url(#lbr63halo)"/>${segments}${spokes}${historicLines}${area}${lines}${nodes}${axisLabels}<circle cx="195" cy="195" r="2.3" fill="#8099A9"/></svg><div class="lbr63-temporal-legend" aria-label="Verglichene Zeiträume">${legend}</div></div>
- <div class="lbr63-aside"><div class="lbr63-coverage"><span>VERFÜGBARE DIMENSIONEN</span><strong>${coverage}<small> / ${total}</small></strong><p>${coverage<8?'Unvollständige Achsen bleiben bewusst offen.':'Alle acht Bereiche haben aktuelle, ausreichend belastbare Indikatoren.'}</p></div><div class="lbr63-key"><i></i> Beobachteter Zielerfüllungswert <span></span> Unbewerteter Bereich</div>${!compact?`<div class="lbr63-aside-note">Hohe Werte bedeuten Nähe zu einem Richtwert, nicht automatisch Gesundheit oder Wohlbefinden. Ein Gesamtscore wird bewusst nicht gebildet.</div>`:''}</div></div>
- ${compact?`<div class="lbr63-compact-bottom"><p class="lbr63-note">${coverage} von ${total} Bereichen auswertbar · Fehlende Werte werden nicht geschätzt.</p>${coverageNote?`<details class="lbr63-coverage-help"><summary>Warum fehlen ${total-coverage} Werte?</summary><ul>${coverageNote}</ul></details>`:''}</div>`:`<div class="lbr63-list" aria-label="Bereichsdetails">${details}</div><details class="lbr63-goals"><summary>Persönliche Richtwerte anpassen</summary><form id="lbr63-goals-form"><label>Schlafziel (Stunden)<input name="sleepHours" type="number" min="4" max="12" step="0.25" value="${model.goals.sleepMinutes/60}" required></label><label>Schrittziel / Tag<input name="stepsDaily" type="number" min="1000" max="30000" step="100" value="${model.goals.stepsDaily}" required></label><label>Arbeitszeit-Grenzwert / Woche (h)<input name="weeklyHours" type="number" min="10" max="80" step="0.5" value="${model.goals.weeklyHours}" required></label><label>Optional: Gewichtsrichtwert (kg)<input name="weightKg" type="number" min="30" max="300" step="0.1" placeholder="Kein Ziel gesetzt" value="${model.goals.weightKg??''}"></label><label>Optional: persönlicher Körperfett-Richtwert (%)<input name="bodyFatTargetPct" type="number" min="4" max="65" step="0.1" placeholder="Kein Ziel gesetzt" value="${model.goals.bodyFatTargetPct??''}"></label><button class="primary-btn" type="submit">Richtwerte speichern</button></form><p>Fitdays-Körperfett wird als Messwert angezeigt. Ein 0–100-Zielnähe-Score entsteht nur, wenn du persönlich einen Körperfett- oder Gewichtsrichtwert festlegst. Das ist keine medizinische Einstufung. Kontakte verwenden die selbst gewählten Rhythmen aus dem Relationship Radar; Pausen werden respektiert.</p></details><p class="lbr63-note">Vergleichslinien beruhen ausschließlich auf historischen Messwerten: GTD, Kontakte und aktuelle Cashflow-Deckung besitzen ohne gespeicherte Vergangenheit keine rückwirkenden Scores. Scores beschreiben deine Zielnähe im angegebenen Zeitraum. Unterschiedliche Datenquellen und Skalen sind nicht medizinisch oder wissenschaftlich gleichwertig. Garmin-Werte sind Geräteindikatoren; Liquidität beruht auf Schätzungen. Öffne jede Dimension für ihre zugrunde liegenden Daten.</p>`}
+ <div class="lbr63-layout"><div class="lbr63-chart"><svg viewBox="0 0 390 390" role="group" aria-label="Radar mit acht Achsen; ${coverage} davon mit ausreichender Datengrundlage. Fehlende Werte bleiben offen."><defs><linearGradient id="lbr63area" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#84D9C9" stop-opacity=".30"/><stop offset="1" stop-color="#829DE0" stop-opacity=".05"/></linearGradient><radialGradient id="lbr63halo"><stop stop-color="#2D7E85" stop-opacity=".22"/><stop offset="1" stop-color="#122132" stop-opacity="0"/></radialGradient></defs><circle cx="195" cy="195" r="166" fill="url(#lbr63halo)"/>${segments}${spokes}${historicLines}${area}${lines}${nodes}${axisLabels}<circle cx="195" cy="195" r="2.3" fill="#8099A9"/></svg><div class="lbr63-temporal-legend" aria-label="Verglichene Zeiträume">${legend}</div></div>
+ <aside class="lbr63-aside lbr672-side-panel">${compact?`<div class="lbr63-coverage"><span>VERFÜGBARE DIMENSIONEN</span><strong>${coverage}<small> / ${total}</small></strong></div>`:balanceAxisInspector(axes.find(a=>a.key===activeAxis),model)}</aside></div>
+ ${compact?`<div class="lbr63-compact-bottom"><p class="lbr63-note">${coverage} von ${total} Bereichen auswertbar · Fehlende Werte werden nicht geschätzt.</p>${coverageNote?`<details class="lbr63-coverage-help"><summary>Warum fehlen ${total-coverage} Werte?</summary><ul>${coverageNote}</ul></details>`:''}</div>`:`<nav class="lbr672-dimensions" aria-label="Radar-Dimension wählen">${axes.map(a=>`<button type="button" data-action="balance-select" data-id="${esc(a.key)}" class="${a.key===activeAxis?'is-active':''}" aria-pressed="${a.key===activeAxis}">${esc(a.label)}</button>`).join('')}</nav><details class="lbr63-goals"><summary>Persönliche Richtwerte anpassen</summary><form id="lbr63-goals-form"><label>Schlafziel (Stunden)<input name="sleepHours" type="number" min="4" max="12" step="0.25" value="${model.goals.sleepMinutes/60}" required></label><label>Schrittziel / Tag<input name="stepsDaily" type="number" min="1000" max="30000" step="100" value="${model.goals.stepsDaily}" required></label><label>Arbeitszeit-Grenzwert / Woche (h)<input name="weeklyHours" type="number" min="10" max="80" step="0.5" value="${model.goals.weeklyHours}" required></label><label>Optional: Gewichtsrichtwert (kg)<input name="weightKg" type="number" min="30" max="300" step="0.1" placeholder="Kein Ziel gesetzt" value="${model.goals.weightKg??''}"></label><label>Optional: persönlicher Körperfett-Richtwert (%)<input name="bodyFatTargetPct" type="number" min="4" max="65" step="0.1" placeholder="Kein Ziel gesetzt" value="${model.goals.bodyFatTargetPct??''}"></label><button class="primary-btn" type="submit">Richtwerte speichern</button></form><p>Fitdays-Körperfett wird als Messwert angezeigt. Ein 0–100-Zielnähe-Score entsteht nur, wenn du persönlich einen Körperfett- oder Gewichtsrichtwert festlegst. Das ist keine medizinische Einstufung. Kontakte verwenden die selbst gewählten Rhythmen aus dem Relationship Radar; Pausen werden respektiert.</p></details><p class="lbr63-note">Vergleichslinien beruhen ausschließlich auf historischen Messwerten: GTD, Kontakte und aktuelle Cashflow-Deckung besitzen ohne gespeicherte Vergangenheit keine rückwirkenden Scores. Scores beschreiben deine Zielnähe im angegebenen Zeitraum. Unterschiedliche Datenquellen und Skalen sind nicht medizinisch oder wissenschaftlich gleichwertig. Garmin-Werte sind Geräteindikatoren; Liquidität beruht auf Schätzungen. Öffne jede Dimension für ihre zugrunde liegenden Daten.</p>`}
  </section>`;
 }
