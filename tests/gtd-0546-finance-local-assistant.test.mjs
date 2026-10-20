@@ -50,7 +50,7 @@ test('local LM Studio used only when explicitly invoked; payload excludes origin
 test('assistant is discoverable under Finance tools without new navigation tabs or auto-approval',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  const ui=readFileSync(new URL('../client/src/finance-dashboard.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.49\.2'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.49\.3'/);
  assert.match(ui,/financeAssistantView\(transactions/);
  assert.match(main,/finance-ai-local/);assert.match(main,/finance-ai-apply/);
  assert.match(main,/if\(!confirm\(/);assert.match(ui,/title:'Werkzeuge'/);

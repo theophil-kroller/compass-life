@@ -101,6 +101,18 @@ export function smartImportGroups(entries=[]){
  }
  return [...groups.values()].sort((a,b)=>Number(a.duplicate)-Number(b.duplicate)||b.indexes.length-a.indexes.length);
 }
+/** Explicit backfill: rerun previously imported health ZIPs after parser changes.
+ * Still process identical files only once within the same scan. */
+export function recheckHealthArchiveEntries(entries=[]){
+ const seen=new Set();
+ return entries.map(e=>{
+  if(e.kind!=='health')return e;
+  const digest=e.digest||null;
+  const duplicate=Boolean(digest&&seen.has(digest));
+  if(digest)seen.add(digest);
+  return {...e,duplicate};
+ });
+}
 export function normalizeImportHistory(value){return (Array.isArray(value)?value:[]).filter(x=>x&&/^[a-f0-9]{64}$/.test(x.digest)&&SMART_IMPORT_KINDS[x.kind]&&x.kind!=='unknown').slice(-1000);}
 export function committedSmartImport(history=[],entries=[],kind){
  if(!SMART_IMPORT_KINDS[kind]||kind==='unknown')return normalizeImportHistory(history);
@@ -159,6 +171,7 @@ export function smartImportHubView({entries=[],history=[],folderStatus={},notice
  <div class="smart49-sources">${SMART_IMPORT_SOURCES.map(x=>`<div class="smart49-source"><div><strong>${x.id==='health'?'⌚':'◈'} ${esc(x.label)}</strong><small>${esc(x.hint)}</small><small>${esc(folderStatus[x.id]||'Ordner nur nach Freigabe lesbar')}</small></div><button type="button" class="secondary-btn" data-action="smart49-pick-folder" data-id="${x.id}" ${busy?'disabled':''}>Ordner wählen</button><button type="button" class="secondary-btn" data-action="smart49-rescan-folder" data-id="${x.id}" ${!folderStatus[x.id]||busy?'disabled':''}>Prüfen</button></div>`).join('')}</div>
  ${notice?`<p class="muted-line" role="status">${esc(notice)}</p>`:''}
  ${entries.length?`<div class="smart49-results"><div class="smart49-overview"><strong>${entries.length} Dateien · ${groups.length} Gruppen</strong><small>${pending} zu prüfen${duplicates?` · ${duplicates} identische Datei(en) bereits erkannt`:''}</small></div>
+ ${entries.some(e=>e.kind==='health'&&e.duplicate)?`<button type="button" class="secondary-btn" data-action="smart49-health-backfill" ${busy?'disabled':''}>Ältere Gesundheitsarchive erneut auf fehlende Messwerte prüfen</button>`:''}
  ${totals.map(([kind,count])=>`<button type="button" class="secondary-btn" data-action="smart49-preview-kind" data-id="${kind}" ${busy?'disabled':''}>${esc(SMART_IMPORT_KINDS[kind])} · ${count} →</button>`).join('')}
  <div class="smart49-groups">${groups.map((g,i)=>`<div class="smart49-group"><div class="smart49-group-head"><div><strong>${g.indexes.length} × ${esc(g.indexes.length>1?'gleichartige Dateien':'Datei')} · ${esc(g.duplicate?'bereits erkannt':SMART_IMPORT_KINDS[g.kind])}</strong><small>${esc(g.examples.join(' · '))}${g.indexes.length>3?' …':''}</small><small>${esc(entries[g.indexes[0]]?.reason||'')}</small>${g.members.length?`<small>ZIP-Inhalt z. B.: ${esc(g.members.join(', '))}</small>`:''}</div>${!g.duplicate?`<select data-smart49-group="${i}" aria-label="Importtyp dieser ${g.indexes.length} Dateien gemeinsam festlegen">${Object.entries(SMART_IMPORT_KINDS).map(([key,label])=>`<option value="${key}" ${key===g.kind?'selected':''}>${esc(label)}</option>`).join('')}</select>`:''}</div><details><summary>Einzeldateien ansehen (${g.indexes.length})</summary><div class="smart49-list">${g.indexes.slice(0,30).map(idx=>{const e=entries[idx];return `<div class="smart49-row"><div><strong>${esc(e.name)}</strong><small>${esc(e.reason)} · ${e.size<1024?e.size+' B':e.size<1048576?(e.size/1024).toLocaleString('de-AT',{maximumFractionDigits:1})+' KB':(e.size/1048576).toLocaleString('de-AT',{maximumFractionDigits:1})+' MB'}</small></div>${!e.duplicate?`<select data-smart49-kind="${idx}" aria-label="Importtyp für ${esc(e.name)}">${Object.entries(SMART_IMPORT_KINDS).map(([key,label])=>`<option value="${key}" ${key===e.kind?'selected':''}>${esc(label)}</option>`).join('')}</select>`:''}</div>`}).join('')}${g.indexes.length>30?`<small>${g.indexes.length-30} weitere Dateien in dieser Gruppe; gemeinsame Zuordnung gilt für alle.</small>`:''}</div></details></div>`).join('')}</div>
  <p class="muted-line">Eine Zuordnung gilt für die ganze Gruppe. ZIPs werden anhand ihrer enthaltenen Dateinamen geprüft, nicht automatisch entpackt. Unbekannte Formate bleiben ungeprüft. Die Zielimporte prüfen Inhalte und Dubletten vor dem Speichern.</p>

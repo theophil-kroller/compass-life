@@ -96,9 +96,10 @@ export async function parseGarminFile(bytes,name=''){
 }
 export async function inspectHealthFiles(files){
  if(!files?.length)throw Error('Bitte Dateien auswählen');
- const result={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],errors:[],processed:0};
+ const result={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],errors:[],processed:0,fileResults:[]};
  if(files.length>75)throw Error('Bitte maximal 75 Dateien gleichzeitig wählen');
  for(const file of files){
+  let partial=false;
   try{
    if(file.size>LIMIT_FILE)throw Error('Datei größer als 120 MB – Archiv bitte aufteilen');
    const bytes=new Uint8Array(await file.arrayBuffer());
@@ -108,10 +109,11 @@ export async function inspectHealthFiles(files){
     result.fitdays.push(...await parseFitdaysFile(bytes));
    }else{
     const v=await parseGarminFile(bytes,file.name);result.garminNights.push(...v.nights);result.garminHrv.push(...v.hrvs);result.garminWellness.push(...(v.wellness||[]));result.garminFitness.push(...(v.fitness||[]));result.garminSessions.push(...(v.sessions||[]));
-    if(v.failed?.length)result.errors.push(`${file.name}: ${v.failed.length} FIT-Datei(en) nicht lesbar`);
+    if(v.failed?.length){partial=true;result.errors.push(`${file.name}: ${v.failed.length} FIT-Datei(en) nicht lesbar`);}
    }
    result.processed++;
-  }catch(e){result.errors.push(`${file.name}: ${e.message}`);}
+   result.fileResults.push({name:file.name,status:partial?'partial':'ok'});
+  }catch(e){result.errors.push(`${file.name}: ${e.message}`);result.fileResults.push({name:file.name,status:'error',reason:String(e.message||e)});}
  }
  // Multiple overlapping archives and repeated exports are common.
  const unique=(rows,key,prefer=()=>true)=>{const map=new Map();for(const row of rows){const k=key(row),old=map.get(k);if(!old||prefer(old,row))map.set(k,row);}return [...map.values()];};

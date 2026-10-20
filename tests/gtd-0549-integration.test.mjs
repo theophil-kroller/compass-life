@@ -19,7 +19,7 @@ test('all supported preview types are explicitly confirmed by the old importer',
  for(const type of ['health','places','project','kraken','bank','flatex'])assert.match(main,new RegExp(`id==='${type}'|kind==='${type}'`),type);
  assert.match(main,/s\.smartImportHistory=committedSmartImport\(s\.smartImportHistory,smartHubStage\.entries,'project'\)/);
  assert.match(main,/s\.smartImportHistory=committedSmartImport\(s\.smartImportHistory,smartHubStage\.entries,'kraken'\)/);
- assert.match(main,/s\.smartImportHistory=committedSmartImport\(s\.smartImportHistory,smartHubStage\.entries,'health'\)/);
+ assert.match(main,/s\.smartImportHistory=committedSmartImport\(s\.smartImportHistory,report\.accepted,'health'\)/);
 });
 test('release does not claim background monitoring or silently process local folders',()=>{
  const ui=smartImportHubView();

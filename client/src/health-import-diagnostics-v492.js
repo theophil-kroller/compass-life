@@ -10,10 +10,10 @@ export function newestHealthFirst(entries=[]){
  return [...entries].sort((a,b)=>dayOfName(b).localeCompare(dayOfName(a))||
   (Number(b?.file?.lastModified||0)-Number(a?.file?.lastModified||0))||String(a?.name||'').localeCompare(String(b?.name||'')));
 }
-function localDay(iso,timezone){
- if(typeof iso!=='string'||!Number.isFinite(Date.parse(iso)))return '';
+function localDay(iso,formatter){
+ if(typeof iso!=='string'||!Number.isFinite(Date.parse(iso))||!formatter)return '';
  try{
-  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(iso));
+  const parts=formatter.formatToParts(new Date(iso));
   const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));
   return `${map.year}-${map.month}-${map.day}`;
  }catch{return ''}
@@ -22,8 +22,9 @@ const ranged=(dates)=>{const list=dates.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x))
 /** Keep sleep and stress distinct: a successful sleep archive does not imply any stress points. */
 export function healthImportCoverage(data={},timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Vienna'){
  const points=Array.isArray(data.garminWellness)?data.garminWellness:[];
- const stress=ranged(points.filter(x=>Number.isFinite(x.stress)&&x.stress>=0&&x.stress<=100).map(x=>localDay(x.at,timezone)));
- const battery=ranged(points.filter(x=>Number.isFinite(x.bodyBattery)&&x.bodyBattery>=0&&x.bodyBattery<=100).map(x=>localDay(x.at,timezone)));
+ let formatter=null;try{formatter=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'});}catch{}
+ const stress=ranged(points.filter(x=>Number.isFinite(x.stress)&&x.stress>=0&&x.stress<=100).map(x=>localDay(x.at,formatter)));
+ const battery=ranged(points.filter(x=>Number.isFinite(x.bodyBattery)&&x.bodyBattery>=0&&x.bodyBattery<=100).map(x=>localDay(x.at,formatter)));
  const nights=ranged((data.garminNights||[]).map(x=>x.day));
  return {stress,battery,nights};
 }
