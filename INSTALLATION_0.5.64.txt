@@ -1,0 +1,33 @@
+Compass 0.5.64 — Relationship Radar
+==================================
+
+PATCH ab 0.5.63
+1. Vor dem Update den funktionierenden Quellstand sichern.
+2. Inhalt von Compass_0.5.64_PATCH_FROM_0.5.63.zip im Repository-Stammverzeichnis
+   entpacken und gleichnamige Dateien ersetzen.
+3. Committen und den bisherigen Cloudflare/GitHub-Deploy ausführen.
+4. Browser/PWA nach Deployment einmal neu laden.
+
+FULL SOURCE
+Compass_0.5.64_FULL_SOURCE.zip enthält den vollständigen Quellstand.
+
+KEINE D1-MIGRATION. Kein Vault-Reset und kein erneuter Datenimport nötig.
+
+ZUERST TESTEN
+- Menschen > Kontakte: vorhandenene Kontakte öffnen, Nähe-Slider und Rhythmus speichern.
+- Beziehungslandkarte: Kontakte visuell darstellen, einen Knoten verschieben;
+  kontrollieren, dass der Nähe-Slider den neuen Wert zeigt.
+- Pause/Play: ein pausierter Kontakt erscheint nicht mehr als Impuls im Weekly Review.
+- Kontakt-Schnellaktionen: Telefon / Treffen / E-Mail vorwählen, erst durch
+  Formularbestätigung als tatsächlich erfolgt dokumentieren.
+- Projekt beim Menschen verknüpfen oder neu anlegen und über das Projekt öffnen.
+- Persönliche Informationen speichern und nach Neustart des Vault wieder prüfen.
+
+PRÜFSTAND
+639/639 Node-Tests, JS- und Worker-Syntaxprüfung bestanden.
+Vite-Produktionsbuild und visuelle Live-Abnahme noch ausstehend, da lokal vite fehlt.
+
+HINWEIS
+Die Kontaktpunkte sind eine einstellbare Heuristik für freiwillige Kontaktimpulse,
+keine Bewertung einer Person oder Beziehung. Es findet keine automatische
+Mail-/Kalender-/Telefonüberwachung statt.

@@ -2511,3 +2511,30 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .lbr63-temporal-item small{display:block;font-size:9px;font-weight:400;color:#9ab4bf;white-space:nowrap;margin-top:1px}
 @media(max-width:670px){.lbr63-header-actions{flex-wrap:wrap}.lbr63-history-choose>span{display:none}}
 @media(max-width:440px){.lbr63-temporal-legend{gap:8px}.lbr63-temporal-item small{font-size:8px}.lbr63-history-choose button{padding:7px}}
+
+/* Compass 0.5.64 — Relationship Radar, compact people inspector and radial relationship map. */
+.relationship-tabs{display:flex;align-items:center;gap:6px;margin:0 0 14px;flex-wrap:wrap}
+.relationship-tabs button{appearance:none;border:1px solid #d9e3e3;color:#49676b;background:#f8fbfb;border-radius:11px;padding:9px 16px;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.relationship-tabs button.is-active{background:#315a58;color:#fff;border-color:#315a58}
+.relationship-profile{padding:15px 16px;background:linear-gradient(146deg,#f7faf9,#fff);border:1px solid #dbe6e2;border-radius:16px;margin:4px 0 16px}
+.relationship-profile .work-heading{margin-bottom:10px}.relationship-pause{border:1px solid #cfdcd7;background:#fff;border-radius:20px;font-size:11px;font-weight:650;padding:7px 12px;color:#476d62;cursor:pointer}.relationship-pause.is-paused{background:#f5efea;border-color:#e7d9c9;color:#936443}
+.relationship-pref-form{display:grid;gap:9px}.relationship-pref-form>label{display:flex;justify-content:space-between;gap:12px;font-size:12px;font-weight:650;color:#385d53}.relationship-pref-form label strong{font-size:12px;color:#648078;font-weight:650}
+.relationship-inline-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}.relationship-inline-fields label{font-size:11px;color:#526c68}.relationship-inline-fields select{display:block;width:100%;margin-top:3px;min-width:0;background:#fff;border:1px solid #d2e0db;border-radius:9px;padding:7px 8px;font:inherit;color:#365b52}
+.relationship-slider-line{display:flex;align-items:center;gap:9px;color:#536b74;font-size:17px}.relationship-slider-line input[type=range]{flex:1;min-width:0;accent-color:#bf7f75;cursor:pointer}
+.relationship-closeness-slider{height:15px;appearance:none;-webkit-appearance:none;border-radius:99px;background:linear-gradient(90deg,#7cb1d4 0%,#b7cad9 27%,#ddd4c9 49%,#e7a589 76%,#d27086 100%)}
+.relationship-closeness-slider::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #476c73;box-shadow:0 2px 7px #172e3940}
+.relationship-closeness-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #476c73;box-shadow:0 2px 7px #172e3940}
+.relationship-cadence-slider{height:10px;appearance:none;-webkit-appearance:none;border-radius:99px;background:linear-gradient(90deg,#cb968c,#ddc0a4 50%,#acb8cd)}
+.relationship-cadence-slider::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:19px;height:19px;border-radius:50%;background:#fff;border:3px solid #667d84}
+.relationship-cadence-slider::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:#fff;border:3px solid #667d84}
+.relationship-score-line{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-top:4px;font-size:11px;color:#607e78}.relationship-score-line span{min-width:0}
+.relationship-pref-form>small{font-size:10px;color:#7c8c89;line-height:1.55}
+.relationship-personal,.relationship-projects{border-top:1px solid #dfe9e5;margin-top:13px;padding-top:12px}.relationship-personal summary{cursor:pointer;color:#3c5d54;font-size:12px;font-weight:650}.relationship-personal form{margin-top:10px}.relationship-personal label{font-size:11px}
+.relationship-projects .work-heading{margin-bottom:8px}.relationship-project-row{display:flex;align-items:center;gap:6px;margin:6px 0;justify-content:space-between}.relationship-project-row button:first-child{border:0;background:transparent;text-align:left;color:#406a61;font-size:12px;cursor:pointer}.relationship-project-link{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}.relationship-project-link select,.relationship-project-link input{flex:1 1 140px;min-width:0;width:100%;border:1px solid #d9e5e0;border-radius:8px;padding:7px;font-size:11px;background:#fff}.relationship-project-link .secondary-btn{font-size:11px}
+.people-quick-actions{display:flex;gap:4px;margin:-2px 0 6px 2px}.people-quick-actions button{background:#f6faf8;border:1px solid #dce5e0;color:#46665f;border-radius:8px;min-width:38px;min-height:30px;cursor:pointer;font-size:17px}.people-quick-actions button:hover,.relationship-contact-quick button:hover{background:#e9f3f0}
+.relationship-contact-quick{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}.relationship-contact-quick button{padding:7px 9px;min-height:34px;border-radius:8px;border:1px solid #d6e4e0;background:#fff;cursor:pointer;color:#46665f;font-size:11px}
+.relationship-log-hint{font-size:11px;padding:8px 10px;background:#edf5f2;border:1px solid #d3e5db;border-radius:9px;color:#406a5b;margin:7px 0}
+.relationship-map-card{margin-bottom:14px}.relationship-map-card>.muted-line{font-size:12px;line-height:1.6}.relationship-map{display:block;width:100%;max-width:620px;margin:auto;touch-action:none;user-select:none}.relationship-node{cursor:grab;outline:none}.relationship-node:active{cursor:grabbing}.relationship-node:focus circle{stroke:#df886c;stroke-width:4}.relationship-node-label{fill:#3a5c5e;paint-order:stroke;stroke:#f9fbfa;stroke-width:3.5;stroke-linejoin:round}.relationship-map-legend{display:flex;justify-content:space-between;max-width:600px;margin:0 auto 8px;color:#597981;font-size:11px}
+@media(max-width:620px){.relationship-profile{padding:12px}.relationship-inline-fields{grid-template-columns:1fr}.relationship-map{max-width:100%}.relationship-project-link .secondary-btn{padding:7px 9px}}
+@media(prefers-reduced-motion:reduce){.relationship-node,.relationship-profile *{transition:none!important}}
+@media(min-width:891px){.people-grid.map-active{grid-template-columns:minmax(340px,1.2fr) minmax(350px,1fr)}}

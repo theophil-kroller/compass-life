@@ -10,7 +10,7 @@ const safeDate=day=>{
 };
 export const CONTACT_TYPES=Object.freeze([
  ['meeting','Persönliches Treffen'],['call','Telefonat'],['message','Nachricht'],
- ['video','Videogespräch'],['other','Sonstiger Kontakt']
+ ['video','Videogespräch'],['email','E-Mail'],['other','Sonstiger Kontakt']
 ]);
 export const CONTACT_REVIEW_DAYS=Object.freeze([0,14,30,60,90,180,365]);
 export const contactTypeLabel=id=>CONTACT_TYPES.find(([key])=>key===id)?.[1]||'Kontakt';
