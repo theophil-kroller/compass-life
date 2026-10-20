@@ -72,5 +72,5 @@ test('Visual Lab selectable; finance spending and cashflow contain the actual hi
  const spending=financeDashboardView({financeTransactions:history},'Ausgaben','last12',null,0,{today:'2026-10-18'});
  assert.match(spending,/Abgänge → Hauptkategorien → Unterkategorien/);assert.match(spending,/finance-files/);
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/finance-subcategory-select/);assert.match(main,/finance-day-select/);assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.57'/);
+ assert.match(main,/finance-subcategory-select/);assert.match(main,/finance-day-select/);assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.58'/);
 });

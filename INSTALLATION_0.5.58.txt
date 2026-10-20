@@ -1,0 +1,21 @@
+Compass 0.5.58 — Installation
+================================
+
+PATCH ab 0.5.57:
+  1. Repository- und Vault-Backup anlegen. Kein Vault-Reset und keine D1-Migration.
+  2. ZIP Compass_0.5.58_PATCH_FROM_0.5.57.zip im bestehenden Repository-Hauptverzeichnis entpacken; Dateien überschreiben.
+  3. Committen und bestehendes GitHub-Pages-Deployment auslösen.
+  4. Nach Deployment Browser/PWA vollständig aktualisieren.
+
+FULL SOURCE:
+  Compass_0.5.58_FULL_SOURCE.zip enthält den vollständigen Stand inklusive früherer Funktionen.
+
+PRÜFEN:
+  1. Insights > Arbeitszeit: Palme sichtbar größer, zwei Diagramme untereinander, keine Monatsvergleichs-Doppelung, Excel-Import ganz unten.
+  2. Balken / Jahresvergleich: beim Darüberfahren erscheinen native Tooltips mit Stunden, Kalenderwoche/Datum bzw. Monat.
+  3. Smart Import Hub (Upload-Symbol oben) > Arbeitszeit-Excel auswählen: Vorschau vor Übernahme, ggf. Typ manuell auf „Arbeitszeit-Excel“ setzen.
+  4. Vorschaudaten bestätigen, danach ohne Dubletten im Arbeitszeit-Dashboard und im Wochenreview sichtbar.
+  5. Wochenreview > letzter Schritt: Datum des letzten erfolgreichen Imports und tatsächlich letzter Datenstand für mehrere Quellen; ältere Historie ohne bekannten Zeitstempel nicht als „heute“ anzeigen.
+  6. Keine Importe nötig, um Weekly Review abzuschließen. Frühere Einzelimporte bleiben als optionaler Bereich verfügbar.
+
+TESTSTAND: 596/596 Node-Tests, Worker-Syntax erfolgreich. Nicht durchgeführt: Vite-Produktionskompilierung (vite nicht installiert), echte Browser- und PWA-Überprüfung.

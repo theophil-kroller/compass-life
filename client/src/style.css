@@ -2413,3 +2413,15 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .inbox-row-wrap .inbox-quick-today:focus-visible{outline:2px solid #387d63;outline-offset:2px}
 .inbox-row-wrap .inbox-quick-today svg{flex:none}
 @media(max-width:580px){.inbox-row-wrap .inbox-quick-today{min-width:32px;padding:5px 7px}.inbox-row-wrap .inbox-quick-today span{display:none}}
+
+/* 0.5.58 · compact Import Hub and Weekly Review freshness; vacation icon legibility. */
+.work553-kpis .work558-vacation svg{width:27px;height:27px;stroke-width:1.65;flex:0 0 27px}
+.work558-vacation{gap:8px;min-height:29px}
+.import558-status{display:grid;gap:0;border:1px solid #DFEAE2;border-radius:12px;overflow:hidden;background:#fff;margin:10px 0;font-size:11px;color:#436453}
+.import558-head,.import558-row{display:grid;grid-template-columns:minmax(130px,1.1fr) minmax(125px,1.2fr) minmax(95px,.8fr) minmax(140px,1fr);gap:10px;align-items:center;padding:9px 13px}
+.import558-head{font-weight:600;background:#F2F7F3;color:#597666;font-size:10px}
+.import558-row+ .import558-row{border-top:1px solid #EFF2EF}
+.import558-row strong{font-size:11px}.import558-row small{font-size:10px}
+.import558-current{color:#46775d}.import558-check{color:#AB6D39}.import558-never,.import558-undocumented{color:#788A7F}
+.review558-actions{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}.review558-legacy{margin:12px 0;color:#54715f;font-size:12px}.review558-legacy summary,.smart558-coverage summary{cursor:pointer;padding:5px 0}.smart558-coverage{margin:9px 0}
+@media(max-width:680px){.import558-head{display:none}.import558-row{grid-template-columns:minmax(120px,1fr) minmax(120px,1fr);gap:5px}.import558-row>span:nth-child(2):before{content:'Import: ';font-weight:600}.import558-row>span:nth-child(3):before{content:'Daten bis: ';font-weight:600}.import558-row small{justify-self:end}.work553-kpis .work558-vacation svg{width:26px;height:26px}}

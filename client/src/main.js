@@ -55,7 +55,8 @@ import {transferCandidates,accountMatches} from './finance-revolut.js';
 import {exploreDays,exploreView,EXPLORE_FIELDS} from './insights-explorer.js';
 import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insightsPlannedView} from './insights.js';
 import {healthFindings,rankHealthFindingsLocally} from './health-intelligence-v551.js';
-import {inspectWorktimeFile,mergeWorktime,worktimeView} from './worktime-v553.js';
+import {inspectWorktimeFile,mergeWorktime,worktimeView,worktimeImportPanel} from './worktime-v553.js';
+import {markSuccessfulImport} from './import-status-v558.js';
 import {worktimeYearComparisonView} from './worktime-multiyear-v555.js';
 import {recoveryCandidates,recoveryEvidence,recoveryView} from './recovery-timeoff-v554.js';
 import {conferenceEntries,conferenceRadarView,conferenceProjectPlan,newConference,setConferenceStatus,RADAR_TOPICS,RADAR_REGIONS,RADAR_FOCI} from './conference-radar-v555.js';
@@ -77,7 +78,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.57';
+const COMPASS_CLIENT_VERSION='0.5.58';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -1125,7 +1126,7 @@ function privateMirrorSettings(){
  <details><summary>Datenschutz und Funktionsumfang</summary><p class="small-muted">Nur Bankdaten einschließlich Korrekturen, finanzielle Ziele und lokale Garmin/Fitdays-Importe sowie manuelle Aktivitäten. Cloudflare sieht verschlüsselten Inhalt, Zeitpunkte und die Datenpaketgröße; keine Klartexte und keine Passphrase. Der Schlüssel liegt nur im verschlüsselten lokalen Tresor. Änderungen an diesen Bereichen erfolgen am Hauptgerät; andere Geräte erhalten eine schreibgeschützte Kopie. Beim Abgleich bleibt eine lokale Offline-Kopie erhalten. Verlierst du die Sync-Passphrase auf beiden Geräten und die eingerichteten Tresore, kann niemand Cloud-Daten entschlüsseln. Kein automatisches Zusammenführen widersprüchlicher Finanzkorrekturen.</p></details></section>`;
 }
 function systemScreen(){
- return chrome(`${smartImportHubView({entries:smartHubEntries,history:state?.smartImportHistory||[],folderStatus:smartHubFolderStatus,notice:smartHubNotice,busy:smartHubBusy,source:smartHubScanSource,storedCoverage:healthDataCoverage(state?.healthImports||{},localDate()),healthPreview:smartHubStage?.kind==='health'?healthFilePreview:null,healthJob:healthImportJob})}<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
+ return chrome(`${smartImportHubView({state,entries:smartHubEntries,history:state?.smartImportHistory||[],folderStatus:smartHubFolderStatus,notice:smartHubNotice,busy:smartHubBusy,source:smartHubScanSource,storedCoverage:healthDataCoverage(state?.healthImports||{},localDate()),healthPreview:smartHubStage?.kind==='health'?healthFilePreview:null,healthJob:healthImportJob})}<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
  <div class="connection-detail"><span class="connection-dot ${configured()?'green':'amber'}"></span><span>${configured()?'Konfiguration hinterlegt':'Google-Anmeldung noch nicht konfiguriert'}</span></div>
  <p class="small-muted">${configured()?'API: '+h(config.apiUrl):'In client/public/runtime-config.json sind noch Konfigurationswerte zu ergänzen.'}</p><p class="small-muted">Frontend: Compass ${COMPASS_CLIENT_VERSION} · benötigt Worker-API 11 oder neuer.</p>
  <div id="google-button" class="google-button"></div><p class="small-muted">${authToken?'Compass-Sitzung aktiv: '+h(currentUser)+' · bleibt nach erneutem Tresor-Entsperren erhalten.':'Google-Anmeldung einmalig verknüpfen; danach wird die Compass-Sitzung verschlüsselt im Tresor gespeichert.'}</p><p class="small-muted">Planung automatisch: nach Änderungen und bei geöffneter App regelmäßig. Bank- und Garmin-Importe werden erst mit aktiviertem privaten Geräteabgleich übertragen.</p>
@@ -1306,7 +1307,7 @@ function insightsScreen(){
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today,false)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode)+worktimeImportPanel(state?.workTime||{},workPreview):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <div class="calm-insight-toolbar" aria-label="Mobile Insights-Navigation"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
  <div class="insight-view-header ${insightTab==='sources'?'insight-source-heading':''}"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
@@ -1660,7 +1661,7 @@ function bind() {
         // Mutate only after the full plan passes validation; preserve other Vault sections.
         s.projects=result.state.projects;s.tasks=result.state.tasks;
         s.projectPending=result.state.projectPending;s.taskPending=result.state.taskPending;
-        if(smartHubStage?.kind==='project')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'project');
+        if(smartHubStage?.kind==='project')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'project');markSuccessfulImport(s,'project');
       });
       if(smartHubStage?.kind==='project'){for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}exchangePreview=null;exchangeBaseline=null;selectedTaskId=null;toast(`${result.projects} Projekte und ${result.tasks} Aufgaben übernommen. Bestehendes nur nach deiner Auswahl geändert.`);
     }catch(ex){toast('Import nicht durchgeführt: '+ex.message,true);}
@@ -1965,6 +1966,8 @@ function bind() {
   const calmHealthSelect=app.querySelector('#calm-health-view');if(calmHealthSelect)calmHealthSelect.onchange=()=>{if(['sleep','energy','stress','body'].includes(calmHealthSelect.value)){insightTab=calmHealthSelect.value;render();}};
   const workFile=app.querySelector('#work553-file');if(workFile)workFile.onchange=async()=>{
   if(!workFile.files?.length)return;
+  // A manual replacement must not register a previously staged Smart Hub file.
+  if(smartHubStage?.kind==='worktime')smartHubStage=null;
   try{workPreview=await inspectWorktimeFile(workFile.files[0],{today:localDate(),nowMinutes:new Date().getHours()*60+new Date().getMinutes()});toast(`${workPreview.days.length} Arbeitszeittage erkannt. Bitte Vorschau prüfen und übernehmen.`);}
   catch(ex){workPreview=null;toast(`Excel-Import: ${ex.message}`,true);}
  };
@@ -2238,7 +2241,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='insights-wellness-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;const items=(state?.healthImports?.garminWellness||[]);if(items.some(x=>String(x.at||'').slice(0,10)===id)){insightWellnessDay=id;render();}return;}
     if(action==='insights-stress-granularity'){if(['day','week'].includes(id)){insightStressGranularity=id;render();}return;}
     if(action==='insights-body-composition'){if(['composition','water','stacked'].includes(id)){insightBodyComposition=id;render();}return;}
-    if(action==='review-import-open'){if(id==='health'){tab='insights';insightTab='sources';}else if(id==='places'){tab='insights';insightTab='places';insightPeriod='all';}else if(id==='finance'){tab='finance';financePane='Buchungen';}else if(id==='kraken'){tab='finance';financePane='Portfolio';}render();return;}
+    if(action==='review-import-open'){if(id==='hub'){tab='system';calmNavGroup='';render();requestAnimationFrame(()=>app.querySelector('#smart-import-hub')?.scrollIntoView({behavior:'smooth',block:'start'}));return;}if(id==='worktime'){tab='insights';insightTab='worktime';calmNavGroup='insights';render();return;}if(id==='health'){tab='insights';insightTab='sources';}else if(id==='places'){tab='insights';insightTab='places';insightPeriod='all';}else if(id==='finance'){tab='finance';financePane='Buchungen';}else if(id==='kraken'){tab='finance';financePane='Portfolio';}render();return;}
      if(action==='finance-budget-month'){if(/^\d{4}-(0[1-9]|1[0-2])$/.test(id)){financeBudgetMonth=id;render();}return;}
     if(action==='finance-budget-edit'){const entry=(state.financeFlexBudgets||[]).find(x=>x.category===id);if(!entry)return;const el=app.querySelector('#finance-budget-editor');if(el)el.open=true;const cat=app.querySelector('#finance-budget-category'),group=app.querySelector('#finance-budget-group'),amount=app.querySelector('#finance-flex-budget-form input[name="limit"]');if(cat)cat.value=entry.category;if(group)group.value=entry.group;if(amount)amount.value=(entry.limitCents/100).toFixed(2);el?.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
     if(action==='finance-budget-remove'){if(!(state.financeFlexBudgets||[]).some(x=>x.category===id)||!confirm('Dieses Budget entfernen? Bankbuchungen bleiben unverändert.'))return;await mutate(s=>{s.financeFlexBudgets=(s.financeFlexBudgets||[]).filter(x=>x.category!==id);});toast('Budget entfernt.');return;}
@@ -2334,6 +2337,11 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
           smartHubNotice=`Vorschau: ${sample.length} von ${queue.total} Dateien geprüft · Stress bis ${coverage.stress.last||'kein Wert'} · Schlaf bis ${coverage.nights.last||'kein Wert'}. Nach einer Bestätigung werden ALLE ${queue.total} Archive schrittweise verarbeitet und gespeichert.`;
           // Keep the preview in the Import Hub: no confusing navigation round-trip.
           tab='system';calmNavGroup='';
+        }else if(id==='worktime'){
+          if(group.length!==1)throw Error('Arbeitszeit-Excel bitte einzeln prüfen.');
+          workPreview=await inspectWorktimeFile(group[0].file,{today:localDate(),nowMinutes:new Date().getHours()*60+new Date().getMinutes()});
+          if(!workPreview.days.length)throw Error('Keine abgeschlossenen Zeiterfassungstage gefunden.');
+          tab='insights';insightTab='worktime';calmNavGroup='insights';
         }else if(id==='places'){
           if(group.length>12)throw Error('Maximal zwölf Timeline-Dateien pro Vorschau.');
           placesPreview=await inspectTimelineFiles(group.map(x=>x.file));if(!placesPreview.visits.length)throw Error('Keine Standort-Aufenthalte erkannt.');
@@ -2353,7 +2361,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
           const snap=parseFlatexPositionsCsv(await group[0].file.text());
           if(!confirm(`flatex-Depotstand ${snap.day} mit ${snap.positions.length} Positionen übernehmen?`))return;
           await mutate(st=>{st.financeFlatexSnapshots=putFlatexSnapshot(st.financeFlatexSnapshots||[],snap);
-            st.smartImportHistory=committedSmartImport(st.smartImportHistory,group,'flatex');});
+            st.smartImportHistory=committedSmartImport(st.smartImportHistory,group,'flatex');markSuccessfulImport(st,'flatex');});
           smartHubEntries.forEach(e=>{if(group.includes(e))e.duplicate=true;});
           smartHubStage=null;smartHubNotice='flatex-Depotstand übernommen.';toast(smartHubNotice);return;
         }
@@ -2361,7 +2369,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
         if(id!=='health')smartHubNotice=`${group.length} ${SMART_IMPORT_KINDS[id]}-Datei(en) zur bestehenden Importvorschau übergeben.`;
         render();
         requestAnimationFrame(()=>{
-          const selector=({bank:'#finance-import-manager',health:'#smart49-health-review',places:'.places-import-preview',project:'#project-exchange-details',kraken:'.fin41-portfolio-panel'})[id];
+          const selector=({bank:'#finance-import-manager',health:'#smart49-health-review',worktime:'.work553-preview',places:'.places-import-preview',project:'#project-exchange-details',kraken:'.fin41-portfolio-panel'})[id];
           (selector&&app.querySelector(selector))?.scrollIntoView?.({behavior:'smooth',block:'start'});
         });
       }catch(ex){toast('Smart Import: '+ex.message,true);}return;
@@ -2753,7 +2761,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='finance-kraken-cancel'){if(smartHubStage?.kind==='kraken')smartHubStage=null;krakenPreview=null;render();return;}
     if(action==='finance-kraken-confirm'){
       if(!krakenPreview)return;
-      try{const incoming=krakenPreview;await mutate(s=>{s.krakenPortfolio=mergeKrakenSnapshot(s.krakenPortfolio,incoming);if(smartHubStage?.kind==='kraken')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'kraken');});if(smartHubStage?.kind==='kraken'){for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}krakenPreview=null;toast('Kraken-Daten verschlüsselt im lokalen Tresor gespeichert. Bitte die unverschlüsselte JSON-Datei entfernen.');}
+      try{const incoming=krakenPreview;await mutate(s=>{s.krakenPortfolio=mergeKrakenSnapshot(s.krakenPortfolio,incoming);if(smartHubStage?.kind==='kraken')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'kraken');markSuccessfulImport(s,'kraken');});if(smartHubStage?.kind==='kraken'){for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}krakenPreview=null;toast('Kraken-Daten verschlüsselt im lokalen Tresor gespeichert. Bitte die unverschlüsselte JSON-Datei entfernen.');}
       catch(e){toast(e.message,true);}return;
     }
     if(action==='finance-kraken-delete'){
@@ -2763,7 +2771,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='finance-import-cancel'){if(smartHubStage?.kind==='bank')smartHubStage=null;financePreview=null;render();return;}
     if(action==='finance-import-confirm'){
       if(!financePreview?.rows.length)return;
-      try{let added=0,duplicates=0;await mutate(s=>{s.financeTransactions??=[];const seen=new Set(s.financeTransactions.map(t=>t.id));for(const t of financePreview.rows){if(seen.has(t.id)){duplicates++;continue;}s.financeTransactions.push(t);seen.add(t.id);added++;}if(smartHubStage?.kind==='bank')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'bank');});
+      try{let added=0,duplicates=0;await mutate(s=>{s.financeTransactions??=[];const seen=new Set(s.financeTransactions.map(t=>t.id));for(const t of financePreview.rows){if(seen.has(t.id)){duplicates++;continue;}s.financeTransactions.push(t);seen.add(t.id);added++;}if(smartHubStage?.kind==='bank')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'bank');markSuccessfulImport(s,'bank');});
         financePreview=null;financePane='Prüfen';financeReviewPage=0;if(smartHubStage?.kind==='bank'){for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}toast(`${added} Buchungen lokal übernommen. ${duplicates} weitere Duplikate ausgelassen. Unsichere Zahlungen bitte prüfen.`);
       }catch(e){toast(e.message,true);}return;
     }
@@ -2779,7 +2787,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='places-import-confirm'){
       if(!placesPreview?.visits.length)return;
       try{const incoming=placesPreview.visits;let count=0;
-        await mutate(s=>{const m=mergePlaces(s.placesVisits||[],incoming);s.placesVisits=m.visits;count=m.added;if(smartHubStage?.kind==='places'&&!placesPreview?.warnings?.length)s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'places');});
+        await mutate(s=>{const m=mergePlaces(s.placesVisits||[],incoming);s.placesVisits=m.visits;count=m.added;if(smartHubStage?.kind==='places'&&!placesPreview?.warnings?.length)s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'places');markSuccessfulImport(s,'places');});
         if(smartHubStage?.kind==='places'){if(!placesPreview?.warnings?.length)for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}placesPreview=null;selectedPlaceKey='';toast(`${count} neue Aufenthalte lokal gespeichert. Bestehende Einträge wurden nicht verdoppelt.`);
       }catch(ex){toast('Standortimport: '+ex.message,true);}return;
     }
@@ -2796,7 +2804,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='sports-select'){if(['running','cycling','walking','hiking','ski','swimming','paddling','dancing','disc','martial','sauna','other'].includes(id)){sportsSelected=sportsSelected===id?'':id;render();}return;}
     if(action==='worktime-compare-mode'){if(id==='month'||id==='week'){workCompareMode=id;render();}return;}
     if(action==='worktime-year'){const n=Number(id);if(Number.isInteger(n)&&n>=2023&&n<=new Date().getFullYear()+1){workYear=n;render();}return;}
-    if(action==='worktime-confirm'){if(!workPreview)return;const preview=workPreview;await mutate(s=>{s.workTime=mergeWorktime(s.workTime||{},preview);if(!s.workTime.vacation)s.workTime.vacation={balanceHours:192,asOf:'2026-10-20',hoursPerDay:8};});workPreview=null;toast(`${preview.days.length} Arbeitszeittage übernommen. Überzeit: ${preview.lastBalance?.hours?.toFixed(2)||'–'} h.`);return;}
+    if(action==='worktime-confirm'){if(!workPreview)return;const preview=workPreview;await mutate(s=>{s.workTime=mergeWorktime(s.workTime||{},preview);markSuccessfulImport(s,'worktime');if(smartHubStage?.kind==='worktime')s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'worktime');if(!s.workTime.vacation)s.workTime.vacation={balanceHours:192,asOf:'2026-10-20',hoursPerDay:8};});if(smartHubStage?.kind==='worktime'){for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}workPreview=null;toast(`${preview.days.length} Arbeitszeittage übernommen. Überzeit: ${preview.lastBalance?.hours?.toFixed(2)||'–'} h.`);return;}
     if(action==='insights-week-shift'){
       if(!['-7','7','today'].includes(id))return;
       const today=localDate();const base=insightWeekAnchor||today;

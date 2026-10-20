@@ -4,13 +4,14 @@ import {filePeriodMarkup,healthCoverageMarkup,importFilePeriod} from './health-d
  * No persistent directory handles, background reads, silent cloud uploads, or model calls.
  */
 import {detectFinanceFormat} from './finance-account-import.js';
+import {importStatusMarkup} from './import-status-v558.js';
 
 export const SMART_IMPORT_SOURCES=Object.freeze([
  {id:'health',label:'Health Daten',hint:'C:\\Users\\kroll\\Documents\\Health Daten'},
  {id:'finance',label:'Konto Daten',hint:'C:\\Users\\kroll\\Documents\\Konto Daten'}
 ]);
 export const SMART_IMPORT_KINDS=Object.freeze({
- bank:'Bankbuchungen',health:'Garmin / Fitdays',places:'Google Timeline',project:'Compass-Projektplan',kraken:'Kraken-Export',flatex:'flatex-Depotstand',unknown:'Manuell zuordnen'
+ bank:'Bankbuchungen',health:'Garmin / Fitdays',worktime:'Arbeitszeit-Excel',places:'Google Timeline',project:'Compass-Projektplan',kraken:'Kraken-Export',flatex:'flatex-Depotstand',unknown:'Manuell zuordnen'
 });
 const MAX_FILE_BYTES=125*1024*1024;
 const MAX_HASH_BYTES=12*1024*1024;
@@ -46,7 +47,11 @@ export function detectSmartImport({name='',head='',bytes=null}={}){
  if(ext==='json'){
   const kind=jsonMarkers(head);return {kind,reason:kind==='unknown'?'JSON-Schema nicht eindeutig':`Struktur: ${SMART_IMPORT_KINDS[kind]}`,confidence:kind==='unknown'?'low':'high'};
  }
- if(ext==='xlsx'||ext==='xls')return /fitdays/i.test(filename)?{kind:'health',reason:'Fitdays-Tabellenexport nach Dateiname – Inhalt im Zielimporter prüfen',confidence:'medium'}:{kind:'unknown',reason:'Tabellenformat ohne unterstütztes Schema',confidence:'low'};
+ if(ext==='xlsx'||ext==='xls'){
+  if(/fitdays/i.test(filename))return {kind:'health',reason:'Fitdays-Tabellenexport nach Dateiname – Inhalt im Zielimporter prüfen',confidence:'medium'};
+  if(ext==='xlsx'&&/(arbeitszeit|zeiterfassung|time.?tracking|zeitaufzeichnung|stundenliste|stundenaufzeichnung)/i.test(filename))return {kind:'worktime',reason:'Arbeitszeit-Excel nach Dateinamen – Monatsblätter werden in der Vorschau geprüft',confidence:'medium'};
+  return {kind:'unknown',reason:'Tabellenformat noch nicht zugeordnet – Arbeitszeit-Excel kann manuell gewählt werden',confidence:'low'};
+ }
  if(zip){
   if(/(?:timeline|zeitachse|semantic|location.?history|standort)/i.test(filename))return {kind:'places',reason:'Timeline-ZIP nach Dateiname – Inhalt im Zielimporter prüfen',confidence:'medium'};
   if(/(?:garmin|fitdays|health|wellness|fitness|activity)/i.test(filename))return {kind:'health',reason:'Gesundheits-ZIP nach Dateiname – Inhalt im Zielimporter prüfen',confidence:'medium'};
@@ -159,7 +164,7 @@ export async function collectFolderFiles(directory,{maxFiles=MAX_FILES,maxDepth=
  await walk(directory,0);
  return {files,warnings};
 }
-export function smartImportHubView({entries=[],history=[],folderStatus={},notice='',busy=false,source='',storedCoverage=null,healthPreview=null,healthJob=null}={}){
+export function smartImportHubView({entries=[],history=[],folderStatus={},notice='',busy=false,source='',storedCoverage=null,healthPreview=null,healthJob=null,state={}}={}){
  const totals=Object.keys(SMART_IMPORT_KINDS).filter(k=>k!=='unknown').map(k=>[k,entries.filter(e=>e.kind===k&&!e.duplicate).length]).filter(x=>x[1]);
  const groups=smartImportGroups(entries);
  const pending=entries.filter(e=>!e.duplicate).length;const duplicates=entries.filter(e=>e.duplicate).length;
@@ -167,6 +172,7 @@ export function smartImportHubView({entries=[],history=[],folderStatus={},notice
  return `<section class="work-card smart49-hub" id="smart-import-hub" aria-label="Smart Import Hub">
  <div class="work-heading"><span>⇩ Smart Import Hub</span><span class="quiet-tag">Lokal · mit Vorschau</span></div>
  <p class="muted-line">Ordner verbinden oder Dateien ablegen. Compass prüft lokal und zeigt vor dem Import, was neu ist. Importiert wird erst nach deiner Bestätigung.</p>
+ <details class="smart558-coverage"><summary>Datenaktualität aller Quellen anzeigen</summary>${importStatusMarkup(state)}</details>
  <div class="smart49-drop" id="smart49-drop" tabindex="0" role="group" aria-label="Dateien zum Smart Import ziehen">
  <label class="secondary-btn smart49-file-btn">Dateien auswählen<input id="smart49-files" type="file" multiple accept=".csv,.json,.zip,.fit,.xls,.xlsx,.txt,.pdf,.ics,.gpx,.ris,.ofx"></label><span>oder Dateien hierher ziehen</span>
  </div>
