@@ -69,7 +69,7 @@ test('Invalid exchange files, cyclic nesting, cross-project parents and injected
 });
 test('Version and read-only UX constraints preserved',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.53'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.53\.1'/);
  assert.match(main,/deadlineCompact\(\{inForecast:true\}\)/);
  assert.doesNotMatch(readFileSync(new URL('../client/src/deadline-intelligence-v45.js',import.meta.url),'utf8'),/fetch\(|localStorage|setItem/);
  assert.doesNotMatch(readFileSync(new URL('../client/src/project-exchange-v45.js',import.meta.url),'utf8'),/fetch\(|eval\(|localStorage/);

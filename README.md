@@ -95,3 +95,6 @@ Details: [Release Notes](docs/COMPASS_0.5.30_RELEASE.md).
 - Finanzen als linke aufklappbare Navigationsgruppe, analog zu Planen und Insights. Die bisherigen Finanz-Tabs bleiben auf schmalen Displays erreichbar.
 - Freiwillige, einmalige Einzelkurs-Abfrage bei Twelve Data im Portfolio; eigenes API-Key-Feld, keine Speicherung, kein automatisches Repricing.
 - Upgrade und Einschränkungen: `INSTALLATION_0.5.36.txt`.
+### 0.5.53.1 · Projektaufgaben mit „Heute“-Kästchen vormerken
+
+Unter **Planen → Projekte** können verfügbare konkrete Aufgaben einzeln für **Heute** ausgewählt werden. Die Auswahl ist getrennt vom Erledigt-Kreis und verändert keine Fälligkeit. Die gleiche Aufgabe erscheint daraufhin unter **Heute → Meine Aufgaben**, einschließlich des bereits vorhandenen Stückzählers für Prüfungskorrekturen. Erneut anklicken hebt die Vormerkung auf. Einzelheiten im `CHANGELOG_0.5.53.1.md`.

@@ -1,0 +1,19 @@
+Compass 0.5.53.1 – Projektaufgaben per Häkchen für Heute auswählen
+
+Ausgangsversion: Compass 0.5.53.
+
+PATCH:
+1. Backup des aktuellen Repositories erstellen.
+2. Den Inhalt von Compass_0.5.53.1_PATCH_FROM_0.5.53.zip ins Stammverzeichnis des Repositorys entpacken und gleichnamige Dateien ersetzen.
+3. Wie bisher Frontend veröffentlichen (GitHub-Pages-Workflow bzw. npm install und npm run build).
+4. Bei älteren PWA-Ständen die aktualisierte App neu laden.
+
+FULL SOURCE:
+Alternativ das vollständige Compass_0.5.53.1_FULL_SOURCE.zip verwenden.
+
+Keine neue Cloudflare-Worker-API, keine D1-Migration und keine Änderung der lokalen Vault-Struktur erforderlich.
+
+TEST:
+Unter Planen → Projekte bei einer offenen ausführbaren Aufgabe das kleine Kästchen „Heute“ aktivieren. Danach unter Heute → Meine Aufgaben dieselbe Aufgabe auswählen. Bei Prüfungsaufgaben mit Stückzähler muss +1 dort denselben Fortschritt wie im Projekt erhöhen. Mit nochmaligem Klick auf Heute die Wunschtag-Vormerkung wieder entfernen, ohne die Aufgabe abzuschließen.
+
+Hinweis: Der vorhandene Kreis links neben der Aufgabe markiert weiterhin die gesamte Aufgabe als erledigt; das neue „Heute“-Kästchen ist separat. Aufgaben mit harten Deadlines heute bleiben selbst nach Entfernung einer zusätzlichen Vormerkung in der Tagesliste.

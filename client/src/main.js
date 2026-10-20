@@ -73,7 +73,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.53';
+const COMPASS_CLIENT_VERSION='0.5.53.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -799,6 +799,7 @@ function treeTaskRows(projectId,parentTaskId=null,depth=0,visited=new Set()){
    <button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button>
    <button class="tree-label ${t.completed?'tree-done':''}" type="button" data-action="tree-task-select" data-id="${h(t.id)}"><span>${h(t.title)}</span>${due}</button>
    ${taskProgressInline(t)}
+   ${!t.completed&&!isTemplateTask(state,t)?`<button type="button" class="tree-today-check ${t.plannedDate===localDate()?'is-planned':''}" data-action="tree-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" aria-label="${h(t.title)}: ${t.plannedDate===localDate()?'Aus Heute entfernen':'Für Heute auswählen'}" title="${t.plannedDate===localDate()?'Aus Heute entfernen':'Für Heute auswählen – keine Deadline'}" ${!isActionAvailable(state,t,localDate())&&t.plannedDate!==localDate()?'disabled':''}><span class="tree-today-box" aria-hidden="true">${t.plannedDate===localDate()?'✓':''}</span><span>Heute</span></button>`:''}
    <button type="button" class="tree-flag-toggle ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" aria-label="${t.flagged?'Flagge entfernen':'Flagge setzen'}" aria-pressed="${!!t.flagged}" title="${t.flagged?'Flagge entfernen':'Flagge setzen'}">${ico('flag',15)}</button>
    <button type="button" class="tree-inline-add" data-action="tree-add-subtask" data-id="${h(t.id)}" title="Unteraufgabe hinzufügen" aria-label="Unteraufgabe hinzufügen">${ico('plus',15)}</button>
   </div>${collapsed?'':treeTaskRows(projectId,t.id,depth+1,visited)}</div>`;
@@ -2124,14 +2125,14 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       await mutate(s=>{s.tasks[id].plannedDate=day;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
       toast('Wunschtag vorgemerkt. Kein Kalendertermin angelegt und keine Deadline verändert.');return;
     }
-    if(action==='next-plan-today'){
+    if(action==='next-plan-today'||action==='tree-plan-today'){
       const current=state?.tasks?.[id];
-      if(!current||!isActionAvailable(state,current,localDate())||state?.taskConflicts?.[id])return;
+      if(!current||current.archived||current.completed||state?.taskConflicts?.[id]||(!isActionAvailable(state,current,localDate())&&current.plannedDate!==localDate()))return;
       const today=localDate();
       if(current.plannedDate&&current.plannedDate!==today&&!confirm(`Die Aufgabe ist für ${current.plannedDate} geplant. Auf heute ändern? Die Fälligkeit bleibt unverändert.`))return;
       const setDate=current.plannedDate===today?null:today;
       await mutate(s=>{s.tasks[id].plannedDate=setDate;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
-      toast(setDate?'Für heute vorgemerkt – ohne neue Deadline.':'Heute-Vormerkung entfernt.');return;
+      toast(setDate?'Für heute vorgemerkt – ohne neue Deadline.':current.dueDate===today?'Heute-Vormerkung entfernt. Wegen der heutigen Deadline bleibt die Aufgabe unter Heute sichtbar.':'Heute-Vormerkung entfernt.');return;
     }
     if(action==='inbox-move-up'||action==='inbox-move-down'){
       if(inboxQuery.trim())return;
