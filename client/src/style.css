@@ -2121,3 +2121,16 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 
 /* 0.5.49 · Compact Smart Import Hub; no changes to established dashboard density. */
 .smart49-hub{margin-bottom:16px}.smart49-drop{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px dashed var(--border,#c9d1d3);border-radius:12px;background:var(--surface-muted,#f7f8f8)}.smart49-drop.is-dragover{outline:2px solid #578f83}.smart49-file-btn input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.smart49-drop>span{font-size:.79rem;opacity:.7}.smart49-sources{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin:12px 0}.smart49-source{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--border,#d8dddf);border-radius:10px;min-width:0}.smart49-source>div{flex:1 1 100%;min-width:0;display:grid;gap:3px}.smart49-source strong{font-size:.86rem}.smart49-source small{font-size:.72rem;color:var(--text-muted,#69747c);overflow-wrap:anywhere}.smart49-source .secondary-btn{font-size:.75rem}.smart49-overview{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:10px 0 8px}.smart49-results>.secondary-btn{margin:0 6px 7px 0}.smart49-list{border-top:1px solid var(--border,#d7dcdf);margin:6px 0 10px;max-height:290px;overflow:auto}.smart49-row{display:flex;align-items:center;gap:12px;justify-content:space-between;border-bottom:1px solid var(--border,#e1e4e5);padding:7px 2px}.smart49-row>div:first-child{min-width:0;flex:1}.smart49-row strong{display:block;font-size:.79rem;overflow-wrap:anywhere}.smart49-row small{display:block;font-size:.7rem;color:var(--text-muted,#64717c);margin-top:2px}.smart49-row select{max-width:195px;font-size:.77rem}.smart49-help{margin-top:12px;font-size:.77rem}@media(max-width:650px){.smart49-row{align-items:stretch;flex-direction:column;gap:4px}.smart49-row select{max-width:100%;width:100%}}
+
+/* 0.5.49.1: Grouped, unobtrusive smart import review. */
+.smart49-groups{display:grid;gap:8px;margin:10px 0}
+.smart49-group{padding:9px 11px;border:1px solid var(--border,#d9dfe0);border-radius:10px;background:var(--surface,#fff);min-width:0}
+.smart49-group-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.smart49-group-head>div{flex:1;min-width:0}
+.smart49-group-head strong{display:block;font-size:.82rem}
+.smart49-group-head small{display:block;font-size:.72rem;color:var(--text-muted,#64717c);overflow-wrap:anywhere;margin-top:2px}
+.smart49-group-head select{min-width:170px;max-width:205px;font-size:.78rem}
+.smart49-group details{margin-top:5px;font-size:.75rem}
+.smart49-group summary{color:var(--text-muted,#64717c);cursor:pointer}
+.smart49-group .smart49-list{max-height:200px;margin-bottom:2px}
+@media(max-width:630px){.smart49-group-head{align-items:stretch;flex-direction:column}.smart49-group-head select{width:100%;max-width:none}}

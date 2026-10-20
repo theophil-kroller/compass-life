@@ -13,8 +13,8 @@ export const SMART_IMPORT_KINDS=Object.freeze({
 });
 const MAX_FILE_BYTES=125*1024*1024;
 const MAX_HASH_BYTES=12*1024*1024;
-const MAX_FILES=120;
-const MAX_TOTAL_BYTES=500*1024*1024;
+const MAX_FILES=2000;
+const MAX_TOTAL_BYTES=2*1024*1024*1024;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const normalize=s=>String(s||'').toLowerCase();
 function jsonMarkers(s){
@@ -54,6 +54,53 @@ export function detectSmartImport({name='',head='',bytes=null}={}){
  if(ext==='fit')return {kind:'unknown',reason:'FIT-Dateiendung, aber keine gültige FIT-Kennung',confidence:'low'};
  return {kind:'unknown',reason:'Dateityp nicht unterstützt oder nicht sicher erkannt',confidence:'low'};
 }
+/** Read only ZIP central-directory metadata using bounded slices. No extraction, no upload.
+ * A ZIP file signature by itself cannot establish its content or target importer. */
+export async function inspectZipDirectory(file){
+ const failure=(reason)=>({kind:'unknown',confidence:'low',reason,layout:'zip:unreadable',members:[],memberCount:0});
+ if(!file||!Number.isSafeInteger(file.size)||file.size<22)return failure('Leeres oder unvollständiges ZIP');
+ const tailStart=Math.max(0,file.size-65557);
+ const tail=new Uint8Array(await file.slice(tailStart,file.size).arrayBuffer());
+ const eocd=(()=>{for(let i=tail.length-22;i>=0;i--)if(tail[i]===0x50&&tail[i+1]===0x4b&&tail[i+2]===0x05&&tail[i+3]===0x06)return i;return -1;})();
+ if(eocd<0)return failure('ZIP-Inhaltsverzeichnis nicht gefunden');
+ const view=new DataView(tail.buffer,tail.byteOffset,tail.byteLength);
+ const count=view.getUint16(eocd+10,true),length=view.getUint32(eocd+12,true),offset=view.getUint32(eocd+16,true);
+ if(count===65535||length===4294967295||offset===4294967295)return failure('ZIP64-Archiv: Inhaltsverzeichnis kann hier nicht gelesen werden');
+ if(count>12000||length>1024*1024)return failure('ZIP-Inhaltsverzeichnis zu groß (maximal 12.000 Einträge / 1 MB)');
+ if(offset+length>file.size)return failure('ZIP-Inhaltsverzeichnis unvollständig');
+ // Some ZIPs contain prepended bytes; compute the directory location relative to EOCD.
+ const realOffset=tailStart+eocd-length;
+ if(realOffset<0||realOffset+length>file.size)return failure('ZIP-Inhaltsverzeichnis außerhalb der Datei');
+ const data=realOffset>=tailStart?tail.slice(realOffset-tailStart,realOffset-tailStart+length):new Uint8Array(await file.slice(realOffset,realOffset+length).arrayBuffer());
+ const dv=new DataView(data.buffer,data.byteOffset,data.byteLength), names=[];
+ let pos=0;
+ for(let i=0;i<count;i++){
+  if(pos+46>data.length||dv.getUint32(pos,true)!==0x02014b50)return failure('ZIP-Inhaltsverzeichnis beschädigt');
+  const nameLen=dv.getUint16(pos+28,true),extra=dv.getUint16(pos+30,true),comment=dv.getUint16(pos+32,true);
+  const end=pos+46+nameLen+extra+comment;
+  if(end>data.length)return failure('ZIP-Eintrag unvollständig');
+  if(nameLen){const name=new TextDecoder('utf-8',{fatal:false}).decode(data.slice(pos+46,pos+46+nameLen));if(!name.endsWith('/')&&!name.startsWith('__MACOSX/')&&!name.includes('../'))names.push(name.slice(0,300));}
+  pos=end;
+ }
+ if(!names.length)return failure('ZIP enthält keine erkennbaren Dateien');
+ const sorted=[...names].sort();
+ const extCount=new Map();for(const n of names){const ext=(n.match(/\.([a-z0-9]+)$/i)||[])[1]?.toLowerCase()||'ohne Endung';extCount.set(ext,(extCount.get(ext)||0)+1);}
+ const digest=[...extCount].sort((a,b)=>a[0].localeCompare(b[0])).map(([e,n])=>`${n} ${e.toUpperCase()}`).join(', ');
+ const containsFit=names.some(n=>/\.fit$/i.test(n)),containsSleep=names.some(n=>/\/??sleepData\.json$/i.test(n));
+ const likelyTimeline=names.some(n=>/(?:semantic.?location.?history|timeline|recording.?history|records\.json|semanticSegments)/i.test(n)&&/\.json$/i.test(n));
+ const layout='zip:'+ [...extCount.keys()].sort().join('|')+':'+String(containsFit)+':'+String(containsSleep)+':'+String(likelyTimeline);
+ const supported=containsFit||containsSleep;
+ return {kind:supported?'health':likelyTimeline?'places':'unknown',confidence:supported?'high':likelyTimeline?'medium':'low',reason:supported?`Garmin-ZIP: ${digest}`:likelyTimeline?`Standort-ZIP: ${digest}; Zielimporter prüft Struktur`:`ZIP enthält ${digest}; noch kein passender Parser nachgewiesen`,layout,members:sorted.slice(0,5),memberCount:names.length};
+}
+export function smartImportGroups(entries=[]){
+ const groups=new Map();
+ for(const [index,e] of entries.entries()){
+  const key=e.duplicate?'duplicate':`${e.kind}|${e.layout||'file:'+e.kind+':'+String(e.reason||'')}`;
+  if(!groups.has(key))groups.set(key,{key,kind:e.kind,layout:e.layout||'',indexes:[],examples:[],members:[],duplicate:Boolean(e.duplicate)});
+  const g=groups.get(key);g.indexes.push(index);if(g.examples.length<3)g.examples.push(e.name);if(!g.members.length&&e.members?.length)g.members=e.members;
+ }
+ return [...groups.values()].sort((a,b)=>Number(a.duplicate)-Number(b.duplicate)||b.indexes.length-a.indexes.length);
+}
 export function normalizeImportHistory(value){return (Array.isArray(value)?value:[]).filter(x=>x&&/^[a-f0-9]{64}$/.test(x.digest)&&SMART_IMPORT_KINDS[x.kind]&&x.kind!=='unknown').slice(-1000);}
 export function committedSmartImport(history=[],entries=[],kind){
  if(!SMART_IMPORT_KINDS[kind]||kind==='unknown')return normalizeImportHistory(history);
@@ -72,11 +119,14 @@ export async function inspectSmartFiles(files,history=[]){
   const headBytes=new Uint8Array(await file.slice(0,28000).arrayBuffer());
   const text=new TextDecoder('utf-8',{fatal:false}).decode(headBytes);
   const guess=detectSmartImport({name,head:text,bytes:headBytes});
+  const zip=headBytes[0]===80&&headBytes[1]===75&&/\.zip$/i.test(name);
+  const details=zip?await inspectZipDirectory(file):{};
+  const classification=zip?details:guess;
   // Exact SHA-256 for reasonably sized files; large files remain unmarked rather than claiming reliable deduplication.
   const digest=file.size<=MAX_HASH_BYTES?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()))).map(v=>v.toString(16).padStart(2,'0')).join(''):null;
   const duplicate=Boolean(digest&&(seen.has(digest)||known.has(digest)));
   if(digest)seen.add(digest);
-  results.push({name,size:file.size,kind:guess.kind,confidence:guess.confidence,reason:guess.reason,digest,duplicate,file});
+  results.push({name,size:file.size,kind:classification.kind,confidence:classification.confidence,reason:classification.reason,digest,duplicate,file,layout:details.layout||null,members:details.members||[],memberCount:details.memberCount||0});
  }
  return results;
 }
@@ -98,6 +148,7 @@ export async function collectFolderFiles(directory,{maxFiles=MAX_FILES,maxDepth=
 }
 export function smartImportHubView({entries=[],history=[],folderStatus={},notice='',busy=false}={}){
  const totals=Object.keys(SMART_IMPORT_KINDS).filter(k=>k!=='unknown').map(k=>[k,entries.filter(e=>e.kind===k&&!e.duplicate).length]).filter(x=>x[1]);
+ const groups=smartImportGroups(entries);
  const pending=entries.filter(e=>!e.duplicate).length;const duplicates=entries.filter(e=>e.duplicate).length;
  return `<section class="work-card smart49-hub" id="smart-import-hub" aria-label="Smart Import Hub">
  <div class="work-heading"><span>⇩ Smart Import Hub</span><span class="quiet-tag">Lokal · mit Vorschau</span></div>
@@ -107,10 +158,10 @@ export function smartImportHubView({entries=[],history=[],folderStatus={},notice
  </div>
  <div class="smart49-sources">${SMART_IMPORT_SOURCES.map(x=>`<div class="smart49-source"><div><strong>${x.id==='health'?'⌚':'◈'} ${esc(x.label)}</strong><small>${esc(x.hint)}</small><small>${esc(folderStatus[x.id]||'Ordner nur nach Freigabe lesbar')}</small></div><button type="button" class="secondary-btn" data-action="smart49-pick-folder" data-id="${x.id}" ${busy?'disabled':''}>Ordner wählen</button><button type="button" class="secondary-btn" data-action="smart49-rescan-folder" data-id="${x.id}" ${!folderStatus[x.id]||busy?'disabled':''}>Prüfen</button></div>`).join('')}</div>
  ${notice?`<p class="muted-line" role="status">${esc(notice)}</p>`:''}
- ${entries.length?`<div class="smart49-results"><div class="smart49-overview"><strong>${entries.length} Dateien</strong><small>${pending} zu prüfen${duplicates?` · ${duplicates} identische Datei(en) bereits erkannt`:''}</small></div>
+ ${entries.length?`<div class="smart49-results"><div class="smart49-overview"><strong>${entries.length} Dateien · ${groups.length} Gruppen</strong><small>${pending} zu prüfen${duplicates?` · ${duplicates} identische Datei(en) bereits erkannt`:''}</small></div>
  ${totals.map(([kind,count])=>`<button type="button" class="secondary-btn" data-action="smart49-preview-kind" data-id="${kind}" ${busy?'disabled':''}>${esc(SMART_IMPORT_KINDS[kind])} · ${count} →</button>`).join('')}
- <div class="smart49-list">${entries.map((e,i)=>`<div class="smart49-row"><div><strong>${esc(e.name)}</strong><small>${esc(e.duplicate?'Identische Datei – bereits gesehen oder importiert':e.reason)} · ${(e.size/1024/1024).toLocaleString('de-AT',{maximumFractionDigits:1})} MB</small></div><div><select data-smart49-kind="${i}" aria-label="Importtyp für ${esc(e.name)}" ${e.duplicate?'disabled':''}>${Object.entries(SMART_IMPORT_KINDS).map(([key,label])=>`<option value="${key}" ${key===e.kind?'selected':''}>${esc(label)}</option>`).join('')}</select></div></div>`).join('')}</div>
- <p class="muted-line">Unsichere Dateien zuerst prüfen. Der Importtyp lässt sich korrigieren. Dateien über 12 MB erhalten keinen Datei-Hash; der Zielimporter prüft seine eigenen Dubletten.</p>
+ <div class="smart49-groups">${groups.map((g,i)=>`<div class="smart49-group"><div class="smart49-group-head"><div><strong>${g.indexes.length} × ${esc(g.indexes.length>1?'gleichartige Dateien':'Datei')} · ${esc(g.duplicate?'bereits erkannt':SMART_IMPORT_KINDS[g.kind])}</strong><small>${esc(g.examples.join(' · '))}${g.indexes.length>3?' …':''}</small><small>${esc(entries[g.indexes[0]]?.reason||'')}</small>${g.members.length?`<small>ZIP-Inhalt z. B.: ${esc(g.members.join(', '))}</small>`:''}</div>${!g.duplicate?`<select data-smart49-group="${i}" aria-label="Importtyp dieser ${g.indexes.length} Dateien gemeinsam festlegen">${Object.entries(SMART_IMPORT_KINDS).map(([key,label])=>`<option value="${key}" ${key===g.kind?'selected':''}>${esc(label)}</option>`).join('')}</select>`:''}</div><details><summary>Einzeldateien ansehen (${g.indexes.length})</summary><div class="smart49-list">${g.indexes.slice(0,30).map(idx=>{const e=entries[idx];return `<div class="smart49-row"><div><strong>${esc(e.name)}</strong><small>${esc(e.reason)} · ${e.size<1024?e.size+' B':e.size<1048576?(e.size/1024).toLocaleString('de-AT',{maximumFractionDigits:1})+' KB':(e.size/1048576).toLocaleString('de-AT',{maximumFractionDigits:1})+' MB'}</small></div>${!e.duplicate?`<select data-smart49-kind="${idx}" aria-label="Importtyp für ${esc(e.name)}">${Object.entries(SMART_IMPORT_KINDS).map(([key,label])=>`<option value="${key}" ${key===e.kind?'selected':''}>${esc(label)}</option>`).join('')}</select>`:''}</div>`}).join('')}${g.indexes.length>30?`<small>${g.indexes.length-30} weitere Dateien in dieser Gruppe; gemeinsame Zuordnung gilt für alle.</small>`:''}</div></details></div>`).join('')}</div>
+ <p class="muted-line">Eine Zuordnung gilt für die ganze Gruppe. ZIPs werden anhand ihrer enthaltenen Dateinamen geprüft, nicht automatisch entpackt. Unbekannte Formate bleiben ungeprüft. Die Zielimporte prüfen Inhalte und Dubletten vor dem Speichern.</p>
  <button type="button" class="secondary-btn" data-action="smart49-reset">Liste leeren</button></div>`:`<small class="muted-line">Auch gemischte Stapel sind möglich. Ordnerzugriff funktioniert in unterstützten Desktop-Browsern und nur mit deiner Erlaubnis.</small>`}
  <details class="smart49-help"><summary>Datenschutz & Hintergrundüberwachung</summary><p>Es werden weder Dateiinhalte noch Windows-Verzeichnisse an ChatGPT oder eine externe KI übertragen. Die Dateien verbleiben bis zur Vorschau im Arbeitsspeicher, bestätigte Daten im verschlüsselten Tresor. Nur gehashte, bestätigte Importdateien erscheinen im lokalen Importprotokoll. Windows-Ordner müssen nach einem Neustart erneut freigegeben werden. Eine dauerhafte Überwachung bei geschlossenem Browser benötigt einen separaten lokalen Begleitprozess.</p><small>${normalizeImportHistory(history).length} bestätigte Dateiimporte im lokalen Protokoll</small></details>
  </section>`;

@@ -54,7 +54,7 @@ import {fitnessInsightsView} from './insights-fitness.js';
 import {buildProductivityInsights,productivityInsightsView} from './insights-productivity.js';
 import {inspectTimelineFiles,manualPlaceVisit,mergePlaces,placesInsightsView} from './insights-places.js';
 import {reviewImportHub} from './review-import-hub.js';
-import {smartImportHubView,inspectSmartFiles,collectFolderFiles,committedSmartImport,SMART_IMPORT_KINDS,SMART_IMPORT_SOURCES} from './smart-import-hub-v49.js';
+import {smartImportHubView,inspectSmartFiles,collectFolderFiles,committedSmartImport,smartImportGroups,SMART_IMPORT_KINDS,SMART_IMPORT_SOURCES} from './smart-import-hub-v49.js';
 import {sportsInsightsView,sportsPeriodWindow,sportsShiftAnchor,SPORTS_MODES} from './sports-insights.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
@@ -67,7 +67,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.49';
+const COMPASS_CLIENT_VERSION='0.5.49.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -1664,6 +1664,14 @@ function bind() {
     hubDrop.addEventListener('dragleave',()=>hubDrop.classList.remove('is-dragover'));
     hubDrop.addEventListener('drop',ev=>{ev.preventDefault();hubDrop.classList.remove('is-dragover');addSmartFiles(ev.dataTransfer?.files);});
   }
+  app.querySelectorAll('[data-smart49-group]').forEach(select=>{select.onchange=()=>{
+    const groups=smartImportGroups(smartHubEntries);const group=groups[Number(select.dataset.smart49Group)];
+    if(!group||group.duplicate||!SMART_IMPORT_KINDS[select.value])return;
+    for(const index of group.indexes){const entry=smartHubEntries[index];if(!entry||entry.duplicate)continue;
+      entry.kind=select.value;entry.confidence='manual';entry.reason='Gemeinsame Zuordnung – Zielparser prüft das tatsächliche Dateiformat';}
+    smartHubNotice=`${group.indexes.length} gleichartige Dateien gemeinsam zugeordnet. Import erst nach Vorschau und Bestätigung.`;
+    render();
+  };});
   app.querySelectorAll('[data-smart49-kind]').forEach(select=>{select.onchange=()=>{
     const entry=smartHubEntries[Number(select.dataset.smart49Kind)];if(!entry||entry.duplicate)return;
     entry.kind=select.value;entry.reason='Manuell gewählter Importtyp – Zielparser validiert den Inhalt';entry.confidence='manual';render();
@@ -2166,8 +2174,17 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
           if(!preview.rows.length){smartHubNotice='Bankvorschau: keine neuen Buchungen ('+preview.duplicates+' Duplikate).';render();return;}
           financePreview=preview;financePane='Prüfen';tab='finance';calmNavGroup='finance';
         }else if(id==='health'){
-          if(group.length>75)throw Error('Maximal 75 Gesundheitsdateien pro Vorschau.');
-          const preview=await inspectHealthFiles(group.map(x=>x.file));if(!preview.processed)throw Error((preview.errors||[]).join(' · ')||'Keine lesbaren Gesundheitsdateien.');
+          // A single confirmation covers up to 150 similar ZIPs; the parser runs in bounded batches.
+          const batch=group.slice(0,150);
+          const preview={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],errors:[],processed:0};
+          for(let i=0;i<batch.length;i+=40){
+            const part=await inspectHealthFiles(batch.slice(i,i+40).map(x=>x.file));
+            for(const key of ['fitdays','garminNights','garminHrv','garminWellness','garminFitness','garminSessions','errors'])preview[key].push(...(part[key]||[]));
+            preview.processed+=part.processed;
+          }
+          if(!preview.processed)throw Error((preview.errors||[]).slice(0,3).join(' · ')||'Keine lesbaren Gesundheitsdateien.');
+          group.splice(0,group.length,...batch);
+          smartHubNotice=`${batch.length} Gesundheitsdateien in gemeinsamer Vorschau; ${smartHubEntries.filter(e=>e.kind==='health'&&!e.duplicate).length-batch.length} verbleiben für den nächsten Durchgang.`;
           healthFilePreview=preview;tab='insights';insightTab='sources';calmNavGroup='insights';
         }else if(id==='places'){
           if(group.length>12)throw Error('Maximal zwölf Timeline-Dateien pro Vorschau.');
