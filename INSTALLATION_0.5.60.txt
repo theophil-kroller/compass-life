@@ -1,0 +1,31 @@
+Compass 0.5.60 — Installation
+================================
+
+PATCH ab Compass 0.5.59:
+  1. Aktuellen Repositorystand und verschlüsselten Compass-Vault sichern.
+  2. Inhalt von Compass_0.5.60_PATCH_FROM_0.5.59.zip in das
+     Repository-Stammverzeichnis entpacken und Dateien ersetzen.
+  3. Änderungen committen und GitHub-Pages-Deployment auslösen.
+  4. GitHub Actions muss `npm run check` UND `npm run build` erfolgreich abschließen.
+  5. Browser neu laden; bei PWA ggf. App beenden und wieder öffnen.
+
+FULL SOURCE:
+  Compass_0.5.60_FULL_SOURCE.zip enthält den vollständigen Quellenstand.
+
+TEST ZUERST:
+  - Finanzen > Planung > Prognose öffnen.
+  - Ohne manuell bestätigten Anfangsbestand nur Veränderung, keinen erfundenen
+    Bankbestand sehen.
+  - Aktuellen frei verfügbaren Bankbestand sowie Sicherheitspuffer bestätigen.
+  - Beispielsweise eine kurzfristige Zusatzzahlung über 800 € simulieren.
+    Die Ergebnisse müssen vorsichtig sein und die Bankbuchungen unverändert bleiben.
+  - Szenario nach expliziter Bestätigung als einmalige geplante Ausgabe übernehmen,
+    anschließend wieder entfernen. Kein echter Transfer darf ausgelöst werden.
+  - Historischen Forecast weiterhin aufklappen können.
+  - Inspector, Inbox Quick Today, Konferenzradar und Quick Capture stichprobenartig prüfen.
+
+NEUE DATEN: financeCashflowSettings und financePlannedCashflows im bestehenden
+verschlüsselten Vault. Keine D1-Migration. Kein Vault-Reset.
+
+PRÜFUNGEN: 611/611 Node-Tests, Worker-/JS-Syntax erfolgreich.
+Noch offen: Vite-Produktionsbuild, reale Browser-/Vault-Abnahme nach Deployment.

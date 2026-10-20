@@ -7,6 +7,7 @@ import {financeNecessitiesView} from './finance-essentials-v43.js';
 import {flatexPortfolioSection} from './finance-market-v36.js';
 import {portfolioProfessionalView} from './finance-portfolio-pro-v37.js';
 import {financeForecastDashboard,financeFixedVariableView} from './finance-forecast-v18.js';
+import {cashflowDashboard} from './finance-cashflow-v560.js';
 import {financeTrendsView,financeCategoryDetailView,financeRecurringView,financeLedgerView,financeCashflowDetailView} from './finance-enhancements.js';
 import {financeTravelView} from './finance-travel.js';
 import {krakenPortfolioView,krakenWealthSummary} from './finance-kraken.js';
@@ -118,7 +119,7 @@ export function financeDashboardView(state={},selected='Überblick',period='all'
  }
  if(pane==='Visual Lab')body=financeVisualLab(transactions,filtered,ui,today);
  if(pane==='Einnahmen')body=`<div class="fin-kpi-grid">${card('Einnahmen',eur(vm.incomeCents),'kategorisierte Eingänge')}${card('Rückerstattungen',eur(vm.refundCents),'nicht als Einkommen gezählt')}${card('Gutschriften ungeklärt',eur(vm.pendingInCents),'bitte prüfen')}${card('Beobachtete Monate',String(window.months),'importierte Buchungen')}</div>${financeIncomeView(filtered)}<section class="fin-visual-section"><div class="fin-art-heading"><div><small>INCOME HISTORY</small><h3>Geldzuflüsse im Zeitverlauf</h3></div></div>${flowBarChart(vm.months)}</section>`;
- if(pane==='Prognose')body=`<section class="fin-visual-section"><div class="fin-art-heading"><div><small>FINANCIAL INTELLIGENCE / 0.5.18</small><h3>Was kostet mein Leben in den nächsten Monaten?</h3></div><span class="fin-art-tag">Szenario · keine Anlageberatung</span></div>${financeForecastDashboard(transactions,state.financeRecurringRules||{},today,ui.forecastScenario||'basis')}</section>${categoryInsightCards(transactions,today,ui.categorySelected||'')}`;
+ if(pane==='Prognose')body=`${cashflowDashboard(state,today,ui.financeWhatIf||null,ui.financeWhatIfDraft||null)}<details class="fin560-history"><summary>Historischer Ausgaben-Forecast · Details</summary><section class="fin-visual-section">${financeForecastDashboard(transactions,state.financeRecurringRules||{},today,ui.forecastScenario||'basis')}</section>${categoryInsightCards(transactions,today,ui.categorySelected||'')}</details>`;
  if(pane==='Fixkosten')body=financeFixedVariableView(transactions,state.financeRecurringRules||{},today)+financeRecurringView(transactions,state.financeRecurringRules||{});
  if(pane==='Kontenflüsse')body=accountFlowView(allTransactions);
  if(pane==='Geldkreislauf')body=circularWealthFlowView(state,financePeriodInfo(allTransactions,period,today).rows,ui.cycleSelected||'',ui.account||'all');

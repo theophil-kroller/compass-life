@@ -41,7 +41,7 @@ test('0.5.24 confirmed calendar contact may be recorded once with stable source 
 });
 test('0.5.24 UI contains contact log, open agenda, and review integration',()=>{
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.59'/);
+ assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.60'/);
  for(const needle of ['person-contact-form','person-review-days-form','person-contact-delete','people-agenda-first','contactReviewQueue','person-review-open'])assert.ok(source.includes(needle),needle);
  assert.ok(!source.includes('automatisch als stattgefunden'));
  const css=readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');

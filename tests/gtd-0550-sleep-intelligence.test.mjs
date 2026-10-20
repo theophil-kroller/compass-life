@@ -59,7 +59,7 @@ test('integrates into insights model without deleting HRV, advanced sleep stats 
  assert.equal(m.nights.length,1);assert.equal(m.allNights.length,2);
  const html=insightsSleepView(m,'',()=>'', '2026-10-20');
  assert.match(html,/Weitere Analysen/);assert.match(html,/Meine beobachtete HRV-Spanne/);assert.match(html,/Garmin-Sleep-Need-Wert/);
- const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.59'/);
+ const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.60'/);
 });
 
 test('stage curve connects real adjacent stages, excludes unknown blocks, and labels local time',()=>{

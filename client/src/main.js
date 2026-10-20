@@ -36,6 +36,7 @@ import {planHealthQueue,healthBatchResult} from './health-import-queue-v493.js';
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS,FINANCE_GROUPS,financeGroupForPane} from './finance-dashboard.js';
+import {cashflowDateOK,validateCashflowSettings,validatedPlanEvent,cashflowMonth} from './finance-cashflow-v560.js';
 import {financeAssistantPatterns,financeAssistantView,financeAssistEligible,askLocalFinanceModel,applyFinanceAssistantGroup} from './finance-local-assistant-v46.js';
 import {fetchTwelveDataQuote} from './finance-market-v36.js';
 import {fetchFlatexMarketHistory} from './flatex-market-history-v41.js';
@@ -79,7 +80,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.59';
+const COMPASS_CLIENT_VERSION='0.5.60';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -219,7 +220,7 @@ let calmNavGroup=['projects','overview','next','forecast','radar','flagged','hol
 let financeSankeyFocus='all',financeMerchantSelected='';
 let financePaceCompare='previous',financeBudgetMonth=new Date().toLocaleDateString('sv-SE').slice(0,7);
 let financeAiSuggestions=[],financeAiOffset=0;
-let financePeriod='last12',financeForecastScenario='basis',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
+let financeWhatIf=null,financeWhatIfDraft=null,financePeriod='last12',financeForecastScenario='basis',financeAccount='all',financePreview=null,krakenPreview=null,financeBusy=false,financeReviewPage=0,financeCategorySelected='';
 let krakenBridgeToken='',krakenBridgeBusy=false,krakenLocalCheckedAt=0;
 let krakenPublicBusy=false,krakenPublicAttempt=0;
 let krakenChartAsset='',krakenChartPeriod='1m',krakenChartBusy=false,krakenChartError='',krakenChartData=null,krakenChartSettings=technicalSettings();
@@ -1282,7 +1283,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form></details>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,financeAiSuggestions,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote,portfolioTab:financePortfolioTab,portfolioMarket:financePortfolioMarket,flatexSort:{key:flatexPositionSort,descending:flatexPositionDescending},flatexChart:{isin:flatexChartIsin,ticker:flatexChartTicker,period:flatexChartPeriod,busy:flatexChartBusy,error:flatexChartError,data:flatexChartData,settings:flatexChartSettings}}));}
+function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,financeWhatIf,financeWhatIfDraft,financeAiSuggestions,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote,portfolioTab:financePortfolioTab,portfolioMarket:financePortfolioMarket,flatexSort:{key:flatexPositionSort,descending:flatexPositionDescending},flatexChart:{isin:flatexChartIsin,ticker:flatexChartTicker,period:flatexChartPeriod,busy:flatexChartBusy,error:flatexChartError,data:flatexChartData,settings:flatexChartSettings}}));}
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
 const krakenBridgeRequest=async(path,method='GET',body=null)=>{
@@ -1964,6 +1965,36 @@ function bind() {
   app.querySelectorAll('[data-finance-cost-class]').forEach(select=>select.onchange=async()=>{const key=select.dataset.financeCostClass,value=select.value;if(!key)return;try{const {checkedCostClass}=await import('./finance-essentials-v43.js');checkedCostClass(key,value);await mutate(s=>{s.financeCostClasses??={};s.financeCostClasses[key]=value;});toast('Kostenart gespeichert.');}catch(ex){toast(ex.message,true);}render();});
   const finPeriod=app.querySelector('#finance-period');if(finPeriod)finPeriod.onchange=()=>{financePeriod=finPeriod.value;financeReviewPage=0;financeLedgerPage=0;render();};
   const scenarioSelector=app.querySelector('#finance-forecast-scenario');if(scenarioSelector)scenarioSelector.onchange=()=>{financeForecastScenario=scenarioSelector.value;render();};
+  const cashflowSettings=app.querySelector('#finance-560-settings');if(cashflowSettings)cashflowSettings.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(cashflowSettings);
+    try{
+      const openingRaw=String(fd.get('opening')||'').trim();const opening=openingRaw===''?null:Math.round(Number(openingRaw)*100);
+      const buffer=Math.round(Number(fd.get('buffer'))*100),asOf=String(fd.get('asOf')||'');
+      if(openingRaw!==''&&!/^\d+(?:\.\d{1,2})?$/.test(openingRaw))throw Error('Gültigen verfügbaren Anfangsbestand in EUR eingeben.');
+      if(!/^\d+(?:\.\d{1,2})?$/.test(String(fd.get('buffer')||'')))throw Error('Gültigen Sicherheitspuffer in EUR eingeben.');
+      const settings=validateCashflowSettings({openingCents:opening,bufferCents:buffer,asOf},localDate());
+      await mutate(s=>{s.financeCashflowSettings=settings;});toast('Anfangsbestand und Puffer verschlüsselt gespeichert.');
+    }catch(ex){toast(ex.message,true);}
+  };
+  const whatIfForm=app.querySelector('#finance-560-what-if');if(whatIfForm){
+    whatIfForm.querySelectorAll('input').forEach(input=>input.addEventListener('input',()=>{const fd=new FormData(whatIfForm);financeWhatIfDraft={label:String(fd.get('label')||''),amount:String(fd.get('amount')||''),day:String(fd.get('day')||'')};}));
+    whatIfForm.onsubmit=ev=>{
+    ev.preventDefault();const fd=new FormData(whatIfForm),value=String(fd.get('amount')||''),day=String(fd.get('day')||''),label=String(fd.get('label')||'').trim();
+    const amount=Math.round(Number(value)*100);
+    if(!/^\d+(?:\.\d{1,2})?$/.test(value)||amount<=0||amount>100_000_000_00||!cashflowDateOK(day)||day<localDate()||day>=cashflowMonth(localDate(),12)+'-01'||!label||label.length>100){toast('Betrag, Beschreibung und Datum innerhalb der nächsten 12 Monate prüfen.',true);return;}
+    financeWhatIf={label,day,cents:amount};financeWhatIfDraft=null;render();
+    };
+  }
+  const cashflowEventForm=app.querySelector('#finance-560-event');if(cashflowEventForm)cashflowEventForm.onsubmit=async ev=>{
+    ev.preventDefault();const fd=new FormData(cashflowEventForm),value=String(fd.get('amount')||'');
+    if(!/^\d+(?:\.\d{1,2})?$/.test(value)){toast('Ungültiger EUR-Betrag.',true);return;}
+    try{
+      const event=validatedPlanEvent({id:'plan-'+crypto.randomUUID(),kind:String(fd.get('kind')),day:String(fd.get('day')),label:String(fd.get('label')||''),amountCents:Math.round(Number(value)*100)});
+      if(event.day<localDate()||event.day>=cashflowMonth(localDate(),12)+'-01')throw Error('Nur Planposten der nächsten 12 Monate übernehmen.');
+      await mutate(s=>{s.financePlannedCashflows??=[];if(s.financePlannedCashflows.length>=200)throw Error('Maximal 200 geplante Zahlungen.');s.financePlannedCashflows.push(event);});toast('Einmalige geplante Zahlung im verschlüsselten Vault erfasst.');
+    }catch(ex){toast(ex.message,true);}
+  };
+
   const finSearch=app.querySelector('#finance-ledger-query');if(finSearch)finSearch.onchange=()=>{financeLedgerQuery=finSearch.value.slice(0,100);financeLedgerPage=0;render();};
   const finFilter=app.querySelector('#finance-ledger-filter');if(finFilter)finFilter.onchange=()=>{financeLedgerFilter=finFilter.value;financeLedgerPage=0;render();};
   app.querySelectorAll('form[data-finance-edit]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeEdit;const data=new FormData(form),category=String(data.get('category')||''),flow=String(data.get('flow')||'');if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')return toast('Bitte eine konkrete Kategorie auswählen.',true);try{let affected=0;const remember=data.get('remember')==='yes';
@@ -2692,6 +2723,21 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='finance-category-clear'){financeCategorySelected='';render();return;}
     if(action==='finance-go-ledger'){financePane='Buchungen';financeLedgerQuery=financeCategorySelected;financeLedgerFilter='all';financeLedgerPage=0;render();return;}
     if(action==='finance-account-pick'){financePane='Buchungen';financeAccount=id;financeLedgerPage=0;render();return;}
+    if(action==='finance-560-commit-scenario'){
+      if(!financeWhatIf)return;
+      try{
+        const event=validatedPlanEvent({id:'plan-'+crypto.randomUUID(),kind:'expense',day:financeWhatIf.day,label:financeWhatIf.label,amountCents:financeWhatIf.cents});
+        if(event.day<localDate()||event.day>=cashflowMonth(localDate(),12)+'-01')throw Error('Szenario ist abgelaufen oder außerhalb des Planungszeitraums.');
+        if(!confirm(`Die zusätzliche Ausgabe „${event.label}“ in Höhe von ${(Math.abs(event.cents)/100).toFixed(2)} EUR am ${event.day} als PLANUNG übernehmen? Es findet KEINE Zahlung statt.`))return;
+        await mutate(s=>{s.financePlannedCashflows??=[];if(s.financePlannedCashflows.length>=200)throw Error('Maximal 200 geplante Zahlungen.');s.financePlannedCashflows.push(event);});
+        financeWhatIf=null;financeWhatIfDraft=null;toast('Szenario in die Finanzplanung übernommen – keine Bankbuchung erzeugt.');
+      }catch(ex){toast(ex.message,true);}return;
+    }
+    if(action==='finance-560-remove-event'){
+      if(!(state?.financePlannedCashflows||[]).some(e=>e.id===id))return;
+      if(!confirm('Diesen einmaligen Planposten entfernen? Bankbuchungen bleiben unverändert.'))return;
+      await mutate(s=>{s.financePlannedCashflows=(s.financePlannedCashflows||[]).filter(e=>e.id!==id);});toast('Planposten entfernt.');return;
+    }
     if(action==='finance-pane'){if(FINANCE_TABS.some(p=>p.title===id)){financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='finance-trip-select'){
       if((state?.financeTrips||[]).some(t=>t.id===id)){financeTripSelected=id;financeTripPage=0;financeTripQuery='';render();}return;
