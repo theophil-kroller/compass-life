@@ -1,3 +1,4 @@
+import * as feelingWheel65 from '../client/src/feeling-wheel-v565.js';
 import * as lifeBalance63 from '../client/src/life-balance-radar-v563.js';
 import * as dailyPlanning from '../client/src/daily-planning-v48.js';
 import * as deadline from '../client/src/deadline-intelligence-v45.js';
@@ -36,7 +37,7 @@ function setup(){
  const app={innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null};
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const ctx={document,window:{addEventListener:()=>{}},location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(Error('offline')),setTimeout,clearTimeout};
- Object.assign(ctx,lifeBalance63,radar555,dailyPlanning,capacity,deadline,projectExchange,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,relationships,relationshipRadar);
+ Object.assign(ctx,lifeBalance63,radar555,dailyPlanning,capacity,deadline,projectExchange,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,relationships,relationshipRadar,feelingWheel65);
  ctx.technicalSettings=technicalSettings;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
  runInNewContext(compiled,ctx,{filename:'browser-ui-smoke.js',timeout:2000});

@@ -6,7 +6,7 @@
 import {sleepMinutes} from './insights.js';
 import {joinedFitnessDays} from './insights-fitness.js';
 import {cashflowModel} from './finance-cashflow-v560.js';
-import {contactSummary} from './people-relationships-v24.js';
+import {contactImpulse,preference} from './relationship-radar-v564.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp=x=>Math.max(0,Math.min(100,Math.round(x)));
@@ -14,18 +14,19 @@ const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
 const validDay=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')&&!Number.isNaN(Date.parse(d+'T12:00:00Z'));
 const shift=(date,n)=>new Date(Date.parse(date+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
 const dec=(v,d=0)=>Number(v).toLocaleString('de-AT',{maximumFractionDigits:d});
-export const BALANCE_DEFAULTS=Object.freeze({sleepMinutes:480,stepsDaily:8000,weeklyHours:45,weightKg:null});
+export const BALANCE_DEFAULTS=Object.freeze({sleepMinutes:480,stepsDaily:8000,weeklyHours:45,weightKg:null,bodyFatTargetPct:null});
 export function balanceGoals(value={}){
  const obj=value&&typeof value==='object'?value:{};
  const num=(field,min,max,defaultValue)=>{const n=Number(obj[field]);return obj[field]!==''&&obj[field]!=null&&Number.isFinite(n)&&n>=min&&n<=max?n:defaultValue;};
- return {sleepMinutes:num('sleepMinutes',240,720,480),stepsDaily:num('stepsDaily',1000,30000,8000),weeklyHours:num('weeklyHours',10,80,45),weightKg:num('weightKg',30,300,null)};
+ return {sleepMinutes:num('sleepMinutes',240,720,480),stepsDaily:num('stepsDaily',1000,30000,8000),weeklyHours:num('weeklyHours',10,80,45),weightKg:num('weightKg',30,300,null),bodyFatTargetPct:num('bodyFatTargetPct',4,65,null)};
 }
 export function validateBalanceGoals(value){
  for(const [key,min,max] of [['sleepMinutes',240,720],['stepsDaily',1000,30000],['weeklyHours',10,80]]){
   if(!Number.isFinite(Number(value?.[key]))||Number(value[key])<min||Number(value[key])>max)throw Error('Bitte gültige persönliche Zielwerte eingeben.');
  }
  if(value.weightKg!==''&&value.weightKg!=null&&(!Number.isFinite(Number(value.weightKg))||Number(value.weightKg)<30||Number(value.weightKg)>300))throw Error('Gewichtsziel: 30–300 kg oder leer.');
- return {sleepMinutes:Number(value.sleepMinutes),stepsDaily:Number(value.stepsDaily),weeklyHours:Number(value.weeklyHours),weightKg:value.weightKg===''||value.weightKg==null?null:Number(value.weightKg)};
+ if(value.bodyFatTargetPct!==''&&value.bodyFatTargetPct!=null&&(!Number.isFinite(Number(value.bodyFatTargetPct))||Number(value.bodyFatTargetPct)<4||Number(value.bodyFatTargetPct)>65))throw Error('Körperfett-Richtwert: 4–65 % oder leer.');
+ return {sleepMinutes:Number(value.sleepMinutes),stepsDaily:Number(value.stepsDaily),weeklyHours:Number(value.weeklyHours),weightKg:value.weightKg===''||value.weightKg==null?null:Number(value.weightKg),bodyFatTargetPct:value.bodyFatTargetPct===''||value.bodyFatTargetPct==null?null:Number(value.bodyFatTargetPct)};
 }
 function axis(key,label,score,detail,hint,tab,insight,observed=0,latest=null){return {key,label,score:score==null?null:clamp(score),detail,hint,tab,insight,observed,latest};}
 const recent=(rows,start,today,key='day')=>(Array.isArray(rows)?rows:[]).filter(r=>validDay(r?.[key])&&r[key]>=start&&r[key]<=today);
@@ -39,11 +40,12 @@ export function buildLifeBalanceRadar(state={}, {today='2026-10-20',period=7,hea
  const sleep=axis('sleep','Schlaf',nights.length>=enough&&sleepFresh>=shift(today,-7)?100-Math.min(100,Math.abs(sleepAvg-g.sleepMinutes)/g.sleepMinutes*100):null,
   sleepAvg===null?'Keine auswertbaren Schlafnächte':`Ø ${dec(sleepAvg/60,1)} h · ${nights.length} Nächte`,
   `Abweichung vom persönlichen Richtwert ${dec(g.sleepMinutes/60,1)} h. Keine medizinische Beurteilung.`, 'insights','sleep',nights.length,sleepFresh);
- const steps=joinedFitnessDays(data,healthDays,today,{start,end:today}).filter(r=>Number.isFinite(r.steps)&&r.steps>=0);
- const stepsAvg=mean(steps.map(r=>r.steps)),stepsFresh=freshest(steps);
+ const movement=joinedFitnessDays(data,healthDays,today,{start,end:today});
+ const steps=movement.filter(r=>Number.isFinite(r.steps)&&r.steps>=0),exercise=movement.filter(r=>Number.isFinite(r.exerciseMinutes)&&r.exerciseMinutes>=0);
+ const stepsAvg=mean(steps.map(r=>r.steps)),stepsFresh=freshest(steps),exerciseAvg=mean(exercise.map(r=>r.exerciseMinutes));
  const activity=axis('activity','Aktivität',steps.length>=enough&&stepsFresh>=shift(today,-7)?stepsAvg/g.stepsDaily*100:null,
-  stepsAvg===null?'Keine Schritt-Messungen':`Ø ${dec(stepsAvg)} Schritte · ${steps.length} Tage`,
-  `Anteil des selbst wählbaren Schrittziels ${dec(g.stepsDaily)}. Garmin vor Health Connect, niemals addiert.`, 'insights','activity',steps.length,stepsFresh);
+  (stepsAvg===null?'Keine Schritt-Messungen':`Ø ${dec(stepsAvg)} Schritte · ${steps.length} Tage`)+(exerciseAvg===null?'':` · Ø ${dec(exerciseAvg)} Trainingsmin. (Health Connect, ${exercise.length} Tage)`),
+  `Anteil des selbst wählbaren Schrittziels ${dec(g.stepsDaily)}. Garmin vor Health Connect, niemals addiert. Health-Connect-Trainingsminuten sind keine Garmin-Intensitätsminuten und fließen nicht zusätzlich in den Schritt-Score ein.`, 'insights','activity',steps.length,stepsFresh);
  const taskList=Object.values(state.tasks||{}).filter(t=>t&&!t.archived&&!t.isTemplate),inbox=Object.values(state.records||{}).filter(r=>r&&!r.deleted&&!r.tags?.includes('dreams'));
  const openTasks=taskList.filter(t=>!t.completed),projects=Object.values(state.projects||{}).filter(p=>p&&p.status==='active'&&p.kind!=='folder'&&!p.isTemplate);
  const stalled=projects.filter(p=>!openTasks.some(t=>t.projectId===p.id&&(t.workflow||'next')==='next')).length;
@@ -70,21 +72,38 @@ export function buildLifeBalanceRadar(state={}, {today='2026-10-20',period=7,hea
   batteryAvg===null?'Keine Body-Battery-Werte':`Ø Tagesmaximum ${dec(batteryAvg)} · ${battery.length} Tage`,
   'Nur Garmin Body Battery (Geräteindikator), keine diagnostische Erholungsmessung.','insights','energy',battery.length,freshest(battery));
  const fit=recent(data.fitdays,shift(today,-90),today).filter(x=>Number.isFinite(x.weightKg)&&x.weightKg>0).sort((a,b)=>a.day.localeCompare(b.day));
- const weight=fit.at(-1),weightRecent=weight?.day>=shift(today,-45);
- const body=axis('body','Körper',g.weightKg&&weightRecent?100-Math.min(100,Math.abs(weight.weightKg-g.weightKg)/g.weightKg*500):null,
-  weight?`${dec(weight.weightKg,1)} kg · ${weight.day}`:'Keine Fitdays-Messung',
-  g.weightKg?'Nähe zu deinem selbst gesetzten Gewichtsrichtwert, keine Bewertung der Körpergesundheit.':'Für eine Einordnung optional eigenen Gewichtsrichtwert festlegen.','insights','body',fit.length,weight?.day||null);
- // Financial cash flow is an estimate. Require a same-day verified balance and at least three historical months.
+ const weight=fit.at(-1),weightRecent=weight?.day>=shift(today,-45)&&(!historicalOnly||weight.day>=start);
+ // Fitdays exports BIA estimates, not a clinical body-fat diagnosis. Show the measured
+ // value even without a goal; only map it to 0–100 after explicit user calibration.
+ const fat=Number.isFinite(weight?.bodyFatPct)&&weight.bodyFatPct>=1&&weight.bodyFatPct<=75?weight.bodyFatPct:null;
+ const fatTarget=Number.isFinite(g.bodyFatTargetPct)?g.bodyFatTargetPct:null;
+ const fatScore=weightRecent&&fat!=null&&fatTarget!=null?100-Math.min(100,Math.abs(fat-fatTarget)/fatTarget*100):null;
+ const weightScore=weightRecent&&g.weightKg?100-Math.min(100,Math.abs(weight.weightKg-g.weightKg)/g.weightKg*500):null;
+ const bodyDetail=weight?`${fat==null?'Körperfett nicht erfasst':dec(fat,1)+' % Körperfett (Fitdays)'} · ${dec(weight.weightKg,1)} kg · ${weight.day}${!weightRecent?' · Messung älter als 45 Tage':''}`:'Keine Fitdays-Messung';
+ const body=axis('body','Körper',fatScore??weightScore,
+  bodyDetail,
+  fatTarget!=null?'Abstand zum selbst festgelegten Körperfett-Richtwert '+dec(fatTarget,1)+' %. Fitdays-BIA ist eine Schätzung, keine Diagnose.':g.weightKg?'Abstand zum selbst festgelegten Gewichtsrichtwert. Fitdays-Werte sind Schätzungen.':'Für einen 0–100-Zielnähe-Score bitte optional einen persönlichen Körperfett- oder Gewichtsrichtwert setzen. Der Messwert selbst wird auch ohne Ziel angezeigt.','insights','body',fit.length,weight?.day||null);
+ // Two distinct questions: historical cashflow coverage can be scored from imported
+ // income/outflows; current solvency REQUIRES a manually confirmed today's cash balance.
+ // We never pretend the first indicator proves the second.
  let financial=null;try{if(!historicalOnly&&state.financeTransactions?.length){financial=cashflowModel({transactions:state.financeTransactions,settings:state.financeCashflowSettings||{},planned:state.financePlannedCashflows||[],recurringRules:state.financeRecurringRules||{},today});}}catch{}
- const financeReady=!historicalOnly&&financial?.opening!=null&&financial?.observed>=3&&financial?.mode==='daily'&&financial?.buffer>0&&Number.isFinite(financial?.trough);
- const finance=axis('finance','Finanzen',financeReady?financial.trough/financial.buffer*60:null,
-  financeReady?`Geschätzter Tiefststand ${(financial.trough/100).toLocaleString('de-AT',{maximumFractionDigits:0})} €`:financial?.opening==null?'Kein heute bestätigter Anfangsbestand':'Prognose noch nicht belastbar',
-  'Modellierter Liquiditätspuffer; nicht als sichere Zahlungsfähigkeit interpretieren.','finance',null,financial?.observed||0,today);
- const participants=Object.values(state.people||{}).map(p=>contactSummary(p,today)).filter(p=>p.reviewDays>0&&p.hasHistory);
+ const complete=(financial?.recent||[]).filter(r=>r.rows>0&&r.income>0&&r.spent>0);
+ const inflow=complete.length>=3?financial.monthlyIncome:null;
+ const outflow=complete.length>=3?financial.monthlyExpense:null;
+ const financeReady=!historicalOnly&&inflow>0&&outflow>0;
+ // A 20% surplus yields 100, break-even yields 50, a 20% deficit yields 0.
+ // This is a simple CASHFLOW metric, not a personal finance or solvency diagnosis.
+ const financeScore=financeReady?50+250*(inflow-outflow)/inflow:null;
+ const finance=axis('finance','Finanzen',financeScore,
+  financeReady?`Ø Einnahmenbasis ${dec(inflow/100)} € · Ø Ausgaben ${dec(outflow/100)} € · ${complete.length} Monate`:financial?.observed?'Bankdaten vorhanden, aber noch keine drei vollständigen Monate mit Einnahmen und Ausgaben':'Keine auswertbare Bankhistorie',
+  'Historische Cashflow-Deckung, kein Vermögens-/Liquiditätsscore. '+(financial?.opening==null?'Ohne heute bestätigten Bankbestand keine Aussage zur aktuellen Zahlungsfähigkeit.':'Separat ermittelte Liquiditätsprognose unter Finanzen prüfen.'), 'finance',null,complete.length,complete.at(-1)?.month||null);
+ // The 0.5.64 relationship cadence and pause state are authoritative. A paused
+ // contact is excluded; no one is scored for distance or closeness alone.
+ const participants=!historicalOnly?Object.values(state.people||{}).filter(p=>preference(p).cadence>0&&!preference(p).paused).map(p=>contactImpulse(p,today)).filter(p=>p.hasHistory):[];
  const due=participants.filter(p=>p.due).length;
- const people=axis('people','Kontakte',!historicalOnly&&participants.length?100-due/participants.length*100:null,
-  participants.length?`${due} von ${participants.length} vereinbarten Kontaktintervallen erreicht`:'Noch keine freiwilligen Kontaktintervalle mit Verlauf',
-  'Nur selbst gewählte Kontaktwiedervorlagen. Kein Beziehungsqualitäts- oder Nähe-Score.','people',null,participants.length,null);
+ const people=axis('people','Kontakte',participants.length?100-due/participants.length*100:null,
+  participants.length?`${due} von ${participants.length} selbst gewählten Kontaktintervallen erreicht`:'Noch keine aktiven Kontaktintervalle mit bestätigtem Verlauf',
+  'Relationship Radar 0.5.64: individueller Kontaktrhythmus und Pause/Play berücksichtigt; kein Beziehungsqualitäts- oder Nähe-Score.','people',null,participants.length,null);
  const axes=[sleep,activity,gtd,finance,people,body,recovery,work];
  const known=axes.filter(x=>x.score!=null);
  return {axes,period:n,start,today,goals:g,coverage:known.length,total:axes.length,mean:known.length?Math.round(mean(known.map(x=>x.score))):null};
@@ -129,6 +148,6 @@ export function lifeBalanceRadarView(model,{compact=false,history=[]}={}){
  <header class="lbr63-top"><div><div class="lbr63-eyebrow">COMPASS · PERSONAL INTELLIGENCE</div><h2>Life Balance Radar</h2><p>${period===7?'Letzte 7 Tage':'Letzte 30 Tage'} · Deine persönlichen Richtwerte</p></div><div class="lbr63-header-actions"><div class="lbr63-period" role="group" aria-label="Zeitraum des Life Balance Radars">${[7,30].map(n=>`<button type="button" class="${period===n?'chosen':''}" data-action="balance-period" data-id="${n}" aria-pressed="${period===n}">${n} T</button>`).join('')}</div><div class="lbr63-history-choose" role="group" aria-label="Vergleich mit früheren Zeiträumen"><span>Zeitspuren</span>${[0,1,2].map(n=>`<button type="button" data-action="balance-history" data-id="${n}" class="${history.length===n?'chosen':''}" aria-pressed="${history.length===n}">${n===0?'Aus':n===1?'2':'3'}</button>`).join('')}</div>${compact?'<button type="button" class="lbr63-details-link" data-action="balance-open">Details ↗</button>':''}</div></header>
  <div class="lbr63-layout"><div class="lbr63-chart"><svg viewBox="0 0 390 390" role="img" aria-label="Radar mit acht Achsen; ${coverage} davon mit ausreichender Datengrundlage. Fehlende Werte bleiben offen."><defs><linearGradient id="lbr63area" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#84D9C9" stop-opacity=".30"/><stop offset="1" stop-color="#829DE0" stop-opacity=".05"/></linearGradient><radialGradient id="lbr63halo"><stop stop-color="#2D7E85" stop-opacity=".22"/><stop offset="1" stop-color="#122132" stop-opacity="0"/></radialGradient></defs><circle cx="195" cy="195" r="166" fill="url(#lbr63halo)"/>${segments}${spokes}${historicLines}${area}${lines}${nodes}${axisLabels}<circle cx="195" cy="195" r="2.3" fill="#8099A9"/></svg><div class="lbr63-temporal-legend" aria-label="Verglichene Zeiträume">${legend}</div></div>
  <div class="lbr63-aside"><div class="lbr63-coverage"><span>VERFÜGBARE DIMENSIONEN</span><strong>${coverage}<small> / ${total}</small></strong><p>${coverage<8?'Unvollständige Achsen bleiben bewusst offen.':'Alle acht Bereiche haben aktuelle, ausreichend belastbare Indikatoren.'}</p></div><div class="lbr63-key"><i></i> Beobachteter Zielerfüllungswert <span></span> Unbewerteter Bereich</div>${!compact?`<div class="lbr63-aside-note">Hohe Werte bedeuten Nähe zu einem Richtwert, nicht automatisch Gesundheit oder Wohlbefinden. Ein Gesamtscore wird bewusst nicht gebildet.</div>`:''}</div></div>
- ${compact?`<p class="lbr63-note">${coverage} von ${total} Bereichen auswertbar · Fehlende Werte werden nicht geschätzt.</p>`:`<div class="lbr63-list" aria-label="Bereichsdetails">${details}</div><details class="lbr63-goals"><summary>Persönliche Richtwerte anpassen</summary><form id="lbr63-goals-form"><label>Schlafziel (Stunden)<input name="sleepHours" type="number" min="4" max="12" step="0.25" value="${model.goals.sleepMinutes/60}" required></label><label>Schrittziel / Tag<input name="stepsDaily" type="number" min="1000" max="30000" step="100" value="${model.goals.stepsDaily}" required></label><label>Arbeitszeit-Grenzwert / Woche (h)<input name="weeklyHours" type="number" min="10" max="80" step="0.5" value="${model.goals.weeklyHours}" required></label><label>Optional: Gewichtsrichtwert (kg)<input name="weightKg" type="number" min="30" max="300" step="0.1" placeholder="Kein Ziel gesetzt" value="${model.goals.weightKg??''}"></label><button class="primary-btn" type="submit">Richtwerte speichern</button></form><p>Voreingestellte Orientierungswerte sind editierbar. Körperbewertung nur mit selbst gesetztem Richtwert; Kontaktbewertung nur bei freiwilligen Intervallen und bestätigter Kontakthistorie. Fehlende Daten niemals als null Punkte interpretieren.</p></details><p class="lbr63-note">Vergleichslinien beruhen ausschließlich auf historischen Messwerten: GTD, Kontakte und Finanzprognose besitzen ohne gespeicherte Vergangenheit keine rückwirkenden Scores. Scores beschreiben deine Zielnähe im angegebenen Zeitraum. Unterschiedliche Datenquellen und Skalen sind nicht medizinisch oder wissenschaftlich gleichwertig. Garmin-Werte sind Geräteindikatoren; Liquidität beruht auf Schätzungen. Öffne jede Dimension für ihre zugrunde liegenden Daten.</p>`}
+ ${compact?`<p class="lbr63-note">${coverage} von ${total} Bereichen auswertbar · Fehlende Werte werden nicht geschätzt.</p>`:`<div class="lbr63-list" aria-label="Bereichsdetails">${details}</div><details class="lbr63-goals"><summary>Persönliche Richtwerte anpassen</summary><form id="lbr63-goals-form"><label>Schlafziel (Stunden)<input name="sleepHours" type="number" min="4" max="12" step="0.25" value="${model.goals.sleepMinutes/60}" required></label><label>Schrittziel / Tag<input name="stepsDaily" type="number" min="1000" max="30000" step="100" value="${model.goals.stepsDaily}" required></label><label>Arbeitszeit-Grenzwert / Woche (h)<input name="weeklyHours" type="number" min="10" max="80" step="0.5" value="${model.goals.weeklyHours}" required></label><label>Optional: Gewichtsrichtwert (kg)<input name="weightKg" type="number" min="30" max="300" step="0.1" placeholder="Kein Ziel gesetzt" value="${model.goals.weightKg??''}"></label><label>Optional: persönlicher Körperfett-Richtwert (%)<input name="bodyFatTargetPct" type="number" min="4" max="65" step="0.1" placeholder="Kein Ziel gesetzt" value="${model.goals.bodyFatTargetPct??''}"></label><button class="primary-btn" type="submit">Richtwerte speichern</button></form><p>Fitdays-Körperfett wird als Messwert angezeigt. Ein 0–100-Zielnähe-Score entsteht nur, wenn du persönlich einen Körperfett- oder Gewichtsrichtwert festlegst. Das ist keine medizinische Einstufung. Kontakte verwenden die selbst gewählten Rhythmen aus dem Relationship Radar; Pausen werden respektiert.</p></details><p class="lbr63-note">Vergleichslinien beruhen ausschließlich auf historischen Messwerten: GTD, Kontakte und aktuelle Cashflow-Deckung besitzen ohne gespeicherte Vergangenheit keine rückwirkenden Scores. Scores beschreiben deine Zielnähe im angegebenen Zeitraum. Unterschiedliche Datenquellen und Skalen sind nicht medizinisch oder wissenschaftlich gleichwertig. Garmin-Werte sind Geräteindikatoren; Liquidität beruht auf Schätzungen. Öffne jede Dimension für ihre zugrunde liegenden Daten.</p>`}
  </section>`;
 }

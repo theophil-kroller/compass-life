@@ -1,0 +1,23 @@
+Compass 0.5.65 — Installation und Prüfung
+========================================
+
+PATCH von 0.5.64:
+  1. Einen sicheren Snapshot des bisherigen GitHub-Quellstands anlegen.
+  2. Compass_0.5.65_PATCH_FROM_0.5.64.zip in das Repository-Stammverzeichnis entpacken und geänderte Dateien ersetzen.
+  3. Committen und über den bisherigen Deployment-Workflow veröffentlichen.
+  4. Seite neu laden, bei installierter PWA nötigenfalls neu starten.
+
+FULL SOURCE:
+  Compass_0.5.65_FULL_SOURCE.zip ist der vollständige Quellstand.
+
+TESTEN:
+ - Feeling Wheel oben rechts aus Heute, Projekten, Finanzen und Insights öffnen, mehrere Gefühle auswählen, Intensität ändern, Check-in speichern.
+ - Unter Insights > Gefühle sowie Weekly Review Verlauf prüfen.
+ - Unter Insights > Life Balance Radar prüfen, ob Fitdays-Körperfett als Wert erscheint. Für einen numerischen Zielnähe-Score optional eigenen Körperfett-Richtwert setzen.
+ - Finanzscore: Voraussetzung mindestens drei volle Monate mit auswertbaren Einnahmen UND Ausgaben; ohne heutigen bestätigten Kontostand ist dies ausschließlich ein historischer Cashflow-Indikator.
+ - Kontakte: Eigenen Rhythmus, Pause/Play und bestätigte Kontakt-Historie prüfen.
+ - Historische Radar-Zeitspuren und unbekannte Werte kontrollieren.
+
+Keine D1-Migration oder Vault-Rücksetzung erforderlich.
+651/651 Node-Tests und JavaScript-/Worker-Syntax geprüft.
+Wichtig: Vite-Produktionsbuild (`vite: not found`) sowie Live-Test mit echten Daten konnten in dieser Umgebung nicht erfolgen.
