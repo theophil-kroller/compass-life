@@ -4,6 +4,8 @@
  */
 import {escapeFinance} from './finance-core.js';
 import {detectPaymentPatterns,dailyPaymentForecast} from './finance-payment-patterns-v561.js';
+import {financeRecurringCandidates} from './finance-analytics.js';
+import {merchantKey} from './finance-core.js';
 const h=escapeFinance;
 const eur=c=>(c/100).toLocaleString('de-AT',{style:'currency',currency:'EUR'});
 export const cashflowMonth=(day,offset=0)=>{const [y,m]=String(day).slice(0,7).split('-').map(Number);return new Date(Date.UTC(y,m-1+offset,1)).toISOString().slice(0,7);};
@@ -44,11 +46,11 @@ function monthlyHistory(transactions,today){
  });
 }
 /** Nothing here represents a bank-confirmed forecast. When the balance is unknown, return changes only. */
-export function cashflowModel({transactions=[],settings={},planned=[],today='2026-10-20',whatIf=null}={}){
+export function cashflowModel({transactions=[],settings={},planned=[],recurringRules={},today='2026-10-20',whatIf=null}={}){
  if(!cashflowDateOK(today))throw Error('Ungültiges heutiges Datum.');
  const recent=monthlyHistory(Array.isArray(transactions)?transactions:[],today),observed=recent.filter(m=>m.rows>0);
  const monthlyExpense=avg(observed.map(m=>m.spent));
- const patterns=detectPaymentPatterns(transactions,today);
+ const patterns=detectPaymentPatterns(transactions,today,recurringRules);
  const recognizedSalary=patterns.filter(p=>p.type==='salary');
  // Never smooth seasonal supplements into a falsely high ordinary monthly salary.
  const monthlyIncome=recognizedSalary.length?recognizedSalary.reduce((s,p)=>s+p.baselineCents,0):avg(observed.map(m=>m.income));
@@ -83,7 +85,9 @@ export function cashflowModel({transactions=[],settings={},planned=[],today='202
  warnings.push('Importierte Monatsbuchungen können unvollständig sein. Einkünfte, Fixkosten und Tageszeitpunkte sind geschätzt; Wechselkurse und Überweisungsgebühren können fehlen.');
  let verdict='unavailable';
  if(scenario){if((!daily&&!regularReady)||opening===null)verdict='unavailable';else if(trough<buffer)verdict='risk';else verdict='conditional';}
- return {today,recent,observed:observed.length,regularReady,monthlyExpense,monthlyIncome,opening,buffer,freshOpening,year,trough,verdict,scenario,warnings,planned:events,patterns,daily,mode:daily?'daily':'monthly'};
+ const forecastMerchants=new Set(patterns.filter(p=>p.kind==='expense').map(p=>p.merchantKey));
+ const unmodeledRecurring=financeRecurringCandidates(transactions,recurringRules).filter(c=>!forecastMerchants.has(merchantKey(c.key))).slice(0,25).map(c=>({...c,reason:recurringGapReason(c,transactions,today)}));
+ return {today,recent,observed:observed.length,regularReady,monthlyExpense,monthlyIncome,opening,buffer,freshOpening,year,trough,verdict,scenario,warnings,planned:events,patterns,daily,unmodeledRecurring,mode:daily?'daily':'monthly'};
 }
 const formattedDate=d=>cashflowDateOK(d)?new Intl.DateTimeFormat('de-AT',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'UTC'}).format(new Date(d+'T12:00:00Z')):'—';
 const moneyInput=c=>(Number.isFinite(c)?(c/100).toFixed(2):'');
@@ -122,10 +126,28 @@ function dailyRunwayGraph(model){
  const labels=points.filter((_,i)=>i%7===0||i===44).map(p=>{const i=points.indexOf(p);return `<text x="${x(i).toFixed(1)}" y="${height-6}" text-anchor="middle" font-size="10" fill="currentColor">${h(p.day.slice(8)+'.'+p.day.slice(5,7)+'.')}</text>`;}).join('');
  return `<section class="fin561-daily"><div class="fin561-head"><div><h4>Nächste 45 Tage · geschätzter Tagesverlauf</h4><p>${model.opening===null?'Kumulierte Veränderung ohne Kontostand':'Ab heutigem bestätigtem Anfangsbestand'}. Buchungstage sind Schätzungen, nicht garantiert.</p></div></div><div class="fin560-graph"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Voraussichtlicher Tages-Cashflow der nächsten 45 Tage"><polyline fill="none" stroke="#288476" stroke-width="3" points="${trace('base')}"/>${hasScenario?`<polyline fill="none" stroke="#ce8151" stroke-width="2.5" stroke-dasharray="6 4" points="${trace('scenario')}"/>`:''}${circles}${labels}</svg></div></section>`;
 }
+function recurringGapReason(candidate,transactions,today){
+ const lastMonths=String(today||'').slice(0,7);
+ const rows=(Array.isArray(transactions)?transactions:[]).filter(t=>t&&t.amountCents<0&&!t.needsReview&&merchantKey(t.merchant||t.merchantDisplayName||'')===merchantKey(candidate.key)&&t.day<=today).sort((a,b)=>a.day.localeCompare(b.day));
+ if(!rows.length)return 'Keine auswertbaren Ausgangsbuchungen';
+ const latest=rows.at(-1);
+ if(latest.flow==='transfer'&&!/(?:miete|betriebskosten|hausverwaltung|mietzins)/iu.test(String(latest.description||'')+' '+String(latest.category||'')))return 'Private Überweisung: Zweck noch nicht als Wohnkosten erkannt';
+ const dayDiff=(Date.parse(today+'T12:00:00Z')-Date.parse(latest.day+'T12:00:00Z'))/86400000;
+ if(dayDiff>75)return 'Letzter Eingang der Zahlung liegt über 75 Tage zurück';
+ const byMonth=new Map();for(const t of rows){let m=String(t.day).slice(0,7);byMonth.set(m,(byMonth.get(m)||0)+1);}
+ if([...byMonth.values()].some(n=>n>1))return 'Mehrere Buchungen je Monat – kein eindeutiger Einzeltermin';
+ const cutoff=cashflowMonth(today,-7)+'-01';
+ if(rows.filter(t=>t.day<lastMonths+'-01'&&t.day>=cutoff).length<3)return 'Weniger als drei vollständige Monatsbeobachtungen im letzten Halbjahr';
+ const days=rows.slice(-7).map(t=>Number(String(t.day).slice(8))).filter(Number.isFinite);
+ const md=[...days].sort((a,b)=>a-b)[Math.floor(days.length/2)];
+ const maxDev=Math.max(...days.map(d=>Math.abs(d-md)));
+ if(maxDev>8&&candidate.status!=='fixed')return 'Buchungstag schwankt deutlich – Termin noch nicht belastbar';
+ return 'Empfänger, Kategorie oder Buchungsrhythmus noch nicht eindeutig genug';
+}
 function paymentPatternSection(model){
  const daily=model.daily,patterns=model.patterns||[];
  const heading=`<div class="fin561-head"><div><h4>Zahlungsmuster &amp; Fixkosten</h4><p>${daily?'Tagesprognose aktiv · erwartete Zahlungstage, keine Bankzusagen.':'Noch keine belastbare Tagesprognose: zu wenige bestätigte wiederkehrende Gehalts- und Fixkostenbuchungen mit benannten Zahlungspartnern.'}</p></div><span class="quiet-tag">${patterns.length} erkannt</span></div>`;
- if(!patterns.length)return `<section class="fin561-section">${heading}<p class="fin-art-note">Weitere bestätigte Bankumsätze importieren und Buchungen nach Empfängern klassifizieren, um Muster zu erkennen.</p></section>`;
+ if(!patterns.length)return `<section class="fin561-section">${heading}<p class="fin-art-note">Weitere bestätigte Bankumsätze importieren und Buchungen nach Empfängern klassifizieren, um Muster zu erkennen.</p>${(model.unmodeledRecurring||[]).length?`<details><summary>${model.unmodeledRecurring.length} regelmäßige Kandidaten nicht prognostiziert</summary><div class="fin561-events">${model.unmodeledRecurring.map(x=>`<div><span>${h(x.merchant)} · ${h(x.reason)}</span><strong>${h(x.status==='fixed'?'Bestätigt – weitere Daten nötig':'Kandidat – prüfen')}</strong></div>`).join('')}</div></details>`:''}</section>`;
  const display=patterns.slice(0,24).map(p=>{
   const next=daily?.events.find(e=>e.patternKey===p.key&&e.day>=model.today);
   const typ=p.type==='salary'?'Gehalt (Basis)':p.kind==='expense'?'Wiederkehrende Fixkosten':'Regelmäßiger Eingang';
@@ -133,10 +155,12 @@ function paymentPatternSection(model){
  }).join('');
  const bonus=patterns.filter(p=>p.type==='salary').flatMap(p=>p.seasonalUplifts.map(u=>({name:p.name,...u}))).sort((a,b)=>a.month.localeCompare(b.month));
  const bonusHtml=bonus.length?`<div class="fin561-bonus"><strong>Beobachtete höhere Gehaltsmonate (kein zusätzlicher Zahlungseingang)</strong><p>${bonus.slice(0,12).map(b=>`${h(b.month)}: +${h(eur(b.extraCents))} im gemeinsamen Gehalt bei ${h(b.name)} (${b.years} Jahr${b.years===1?'':'e'} beobachtet)`).join(' · ')}. <strong>Diese Erhöhungen werden nicht in den verfügbaren Grundbetrag eingerechnet.</strong> Falls verbindlich erwartet, nur den Zusatzbetrag als einmaligen Planposten bestätigen.</p></div>`:'';
- return `<section class="fin561-section">${heading}<div class="fin560-table-wrap"><table class="fin560-table fin561-table"><thead><tr><th>Zahlungspartner &amp; Typ</th><th>Nächster Termin</th><th>Ansatz</th><th>Modell</th></tr></thead><tbody>${display}</tbody></table></div>${bonusHtml}${daily?`<details><summary>Nächste 14 erwartete Geldbewegungen</summary><div class="fin561-events">${daily.events.filter(e=>e.source!=='scenario').slice(0,14).map(e=>`<div><time>${h(formattedDate(e.day))}</time><span>${h(e.label)}</span><strong>${h(eur(e.cents))}</strong></div>`).join('')}</div></details>`:''}</section>`;
+ const missing=(model.unmodeledRecurring||[]);
+ const missingHtml=missing.length?`<details class="fin560-method"><summary>${missing.length} weitere regelmäßige Kandidaten noch nicht in der Tagesprognose</summary><p>Auch ein bestätigter Vertrag wird erst mit ausreichend aktuellen, nachvollziehbaren Bankbuchungen und einem plausiblen Zahlungstag in die Tagesprognose übernommen. Manuelle Bestätigung gilt für die Einordnung als Fixkosten, nicht als garantierter Zahlungstermin. Prüfe bei fehlenden Positionen die Geldflussart, Empfängerzuordnung und Buchungshistorie.</p><div class="fin561-events">${missing.map(x=>`<div><span>${h(x.merchant)} · ${h(x.months)} Monate<br><small>${h(x.reason)}</small></span><strong>${h(x.status==='fixed'?'Bestätigt – Termin prüfen':'Kandidat – prüfen')}</strong></div>`).join('')}</div></details>`:'';
+ return `<section class="fin561-section">${heading}<div class="fin560-table-wrap"><table class="fin560-table fin561-table"><thead><tr><th>Zahlungspartner &amp; Typ</th><th>Nächster Termin</th><th>Ansatz</th><th>Modell</th></tr></thead><tbody>${display}</tbody></table></div>${bonusHtml}${missingHtml}${daily?`<details><summary>Nächste 14 erwartete Geldbewegungen</summary><div class="fin561-events">${daily.events.filter(e=>e.source!=='scenario').slice(0,14).map(e=>`<div><time>${h(formattedDate(e.day))}</time><span>${h(e.label)}</span><strong>${h(eur(e.cents))}</strong></div>`).join('')}</div></details>`:''}</section>`;
 }
 export function cashflowDashboard(state={},today,whatIf=null,draft=null){
- const model=cashflowModel({transactions:state.financeTransactions||[],settings:state.financeCashflowSettings||{},planned:state.financePlannedCashflows||[],today,whatIf});
+ const model=cashflowModel({transactions:state.financeTransactions||[],settings:state.financeCashflowSettings||{},planned:state.financePlannedCashflows||[],recurringRules:state.financeRecurringRules||{},today,whatIf});
  const s=state.financeCashflowSettings||{};const results=model.scenario?model.verdict==='unavailable'?'<strong>Keine belastbare Ja/Nein-Antwort möglich.</strong> Bitte aktuellen Anfangsbestand und ausreichend aktuelle Bankdaten bestätigen.':model.verdict==='risk'?`<strong>Engpass im Szenario.</strong> Der modellierte Tiefststand (${h(eur(model.trough))}) unterschreitet deinen Sicherheitspuffer von ${h(eur(model.buffer))}.`:`<strong>Rechnerisch innerhalb des Puffers.</strong> Modellierter Tiefststand: ${h(eur(model.trough))}, Sicherheitspuffer: ${h(eur(model.buffer))}. Die tatsächliche Zahlungsfähigkeit ist damit nicht garantiert.`:'';
  const entry=model.scenario?`<section class="fin560-answer ${model.verdict==='risk'?'risk':''}" aria-live="polite">${results}<small>${h(eur(model.scenario.cents))} zusätzliche Ausgabe am ${h(formattedDate(model.scenario.day))}. ${model.daily?'Tagesmodell mit geschätzten Buchungstagen; tatsächliche Termine und Beträge können abweichen.':'Monatsmodell – mögliche untermonatliche Engpässe bleiben unsichtbar.'} Überweisung wird nicht ausgelöst.</small><button type="button" class="secondary-btn" data-action="finance-560-commit-scenario" ${model.scenario.day<today||model.scenario.day>=cashflowMonth(today,12)+'-01'?'disabled':''}>Als geplante einmalige Ausgabe übernehmen</button></section>`:'';
  return `<section class="fin560" aria-label="12-Monats-Liquiditätsplanung"><div class="fin560-heading"><div><span class="insight-kicker">FINANCIAL FORECAST / 12 MONATE</span><h3>Reicht mein Geld – auch nach einer unerwarteten Zahlung?</h3><p>Du entscheidest. Compass rechnet nur anhand deiner erfassten Daten, ohne Zahlung oder Kontobewegung auszulösen.</p></div><span class="quiet-tag">Lokal · Was wäre wenn?</span></div>

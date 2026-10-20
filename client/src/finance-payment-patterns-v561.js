@@ -12,18 +12,25 @@ const deltaDays=(a,b)=>Math.round((Date.parse(a+'T12:00:00Z')-Date.parse(b+'T12:
 const monthLast=m=>new Date(Date.UTC(+m.slice(0,4),+m.slice(5,7),0)).getUTCDate();
 const addDay=(day,offset)=>new Date(Date.parse(day+'T12:00:00Z')+offset*86400000).toISOString().slice(0,10);
 const cleanLabel=t=>String(t.merchantDisplayName||t.merchant||'').normalize('NFKC').replace(/\s+/g,' ').trim().slice(0,90);
-const isExpense=t=>t.amountCents<0&&(t.flow==='expense'||(t.flow==='transfer'&&!t.linkedTransferId&&t.category==='Wohnen / Miete & Betriebskosten'));
+// Match the merchant identity used by the existing Fixkosten confirmation screen.
+const payerName=t=>merchantKey(t.merchant||t.merchantDisplayName||'');
+const ownTransfer=t=>Boolean(t.linkedTransferId)||/^(?:Transfer \/ (?:Eigene Konten|Kreditkartenabrechnung|Depot & Wertpapiere|Krypto|Sparen))$/iu.test(String(t.category||''));
+// Bank exports often code manual rent/service-charge standing orders as private transfers.
+const housingMemo=t=>/(?:^|[^a-zäöüß])(?:betriebskosten|hausverwaltung|mietzins|miete)(?:$|[^a-zäöüß])/iu.test(String(t.description||'')+' '+String(t.category||''));
+export const isRecognizedExternalHousingTransfer=t=>t.flow==='transfer'&&!ownTransfer(t)&&housingMemo(t);
+const isExpense=t=>t.amountCents<0&&(t.flow==='expense'||isRecognizedExternalHousingTransfer(t));
 const isIncome=t=>t.amountCents>0&&t.flow==='income';
 const safeName=name=>name.length>=4&&safeMerchantRule(name)&&!/^(?:UNBEKANNT|UNBEKANNTER ZAHLUNGSPARTNER|BANK|BARGELD|KARTENZAHLUNG|SONSTIGES|GEHALT|EINKOMMEN|UEBERWEISUNG|ÜBERWEISUNG|SEPA|DAUERAUFTRAG|TRANSFER|LASTSCHRIFT|PAYMENT|EMPFAENGER|AUFTRAGGEBER)$/iu.test(name);
 const knownSalary=t=>/\b(?:GEHALT|LOHN|BEZUG|PAYROLL|SALARY|ENTGELT)\b/iu.test(String(t.category||'')+' '+String(t.description||'').slice(0,110));
 const clearlyVariable=category=>/^(?:Lebensmittel|Essen & Ausgehen|Shopping|Freizeit & Reisen|Mobilität \/ (?:Auto & Tanken|Parken & Maut)|Wohnen \/ Haushalt & Einrichtung|Gesundheit & Sport \/ (?:Medizin|Sauna|Optik|Tanzen|Kampfsport|Schwimmen))/iu.test(category);
-const contractualCategory=category=>/^(?:Wohnen \/ (?:Miete & Betriebskosten|Strom & Heizung|ORF-Beitrag)|Verträge & Abos \/|Familie \/ Kinder & Unterhalt|Finanzen \/ (?:Bankgebühren|Sollzinsen))/iu.test(category);
-const payKey=t=>[t.accountId||'primary',merchantKey(cleanLabel(t)),isIncome(t)?'in':'out'].join('|');
-function eligible(t,today){return t&&cashflowDateOK(t.day)&&t.day<=today&&t.day>=cashflowMonth(today,-36)+'-01'&&integer(t.amountCents)&&t.amountCents!==0&&(!t.currency||t.currency==='EUR')&&!t.needsReview&&(isExpense(t)||isIncome(t))&&safeName(cleanLabel(t));}
+const contractualCategory=category=>/^(?:Wohnen \/ (?:Miete & Betriebskosten|Strom & Heizung|ORF-Beitrag)|Verträge & Abos \/|Familie \/ Kinder & Unterhalt|Mobilität \/ Öffentliche Verkehrsmittel|Finanzen \/ (?:Bankgebühren|Sollzinsen))/iu.test(category);
+const payKey=t=>[t.accountId||'primary',payerName(t),isIncome(t)?'in':'out'].join('|');
+function eligible(t,today){return t&&cashflowDateOK(t.day)&&t.day<=today&&t.day>=cashflowMonth(today,-36)+'-01'&&integer(t.amountCents)&&t.amountCents!==0&&(!t.currency||t.currency==='EUR')&&!t.needsReview&&(isExpense(t)||isIncome(t))&&safeName(cleanLabel(t))&&safeName(String(t.merchant||t.merchantDisplayName||''));}
 /** The same merchant with many transactions per month is not a subscription. */
-export function detectPaymentPatterns(transactions=[],today){
+export function detectPaymentPatterns(transactions=[],today,recurringRules={}){
  if(!cashflowDateOK(today))throw Error('Ungültiges Tagesdatum');
- const rows=(Array.isArray(transactions)?transactions:[]).filter(t=>eligible(t,today));
+ const rules=recurringRules&&typeof recurringRules==='object'&&!Array.isArray(recurringRules)?recurringRules:{};
+ const rows=(Array.isArray(transactions)?transactions:[]).filter(t=>eligible(t,today)&&rules[payerName(t)]!=='exclude');
  const map=new Map();for(const t of rows){const key=payKey(t);if(!map.has(key))map.set(key,[]);map.get(key).push(t);}
  const patterns=[];
  for(const [key,all] of map){
@@ -42,15 +49,22 @@ export function detectPaymentPatterns(transactions=[],today){
   const ends=recent.filter(t=>monthLast(t.day.slice(0,7))-Number(t.day.slice(8))<=3).length;
   const endOfMonth=ends>=Math.ceil(recent.length*.70);
   const days=recent.map(t=>Number(t.day.slice(8)));
-  const calendarDay=median(days);
-  if(!endOfMonth&&days.some(d=>Math.abs(d-calendarDay)>5))continue;
   const category=String(all.at(-1).category||'');
+  const confirmed=rules[payerName(all.at(-1))]==='fixed';
+  const dayTolerance=confirmed?31:contractualCategory(category)?8:5;
+  const spread=Math.max(...days.map(d=>Math.abs(d-median(days))));
+  if(!endOfMonth&&spread>dayTolerance)continue;
+  // For an explicitly confirmed expense whose payment date varies, forecast the
+  // EARLIEST recent debit rather than optimistic median; do not mask uncertainty.
+  const calendarDay=confirmed&&!endOfMonth&&spread>5?Math.min(...days):median(days);
   const income=isIncome(all.at(-1));const salary=income&&(knownSalary(all.at(-1))||all.some(knownSalary));
   if(!income){
    // Recurring supermarket, restaurant or travel transactions are not proof of a subscription.
-   if(clearlyVariable(category))continue;
+   if(clearlyVariable(category)&&!confirmed)continue;
+   // Monthly public transport passes as a contract-like expense only if prices are stable.
+   if(category==='Mobilität / Öffentliche Verkehrsmittel'&&!confirmed){const a=completed.slice(-6).map(t=>-t.amountCents);if(a.length<3||Math.max(...a)-Math.min(...a)>median(a)*.20)continue;}
    // Other uncategorized outflows need a stable amount and a long history.
-   if(!contractualCategory(category)&&!(completed.length>=6&&Math.max(...completed.slice(-6).map(t=>-t.amountCents))-Math.min(...completed.slice(-6).map(t=>-t.amountCents))<=median(completed.slice(-6).map(t=>-t.amountCents))*.08))continue;
+   if(!contractualCategory(category)&&!confirmed&&!(completed.length>=6&&Math.max(...completed.slice(-6).map(t=>-t.amountCents))-Math.min(...completed.slice(-6).map(t=>-t.amountCents))<=median(completed.slice(-6).map(t=>-t.amountCents))*.08))continue;
   }else if(!salary){
    // Non-payroll positive transactions are not safely recurring unless verified over a longer horizon.
    if(completed.length<6)continue;
@@ -75,7 +89,7 @@ export function detectPaymentPatterns(transactions=[],today){
    }
    uplifts.sort((a,b)=>a.month.localeCompare(b.month));
   }
-  patterns.push({key,name:cleanLabel(all.at(-1)),accountId:all.at(-1).accountId||'',kind:income?'income':'expense',type:salary?'salary':income?'recurring-income':'fixed-cost',category,baselineCents:baseline,lastCents:Math.abs(all.at(-1).amountCents),lastDay:all.at(-1).day,calendarDay,endOfMonth,observations:completed.length,months:all.map(t=>t.day.slice(0,7)),seasonalUplifts:uplifts,dayVariance:endOfMonth?0:Math.max(...days.map(d=>Math.abs(d-calendarDay)))});
+  patterns.push({key,merchantKey:payerName(all.at(-1)),confirmed,estimatedDay:confirmed&&!endOfMonth&&spread>5,name:cleanLabel(all.at(-1)),accountId:all.at(-1).accountId||'',kind:income?'income':'expense',type:salary?'salary':income?'recurring-income':'fixed-cost',category,baselineCents:baseline,lastCents:Math.abs(all.at(-1).amountCents),lastDay:all.at(-1).day,calendarDay,endOfMonth,observations:completed.length,months:all.map(t=>t.day.slice(0,7)),seasonalUplifts:uplifts,dayVariance:endOfMonth?0:spread});
  }
  return patterns.sort((a,b)=>Number(b.type==='salary')-Number(a.type==='salary')||b.baselineCents-a.baselineCents);
 }

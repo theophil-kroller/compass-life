@@ -1,0 +1,30 @@
+Compass 0.5.62 — Konsistente Fixkosten & Zahlungsprognose
+=======================================================
+
+PATCH (nur bei vollständigem Stand 0.5.61):
+  1. Bestehenden funktionierenden Repository-Stand sichern.
+  2. Compass_0.5.62_PATCH_FROM_0.5.61.zip im Repository-Stamm entpacken;
+     gleichnamige Quelldateien ersetzen.
+  3. Änderungen committen und über den bestehenden Deploy-Workflow veröffentlichen.
+  4. Seite neu laden, PWA ggf. ganz schließen/neu öffnen.
+
+FULL SOURCE:
+  Compass_0.5.62_FULL_SOURCE.zip enthält sämtliche Quellen.
+
+KEINE Datenmigration, KEIN Vault-Reset.
+
+ZUERST TESTEN:
+  - Finanzen > Fixkosten: Kandidatenliste (einschließlich privater
+    Betriebskosten-Überweisungen und monatlicher ÖPNV-Kosten) prüfen.
+  - Finanzen > Planung > Prognose: Zahlungspartner/Kandidaten abgleichen.
+  - Beim Eintrag mit bereits bestätigten Fixkosten den prognostizierten
+    Tag und den letzten beobachteten Betrag überprüfen.
+  - Bei fehlenden Mustern Abschnitt 'weitere regelmäßige Kandidaten'
+    aufklappen; Gründe statt stilles Verschwinden.
+  - Eigene Kontoüberträge und Kreditkarten-Ausgleich NICHT als zweite
+    Fixkostenbuchung interpretieren.
+
+QUALITÄT:
+  628/628 Node-Tests, Worker-Syntax erfolgreich.
+  Vite-Produktionsbuild hier NICHT ausgeführt (vite nicht installiert).
+  Live-Abnahme mit deinen Bankdaten steht aus.

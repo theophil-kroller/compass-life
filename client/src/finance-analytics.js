@@ -3,6 +3,7 @@
  * from a collection of exported bank transactions alone. */
 import {merchantKey,safeMerchantRule} from './finance-core.js';
 import {normalizedMerchant} from './finance-merchant-insights.js';
+import {isRecognizedExternalHousingTransfer} from './finance-payment-patterns-v561.js';
 
 const cents=t=>Math.abs(Number(t.amountCents)||0);
 const signed=t=>Number(t.amountCents)||0;
@@ -49,12 +50,12 @@ export function financeRecurringCandidates(transactions=[],manual={}){
  if(!lastMonth)return [];
  const skipParents=new Set(['Lebensmittel','Essen & Ausgehen','Shopping','Bargeld','Freizeit & Reisen','Mobilität']);
  const groups=new Map();
- for(const t of all){if(t.needsReview||t.flow!=='expense'||signed(t)>=0)continue;
+ for(const t of all){if(t.needsReview||!(t.flow==='expense'||isRecognizedExternalHousingTransfer(t))||signed(t)>=0)continue;
   const key=merchantKey(t.merchant||'');if(!key||!safeMerchantRule(key))continue;
   const month=String(t.day||'').slice(0,7),gap=monthDistance(month,lastMonth);if(gap===null||gap<0||gap>15)continue;
-  const group=groups.get(key)||{key,merchant:t.merchant||'Unbekannt',dates:[],amounts:[],categories:new Map(),days:[],byMonth:new Map()};
+  const group=groups.get(key)||{key,merchant:t.merchant||'Unbekannt',dates:[],amounts:[],categories:new Map(),days:[],byMonth:new Map(),transitCount:0};
   group.dates.push(t.day);group.amounts.push(cents(t));group.days.push(Number(t.day.slice(8)));group.byMonth.set(month,(group.byMonth.get(month)||0)+1);
-  const parent=String(t.category||'').split(' / ')[0];group.categories.set(parent,(group.categories.get(parent)||0)+1);groups.set(key,group);
+  const parent=String(t.category||'').split(' / ')[0];if(t.category==='Mobilität / Öffentliche Verkehrsmittel')group.transitCount++;group.categories.set(parent,(group.categories.get(parent)||0)+1);groups.set(key,group);
  }
  const out=[];
  for(const group of groups.values()){
@@ -65,9 +66,11 @@ export function financeRecurringCandidates(transactions=[],manual={}){
   const gaps=months.slice(1).map((m,i)=>monthDistance(months[i],m));
   const monthly=gaps.length&&gaps.filter(n=>n===1).length>=2;
   const lowMultiple=Math.max(...group.byMonth.values())<=2;
-  const eligible=!skipParents.has(category)&&lowMultiple&&monthly&&months.length>=3&&fresh;
+  const recent=group.amounts.slice(-6);const avg=Math.round(recent.reduce((s,v)=>s+v,0)/recent.length);
+  const stable=avg>0&&recent.every(v=>Math.abs(v-avg)/avg<.20);
+  const transitSubscription=category==='Mobilität'&&group.transitCount>=Math.ceil(group.dates.length*.8)&&stable&&Math.max(...group.byMonth.values())===1;
+  const eligible=(!skipParents.has(category)||transitSubscription)&&lowMultiple&&monthly&&months.length>=3&&fresh;
   if(status!=='fixed'&&!eligible)continue;
-  const recent=group.amounts.slice(-6),avg=Math.round(recent.reduce((s,v)=>s+v,0)/recent.length);
   const median=recent.slice().sort((a,b)=>a-b)[Math.floor(recent.length/2)];
   const recentAmount=group.amounts.at(-1),shift=recent.length>1?recentAmount-median:0;
   const total=group.amounts.reduce((s,v)=>s+v,0);
