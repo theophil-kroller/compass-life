@@ -55,7 +55,7 @@ test('stress and energy show charts built from measured values, no synthetic con
 });
 test('stress and energy tabs integrated into actual Insights and current version, no worker migration',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.55'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.56'/);
  assert.match(main,/insightsStressView/);assert.match(main,/insightsEnergyView/);
  assert.match(main,/insights-wellness-day/);
  for(const id of ['stress','energy'])assert.equal(INSIGHT_TABS.find(x=>x.id===id).state,'live');

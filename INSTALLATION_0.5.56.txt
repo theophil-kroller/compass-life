@@ -1,0 +1,27 @@
+Compass 0.5.56 — Installation
+============================
+
+PATCH von 0.5.55:
+  1. Bestehenden funktionierenden Repositorystand und verschlüsselten lokalen Vault sichern. Den Vault NICHT zurücksetzen.
+  2. Inhalt von Compass_0.5.56_PATCH_FROM_0.5.55.zip im Repository-Stammverzeichnis entpacken und gleichnamige Dateien ersetzen.
+  3. Wie üblich committen und den GitHub-Pages-/Cloudflare-Deployment-Workflow starten.
+  4. Compass vollständig neu laden; in der PWA ggf. App einmal schließen und neu öffnen.
+
+FULL SOURCE:
+  Compass_0.5.56_FULL_SOURCE.zip enthält den vollständigen Quellenstand.
+
+KEINE D1-MIGRATION. Keine Änderungen/Resets an lokalen Datenbanken vornehmen.
+
+NACH DEPLOYMENT TESTEN:
+  - Planen > Projekte: 7 vorhandene Projekte/Ordner statt Fehlerbildschirm sichtbar; Projekte können angeklickt werden.
+  - Projekte und Next Actions: Fortschritt x/y plus +1, keine Titelüberlagerungen. In Heute und Next Actions auch schmaler Fortschrittsbalken.
+  - Insights > Fortschritt: Projekttitel und x/y-Zähler überschneiden sich nie, auch bei schmalem Fenster.
+  - Planen > Konferenzen: 32 Einträge insgesamt; Filter Thema/Region/Forschungsfokus 'Learnly'; CALICO, HICSS, LiP, New Business Models u. a.
+  - Gemerkte Konferenzen aus der vorigen Version bleiben gemerkt.
+  - Vergangene Fristen: sichtbar aber Projektentwurf deaktiviert. Ein Call ohne bestätigte Deadline kann nicht als Deadline-Projekt automatisch angelegt werden.
+  - Mobile Ansicht: Navigation bleibt einzeilig; Konferenzfilter umbrechen ohne horizontales Overflow.
+
+TESTSTAND: 588/588 Node-Tests, Worker-Syntax ok.
+NICHT GETESTET: Vite-Produktionsbuild (Abhängigkeiten fehlen), reales Vault/PWA/Browserlayout.
+
+WICHTIG: 3E 2027 – Frist 1. Dezember laut Veranstalter, abweichende Übersicht gibt 11. Dezember an. Vor Einreichung unbedingt prüfen.

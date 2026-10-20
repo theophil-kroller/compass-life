@@ -57,7 +57,7 @@ import {healthFindings,rankHealthFindingsLocally} from './health-intelligence-v5
 import {inspectWorktimeFile,mergeWorktime,worktimeView} from './worktime-v553.js';
 import {worktimeYearComparisonView} from './worktime-multiyear-v555.js';
 import {recoveryCandidates,recoveryEvidence,recoveryView} from './recovery-timeoff-v554.js';
-import {conferenceEntries,conferenceRadarView,conferenceProjectPlan,newConference,setConferenceStatus,RADAR_TOPICS,RADAR_REGIONS} from './conference-radar-v555.js';
+import {conferenceEntries,conferenceRadarView,conferenceProjectPlan,newConference,setConferenceStatus,RADAR_TOPICS,RADAR_REGIONS,RADAR_FOCI} from './conference-radar-v555.js';
 import {insightsStressView,insightsEnergyView} from './insights-wellness.js';
 import {fitnessInsightsView} from './insights-fitness.js';
 import {buildProductivityInsights,productivityInsightsView} from './insights-productivity.js';
@@ -73,10 +73,10 @@ import {ACTIVITY_CATEGORIES,isoLocal,validActivityEdit,validManualActivity,proje
 import {OCCASION_STEPS,OCCASION_LEAD_DAYS,daysUntil,occasionStepKey,occasionTaskTag,relatedOccasionTask,occasionTask,validCustomStep,shiftDay} from './occasion-planning.js';
 import {occasionsWithPeople,validPersonBirthday} from './people-occasions.js';
 import {contextChoices,filterContextTasks} from './context-perspectives.js';
-import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
+import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.55';
+const COMPASS_CLIENT_VERSION='0.5.56';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -89,7 +89,7 @@ let selectedTaskId=null;
 let selectedProjectId=null;
 let exchangePreview=null;
 let exchangeRaw='';
-let radarTopic='all',radarRegion='all';
+let radarTopic='all',radarRegion='all',radarFocus='all';
 let plannerExpanded=false;
 let selectedForecastDay=localDateString(new Date());
 let dailyPlanExpanded=true,dailyPlanPicked='',dailyPlanDuration=60,dailyPlanShowAll=false,dailyPlanShowUndated=false,dailyPlanDateTask='';
@@ -671,7 +671,7 @@ function todayWork(locked=false){
 }
 function radarScreen(){
  const forecast=localCapacity(localDate(),30);
- return chrome(conferenceRadarView(conferenceEntries(state),{topic:radarTopic,region:radarRegion,today:localDate(),forecast,state}));
+ return chrome(conferenceRadarView(conferenceEntries(state),{topic:radarTopic,region:radarRegion,focus:radarFocus,today:localDate(),forecast,state}));
 }
 function forecastScreen(){
  const list=dueTasks(state,600),planned=Object.values(state?.tasks||{}).filter(t=>!t.archived&&!state.projects?.[t.projectId]?.isTemplate&&!t.completed&&t.plannedDate),today=localDate();
@@ -754,7 +754,7 @@ function taskProgressInline(t){
  const target=t?.progressTarget;
  if(!Number.isSafeInteger(target)||target<=0)return '';
  const current=t.progressCurrent??0,complete=current>=target,locked=!!t.completed||!!state?.projects?.[t.projectId]?.isTemplate;
- return `<span class="v42-task-progress" title="${current} von ${target} Stück bearbeitet${complete?' · Ziel erreicht':''}"><progress max="${target}" value="${current}" aria-label="${h(t.title)}: ${current} von ${target} Stück"></progress><span class="v42-progress-count">${current}/${target}</span><button type="button" data-action="task-progress-plus" data-id="${h(t.id)}" class="v42-progress-plus" aria-label="Bei ${h(t.title)} ein Stück hinzufügen" title="Ein Stück korrigiert (+1)" ${locked||complete?'disabled':''}>+1</button></span>`;
+ return `<span class="v42-task-progress" title="${current} von ${target} Stück bearbeitet${complete?' · Ziel erreicht':''}"><span class="v42-progress-meter"><span class="v42-progress-count">${current}/${target}</span><progress max="${target}" value="${Math.max(0,Math.min(target,current))}" aria-label="${h(t.title)}: ${current} von ${target} Stück"></progress></span><button type="button" data-action="task-progress-plus" data-id="${h(t.id)}" class="v42-progress-plus" aria-label="Bei ${h(t.title)} ein Stück hinzufügen" title="Ein Stück korrigiert (+1)" ${locked||complete?'disabled':''}>+1</button></span>`;
 }
 function taskList(items,scope,hideEmpty=false){
  const nextScope=scope==='next';
@@ -1317,7 +1317,7 @@ function progressScreen(){
  const projects=Object.values(state?.projects||{}).filter(p=>p.kind!=='folder'&&!p.isTemplate&&p.status==='active');
  const today=localDate(),earlier=new Date(today+'T12:00:00');earlier.setDate(earlier.getDate()-6);const begin=localDate(earlier);
  const stats=activityStats(activeActivities(watchSessions,state),begin,today);
- return chrome(`<div class="progress-view"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitäten der letzten 7 Tage</span></div><div class="metrics-row"><div><strong>${stats.count}</strong><small>Sessions</small></div><div><strong>${(stats.minutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>erfasste Zeit</small></div><div><strong>${stats.pomodoros}</strong><small>Pomodoros</small></div></div><button type="button" class="text-link" data-tab="activity">Sessions verwalten ${ico('arrow',14)}</button></section><section class="work-card"><div class="work-heading"><span>${ico('folder',18)} Projektfortschritt</span><span class="quiet-tag">${projects.length} aktiv</span></div>${projects.length?projects.map(p=>{const tasks=projectTasks(state,p.id);const completed=tasks.filter(x=>x.completed).length;return `<button type="button" class="progress-project" data-action="timeline-project" data-id="${h(p.id)}"><span><strong>${h(p.title)}</strong><small>${completed} / ${tasks.length} Schritte erledigt</small></span><div class="progress-track"><span style="width:${tasks.length?Math.round(completed/tasks.length*100):0}%"></span></div></button>`;}).join(''):'<p class="muted-line">Noch keine aktiven Projekte.</p>'}</section></div>`);
+ return chrome(`<div class="progress-view"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitäten der letzten 7 Tage</span></div><div class="metrics-row"><div><strong>${stats.count}</strong><small>Sessions</small></div><div><strong>${(stats.minutes/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>erfasste Zeit</small></div><div><strong>${stats.pomodoros}</strong><small>Pomodoros</small></div></div><button type="button" class="text-link" data-tab="activity">Sessions verwalten ${ico('arrow',14)}</button></section><section class="work-card"><div class="work-heading"><span>${ico('folder',18)} Projektfortschritt</span><span class="quiet-tag">${projects.length} aktiv</span></div>${projects.length?projects.map(p=>{const tasks=projectTasks(state,p.id);const completed=tasks.filter(x=>x.completed).length;return `<button type="button" class="progress-project" data-action="timeline-project" data-id="${h(p.id)}"><span class="progress-project-head"><strong class="progress-project-name">${h(p.title)}</strong><span class="progress-project-count" aria-label="${completed} von ${tasks.length} Schritten erledigt">${completed}/${tasks.length}</span></span><div class="progress-track" aria-hidden="true"><span style="width:${tasks.length?Math.round(completed/tasks.length*100):0}%"></span></div></button>`;}).join(''):'<p class="muted-line">Noch keine aktiven Projekte.</p>'}</section></div>`);
 }
 function healthSummaryPanel(mode='full'){
  const today=localDate(),vm=healthViewModel(healthDays,today,healthSpan);const s=vm.stats;
@@ -1433,7 +1433,7 @@ function render(){
    // A broken older project hierarchy must never leave the sidebar inert.
    // Keep the navigation visible and offer a safe way to inspect the next action.
    const rows=Object.values(state?.projects||{}).filter(p=>p&&!p.isTemplate).slice(0,200);
-   html=chrome(`<section class="work-card" role="alert"><h2>Projektansicht eingeschränkt</h2><p>Ein Projektdatensatz konnte nicht vollständig angezeigt werden. Die Daten wurden nicht verändert.</p><p>${rows.length} Projekte/Ordner gefunden.</p><button type="button" class="secondary-btn" data-tab="next">Next Actions öffnen</button></section>`);
+   html=chrome(`<section class="work-card" role="alert"><h2>Projektansicht eingeschränkt</h2><p>Beim Darstellen der Projekte ist ein Fehler aufgetreten. Deine Projektdaten wurden nicht verändert.</p><p>${rows.length} Projekte/Ordner gefunden.</p><button type="button" class="secondary-btn" data-tab="next">Next Actions öffnen</button></section>`);
  }
  app.innerHTML=html;bind();
  if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto!==false&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
@@ -1624,8 +1624,8 @@ function bind() {
       await mutate(s=>{s.uiPreferences??={};s.uiPreferences[key]=normalize(ctrl.value);});
     };
   }
-  for(const [selector,name,allowed] of [['#radar555-topic','topic',['all',...RADAR_TOPICS]],['#radar555-region','region',['all',...RADAR_REGIONS]]]){
-    const control=app.querySelector(selector);if(control)control.onchange=()=>{if(!allowed.includes(control.value))return;if(name==='topic')radarTopic=control.value;else radarRegion=control.value;render();};
+  for(const [selector,name,allowed] of [['#radar555-topic','topic',['all',...RADAR_TOPICS]],['#radar555-region','region',['all',...RADAR_REGIONS]],['#radar555-focus','focus',['all',...RADAR_FOCI]]]){
+    const control=app.querySelector(selector);if(control)control.onchange=()=>{if(!allowed.includes(control.value))return;if(name==='topic')radarTopic=control.value;else if(name==='region')radarRegion=control.value;else radarFocus=control.value;render();};
   }
   const radarForm=app.querySelector('#radar555-form');if(radarForm)radarForm.onsubmit=async ev=>{
     ev.preventDefault();const v=new FormData(radarForm);
