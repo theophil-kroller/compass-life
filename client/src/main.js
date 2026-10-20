@@ -17,6 +17,7 @@ import {FOLDER_ICONS,folderIcon} from './folder-icons-v35.js';
 import {CONTACT_TYPES,CONTACT_REVIEW_DAYS,contactTypeLabel,addContactEntry,contactSummary,contactReviewQueue,updateContactReviewDays} from './people-relationships-v24.js';
 import {FEELINGS,feelingWord,newFeelingDraft,chooseFeeling,intensityFor,validatedCheckin,appendCheckin,feelingOverlay,feelingInsights,feelingReview} from './feeling-wheel-v565.js';
 import {personalConnections,personalConnectionsView} from './personal-connections-v566.js';
+import {relationshipMapView,MAP567,closenessAt} from './relationship-map-v567.js';
 import {RELATION_KINDS,GENDER_MARKERS,CADENCE_DAYS,preference,contactImpulse,impulseQueue,pauseContact,mapPosition,mapDrop,safePersonDetails,relatedProjectIds,contactWeight} from './relationship-radar-v564.js';
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {linkedPersonTasks,linkedPersonInbox} from './person-links.js';
@@ -84,7 +85,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.66';
+const COMPASS_CLIENT_VERSION='0.5.67';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -111,7 +112,7 @@ let selectedAgendaEventId=null;
 let calendarRulesOpen=false,showHiddenCalendarEvents=false;
 let reviewWorkflow='next';
 let reviewEditingTaskId=null,reviewProjectId=null;
-let activitySelectedId=null,activityTrash=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,personOpenPointId='',peopleTab='list',quickContactType='',occasionOpen=true;
+let activitySelectedId=null,activityTrash=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,personOpenPointId='',peopleTab='list',relationshipMapFocus=false,relationshipMapFilter='all',quickContactType='',occasionOpen=true;
 const reviewDrafts=new Map();
 function captureReviewDraft(){const form=app?.querySelector('#review-commit-form');if(form?.dataset.id)reviewDrafts.set(form.dataset.id,Object.fromEntries(new FormData(form).entries()));}
 let showCalendarBlocks=false;
@@ -1264,16 +1265,12 @@ function timelinePanel(){
  <small class="occasion-footnote">${h(period(today))} bis ${h(period(windowEnd))} · Google Calendar nur lesend. Projekt-Meilensteine nutzen die Projekt-Deadline.</small></section>`;
 }
 function peopleMapMarkup(people,selected){
- const spots=people.map(person=>({person,pos:mapPosition(person)}));
- return `<section class="work-card relationship-map-card"><div class="work-heading"><span>◎ Beziehungslandkarte</span><span class="quiet-tag">${people.length} Kontakte</span></div><p class="muted-line">Du stehst im Zentrum. Ziehe Menschen näher oder weiter weg, um die persönliche Nähe anzupassen. Die Position wird im lokalen Vault gespeichert.</p>
- <svg id="relationship-map" class="relationship-map" viewBox="0 0 470 470" role="group" aria-label="Beziehungslandkarte mit verschiebbaren Personen">
- <defs><radialGradient id="rel64rad"><stop offset="0" stop-color="#f3ddce"/><stop offset=".55" stop-color="#f3f5f4"/><stop offset="1" stop-color="#edf5fc"/></radialGradient></defs>
- <circle cx="235" cy="235" r="218" fill="url(#rel64rad)" stroke="#d7e4e5"/>
- ${[23,63,104,145,185].map((r,i)=>`<circle cx="235" cy="235" r="${r}" fill="none" stroke="${i===4?'#9eafbc':'#c9d7d7'}" stroke-dasharray="${i===4?'0':'3 5'}"/>`).join('')}
- <circle cx="235" cy="235" r="21" fill="#314c51"/><text x="235" y="239" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Ich</text>
- ${spots.map(({person,pos})=>{const mark=person.genderMarker==='female'?'♀':person.genderMarker==='male'?'♂':person.genderMarker==='diverse'?'◇':'•';const picked=person.id===selected?.id;return `<g tabindex="0" role="button" aria-label="${h(person.name)}: Nähe ${preference(person).closeness} von 100, auswählen oder ziehen" data-person-node="${h(person.id)}" transform="translate(${pos.x.toFixed(2)} ${pos.y.toFixed(2)})" class="relationship-node ${picked?'is-selected':''}"><circle r="${picked?20:18}" fill="${picked?'#d88b82':'#fafcfb'}" stroke="${picked?'#ae6964':'#7a9ca0'}" stroke-width="2"/><text text-anchor="middle" y="5" font-size="17" fill="${picked?'#fff':'#415963'}">${mark}</text><text class="relationship-node-label" y="-25" text-anchor="middle" font-size="11" font-weight="650">${h(person.name.length>20?person.name.slice(0,18)+'…':person.name)}</text></g>`;}).join('')}
- </svg><div class="relationship-map-legend"><span>❤️ Sehr nah</span><span>❄️ Weiter entfernt</span></div><small class="muted-line">Die Symbole für Geschlecht sind optional. Alternativ kannst du die Nähe im Inspector mit dem Slider bearbeiten.</small></section>`;
+ const inspector=selected?`${relationshipInspectorMarkup(selected,state?.projects||{},localDate())}
+ <section class="rel567-log"><h3>Kontakt dokumentieren</h3><div class="relationship-contact-quick">${CONTACT_TYPES.filter(([kind])=>['meeting','call','video','message','email'].includes(kind)).map(([kind,label])=>`<button type="button" data-action="person-quick-log" data-id="${h(selected.id)}" data-kind="${h(kind)}">${kind==='meeting'?'☕':kind==='call'?'☎':kind==='video'?'▣':kind==='message'?'💬':'✉'} ${h(label)}</button>`).join('')}</div>
+ <form id="person-contact-form" class="compact-stack" data-id="${h(selected.id)}"><label>Datum<input type="date" name="day" max="${h(localDate())}" value="${h(localDate())}" required></label><label>Kontaktart<select name="type">${CONTACT_TYPES.map(([key,label])=>`<option value="${h(key)}" ${quickContactType===key?'selected':''}>${h(label)}</option>`).join('')}</select></label><label>Notiz (optional)<input name="note" maxlength="1200" placeholder="Was möchte ich behalten?"></label><button type="submit" class="secondary-btn">Kontakt bestätigen</button></form></section>`:'';
+ return relationshipMapView(people,selected,{focus:relationshipMapFocus,filter:relationshipMapFilter,today:localDate(),projects:state?.projects||{},inspector});
 }
+
 function relationshipInspectorMarkup(person,projects,today){
  const p=preference(person),impulse=contactImpulse(person,today);
  const linked=relatedProjectIds(person,projects);
@@ -1643,15 +1640,31 @@ function bind() {
     await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;s.people[id].relatedProjectIds=[...new Set([...(s.people[id].relatedProjectIds||[]),project.id])];});toast('Projekt angelegt und mit Person verbunden.');};
   const relationshipMap=app.querySelector('#relationship-map');if(relationshipMap&&typeof relationshipMap.addEventListener==='function'){
     let dragging=null,moved=false;
-    const point=e=>{const rect=relationshipMap.getBoundingClientRect();const scale=470/Math.max(1,rect.width);return {x:(e.clientX-rect.left)*scale,y:(e.clientY-rect.top)*470/Math.max(1,rect.height)};};
+    const point=e=>{const rect=relationshipMap.getBoundingClientRect(),scale=Math.min(rect.width/MAP567.width,rect.height/MAP567.height)||1;
+      const ox=(rect.width-MAP567.width*scale)/2,oy=(rect.height-MAP567.height*scale)/2;
+      return {x:(e.clientX-rect.left-ox)/scale,y:(e.clientY-rect.top-oy)/scale};};
     relationshipMap.addEventListener('pointerdown',ev=>{const node=ev.target.closest?.('[data-person-node]');if(!node)return;dragging={id:node.dataset.personNode,node,startX:ev.clientX,startY:ev.clientY};moved=false;try{node.setPointerCapture(ev.pointerId);}catch{}});
-    relationshipMap.addEventListener('pointermove',ev=>{if(!dragging)return;const q=point(ev);if(Math.hypot(ev.clientX-dragging.startX,ev.clientY-dragging.startY)>5)moved=true;if(moved){const dx=q.x-235,dy=q.y-235,r=Math.min(185,Math.hypot(dx,dy)),f=r/(Math.hypot(dx,dy)||1);dragging.node.setAttribute('transform',`translate(${(235+dx*f).toFixed(1)} ${(235+dy*f).toFixed(1)})`);}});
+    relationshipMap.addEventListener('pointermove',ev=>{if(!dragging)return;const q=point(ev);if(Math.hypot(ev.clientX-dragging.startX,ev.clientY-dragging.startY)>5)moved=true;
+      if(moved){const dx=q.x-MAP567.cx,dy=q.y-MAP567.cy,r=Math.min(MAP567.max,Math.max(MAP567.min,Math.hypot(dx,dy))),f=r/(Math.hypot(dx,dy)||1);
+       dragging.node.setAttribute('transform',`translate(${(MAP567.cx+dx*f).toFixed(1)} ${(MAP567.cy+dy*f).toFixed(1)})`);}});
     relationshipMap.addEventListener('pointercancel',()=>{dragging=null;moved=false;render();});
     relationshipMap.addEventListener('pointerup',async ev=>{if(!dragging)return;const {id}=dragging,wasMoved=moved;dragging=null;moved=false;if(!state?.people?.[id])return;
-      if(wasMoved){const q=point(ev),next=mapDrop(state.people[id],q.x,q.y);await mutate(s=>{s.people[id].closeness=next.closeness;s.people[id].mapAngleDeg=next.mapAngleDeg;});}
+      if(wasMoved){const q=point(ev),next=mapDrop(state.people[id],q.x,q.y,MAP567.cx,MAP567.max,MAP567.min);await mutate(s=>{s.people[id].closeness=closenessAt(q.x,q.y);s.people[id].mapAngleDeg=next.mapAngleDeg;});}
       selectedPersonId=id;render();});
-    relationshipMap.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){const node=ev.target.closest?.('[data-person-node]');if(!node)return;ev.preventDefault();selectedPersonId=node.dataset.personNode;render();}});
+    relationshipMap.addEventListener('keydown',async ev=>{const node=ev.target.closest?.('[data-person-node]');if(!node||!state?.people?.[node.dataset.personNode])return;
+      if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();selectedPersonId=node.dataset.personNode;render();return;}
+      if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.key)){ev.preventDefault();const id=node.dataset.personNode,p=state.people[id],v=preference(p).closeness+(ev.key==='ArrowUp'||ev.key==='ArrowRight'?(ev.shiftKey?5:1):-(ev.shiftKey?5:1));
+       await mutate(s=>{s.people[id].closeness=Math.max(0,Math.min(100,v));});selectedPersonId=id;render();app.querySelector(`[data-person-node="${id}"]`)?.focus?.();}
+    });
   }
+  const focusOverlay=app.querySelector('.rel567-overlay');if(focusOverlay){focusOverlay.addEventListener('keydown',ev=>{
+    if(ev.key==='Escape'){ev.preventDefault();relationshipMapFocus=false;render();return;}
+    if(ev.key==='Tab'){const controls=[...focusOverlay.querySelectorAll('button,input,select,textarea,[tabindex]')].filter(el=>!el.disabled&&el.getAttribute('tabindex')!=='-1');if(!controls.length)return;
+      const first=controls[0],last=controls[controls.length-1];if(ev.shiftKey&&(document.activeElement===first||document.activeElement===focusOverlay)){ev.preventDefault();last.focus();}
+      else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first.focus();}
+    }
+   });}
+
   const contactForm=app.querySelector('#person-contact-form');if(contactForm)contactForm.onsubmit=async ev=>{
     ev.preventDefault();const id=contactForm.dataset.id;if(!state?.people?.[id])return;
     const fd=new FormData(contactForm),entry={id:crypto.randomUUID(),day:String(fd.get('day')||''),type:String(fd.get('type')||''),note:String(fd.get('note')||'').trim()};
@@ -2612,7 +2625,9 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       await mutate(s=>{s.tasks[id].note=note;s.tasks[id].completed=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
       toast('Aufgabe erledigt.');return;
     }
-    if(action==='people-tab'){if(['list','map'].includes(id)){peopleTab=id;render();}return;}
+    if(action==='people-tab'){if(['list','map'].includes(id)){peopleTab=id;relationshipMapFocus=false;render();}return;}
+    if(action==='rel567-focus'){relationshipMapFocus=!relationshipMapFocus;render();app.querySelector('.rel567-overlay')?.focus?.();return;}
+    if(action==='rel567-filter'){if(['all','family','friend','colleague','partner','impulse','project'].includes(id)){relationshipMapFilter=id;render();}return;}
     if(action==='person-quick-log'){if(!state?.people?.[id])return;selectedPersonId=id;quickContactType=quickContactType||'call';render();const form=app.querySelector('#person-contact-form');form?.querySelector('[name="note"]')?.focus?.();return;}
     if(action==='person-pause-toggle'){if(!state?.people?.[id])return;await mutate(s=>{s.people[id]=pauseContact(s.people[id],s.people[id].contactPaused!==true,localDate());});toast(state.people[id].contactPaused?'Kontaktimpulse pausiert.':'Kontaktimpulse wieder aktiv.');return;}
     if(action==='person-project-open'){if(!state?.projects?.[id])return;selectedProjectId=id;tab='projects';render();return;}

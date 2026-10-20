@@ -1,0 +1,25 @@
+Compass 0.5.67 – Installation
+============================
+
+PATCH von 0.5.66:
+1. Funktionierenden Stand und lokalen verschlüsselten Vault sichern.
+2. Compass_0.5.67_PATCH_FROM_0.5.66.zip ins Repository-Stammverzeichnis entpacken und gleichnamige Dateien ersetzen.
+3. Änderungen committen und den üblichen Deployment-Workflow auslösen.
+4. Browser neu laden; bei installierter PWA schließen und neu starten.
+
+FULL SOURCE:
+Compass_0.5.67_FULL_SOURCE.zip ist die komplette aktualisierte Quellversion.
+
+KEINE D1-MIGRATION, KEIN VAULT-RESET.
+
+ZUERST TESTEN:
+- Menschen > Beziehungslandkarte > Fokusansicht: Größenanpassung, Gruppenfilter, keine Namenskollisionen.
+- Kontakt mit Nähe 90+ steht im innersten roséfarbenen Kreis.
+- Person wählen, im Inspector Nähe ändern und erneut Karte öffnen: beide Werte stimmen überein.
+- Auf Karte verschieben, speichern und Seite neu laden: Nähe bleibt bestehen.
+- Geschlecht im Inspector freiwillig umstellen; Porträt und Symbol ändern sich.
+- Kontakt loggen, Pause/Play, Projektverknüpfungen bleiben bedienbar.
+- Life Balance Radar > Details / Warum fehlen Werte?: Finanzachse und präziser Grund, wenn sie noch leer ist.
+
+PRÜFSTAND: 667/667 automatisierte Tests, JavaScript + Worker Syntax.
+NICHT BESTÄTIGT: Vite-Produktionsbuild / tatsächliche Browseransicht / private lokale Bankdaten.

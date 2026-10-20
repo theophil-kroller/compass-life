@@ -47,6 +47,6 @@ test('0.5.64 editable personal details and project references are scoped',()=>{
 test('0.5.64 UI includes navigation, quick log confirmation, map and accessible sliders',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8'),css=readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');
  for(const v of ['relationship-map','relationship-tabs','person-project-create-form','person-project-link-form','person-quick-log','person-contact-form','relationship-closeness-slider','relationship-cadence-slider','person-pause-toggle','relationship-details-form','contactImpulse','impulseQueue']) assert.ok(main.includes(v)||css.includes(v),v);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.66'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.67'/);
  assert.match(css,/linear-gradient\(90deg,#7cb1d4/);
 });

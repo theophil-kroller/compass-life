@@ -1,3 +1,5 @@
+> Aktueller Release: **Compass 0.5.67 – Relationship Map Redesign**. Siehe `CHANGELOG_0.5.67.md` und `INSTALLATION_0.5.67.txt`.
+
 > **Aktueller Stand: Compass 0.5.66 – Zusammenhänge (Feeling Wheel × Alltag) und verbesserte Datenabdeckung im Life Balance Radar.** Siehe [Changelog](CHANGELOG_0.5.66.md) und [Installation](INSTALLATION_0.5.66.txt).
 
 > **Aktueller Stand: Compass 0.5.63 – Life Balance Radar (inkl. Zeitspuren, Details siehe CHANGELOG_0.5.63.md).**

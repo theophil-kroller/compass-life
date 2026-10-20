@@ -39,7 +39,7 @@ const freshest=rows=>rows.length?rows.map(r=>r.day).sort().at(-1):null;
  */
 export function financeRadarEvidence(transactions=[], today='2026-10-20'){
  const rows=Array.isArray(transactions)?transactions:[];
- const earliest=cashflowMonthForRadar(today,-18), current=today.slice(0,7);
+ const earliest=cashflowMonthForRadar(today,-36), current=today.slice(0,7);
  const groups=new Map();let supported=0,pending=0,invalid=0,excluded=0;
  const ownTransfer=new Set(['Transfer / Eigene Konten','Transfer / Kreditkartenabrechnung','Transfer / Sparen','Transfer / Krypto','Transfer / Depot & Wertpapiere']);
  for(const tx of rows){
@@ -57,20 +57,20 @@ export function financeRadarEvidence(transactions=[], today='2026-10-20'){
   if(tx.needsReview){pending++;item.pending++;}
   groups.set(month,item);
  }
- const complete=[...groups.values()].filter(x=>x.income>0&&x.expense>0).sort((a,b)=>a.month.localeCompare(b.month));
+ const complete=[...groups.values()].filter(x=>x.income>0&&x.expense>0).sort((a,b)=>a.month.localeCompare(b.month)).slice(-12);
  const monthCount=complete.length;
  const income=complete.reduce((a,x)=>a+x.income,0);
  const expense=complete.reduce((a,x)=>a+x.expense,0);
- const provisional=complete.some(x=>x.pending>0);
+ const provisional=monthCount<3||complete.some(x=>x.pending>0);
  const newest=[...groups.keys()].sort().at(-1)||null;
- const late=!!newest&&newest<cashflowMonthForRadar(today,-6);
- // Require multiple paired bank months. The share represents a historical
- // inflow/outflow pattern, never a probability of payment or true solvency.
- const score=monthCount>=3&&income>0&&expense>0&&!late?clamp(50+250*(income-expense)/income):null;
+ const late=!!newest&&newest<cashflowMonthForRadar(today,-12);
+ // At least two paired bank months support a *provisional* historical cashflow.
+ // It is not a solvency, wealth or credit score; fresh individual balances remain unknown.
+ const score=monthCount>=2&&income>0&&expense>0&&!late?clamp(50+250*(income-expense)/income):null;
  const cause=!rows.length?'Noch keine Bankbuchungen importiert':
   !supported?'Bankbuchungen vorhanden, aber keine geeigneten abgeschlossenen EUR-Monate im Betrachtungsfenster':
-  late?'Letzter auswertbarer Monat liegt mehr als sechs Monate zurück':
-  monthCount<3?`${supported} auswertbare Buchungen, aber nur ${monthCount} Monate mit Ein- und Ausgängen (mindestens 3 erforderlich)`:null;
+  late?'Letzter auswertbarer Monat liegt mehr als zwölf Monate zurück':
+  monthCount<2?`${supported} auswertbare Buchungen von ${rows.length} insgesamt, jedoch nur ${monthCount} Monate mit Ein- und Ausgängen (mindestens 2 benötigt). ${excluded} Eigen-/Kapitaltransfers ausgeschlossen, ${invalid} unlesbar oder ohne EUR-Betrag.`:null;
  return {score,monthCount,income,expense,supported,pending,excluded,invalid,latest:newest,provisional,cause,source:'Bankbuchungen'};
 }
 function cashflowMonthForRadar(today,offset){const [y,m]=today.slice(0,7).split('-').map(Number);return new Date(Date.UTC(y,m-1+offset,1)).toISOString().slice(0,7);}
@@ -140,11 +140,11 @@ export function buildLifeBalanceRadar(state={}, {today='2026-10-20',period=7,hea
  const financeScore=ready?clamp(50+250*(inflow-outflow)/inflow):ledger?.score??null;
  const financeMonths=ready?complete.length:ledger?.monthCount||0;
  const financeDetail=ready?`Historischer Cashflow · Ø Einnahmenbasis ${dec(inflow/100)} € · Ø Ausgaben ${dec(outflow/100)} € · ${financeMonths} Monate`:
-  ledger?.score!=null?`Historischer Bank-Cashflow${ledger.provisional?' (vorläufig, unklassifizierte Buchungen enthalten)':''} · ${financeMonths} Monate · ${ledger.latest} · ${ledger.supported} Buchungen`:
+  ledger?.score!=null?`Historischer Bank-Cashflow${ledger.provisional?' (vorläufig; geringe Abdeckung oder ungeprüfte Buchungen)':''} · ${financeMonths} Monate · ${ledger.latest} · ${ledger.supported} von ${(state.financeTransactions||[]).length} Buchungen`:
   ledger?.cause||'Keine auswertbare Bankhistorie';
  const finance=axis('finance','Finanzen',financeScore,
   financeDetail,
-  'Cashflow-Indikator aus importierten Bankbewegungen, keine Vermögens- oder Liquiditätsdiagnose. '+(ledger?.pending?`${ledger.pending} Buchungen ungeprüft. `:'')+(financeError?`Prognosemodul: ${financeError}. `:'')+(financial?.opening==null?'Ohne heute bestätigten Bankbestand keine Aussage zur aktuellen Zahlungsfähigkeit.':'Die tatsächliche Liquiditätsprognose findest du unter Finanzen.'),
+  'Cashflow-Indikator aus importierten Bankbewegungen, keine Vermögens- oder Liquiditätsdiagnose. Datenbasis und Monatsabdeckung bei den Finanzdetails prüfen. '+(ledger?.pending?`${ledger.pending} Buchungen ungeprüft. `:'')+(financeError?`Prognosemodul: ${financeError}. `:'')+(financial?.opening==null?'Ohne heute bestätigten Bankbestand keine Aussage zur aktuellen Zahlungsfähigkeit.':'Die tatsächliche Liquiditätsprognose findest du unter Finanzen.'),
   'finance',null,financeMonths,ready?complete.at(-1)?.month:ledger?.latest||null);
  // The 0.5.64 relationship cadence and pause state are authoritative. A paused
  // contact is excluded; no one is scored for distance or closeness alone.
