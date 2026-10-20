@@ -28,6 +28,7 @@ import {parseEventImport,upcomingImportedEvents,discoveryPromptRegional,discover
 import {eventState,queueEvent,queueEventPreference,removeEvents,prunePastEvents,pendingEventBatch,acknowledgeEventBatch,mergeEventSnapshot,resolveEventConflict} from './event-sync.js';
 import {healthViewModel,healthBars,healthTime,healthObservation} from './health-visual.js';
 import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-import.js';
+import {newestHealthFirst,healthImportCoverage} from './health-import-diagnostics-v492.js';
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
 import {financeDashboardView,FINANCE_TABS,FINANCE_GROUPS,financeGroupForPane} from './finance-dashboard.js';
@@ -67,7 +68,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.49.1';
+const COMPASS_CLIENT_VERSION='0.5.49.2';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -1253,8 +1254,11 @@ function healthSummaryPanel(mode='full'){
  const chart=(key,cls)=>{const bars=healthBars(vm.points,key);return `<div class="health-chart health-chart-${cls}" role="img" aria-label="${label(key)} in den letzten ${healthSpan} Tagen">${bars.map((b,i)=>`<div class="health-chart-slot" title="${h(b.day)}: ${h(b.label)}"><div class="health-chart-rail">${b.value===null?'<span class="health-chart-unknown" aria-hidden="true">·</span>':`<span class="health-chart-bar" style="height:${b.height}%"></span>`}</div><span class="health-chart-date">${h(new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric'}).format(new Date(b.day+'T12:00:00Z')))}</span></div>`).join('')}</div>`;};
  const cards=[['steps','steps','🚶','Bewegung'],['sleepMinutes','sleep','🌙','Schlaf'],['exerciseMinutes','exercise','🏃','Training']].map(([key,cls,emoji,title])=>`<article class="health-visual-card"><div class="health-card-title"><span class="health-card-icon" aria-hidden="true">${emoji}</span><strong>${title}</strong></div><span class="health-card-number">${fmt(key,s[key].average)}</span><span class="health-card-sub">Ø je erfasstem Tag · ${s[key].count}/${healthSpan} Messwerte</span>${chart(key,cls)}</article>`).join('');
  const rows=[...healthDays].sort((a,b)=>b.day.localeCompare(a.day)).slice(0,30);
+ const storedHealth=healthImportCoverage(state?.healthImports||{}),previewHealth=healthFilePreview?healthImportCoverage(healthFilePreview):null;
+ const showCoverage=r=>r.count?`${h(r.last)} · ${r.count.toLocaleString('de-AT')} Werte`:'keine gültigen Messwerte';
  return `${mode==='sources'?healthSourcesView(state?.healthImports):importedHealthDashboard(state?.healthImports,importHealthSpan,selectedGarminNight)}
- ${healthFilePreview?`<section class="health-import-preview"><strong>Importvorschau</strong><p>${healthFilePreview.processed} Datei(en) gelesen · ${healthFilePreview.fitdays.length} Fitdays-Messungen · ${healthFilePreview.garminNights.length} Garmin-Nächte · ${healthFilePreview.garminHrv.length} HRV-Tage · ${(healthFilePreview.garminWellness||[]).length} Stress-/Energie-Messpunkte · ${(healthFilePreview.garminFitness||[]).length} Garmin-Aktivitätstage · ${(healthFilePreview.garminSessions||[]).length} Trainingssessions.</p>${healthFilePreview.errors.length?`<p class="error">${healthFilePreview.errors.map(h).join('<br>')}</p>`:''}<div class="health-import-preview-actions"><button type="button" class="primary-btn" data-action="health-import-confirm">Import übernehmen</button><button type="button" class="secondary-btn" data-action="health-import-cancel">Verwerfen</button></div><small>Originaldateien werden weder gespeichert noch zur Cloud übertragen.</small></section>`:''}
+ ${mode==='sources'?`<p class="muted-line health492-coverage">Im Vault gespeichert: <strong>Stress bis ${showCoverage(storedHealth.stress)}</strong> · Schlaf bis ${storedHealth.nights.last?h(storedHealth.nights.last):'–'}. Eine erkannte ZIP-Datei ist noch kein bestätigter Import.</p>`:''}
+ ${healthFilePreview?`<section class="health-import-preview"><strong>Importvorschau · noch nicht gespeichert</strong><p>${healthFilePreview.processed} Datei(en) gelesen · ${healthFilePreview.fitdays.length} Fitdays-Messungen · ${healthFilePreview.garminNights.length} Garmin-Nächte · ${healthFilePreview.garminHrv.length} HRV-Tage · ${(healthFilePreview.garminWellness||[]).length} Stress-/Energie-Messpunkte · ${(healthFilePreview.garminFitness||[]).length} Garmin-Aktivitätstage · ${(healthFilePreview.garminSessions||[]).length} Trainingssessions.</p><p class="health492-coverage"><strong>Stress: ${showCoverage(previewHealth.stress)}</strong> · Body Battery: ${showCoverage(previewHealth.battery)} · Schlaf bis ${previewHealth.nights.last?h(previewHealth.nights.last):'–'}</p>${!previewHealth.stress.count?'<p class="muted-line">Achtung: Diese Vorschau enthält keine gültigen Stresswerte. Der Import ergänzt deshalb das Stressdiagramm nicht.</p>':''}${healthFilePreview.errors.length?`<details><summary>${healthFilePreview.errors.length} nicht lesbare Dateien anzeigen</summary><p class="error">${healthFilePreview.errors.slice(0,30).map(h).join('<br>')}${healthFilePreview.errors.length>30?'<br>Weitere Fehler im Stapel vorhanden.':''}</p></details>`:''}<div class="health-import-preview-actions"><button type="button" class="primary-btn" data-action="health-import-confirm">Messwerte speichern</button><button type="button" class="secondary-btn" data-action="health-import-cancel">Verwerfen</button></div><small>Originaldateien werden weder gespeichert noch zur Cloud übertragen.</small></section>`:''}
  ${mode==='sources'?`<section class="work-card health-panel health-source-connection" aria-label="Health Connect"><div class="health-source-connection-head"><div><strong>${ico('activity',17)} Health Connect</strong><p>${healthDays.length} geladene Tageswerte · Cloud-Verbindung · maximal 90 Tage geladen</p></div><button type="button" class="secondary-btn" data-action="health-refresh" ${!authToken?'disabled':''}>${ico('sync',14)} Aktualisieren</button></div>${healthError?`<p class="error">${h(healthError)}</p>`:''}<details class="health-source-advanced"><summary>Geräte, Widget und Zugriffsrechte verwalten</summary>`:` <section class="work-card health-panel" aria-label="Gesundheitsüberblick"><div class="work-heading"><span>${ico('activity',18)} Gesundheit · Dein Überblick</span><button class="secondary-btn" data-action="health-refresh" ${!authToken?'disabled':''}>${ico('refresh',14)} Aktualisieren</button></div>
  <div class="health-hero"><div><span class="eyebrow">LETZTE ${healthSpan} TAGE</span><h3>Bewegung, Schlaf und Training</h3><p>Deine tatsächlichen Health-Connect-Messwerte. Fehlende Daten bleiben als Lücken sichtbar.</p></div><div class="health-span"><button class="secondary-btn ${healthSpan===7?'is-chosen':''}" data-action="health-range" data-id="7" aria-pressed="${healthSpan===7}">7 Tage</button><button class="secondary-btn ${healthSpan===30?'is-chosen':''}" data-action="health-range" data-id="30" aria-pressed="${healthSpan===30}">30 Tage</button></div></div>
  <div class="health-visual-grid">${cards}</div>
@@ -2175,7 +2179,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
           financePreview=preview;financePane='Prüfen';tab='finance';calmNavGroup='finance';
         }else if(id==='health'){
           // A single confirmation covers up to 150 similar ZIPs; the parser runs in bounded batches.
-          const batch=group.slice(0,150);
+          const batch=newestHealthFirst(group).slice(0,150);
           const preview={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],errors:[],processed:0};
           for(let i=0;i<batch.length;i+=40){
             const part=await inspectHealthFiles(batch.slice(i,i+40).map(x=>x.file));
@@ -2184,7 +2188,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
           }
           if(!preview.processed)throw Error((preview.errors||[]).slice(0,3).join(' · ')||'Keine lesbaren Gesundheitsdateien.');
           group.splice(0,group.length,...batch);
-          smartHubNotice=`${batch.length} Gesundheitsdateien in gemeinsamer Vorschau; ${smartHubEntries.filter(e=>e.kind==='health'&&!e.duplicate).length-batch.length} verbleiben für den nächsten Durchgang.`;
+          const loaded=healthImportCoverage(preview),remaining=group.length-batch.length;
+          smartHubNotice=`${batch.length} neueste Gesundheitsdateien geprüft · Stress bis ${loaded.stress.last||'kein gültiger Wert'} · ${remaining} weitere Dateien warten nach Bestätigung. Noch nicht gespeichert!`;
           healthFilePreview=preview;tab='insights';insightTab='sources';calmNavGroup='insights';
         }else if(id==='places'){
           if(group.length>12)throw Error('Maximal zwölf Timeline-Dateien pro Vorschau.');
@@ -2645,7 +2650,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='health-import-confirm'){
       if(!healthFilePreview)return;
       const staged=healthFilePreview;
-      try{await mutate(s=>{commitHealthImport(s,staged);if(smartHubStage?.kind==='health'&&!staged.errors?.length)s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'health');});if(smartHubStage?.kind==='health'){if(!staged.errors?.length)for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}healthFilePreview=null;toast('Garmin- und Fitdays-Messwerte im verschlüsselten Tresor gespeichert.');}
+      try{let result=null;await mutate(s=>{const before=healthImportCoverage(s.healthImports||{});commitHealthImport(s,staged);const after=healthImportCoverage(s.healthImports||{});result={addedStress:after.stress.count-before.stress.count,latestStress:after.stress.last,addedSleep:after.nights.count-before.nights.count};if(smartHubStage?.kind==='health'&&!staged.errors?.length)s.smartImportHistory=committedSmartImport(s.smartImportHistory,smartHubStage.entries,'health');});if(smartHubStage?.kind==='health'){if(!staged.errors?.length)for(const e of smartHubStage.entries)e.duplicate=true;smartHubStage=null;}healthFilePreview=null;insightWellnessDay='';const remaining=smartHubEntries.filter(e=>e.kind==='health'&&!e.duplicate).length;smartHubNotice=`Gesundheitsimport bestätigt: ${result?.addedStress??0} neue Stresspunkte; letzter Stresswert ${result?.latestStress||'keiner'}.${remaining?` ${remaining} weitere Dateien warten im Smart Import Hub.`:''}`;toast(smartHubNotice);}
       catch(ex){toast(ex.message,true);}return;
     }
     if(action==='health-import-clear'){

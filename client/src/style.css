@@ -2134,3 +2134,6 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .smart49-group summary{color:var(--text-muted,#64717c);cursor:pointer}
 .smart49-group .smart49-list{max-height:200px;margin-bottom:2px}
 @media(max-width:630px){.smart49-group-head{align-items:stretch;flex-direction:column}.smart49-group-head select{width:100%;max-width:none}}
+/* 0.5.49.2: compact import coverage, without new panels. */
+.health492-coverage{font-size:12px;line-height:1.55;margin:8px 0 13px;color:#60796B}
+.health492-coverage strong{color:#315A49;font-weight:650}
