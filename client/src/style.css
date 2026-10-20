@@ -2143,3 +2143,11 @@ footer{padding:30px 0 12px;display:flex;justify-content:center;align-items:cente
 .health493-job progress{width:100%;height:6px;accent-color:#327D6B}
 .health493-job p{font-size:12px;color:var(--text-muted,#64717c);margin:0}
 .health493-job button{justify-self:start}
+
+/* 0.5.49.4 · concise import coverage, no extra dashboard/navigation. */
+.health494-coverage{border:1px solid #e0eae3;border-radius:13px;background:#fff;padding:12px 14px;margin:11px 0;color:#335746;}
+.health494-overall{display:flex;align-items:baseline;gap:8px 16px;flex-wrap:wrap;margin-bottom:8px}.health494-overall>span{font-size:11px;color:#678375}.health494-overall strong{font-size:13px}.health494-overall small{font-size:10px;color:#7a9385}
+.health494-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:5px 11px}.health494-metrics>div{display:flex;flex-direction:column;gap:2px;border-top:1px solid #edf2ee;padding:7px 0 2px;min-width:0}.health494-metrics span{font-size:10px;color:#789283}.health494-metrics strong{font-size:11px;color:#315948;font-weight:650}.health494-metrics small{font-size:10px;color:#81988b}
+.health494-details{border-top:1px solid #e9efea;margin-top:8px;padding-top:8px}.health494-details summary{cursor:pointer;font-size:11px;font-weight:650;color:#356d56}.health494-details p{font-size:11px;line-height:1.45;color:#748879}.health494-months{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:5px}.health494-month{border:1px solid #e5eee7;border-radius:7px;padding:7px;display:flex;gap:4px 10px;flex-wrap:wrap;font-size:10px;color:#51705e}.health494-month strong{color:#244938}.health494-gaplines{padding-top:6px}.health494-empty{margin:4px 0}
+.smart494-file-period{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;border:1px solid #e0eae3;padding:8px 12px;border-radius:10px;margin:9px 0;font-size:11px;color:#416752}.smart494-file-period small{font-size:10px;color:#829589}.smart494-stored .health494-coverage{margin:7px 0}.smart494-preview{margin:10px 0}.smart494-preview progress{display:block;width:100%;height:9px;margin:8px 0}
+@media(max-width:680px){.health494-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.health494-overall{gap:4px 10px}}

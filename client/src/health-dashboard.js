@@ -84,7 +84,7 @@ export function importedHealthDashboard(data={},span=90,selectedNight=''){
 /** 0.5.8: separate source administration from analytics so that the sidebar has one Insights entry. */
 export function healthSourcesView(data={}){
  const nights=data?.garminNights||[],hrvs=data?.garminHrv||[],fit=data?.fitdays||[],wellness=data?.garminWellness||[],fitness=data?.garminFitness||[],sessions=data?.garminSessions||[],today=new Date().toLocaleDateString('sv-SE');
- const missing=missingGarminDays([...nights,...hrvs],today);
+ const missing=missingGarminDays([...nights,...hrvs],today).filter(day=>day<today);
  const imported=fit.length+nights.length+hrvs.length+wellness.length+fitness.length+sessions.length;
  const sourceCard=(icon,title,count,subtitle,extra)=>`<article class="health-source-card"><span class="health-source-mark" aria-hidden="true">${icon}</span><div><strong>${title}</strong><span>${subtitle}</span></div><b>${count.toLocaleString('de-AT')}</b>${extra?`<small>${extra}</small>`:''}</article>`;
  return `<section class="health-import-hub health-sources-only" aria-label="Gesundheitsdatenquellen">

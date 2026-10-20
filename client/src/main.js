@@ -29,6 +29,7 @@ import {eventState,queueEvent,queueEventPreference,removeEvents,prunePastEvents,
 import {healthViewModel,healthBars,healthTime,healthObservation} from './health-visual.js';
 import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-import.js';
 import {healthImportCoverage} from './health-import-diagnostics-v492.js';
+import {healthDataCoverage,healthCoverageMarkup,importFilePeriod} from './health-data-coverage-v494.js';
 import {planHealthQueue,healthBatchResult} from './health-import-queue-v493.js';
 import {importedHealthDashboard,healthSourcesView,healthBodyView,healthConnectActivityView} from './health-dashboard.js';
 import {financeViewModel,financeReviewGroups,previewBankFiles,categorizeTransaction,merchantKey,validCategory,safeMerchantRule,classifyBankTransaction,updateBankSuggestions} from './finance-core.js';
@@ -69,7 +70,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.49.3';
+const COMPASS_CLIENT_VERSION='0.5.49.4';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -174,8 +175,25 @@ let financeTripSelected='',financeTripQuery='',financeTripMode='suggested',finan
 let exploreX='sleepMinutes',exploreY='workMinutes',exploreLag=0;
 let smartHubEntries=[],smartHubBusy=false,smartHubNotice='',smartHubStage=null;
 let healthImportJob=null,healthImportStop=false,healthImportIssues=[];
+let smartHubScanSource='';
 const smartHubFolders={health:null,finance:null};
 const smartHubFolderStatus={};
+/** A single explicit folder consent triggers local classification; "Prüfen" rescans on demand.
+ * No OS background access, no automatic import or cloud upload. */
+async function scanSmartFolder(id){
+ const handle=smartHubFolders[id];if(!handle||smartHubBusy)return;
+ try{
+  const permission=typeof handle.queryPermission==='function'?await handle.queryPermission({mode:'read'}):'granted';
+  if(permission!=='granted'){smartHubNotice='Ordnerzugriff abgelaufen. Bitte erneut freigeben.';smartHubFolders[id]=null;delete smartHubFolderStatus[id];render();return;}
+  smartHubBusy=true;smartHubNotice='Ordner wird lokal geprüft …';render();
+  const scan=await collectFolderFiles(handle);
+  smartHubEntries=await inspectSmartFiles(scan.files,state?.smartImportHistory||[]);
+  smartHubScanSource=id;
+  smartHubNotice=`${scan.files.length} Dateien aus ${handle.name} geprüft.${scan.warnings.length?' '+scan.warnings.join(' · '):''}`;
+ }catch(ex){smartHubNotice='Ordnerprüfung: '+String(ex.message||ex);}
+ finally{smartHubBusy=false;render();}
+}
+
 let placesPreview=null,placesImportBusy=false,selectedPlaceKey='',placesMapRegion='world',placesMapZoom=1,placesListLimit=25;
 let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryCategories=null,discoveryCategoriesOpen=false,discoveryImportOpen=false,discoveryWeekOffset=0,discoveryImportPreview=null;
 const discoveryExpandedDays=new Set();
@@ -1054,7 +1072,7 @@ function privateMirrorSettings(){
  <details><summary>Datenschutz und Funktionsumfang</summary><p class="small-muted">Nur Bankdaten einschließlich Korrekturen, finanzielle Ziele und lokale Garmin/Fitdays-Importe sowie manuelle Aktivitäten. Cloudflare sieht verschlüsselten Inhalt, Zeitpunkte und die Datenpaketgröße; keine Klartexte und keine Passphrase. Der Schlüssel liegt nur im verschlüsselten lokalen Tresor. Änderungen an diesen Bereichen erfolgen am Hauptgerät; andere Geräte erhalten eine schreibgeschützte Kopie. Beim Abgleich bleibt eine lokale Offline-Kopie erhalten. Verlierst du die Sync-Passphrase auf beiden Geräten und die eingerichteten Tresore, kann niemand Cloud-Daten entschlüsseln. Kein automatisches Zusammenführen widersprüchlicher Finanzkorrekturen.</p></details></section>`;
 }
 function systemScreen(){
- return chrome(`${smartImportHubView({entries:smartHubEntries,history:state?.smartImportHistory||[],folderStatus:smartHubFolderStatus,notice:smartHubNotice,busy:smartHubBusy})}<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
+ return chrome(`${smartImportHubView({entries:smartHubEntries,history:state?.smartImportHistory||[],folderStatus:smartHubFolderStatus,notice:smartHubNotice,busy:smartHubBusy,source:smartHubScanSource,storedCoverage:healthDataCoverage(state?.healthImports||{},localDate()),healthPreview:smartHubStage?.kind==='health'?healthFilePreview:null,healthJob:healthImportJob})}<div class="system-grid"><section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('cloud',22)}<h2>Cloud-Verbindung</h2></div></div><p class="module-subtitle">GitHub Pages · Cloudflare Worker · D1</p>
  <div class="connection-detail"><span class="connection-dot ${configured()?'green':'amber'}"></span><span>${configured()?'Konfiguration hinterlegt':'Google-Anmeldung noch nicht konfiguriert'}</span></div>
  <p class="small-muted">${configured()?'API: '+h(config.apiUrl):'In client/public/runtime-config.json sind noch Konfigurationswerte zu ergänzen.'}</p><p class="small-muted">Frontend: Compass ${COMPASS_CLIENT_VERSION} · benötigt Worker-API 11 oder neuer.</p>
  <div id="google-button" class="google-button"></div><p class="small-muted">${authToken?'Compass-Sitzung aktiv: '+h(currentUser)+' · bleibt nach erneutem Tresor-Entsperren erhalten.':'Google-Anmeldung einmalig verknüpfen; danach wird die Compass-Sitzung verschlüsselt im Tresor gespeichert.'}</p><p class="small-muted">Planung automatisch: nach Änderungen und bei geöffneter App regelmäßig. Bank- und Garmin-Importe werden erst mit aktiviertem privaten Geräteabgleich übertragen.</p>
@@ -1259,7 +1277,7 @@ function healthSummaryPanel(mode='full'){
  const storedHealth=healthImportCoverage(state?.healthImports||{}),previewHealth=healthFilePreview?healthImportCoverage(healthFilePreview):null;
  const showCoverage=r=>r.count?`${h(r.last)} · ${r.count.toLocaleString('de-AT')} Werte`:'keine gültigen Messwerte';
  return `${mode==='sources'?healthSourcesView(state?.healthImports):importedHealthDashboard(state?.healthImports,importHealthSpan,selectedGarminNight)}
- ${mode==='sources'?`<p class="muted-line health492-coverage">Im Vault gespeichert: <strong>Stress bis ${showCoverage(storedHealth.stress)}</strong> · Schlaf bis ${storedHealth.nights.last?h(storedHealth.nights.last):'–'}. Eine erkannte ZIP-Datei ist noch kein bestätigter Import.</p>`:''}
+ ${mode==='sources'?healthCoverageMarkup(healthDataCoverage(state?.healthImports||{},today)):''}
  ${mode==='sources'&&healthImportIssues.length?`<details class="health493-issues health-import-preview"><summary>${healthImportIssues.length} Importhinweise · betroffene Archive anzeigen</summary><div>${healthImportIssues.slice(0,60).map(msg=>`<p class="muted-line">${h(msg)}</p>`).join('')}</div></details>`:''}
  ${healthImportJob?`<section class="health-import-preview health493-job" role="status"><strong>Gesundheitsimport · ${healthImportJob.done}/${healthImportJob.total}</strong><progress max="${healthImportJob.total}" value="${healthImportJob.done}"></progress><p>${h(healthImportJob.message)}</p><button type="button" class="secondary-btn" data-action="health-import-stop" ${healthImportStop?'disabled':''}>Nach diesem Stapel stoppen</button></section>`:''}
  ${healthFilePreview&&!healthImportJob?`<section class="health-import-preview"><strong>Importvorschau · noch nicht gespeichert</strong><p>${healthFilePreview.processed} Datei(en) gelesen · ${healthFilePreview.fitdays.length} Fitdays-Messungen · ${healthFilePreview.garminNights.length} Garmin-Nächte · ${healthFilePreview.garminHrv.length} HRV-Tage · ${(healthFilePreview.garminWellness||[]).length} Stress-/Energie-Messpunkte · ${(healthFilePreview.garminFitness||[]).length} Garmin-Aktivitätstage · ${(healthFilePreview.garminSessions||[]).length} Trainingssessions.</p><p class="health492-coverage"><strong>Stress: ${showCoverage(previewHealth.stress)}</strong> · Body Battery: ${showCoverage(previewHealth.battery)} · Schlaf bis ${previewHealth.nights.last?h(previewHealth.nights.last):'–'}</p>${!previewHealth.stress.count?'<p class="muted-line">Achtung: Diese Vorschau enthält keine gültigen Stresswerte. Der Import ergänzt deshalb das Stressdiagramm nicht.</p>':''}${healthFilePreview.errors.length?`<details><summary>${healthFilePreview.errors.length} nicht lesbare Dateien anzeigen</summary><p class="error">${healthFilePreview.errors.slice(0,30).map(h).join('<br>')}${healthFilePreview.errors.length>30?'<br>Weitere Fehler im Stapel vorhanden.':''}</p></details>`:''}<div class="health-import-preview-actions"><button type="button" class="primary-btn" data-action="health-import-confirm">${smartHubStage?.kind==='health'?`Alle ${smartHubStage.entries.length} Archive übernehmen`:'Messwerte speichern'}</button><button type="button" class="secondary-btn" data-action="health-import-cancel">Verwerfen</button></div><small>Originaldateien werden weder gespeichert noch zur Cloud übertragen.</small></section>`:''}
@@ -1661,7 +1679,7 @@ function bind() {
   async function addSmartFiles(files){
     if(smartHubBusy||!files?.length)return;
     smartHubBusy=true;smartHubNotice='Dateien werden lokal untersucht …';
-    try{smartHubEntries=await inspectSmartFiles([...files],state?.smartImportHistory||[]);
+    try{smartHubEntries=await inspectSmartFiles([...files],state?.smartImportHistory||[]);smartHubScanSource='dateien';
       smartHubNotice=`${smartHubEntries.length} Dateien erkannt. Prüfe die Zuordnung und öffne die Importvorschau.`;
     }catch(ex){smartHubNotice='Fehler bei der Dateiprüfung: '+ex.message;}
     finally{smartHubBusy=false;render();}
@@ -2152,25 +2170,18 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='smart49-open'){
       tab='system';calmNavGroup='';render();requestAnimationFrame(()=>app.querySelector('#smart-import-hub')?.scrollIntoView({behavior:'smooth',block:'start'}));return;
     }
-    if(action==='smart49-reset'){if(smartHubBusy)return;smartHubEntries=[];smartHubStage=null;smartHubNotice='Dateiliste geleert. Originaldateien sind unverändert.';render();return;}
+    if(action==='smart49-reset'){if(smartHubBusy)return;smartHubEntries=[];smartHubStage=null;smartHubScanSource='';smartHubNotice='Dateiliste geleert. Originaldateien sind unverändert.';render();return;}
     if(action==='smart49-health-backfill'){if(smartHubBusy)return;smartHubEntries=recheckHealthArchiveEntries(smartHubEntries);smartHubNotice='Gesundheitsarchive können erneut geprüft werden. Bereits gespeicherte Messwerte werden beim Zusammenführen nicht verdoppelt.';render();return;}
     if(action==='smart49-pick-folder'){
       if(!SMART_IMPORT_SOURCES.some(x=>x.id===id))return;
       if(typeof window.showDirectoryPicker!=='function'){toast('Ordnerzugriff ist in diesem Browser nicht verfügbar. Bitte Dateien auswählen oder Chromium/Edge auf HTTPS verwenden.',true);return;}
       try{const folder=await window.showDirectoryPicker({id:'compass-smart49-'+id,mode:'read'});
         smartHubFolders[id]=folder;smartHubFolderStatus[id]='Freigegeben: '+folder.name+' · nur solange die App geöffnet ist';
-        smartHubNotice='Ordner freigegeben. Klicke auf Prüfen, um Dateien einzulesen.';render();
+        // Selecting a folder is enough: scan immediately, no second "Prüfen" click.
+        await scanSmartFolder(id);
       }catch(ex){if(ex.name!=='AbortError')toast('Ordnerauswahl: '+ex.message,true);}return;
     }
-    if(action==='smart49-rescan-folder'){
-      const handle=smartHubFolders[id];if(!handle||smartHubBusy)return;
-      try{const permission=typeof handle.queryPermission==='function'?await handle.queryPermission({mode:'read'}):'granted';
-        if(permission!=='granted'){smartHubNotice='Ordnerzugriff abgelaufen. Ordner bitte erneut freigeben.';smartHubFolders[id]=null;delete smartHubFolderStatus[id];render();return;}
-        smartHubBusy=true;const scan=await collectFolderFiles(handle);
-        smartHubEntries=await inspectSmartFiles(scan.files,state?.smartImportHistory||[]);
-        smartHubNotice=`${scan.files.length} Dateien aus ${handle.name} geprüft. ${scan.warnings.join(' · ')}`;render();
-      }catch(ex){toast('Ordnerprüfung: '+ex.message,true);}finally{smartHubBusy=false;render();}return;
-    }
+    if(action==='smart49-rescan-folder'){await scanSmartFolder(id);return;}
     if(action==='smart49-preview-kind'){
       if(smartHubBusy||!SMART_IMPORT_KINDS[id]||id==='unknown')return;
       const group=smartHubEntries.filter(e=>e.kind===id&&!e.duplicate);if(!group.length)return;
@@ -2194,7 +2205,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
           healthImportJob=null;healthImportIssues=[];
           smartHubStage={kind:'health',entries:queue.ordered,firstBatch:sample};
           smartHubNotice=`Vorschau: ${sample.length} von ${queue.total} Dateien geprüft · Stress bis ${coverage.stress.last||'kein Wert'} · Schlaf bis ${coverage.nights.last||'kein Wert'}. Nach einer Bestätigung werden ALLE ${queue.total} Archive schrittweise verarbeitet und gespeichert.`;
-          tab='insights';insightTab='sources';calmNavGroup='insights';
+          // Keep the preview in the Import Hub: no confusing navigation round-trip.
+          tab='system';calmNavGroup='';
         }else if(id==='places'){
           if(group.length>12)throw Error('Maximal zwölf Timeline-Dateien pro Vorschau.');
           placesPreview=await inspectTimelineFiles(group.map(x=>x.file));if(!placesPreview.visits.length)throw Error('Keine Standort-Aufenthalte erkannt.');
@@ -2222,7 +2234,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
         if(id!=='health')smartHubNotice=`${group.length} ${SMART_IMPORT_KINDS[id]}-Datei(en) zur bestehenden Importvorschau übergeben.`;
         render();
         requestAnimationFrame(()=>{
-          const selector=({bank:'#finance-import-manager',health:'.health-import-preview',places:'.places-import-preview',project:'#project-exchange-details',kraken:'.fin41-portfolio-panel'})[id];
+          const selector=({bank:'#finance-import-manager',health:'#smart49-health-review',places:'.places-import-preview',project:'#project-exchange-details',kraken:'.fin41-portfolio-panel'})[id];
           (selector&&app.querySelector(selector))?.scrollIntoView?.({behavior:'smooth',block:'start'});
         });
       }catch(ex){toast('Smart Import: '+ex.message,true);}return;
@@ -2693,7 +2705,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
         smartHubBusy=false;
         const c=healthImportCoverage(state?.healthImports||{});
         const remaining=smartHubEntries.filter(e=>e.kind==='health'&&!e.duplicate).length;
-        smartHubNotice=`Gesundheitsimport${healthImportStop?' angehalten':''}: ${healthImportJob.ok} Archive vollständig verarbeitet, ${healthImportJob.partial+healthImportJob.failed} mit Fehlern, ${remaining} noch offen. Im Vault: Stress bis ${c.stress.last||'–'}, Schlaf bis ${c.nights.last||'–'}.${errorMessage?` Fehler: ${errorMessage}`:''}`;
+        smartHubNotice=`Gesundheitsimport${healthImportStop?' angehalten':''}: ${healthImportJob.ok} Archive vollständig verarbeitet, ${healthImportJob.partial+healthImportJob.failed} mit Fehlern, ${remaining} noch offen. Im Vault: Stress ${c.stress.first||'–'} bis ${c.stress.last||'–'}, Schlaf ${c.nights.first||'–'} bis ${c.nights.last||'–'}.${errorMessage?` Fehler: ${errorMessage}`:''}`;
         healthImportJob=null;healthFilePreview=null;smartHubStage=null;insightWellnessDay='';
         toast(smartHubNotice,Boolean(errorMessage));return;
       }

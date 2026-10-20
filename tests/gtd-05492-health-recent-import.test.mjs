@@ -52,7 +52,7 @@ test('UI shows confirmed last stress date separately from import preview and rea
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(main,/planHealthQueue\(group\)/);
  assert.match(main,/Importvorschau · noch nicht gespeichert/);
- assert.match(main,/Im Vault gespeichert/);
+ assert.match(main,/healthCoverageMarkup\(healthDataCoverage/);
  assert.match(main,/Gesundheitsimport bestätigt/);
  assert.match(main,/healthFilePreview=null;smartHubStage=null;insightWellnessDay=''/,'successful import must show latest day rather than stale selection');
 });

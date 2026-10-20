@@ -23,7 +23,7 @@ test('all supported preview types are explicitly confirmed by the old importer',
 });
 test('release does not claim background monitoring or silently process local folders',()=>{
  const ui=smartImportHubView();
- assert.match(ui,/Ordner wählen/);assert.match(ui,/Prüfen/);
+ assert.match(ui,/Ordner verbinden/);assert.match(ui,/Prüfen/);
  assert.match(ui,/geschlossenem Browser benötigt einen separaten lokalen Begleitprozess/);
- assert.match(ui,/erst nach deiner Bestätigung/);
+ assert.match(ui,/nach deiner Bestätigung|Zielimporte prüfen Inhalte und Dubletten vor dem Speichern|Zielimporte prüfen Inhalte und Dubletten/);
 });
