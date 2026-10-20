@@ -2,6 +2,7 @@
  * Only imported observations; rolling descriptive bands are not statistical confidence intervals or Garmin baseline scores.
  */
 import {sleepTimeline} from './health-dashboard.js';
+import {renderSleepIntelligence} from './sleep-intelligence-v550.js';
 import {sleepDistributionChart,hrvReferenceView,sleepHrvScatter} from './insights-stats.js';
 
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -51,16 +52,17 @@ export function nightClock(iso,kind='bed',timeZone){
 }
 export function buildSleepInsights(imported={},today=new Date().toISOString().slice(0,10),period='28',timeZone){
  const range=insightsRange(today,period);
- const nights=(imported.garminNights||[]).filter(x=>inRange(x.day,range)).map(n=>({
+ const allNights=(imported.garminNights||[]).filter(x=>/^\d{4}-\d\d-\d\d$/.test(x.day||'')&&x.day<=today).map(n=>({
   ...n, sleepMinutes:sleepMinutes(n),bedMinutes:nightClock(n.start,'bed',timeZone),wakeMinutes:nightClock(n.end,'wake',timeZone)
  })).sort((a,b)=>a.day.localeCompare(b.day));
+ const nights=allNights.filter(x=>inRange(x.day,range));
  const hrv=(imported.garminHrv||[]).filter(x=>inRange(x.day,range)).map(x=>({...x})).sort((a,b)=>a.day.localeCompare(b.day));
  const numeric=rows=>rows.filter(Number.isFinite);
  const mean=rows=>{const valid=numeric(rows);return valid.length?valid.reduce((sum,v)=>sum+v,0)/valid.length:null;};
  const available=nights.filter(x=>x.sleepMinutes!==null),latest=nights.at(-1)||null;
  const firstDay=nights[0]?.day||hrv[0]?.day||null;
  // Coverage is an observation count, not a claim of how many days the watch was worn.
- return {range,nights,hrv,firstDay,latest,validSleepNights:available.length,
+ return {range,nights,allNights,hrv,firstDay,latest,validSleepNights:available.length,
   totalNights:nights.length,totalHrvDays:hrv.filter(x=>Number.isFinite(x.nightAverageMs)).length,
   meanSleepMinutes:mean(available.map(x=>x.sleepMinutes)),meanBedMinutes:mean(nights.map(x=>x.bedMinutes)),
   meanWakeMinutes:mean(nights.map(x=>x.wakeMinutes)),meanHrv:mean(hrv.map(x=>x.nightAverageMs)),
@@ -125,27 +127,22 @@ export function weeklySleepGroups(nights){
  return [...groups.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([week,values])=>({week,count:values.length,mean:values.reduce((a,b)=>a+b,0)/values.length}));
 }
 export function insightsSleepView(model,selectedNight='',ico=()=>'',today=''){
- const {nights,hrv,range}=model,latest=nights.find(n=>n.day===selectedNight)||nights.at(-1)||null;
- const overview=[
-  ['Ø Schlaf',readableMinutes(model.meanSleepMinutes),'Garmin · valide Nächte'],
-  ['Ø Einschlafen',fmtClock(model.meanBedMinutes),'Gerätezeitzone'],
-  ['Ø Aufwachen',fmtClock(model.meanWakeMinutes),'Gerätezeitzone'],
-  ['Ø nächtliche HRV',Number.isFinite(model.meanHrv)?`${number(model.meanHrv)} ms`:'–','Importierte HRV-Tage']
- ];
- const sleepRows=nights.map(n=>({day:n.day,sleepMinutes:n.sleepMinutes}));
- const weeks=weeklySleepGroups(nights).slice(-8);
+ const {nights,hrv,range}=model;
+ const allNights=model.allNights||nights;
+ const activeDay=today||range.end||new Date().toISOString().slice(0,10);
+ const sleep=renderSleepIntelligence({nights:allNights,selectedNight:(nights.some(n=>n.day===selectedNight)||([365,null].includes(range.days)&&allNights.some(n=>n.day===selectedNight)))?selectedNight:'',today:activeDay,
+  period:range.days===365?'365':range.days===90?'90':range.days===7?'7':range.days===null?'all':'28',
+  timeZone:model.timeZone,sleepTimeline});
  return `<div class="insight-sleep-content">
- <div class="insight-kpi-grid">${overview.map(([k,v,sub])=>`<article class="insight-kpi"><span>${escapeHtml(k)}</span><strong>${escapeHtml(v)}</strong><small>${escapeHtml(sub)}</small></article>`).join('')}</div>
- <div class="insight-data-note">${ico('shield',16)} <span><strong>${model.validSleepNights} Nächte</strong> mit Schlafdauer · <strong>${model.totalHrvDays} Tage</strong> mit nächtlicher HRV. Fehlende Messungen bleiben Lücken. Uhrzeiten werden in <strong>${escapeHtml(model.timeZone)}</strong> angezeigt, nicht automatisch in der Zeitzone einer Reise.</span></div>
- <div class="insight-chart-grid"><article class="insight-chart-card"><div class="insight-figure-title"><div><small>01 · SLEEP DURATION</small><h3>Wie lange schlafe ich?</h3></div>${ico('moon',20)}</div>${insightsLineChart(sleepRows,[{key:'sleepMinutes',label:'Schlafdauer',color:palette.green}],'Schlafdauer in Minuten',{unit:' min',range})}<p class="insight-figure-note">Nur echte Tief-, Leicht- und REM-Minuten aus Garmin. Ein Garmin-Sleep-Need-Wert ist noch nicht verfügbar.</p></article>
- <article class="insight-chart-card"><div class="insight-figure-title"><div><small>02 · SLEEP CONSISTENCY</small><h3>Wann schlafe ich?</h3></div>${ico('clock',20)}</div>${sleepConsistencyChart(nights,range)}<p class="insight-figure-note">Die Uhrzeiten stammen aus Import-Zeitstempeln. Bei Reisen kann die aktuelle Gerätezeitzone von der Ortszeit der damaligen Nacht abweichen.</p></article>
- <article class="insight-chart-card"><div class="insight-figure-title"><div><small>03 · HEART RATE VARIABILITY</small><h3>Mein HRV-Verlauf</h3></div>${ico('heart',20)}</div>${insightsLineChart(hrv,[{key:'nightAverageMs',label:'Nächtlicher Durchschnitt',color:palette.purple},{key:'weeklyAverageMs',label:'Garmin 7-Tage-Wert',color:palette.deep}],'HRV · Millisekunden',{unit:' ms',range})}<p class="insight-figure-note">Die 7-Tage-Werte werden nur gezeigt, wenn Garmin sie im FIT-Export liefert. Kein erfundener Baseline-Bereich und keine abgeleitete Statusklassifikation.</p></article>
- <article class="insight-chart-card"><div class="insight-figure-title"><div><small>04 · WEEKLY SUMMARY</small><h3>Meine Schlafwochen</h3></div>${ico('calendar',20)}</div>${weeks.length?`<div class="insight-weeks">${weeks.map(w=>{const width=Math.max(3,Math.min(100,w.mean/600*100));return `<div class="insight-week"><span>${escapeHtml(dayString(w.week))}</span><div class="insight-week-track"><i style="width:${width.toFixed(1)}%"></i></div><strong>${escapeHtml(readableMinutes(w.mean))}</strong><small>${w.count} Nächte</small></div>`;}).join('')}</div>`:noMeasurements('Noch keine vollständigen Schlafwochen importiert.')}<p class="insight-figure-note">Wochendurchschnitt je gemessener Nacht. Die Balken sind kein Sleep Score.</p></article></div>
- <div class="insight-chart-grid"><article class="insight-chart-card"><div class="insight-figure-title"><div><small>05 · SLEEP DISTRIBUTION</small><h3>Wie stark schwankt mein Schlaf?</h3></div>${ico('activity',20)}</div>${sleepDistributionChart(nights)}</article>
- <article class="insight-chart-card"><div class="insight-figure-title"><div><small>06 · PERSONAL HRV REFERENCE</small><h3>Meine beobachtete HRV-Spanne</h3></div>${ico('heart',20)}</div>${hrvReferenceView(hrv,(rows,series,title,options)=>insightsLineChart(rows,series,title,{...options,range}))}</article>
- <article class="insight-chart-card insight-night-detail"><div class="insight-figure-title"><div><small>07 · SLEEP & HRV</small><h3>Schlaf und HRV zusammen</h3></div>${ico('layers',20)}</div>${sleepHrvScatter(nights,hrv)}</article></div>
- <article class="insight-chart-card insight-night-detail health-night-dark"><div class="insight-figure-title"><div><small>08 · THE NIGHT</small><h3>Schlafphasen im Detail</h3></div>${ico('moon',20)}</div>${nights.length?`<nav class="health-day-switch" aria-label="Schlafnacht wechseln"><button type="button" data-action="insights-night-day" data-id="${escapeHtml(nights[nights.findIndex(n=>n.day===latest.day)-1]?.day||'')}" ${nights.findIndex(n=>n.day===latest.day)>0?'':'disabled'} aria-label="Vorherige Schlafnacht">←</button><strong>${escapeHtml(new Date(dateUTC(latest.day)).toLocaleDateString('de-AT',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}))}</strong><button type="button" data-action="insights-night-day" data-id="${escapeHtml(nights[nights.findIndex(n=>n.day===latest.day)+1]?.day||'')}" ${nights.findIndex(n=>n.day===latest.day)<nights.length-1?'':'disabled'} aria-label="Nächste Schlafnacht">→</button></nav>`:''}${latest?sleepTimeline(latest):noMeasurements('Noch keine importierten Garmin-Nächte.')}<div class="insight-night-totals">${latest?[['Tief',latest.totals?.deep,palette.deep],['Leicht',latest.totals?.light,palette.light],['REM',latest.totals?.rem,palette.rem],['Wach',latest.totals?.awake,palette.awake]].map(([label,v,color])=>`<span><i style="background:${color}"></i>${label}: ${Number.isFinite(v)?readableMinutes(v):'–'}</span>`).join(''):''}</div></article>
- <div class="insight-footnote">Die Garmin-Messwerte sind Schätzungen der Uhr, keine medizinische Diagnose. Ein statistisches 95%-Konfidenzintervall folgt in der Statistikphase nur dort, wo genug Messungen und ein geeignetes Zeitreihenmodell vorliegen. Fehlende Werte werden weder extrapoliert noch als Null behandelt.</div>
+ ${sleep}
+ <div class="insight-data-note">${ico('shield',16)} <span><strong>${model.validSleepNights} gemessene Nächte</strong> im ausgewählten Zeitraum · <strong>${model.totalHrvDays} HRV-Tage</strong>. Die Uhrzeiten werden in <strong>${escapeHtml(model.timeZone)}</strong> angezeigt, nicht nachträglich in Reise-Ortszeiten umgerechnet. Fehlende Messungen sind keine Nullwerte.</span></div>
+ <details class="sleep550-extra sleep550-extended"><summary>Weitere Analysen: Schlafkonsistenz, Boxplots & HRV</summary>
+  <div class="insight-chart-grid"><article class="insight-chart-card"><div class="insight-figure-title"><div><small>03 · SLEEP CONSISTENCY</small><h3>Wann schlafe ich?</h3></div>${ico('clock',20)}</div>${sleepConsistencyChart(nights,range)}<p class="insight-figure-note">Zeitstempel in deiner aktuell gewählten Zeitzone; Ortszeit auf Reisen kann abweichen.</p></article>
+  <article class="insight-chart-card"><div class="insight-figure-title"><div><small>04 · WEEKLY DISTRIBUTION</small><h3>Wie stark schwankt mein Schlaf?</h3></div>${ico('activity',20)}</div>${sleepDistributionChart(nights)}</article>
+  <article class="insight-chart-card"><div class="insight-figure-title"><div><small>05 · PERSONAL HRV REFERENCE</small><h3>Meine beobachtete HRV-Spanne</h3></div>${ico('heart',20)}</div>${hrvReferenceView(hrv,(rows,series,title,options)=>insightsLineChart(rows,series,title,{...options,range}))}</article>
+  <article class="insight-chart-card"><div class="insight-figure-title"><div><small>06 · SLEEP & HRV</small><h3>Schlaf und HRV zusammen</h3></div>${ico('layers',20)}</div>${sleepHrvScatter(nights,hrv)}</article></div>
+ </details>
+ <div class="insight-footnote">Nur tatsächlich beobachtete Tief-, Leicht- und REM-Minuten aus Garmin, keine medizinische Diagnose. Ein Garmin-Sleep-Need-Wert ist noch nicht verfügbar. Garmin-Schlafphasen können von Schlaflaborwerten abweichen; daraus leiten wir keine Schlafstörung oder Übermüdungsdiagnose ab. Ein mögliches 95%-Konfidenzintervall folgt nur mit geeignetem statistischen Modell. Fehlende Werte werden nicht geschätzt.</div>
  </div>`;
 }
 export function insightsPlannedView(tab,imported={},healthDays=[],activities=[]){

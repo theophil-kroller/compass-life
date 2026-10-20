@@ -70,7 +70,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.49.4';
+const COMPASS_CLIENT_VERSION='0.5.50';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -2107,7 +2107,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       delete state.privateDeviceMirror;await persist();toast('Cloud-Kopien gelöscht. Lokale Tresordaten bleiben erhalten.');return;
     }
     if(action==='private-mirror-disconnect'){if(!confirm('Geräteabgleich nur auf diesem Gerät deaktivieren? Lokale Daten bleiben erhalten. Verschlüsselte Cloud-Kopien werden dabei NICHT gelöscht.'))return;delete state.privateDeviceMirror;await persist();toast('Geräteabgleich auf diesem Gerät deaktiviert.');return;}
-    if(action==='insights-night-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;const model=buildSleepInsights(state?.healthImports||{},localDate(),insightPeriod);if(model.nights.some(x=>x.day===id)){insightNight=id;render();}return;}
+    if(action==='insights-night-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;const model=buildSleepInsights(state?.healthImports||{},localDate(),'all');if(model.nights.some(x=>x.day===id)){insightNight=id;render();}return;}
     if(action==='insights-wellness-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;const items=(state?.healthImports?.garminWellness||[]);if(items.some(x=>String(x.at||'').slice(0,10)===id)){insightWellnessDay=id;render();}return;}
     if(action==='insights-stress-granularity'){if(['day','week'].includes(id)){insightStressGranularity=id;render();}return;}
     if(action==='insights-body-composition'){if(['composition','water','stacked'].includes(id)){insightBodyComposition=id;render();}return;}
