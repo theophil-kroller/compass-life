@@ -1,0 +1,29 @@
+Compass 0.5.70.1 – Journal-Sync / Mobile-UX-Hotfix
+=================================================
+
+SICHERN: Vorher lokalen Tresor als verschlüsseltes Backup sichern.
+
+Wenn derzeit 0.5.70 installiert ist:
+  Compass_0.5.70.1_PATCH_FROM_0.5.70.zip in das Repository-Stammverzeichnis entpacken, Dateien ersetzen, committen/deployen.
+
+Wenn derzeit 0.5.69.2 installiert ist (Handy-Screenshot):
+  Compass_0.5.70.1_PATCH_FROM_0.5.69.2.zip verwenden. Dieser kumulative Patch beinhaltet auch Miracle Morning 0.5.70.
+
+Alternativ: Compass_0.5.70.1_FULL_SOURCE.zip als vollständigen Quellstand verwenden.
+
+Nach grünem GitHub-Actions-Deployment Browser/PWA neu laden. Handy und Laptop sollten dieselbe neue Compass-Version anzeigen.
+
+Kein D1-Schema-Update. Voraussetzung: Bereits deployter Journal-Worker + D1-Migration 0018 aus Compass 0.5.69.2.
+
+TESTABLAUF
+1. Handy und Laptop: Tresor entsperren, Google-Verbindung und privater Geräteabgleich im Bereich Einstellungen prüfen.
+2. Handy: Arbeitszeit → Play. Den ausdrücklich angezeigten Journal-Abgleich abwarten. Nicht sofort den Tresor sperren.
+3. Laptop: Arbeitszeit-Popover öffnen; die aktuelle mobile Stempelzeit muss erscheinen.
+4. Laptop: Stopp, wieder bestätigten Abgleich abwarten.
+5. Handy: Arbeitszeit erneut öffnen; der beendete Block muss sichtbar sein.
+6. Handy: Die Utility-Bar horizontal wischen; alle Symbole bleiben erreichbar, kein überstehendes Panel.
+7. Habit-Popover: Der unnötige Motivationssatz ist entfernt.
+
+HINWEIS: Bei gesperrtem Tresor wird zunächst lokal verschlüsselt vorgemerkt. Der geräteübergreifende Sync beginnt nach Entsperren und erfolgreicher Cloud-Verbindung.
+
+AUTOMATISCHE TESTS: 718/718; Vite-Produktionsbuild / echte Browserabnahme nicht verifiziert.

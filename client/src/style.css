@@ -2931,3 +2931,19 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .mm570-player-footer>small{text-align:center;color:#71867d;font-size:11px}
 @media(max-width:620px){.mm570-overview{grid-template-columns:repeat(3,minmax(0,1fr))}.mm570-settings-grid{grid-template-columns:repeat(2,1fr)}.mm570-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.mm570-head-actions{justify-content:flex-start}.mm570-player{padding:17px;border-radius:20px}.mm570-clock{width:126px;height:126px;margin:9px auto}.mm570-desc{padding:12px}.mm570-emoji{font-size:36px}.mm570-center>h2{font-size:27px}}
 .mm570-restart{align-self:center;border:0;background:transparent;color:#668477;text-decoration:underline;text-underline-offset:3px;font-size:12px;cursor:pointer;padding:5px 10px}
+
+/* 0.5.70.1 · The mobile utility row scrolls horizontally, like the primary nav.
+   Fixed quick overlays remain viewport-bound rather than inheriting desktop widths. */
+@media(max-width:700px){
+  html,body,#app,.shell,.workspace{max-width:100%;min-width:0;}
+  html,body{overflow-x:clip;}
+  .utility-bar{display:block;width:100%;max-width:100%;box-sizing:border-box;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;white-space:nowrap;padding:0 10px;}
+  .utility-bar::-webkit-scrollbar{display:none;}
+  .utility-bar .capture-shortcut{display:none;}
+  .utility-bar .utility-right{display:flex;width:max-content;min-width:max-content;height:100%;align-items:center;gap:8px;}
+  .utility-right .connection>span:last-child{max-width:90px;}
+  .quick-panel-backdrop{box-sizing:border-box;inset:0;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;padding:8px 8px max(8px,env(safe-area-inset-bottom));}
+  .quick-panel{box-sizing:border-box;min-width:0;max-width:100%;width:100%;max-height:calc(100dvh - 72px);padding:18px 16px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;border-radius:22px;}
+  .quick-panel .quick-panel-head,.quick-panel .work569-day,.quick-panel .work569-status,.quick-panel .work569-actions{min-width:0;max-width:100%;}
+  .quick-panel h2,.quick-panel p{overflow-wrap:anywhere;}
+}

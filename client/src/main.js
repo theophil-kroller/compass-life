@@ -89,7 +89,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.70';
+const COMPASS_CLIENT_VERSION='0.5.70.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -155,6 +155,14 @@ async function resumeSession(){
 let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),feelingDays=30,feelingView='overview',feelingSelectedId='',feelingHistoryLimit=30,feelingEditingId='',connectionEmotion='anger',connectionDays=30;
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
+let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLastConfirmedAt=0;
+function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.miracleMorning||null]);}
+function scheduleJournalSync(delay=0){
+ clearTimeout(journalSyncTimer);journalSyncTimer=null;
+ if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
+ journalSyncTimer=setTimeout(()=>{journalSyncTimer=null;syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);render();});},delay);
+}
+
 let worktimeSelectedCategory='work';
 const MORNING_PUBLIC_KEY='compass.morning.public.v570';
 let morningPlayerOpen=false,morningSettingsOpen=false,morningSession=null,morningConfig=null,morningSaving=false;
@@ -418,6 +426,7 @@ async function mutate(fn) {
   if(!state)throw new Error('Der Tresor muss entsperrt sein.');
   prepareTasks(state);
   const previous=structuredClone(state);
+  const journalBefore=journalFingerprint(state);
   try {
     fn(state);
     if(privateChanged(previous,state)){
@@ -426,6 +435,7 @@ async function mutate(fn) {
     }
     await persist();
     syncQuickPublicFromState();
+    if(journalFingerprint(state)!==journalBefore){journalRevision++;journalSyncStatus='lokal';if(state.privateDeviceMirror?.key&&authToken&&navigator.onLine)syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);render();});}
   }catch(ex){state=previous;render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
   render();
   if(busy)syncResyncRequested=true;
@@ -562,7 +572,7 @@ function chrome(content){
  </aside><main class="workspace"><div class="utility-bar">
  <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>Ctrl / ⌘ K</kbd></button>
  <div class="utility-right"><button class="fw65-top-trigger" type="button" data-action="feeling-open" aria-label="Feeling Wheel öffnen – Gefühl erfassen" title="Wie fühlst du dich gerade? · Feeling Wheel" aria-haspopup="dialog"><span class="fw65-top-wheel" aria-hidden="true">✦</span><span class="fw65-top-caption">Gefühl</span></button>${worktimeQuickButton()}${habitQuickButton()}<button type="button" class="quick-utility-button pj92-food-trigger" data-action="pj92-food-open" title="Ernährung schnell erfassen" aria-label="Ernährung erfassen" aria-haspopup="dialog">${ico('food',18)}<span class="quick-utility-label">Ernährung</span></button><button class="icon-utility" type="button" data-action="smart49-open" title="Smart Import Hub öffnen" aria-label="Dateien zentral importieren">${ico('upload',18)}</button>${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
- <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?(state.privateDeviceMirror?'Planung + privater Geräteabgleich':'Planung synchronisiert · Importe lokal'):'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
+ <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?(state.privateDeviceMirror?.key?(journalSyncStatus==='ok'?'Journal abgeglichen':journalSyncStatus==='abgleich'?'Journal gleicht ab':'Journal lokal'):'Cloud verbunden · Journal nur lokal'):'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
@@ -676,16 +686,16 @@ function habitQuickButton(){
 }
 function worktimeQuickOverlay(){
  const source=worktimeSource(state);const active=!!source.activeStart;const sessions=worktimeSessionsForDay(state);const total=worktimeMinutesForDay(state);
- return `<div class="quick-panel-backdrop" data-action="worktime-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="worktime-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ARBEITSZEIT · SCHNELLERFASSUNG</p><h2 id="worktime-quick-title">Ein- und ausstempeln</h2></div><button type="button" class="capture-modal-close" data-action="worktime-quick-close" aria-label="Arbeitszeit schließen">${ico('x',18)}</button></div><p class="muted-line">Play startet ein Intervall, Stopp beendet es. Projekt und Details kannst du später zuordnen.</p><label class="pj92-quick-category">Bereich <select id="pj92-current-category">${timeCategoryOptions(active?source.activeCategory||'work':worktimeSelectedCategory)}</select></label><div class="work569-actions"><button type="button" class="work569-action is-play" data-action="worktime-quick-start">${ico('play',24)}<span>Play</span></button><button type="button" class="work569-action is-stop" data-action="worktime-quick-stop">${ico('stop',24)}<span>Stopp</span></button></div><div class="work569-status ${active?'is-active':''}"><strong>${active?'Eingestempelt':'Nicht eingestempelt'}</strong><span>${active&&source.activeStart?'Seit '+formatTimeShort(source.activeStart):'Heute '+formatMinutesCompact(total)}</span></div><div class="work569-day"><div class="work569-day-head"><strong>Heute</strong><span>${formatMinutesCompact(total)}</span></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Noch kein Arbeitsblock erfasst.</p>'}</div><p class="quick-panel-hint">${state?'Im lokalen Tresor gespeichert · Geräteabgleich nach Verbindung.':'Auf diesem Gerät verschlüsselt vorgemerkt · Geräteabgleich erst nach Entsperren.'}</p></section></div>`;
+ return `<div class="quick-panel-backdrop" data-action="worktime-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="worktime-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ARBEITSZEIT · SCHNELLERFASSUNG</p><h2 id="worktime-quick-title">Ein- und ausstempeln</h2></div><button type="button" class="capture-modal-close" data-action="worktime-quick-close" aria-label="Arbeitszeit schließen">${ico('x',18)}</button></div><label class="pj92-quick-category">Bereich <select id="pj92-current-category">${timeCategoryOptions(active?source.activeCategory||'work':worktimeSelectedCategory)}</select></label><div class="work569-actions"><button type="button" class="work569-action is-play" data-action="worktime-quick-start">${ico('play',24)}<span>Play</span></button><button type="button" class="work569-action is-stop" data-action="worktime-quick-stop">${ico('stop',24)}<span>Stopp</span></button></div><div class="work569-status ${active?'is-active':''}"><strong>${active?'Eingestempelt':'Nicht eingestempelt'}</strong><span>${active&&source.activeStart?'Seit '+formatTimeShort(source.activeStart):'Heute '+formatMinutesCompact(total)}</span></div><div class="work569-day"><div class="work569-day-head"><strong>Heute</strong><span>${formatMinutesCompact(total)}</span></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Noch kein Arbeitsblock erfasst.</p>'}</div><p class="quick-panel-hint">${state?(journalSyncStatus==='ok'?'Geräteabgleich bestätigt ✓':journalSyncStatus==='abgleich'?'Synchronisierung läuft …':journalSyncStatus==='fehler'?'Abgleich fehlgeschlagen · lokal gesichert':'Lokal gesichert · Abgleich ausstehend'):'Auf diesem Gerät verschlüsselt vorgemerkt'}</p></section></div>`;
 }
 function habitQuickOverlay(){
  const items=habitItems(state);const doneSet=new Set(todayHabitIds(state));
- return `<div class="quick-panel-backdrop" data-action="habit-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="habit-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">HABITS · HEUTE ERLEDIGT</p><h2 id="habit-quick-title">Gewohnheiten abhaken</h2></div><button type="button" class="capture-modal-close" data-action="habit-quick-close" aria-label="Habits schließen">${ico('x',18)}</button></div><div class="habit569-summary"><strong>${doneSet.size}/${items.length}</strong><span>heute erledigt</span></div><div class="habit569-list">${items.map(item=>{const done=doneSet.has(item.id);const lockedDone=!state&&done;return '<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle" data-id="'+h(item.id)+'" '+(lockedDone?'disabled':'')+'><span><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</span><span class="habit569-check">'+(done?'✓':'')+'</span></button>';}).join('')}</div><div class="quick-panel-row"><button type="button" class="primary-btn" data-action="mm570-open">🌅 Miracle Morning</button><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div><p class="quick-panel-hint">${state?'Motivierend statt perfektionistisch: ein Häkchen genügt.':'Bei gesperrtem Tresor werden Erledigungen verschlüsselt vorgemerkt.'}</p></section></div>`;
+ return `<div class="quick-panel-backdrop" data-action="habit-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="habit-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">HABITS · HEUTE ERLEDIGT</p><h2 id="habit-quick-title">Gewohnheiten abhaken</h2></div><button type="button" class="capture-modal-close" data-action="habit-quick-close" aria-label="Habits schließen">${ico('x',18)}</button></div><div class="habit569-summary"><strong>${doneSet.size}/${items.length}</strong><span>heute erledigt</span></div><div class="habit569-list">${items.map(item=>{const done=doneSet.has(item.id);const lockedDone=!state&&done;return '<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle" data-id="'+h(item.id)+'" '+(lockedDone?'disabled':'')+'><span><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</span><span class="habit569-check">'+(done?'✓':'')+'</span></button>';}).join('')}</div><div class="quick-panel-row"><button type="button" class="primary-btn" data-action="mm570-open">🌅 Miracle Morning</button><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div>${state?'':'<p class="quick-panel-hint">Verschlüsselt vorgemerkt</p>'}</section></div>`;
 }
 function nutritionQuickOverlay(){
  return `<div class="quick-panel-backdrop" data-action="pj92-food-close-backdrop"><section class="quick-panel pj92-food-panel" role="dialog" aria-modal="true" aria-labelledby="pj92-food-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ERNÄHRUNG · EIN TIPP GENÜGT</p><h2 id="pj92-food-title">Was gab es gerade?</h2></div><button type="button" class="capture-modal-close" data-action="pj92-food-close" aria-label="Ernährung schließen">${ico('x',18)}</button></div>${nutritionQuickView(state)}<button type="button" data-action="pj92-food-insights" class="secondary-btn">Ernährungstagebuch ansehen →</button>${!state?'<small>Ohne Entsperren: Einträge bleiben bis zum nächsten Entsperren nur auf diesem Gerät gespeichert.</small>':''}</section></div>`;
 }
-function journalSyncPanel(){const ready=Boolean(state?.privateDeviceMirror?.key&&authToken);return `<section class="work-card pj92-sync-status"><span>${ico('sync',16)} Zeitjournal & Ernährung: ${ready?journalSyncStatus==='ok'?'verschlüsselt abgeglichen ✓':'lokal gespeichert · Abgleich ausstehend':'nur lokal – Geräteabgleich einrichten'}</span>${ready?'<button type="button" class="secondary-btn" data-action="pj92-sync-now">Jetzt abgleichen</button>':'<button type="button" class="secondary-btn" data-tab="system">Geräteabgleich einrichten</button>'}</section>`;}
+function journalSyncPanel(){const ready=Boolean(state?.privateDeviceMirror?.key&&authToken);return `<section class="work-card pj92-sync-status"><span>${ico('sync',16)} Zeitjournal & Ernährung: ${ready?journalSyncStatus==='ok'?'verschlüsselt abgeglichen ✓':journalSyncStatus==='abgleich'?'Abgleich läuft …':journalSyncStatus==='fehler'?'Abgleich fehlgeschlagen – erneut versuchen':'lokal gespeichert · Abgleich ausstehend':'nur lokal – Geräteabgleich einrichten'}</span>${ready?'<button type="button" class="secondary-btn" data-action="pj92-sync-now">Jetzt abgleichen</button>':'<button type="button" class="secondary-btn" data-tab="system">Geräteabgleich einrichten</button>'}</section>`;}
 function quickWorktimeInsights(){
  const sessions=worktimeSessionsForDay(state);const total=worktimeMinutesForDay(state);const weekTotal=[0,1,2,3,4,5,6].reduce((sum,offset)=>{const d=new Date(localDate()+'T12:00:00');d.setDate(d.getDate()-offset);return sum+worktimeMinutesForDay(state,localDateString(d));},0);
  return `<section class="work-card work569-insight-card"><div class="work-heading"><span>${ico('clock',18)} Tatsächliche Arbeitszeit</span><button type="button" class="secondary-btn" data-action="pj92-open-timejournal">Zeitjournal öffnen →</button></div><div class="work569-insight-grid"><div><small>Heute</small><strong>${formatMinutesCompact(total)}</strong></div><div><small>7 Tage</small><strong>${formatMinutesCompact(weekTotal)}</strong></div><div><small>Status</small><strong>${isWorktimeActive(state)?'Eingestempelt':'Nicht aktiv'}</strong></div></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Heute noch keine Arbeitsblöcke gestempelt.</p>'}</section>`;
@@ -1289,21 +1299,43 @@ function reviewScreen(){
 function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,miracleMorning:ensureMorning(st)};}
 function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});setHabitDoneState(st,'miracle-morning',session.day||session.finishedAt.slice(0,10),true,session.finishedAt);}}}
 async function syncPersonalJournal(){
- if(journalSyncBusy||!authToken||!state?.privateDeviceMirror?.key||!navigator.onLine)return;
- journalSyncBusy=true;const cfg=state.privateDeviceMirror;
- try{
-  for(let attempt=0;attempt<4;attempt++){
-   const remote=await mirrorGet('journal');if(remote&&remote.salt!==cfg.salt)throw Error('Anderer Synchronisierungsschlüssel – Journal nicht verändert.');
-   const remoteData=remote?await decryptSection(cfg.key,'journal',remote):{};
-   const merged=mergeJournalData(journalSyncPayload(state),remoteData);
-   if(JSON.stringify(merged)!==JSON.stringify(journalSyncPayload(state))){applyJournalPayload(state,merged);await persist();syncQuickPublicFromState();render();}
-   if(remote&&JSON.stringify(merged)===JSON.stringify(mergeJournalData(remoteData,{}))){journalSyncStatus='ok';return;}
-   const encrypted=await encryptSection(cfg.key,'journal',merged);
-   try{await mirrorPublishEncrypted('journal',encrypted,cfg.salt,remote?.version||0);journalSyncStatus='ok';return;}
-   catch(ex){if(ex.status!==409)throw ex;}
+ // One E2EE journal flight per device. Mutations during flight queue an immediate
+ // follow-up instead of being hidden by a generic "synced" status.
+ if(journalSyncInFlight)return journalSyncInFlight;
+ if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine){journalSyncStatus='lokal';return false;}
+ const startRevision=journalRevision;
+ journalSyncInFlight=(async()=>{
+  journalSyncBusy=true;journalSyncStatus='abgleich';render();
+  const cfg=state.privateDeviceMirror;
+  try{
+   for(let attempt=0;attempt<4;attempt++){
+    const remote=await mirrorGet('journal');
+    if(remote&&remote.salt!==cfg.salt)throw Error('Anderer Synchronisierungsschlüssel – Journal nicht verändert.');
+    const remoteData=remote?await decryptSection(cfg.key,'journal',remote):{};
+    const merged=mergeJournalData(journalSyncPayload(state),remoteData);
+    if(JSON.stringify(merged)!==JSON.stringify(journalSyncPayload(state))){
+     applyJournalPayload(state,merged);await persist();syncQuickPublicFromState();render();
+    }
+    // If the encrypted cloud snapshot already contains this data, a GET is sufficient.
+    if(remote&&JSON.stringify(merged)===JSON.stringify(mergeJournalData(remoteData,{}))){
+      journalLastConfirmedAt=Date.now();journalSyncStatus='ok';return true;
+    }
+    const encrypted=await encryptSection(cfg.key,'journal',merged);
+    try{
+      await mirrorPublishEncrypted('journal',encrypted,cfg.salt,remote?.version||0);
+      journalLastConfirmedAt=Date.now();journalSyncStatus='ok';return true;
+    }catch(ex){if(ex.status!==409)throw ex;}
+   }
+   throw Error('Journal wurde gleichzeitig geändert. Bitte erneut abgleichen.');
+  }catch(ex){journalSyncStatus='fehler';throw ex;}
+  finally{
+   journalSyncBusy=false;
+   journalSyncInFlight=null;
+   if(journalRevision!==startRevision){journalSyncStatus='lokal';scheduleJournalSync(0);}
+   render();
   }
-  throw Error('Journal wurde gleichzeitig geändert. Bitte erneut abgleichen.');
- }catch(ex){journalSyncStatus='fehler';throw ex;}finally{journalSyncBusy=false;}
+ })();
+ return journalSyncInFlight;
 }
 async function mirrorGet(kind){
  let record;try{record=(await request(config.apiUrl,authToken,`/api/private-device/${kind}`)).record;}catch(ex){if(ex.status===404)throw Error('Cloud-Worker zu alt: bitte zuerst die neue D1-Migration und Worker-Version installieren.');throw ex;}
@@ -2578,7 +2610,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
    else{journalSyncStatus='lokal';await mutate(s=>addNutrition(s,item));nutritionQuickOpen=false;toast('Ernährung erfasst.');}
   }catch(ex){toast(ex.message,true);}return;
  }
- if(action==='pj92-open-timejournal'){tab='insights';insightTab='timejournal';calmNavGroup='insights';render();return;}
+ if(action==='pj92-open-timejournal'){tab='insights';insightTab='timejournal';calmNavGroup='insights';render();if(state?.privateDeviceMirror?.key&&authToken)syncPersonalJournal().catch(ex=>toast('Journal-Abgleich: '+ex.message,true));return;}
  if(action==='pj92-period'){timeJournalPeriod=Number(id)||7;render();return;}
  if(action==='pj92-nutrition-period'){nutritionPeriod=Number(id)||30;render();return;}
  if(action==='pj92-time-add'){timeJournalEditId='';timeJournalShowForm=true;render();return;}
@@ -2589,10 +2621,10 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='pj92-food-edit'){nutritionEditId=id;render();return;}
  if(action==='pj92-food-edit-cancel'){nutritionEditId='';render();return;}
  if(action==='pj92-food-delete'){if(!state||!confirm('Ernährungseintrag entfernen?'))return;try{journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===id);if(item){item.deleted=true;item.updatedAt=stamp();}});nutritionEditId='';toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
- if(action==='pj92-sync-now'){try{await syncPersonalJournal();toast('Zeitjournal und Ernährung verschlüsselt abgeglichen.');}catch(ex){toast(ex.message,true);}return;}
+ if(action==='pj92-sync-now'){try{const ok=await syncPersonalJournal();if(ok)toast('Zeitjournal und Ernährung verschlüsselt abgeglichen.');else toast('Kein Cloud-Abgleich möglich: bitte anmelden und Geräteabgleich einrichten.',true);}catch(ex){toast(ex.message,true);}return;}
 
  if(action==='feeling-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}feelingEditingId='';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
- if(action==='worktime-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;habitQuickOpen=false;worktimeQuickOpen=true;render();return;}
+ if(action==='worktime-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;habitQuickOpen=false;worktimeQuickOpen=true;render();if(state?.privateDeviceMirror?.key&&authToken)syncPersonalJournal().catch(ex=>toast('Arbeitszeit-Abgleich: '+ex.message,true));return;}
  if(action==='worktime-quick-close'||action==='worktime-quick-close-backdrop'){worktimeQuickOpen=false;render();return;}
  if(action==='habit-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=true;render();return;}
  if(action==='habit-quick-close'||action==='habit-quick-close-backdrop'){habitQuickOpen=false;render();return;}
@@ -3722,8 +3754,9 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'&&captureOverlayOpen){ev.preventDefault();captureOverlayOpen=false;render();return;}
   if(!typing&&!ev.ctrlKey&&!ev.altKey&&!ev.metaKey&&ev.key.toLowerCase()==='n'&&state){ev.preventDefault();runAction('capture-focus');}
 });
-window.addEventListener('online',()=>{render();if(authToken)scheduleSync(0);});
+window.addEventListener('online',()=>{render();if(authToken){scheduleSync(0);scheduleJournalSync(0);}});
 document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')scheduleJournalSync(0);
   if(document.visibilityState==='visible'&&authToken&&state&&
     (state.pending.length||Object.keys(state.taskPending||{}).length||Object.keys(state.eventPending||{}).length||state.reviewPending||Date.now()-lastSyncAt>=SYNC_INTERVAL_MS))scheduleSync(1000);
 });
