@@ -65,6 +65,7 @@ import {exploreDays,exploreView,EXPLORE_FIELDS} from './insights-explorer.js';
 import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insightsPlannedView} from './insights.js';
 import {healthFindings,rankHealthFindingsLocally} from './health-intelligence-v551.js';
 import {inspectWorktimeFile,mergeWorktime,worktimeView,worktimeImportPanel} from './worktime-v553.js';
+import {MORNING_STEPS,MORNING_PRESETS,defaultMorningConfig,normalizeMorningConfig,ensureMorning,newMorningSession,morningSafeMeta,morningFromSafeMeta,transitionMorning,elapsedStepSeconds,storeMorningSession,morningHubView,morningOverlayView} from './miracle-morning-v570.js';
 import {TIME_AREAS,FOOD_PRESETS,timeCategoryOptions,timeLabel,ensureJournal,validTimeEntry,timeEntries,putTimeEntry,deleteTimeEntry,addNutrition,addCustomFood,nutritionFoods,nutritionEntries,timeJournalView,nutritionQuickView,nutritionInsightsView,mergeJournalData} from './personal-journal-v5692.js';
 import {markSuccessfulImport} from './import-status-v558.js';
 import {worktimeYearComparisonView} from './worktime-multiyear-v555.js';
@@ -88,7 +89,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.69.2';
+const COMPASS_CLIENT_VERSION='0.5.70';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -155,6 +156,24 @@ let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
 let worktimeSelectedCategory='work';
+const MORNING_PUBLIC_KEY='compass.morning.public.v570';
+let morningPlayerOpen=false,morningSettingsOpen=false,morningSession=null,morningConfig=null,morningSaving=false;
+function readMorningPublic(){try{const raw=JSON.parse(localStorage.getItem(MORNING_PUBLIC_KEY)||'null');return {durations:raw?.durations||null,session:morningFromSafeMeta(raw?.session)};}catch{return {durations:null,session:null};}}
+const morningInitial=readMorningPublic();
+morningSession=morningInitial.session;
+function morningPublicWrite(){
+ if(!morningConfig)return;
+ try{const data={durations:Object.fromEntries(MORNING_STEPS.map(step=>[step.id,morningConfig.durations[step.id]])),session:morningSession&&!morningSession.finishedAt?morningSafeMeta(morningSession):null};localStorage.setItem(MORNING_PUBLIC_KEY,JSON.stringify(data));}catch{}
+}
+function morningActiveConfig(){return state?ensureMorning(state).config:normalizeMorningConfig({durations:readMorningPublic().durations||defaultMorningConfig().durations});}
+function morningRestoreConfig(){if(state){morningConfig=ensureMorning(state).config;morningPublicWrite();}else{morningConfig=morningActiveConfig();}}
+function morningSaveNoteFromScreen(){const field=app.querySelector('#mm570-journal');if(field&&morningSession)morningSession.note=field.value.slice(0,4000);}
+function morningCloseOverlay(){morningSaveNoteFromScreen();morningPlayerOpen=false;morningPublicWrite();}
+async function morningBeforeLock(){morningSaveNoteFromScreen();if(state&&morningSession&&!morningSession.finishedAt&&morningSession.note){ensureMorning(state).draft=structuredClone(morningSession);try{await persist();}catch{}}if(morningSession)morningSession.note='';morningConfig=normalizeMorningConfig({durations:readMorningPublic().durations||defaultMorningConfig().durations});}
+function morningRenderOverlay(){if(!morningPlayerOpen||!morningSession)return '';const goals=state?lifeGoals(state):[];const goal=goals.find(g=>g.id===morningConfig.goalId);return morningOverlayView(morningSession,morningConfig,{locked:!state,goalTitle:goal?.title||''});}
+function morningTimerRefresh(){if(!morningPlayerOpen||!morningSession)return;const active=MORNING_STEPS[morningSession.stepIndex],limit=Number(morningSession.durations?.[active.id]||active.minutes)*60;const remaining=Math.max(0,limit-elapsedStepSeconds(morningSession));const node=app.querySelector('[data-mm570-remaining]');if(node)node.textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(Math.ceil(remaining%60)).padStart(2,'0');}
+if(typeof setInterval==='function')setInterval(morningTimerRefresh,1000);
+
 const QUICK_PUBLIC_KEY='compass.quick.public.v569';
 const DEFAULT_HABITS=[
   {id:'vocal-image',title:'Vocal Image',slot:'Morgen',active:true},
@@ -548,7 +567,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[]):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[]):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
 }
 
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
@@ -661,7 +680,7 @@ function worktimeQuickOverlay(){
 }
 function habitQuickOverlay(){
  const items=habitItems(state);const doneSet=new Set(todayHabitIds(state));
- return `<div class="quick-panel-backdrop" data-action="habit-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="habit-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">HABITS · HEUTE ERLEDIGT</p><h2 id="habit-quick-title">Gewohnheiten abhaken</h2></div><button type="button" class="capture-modal-close" data-action="habit-quick-close" aria-label="Habits schließen">${ico('x',18)}</button></div><div class="habit569-summary"><strong>${doneSet.size}/${items.length}</strong><span>heute erledigt</span></div><div class="habit569-list">${items.map(item=>{const done=doneSet.has(item.id);const lockedDone=!state&&done;return '<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle" data-id="'+h(item.id)+'" '+(lockedDone?'disabled':'')+'><span><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</span><span class="habit569-check">'+(done?'✓':'')+'</span></button>';}).join('')}</div><div class="quick-panel-row"><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div><p class="quick-panel-hint">${state?'Motivierend statt perfektionistisch: ein Häkchen genügt.':'Bei gesperrtem Tresor werden Erledigungen verschlüsselt vorgemerkt.'}</p></section></div>`;
+ return `<div class="quick-panel-backdrop" data-action="habit-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="habit-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">HABITS · HEUTE ERLEDIGT</p><h2 id="habit-quick-title">Gewohnheiten abhaken</h2></div><button type="button" class="capture-modal-close" data-action="habit-quick-close" aria-label="Habits schließen">${ico('x',18)}</button></div><div class="habit569-summary"><strong>${doneSet.size}/${items.length}</strong><span>heute erledigt</span></div><div class="habit569-list">${items.map(item=>{const done=doneSet.has(item.id);const lockedDone=!state&&done;return '<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle" data-id="'+h(item.id)+'" '+(lockedDone?'disabled':'')+'><span><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</span><span class="habit569-check">'+(done?'✓':'')+'</span></button>';}).join('')}</div><div class="quick-panel-row"><button type="button" class="primary-btn" data-action="mm570-open">🌅 Miracle Morning</button><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div><p class="quick-panel-hint">${state?'Motivierend statt perfektionistisch: ein Häkchen genügt.':'Bei gesperrtem Tresor werden Erledigungen verschlüsselt vorgemerkt.'}</p></section></div>`;
 }
 function nutritionQuickOverlay(){
  return `<div class="quick-panel-backdrop" data-action="pj92-food-close-backdrop"><section class="quick-panel pj92-food-panel" role="dialog" aria-modal="true" aria-labelledby="pj92-food-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ERNÄHRUNG · EIN TIPP GENÜGT</p><h2 id="pj92-food-title">Was gab es gerade?</h2></div><button type="button" class="capture-modal-close" data-action="pj92-food-close" aria-label="Ernährung schließen">${ico('x',18)}</button></div>${nutritionQuickView(state)}<button type="button" data-action="pj92-food-insights" class="secondary-btn">Ernährungstagebuch ansehen →</button>${!state?'<small>Ohne Entsperren: Einträge bleiben bis zum nächsten Entsperren nur auf diesem Gerät gespeichert.</small>':''}</section></div>`;
@@ -673,7 +692,7 @@ function quickWorktimeInsights(){
 }
 function habitInsightsView(){
  const items=habitItems(state);const done=todayHabitIds(state).length;const avg14=items.length?Math.round(items.reduce((sum,item)=>sum+habitDoneLastDays(state,item.id,14).filter(dot=>dot.done).length,0)/(items.length*14)*100):0;
- return `<div class="habit569-page"><section class="work-card"><div class="work-heading"><span>${ico('checkSquare',18)} Habit Tracker</span><button type="button" class="secondary-btn" data-action="habit-quick-open">Heute abhaken</button></div><p class="muted-line">Einfach, schnell und motivierend. Ein Häkchen pro Habit genügt.</p><div class="habit569-kpis"><div><small>Heute</small><strong>${done}/${items.length}</strong></div><div><small>14-Tage-Konsistenz</small><strong>${avg14}%</strong></div><div><small>Aktive Habits</small><strong>${items.length}</strong></div></div></section><section class="work-card"><div class="work-heading"><span>Deine Habits</span><span class="quiet-tag">${items.length}</span></div><div class="habit569-cards">${items.map(item=>{const streak=habitStreak(state,item.id);const dots=habitDoneLastDays(state,item.id,14);const doneToday=habitIsDone(state,item.id);return '<article class="habit569-card"><div class="habit569-card-head"><div><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</div><button type="button" class="secondary-btn" data-action="habit-toggle" data-id="'+h(item.id)+'">'+(doneToday?'Heute erledigt ✓':'Heute abhaken')+'</button></div><div class="habit569-stats"><span>Streak <strong>'+(streak||0)+'</strong></span><span>14 Tage <strong>'+dots.filter(dot=>dot.done).length+'/14</strong></span></div><div class="habit569-dots">'+dots.map(dot=>'<span class="'+(dot.done?'is-done':'')+'" title="'+h(dot.day)+'"></span>').join('')+'</div></article>';}).join('')}</div></section><section class="work-card"><div class="work-heading"><span>Neues Habit hinzufügen</span></div><form id="habit69-new-form" class="habit569-form"><label>Titel<input type="text" name="title" maxlength="80" placeholder="z. B. Journaling" value="${h(habitDraftTitle)}" required/></label><label>Zeitfenster<select name="slot"><option value="Morgen">Morgen</option><option value="Mittag">Mittag</option><option value="Abend">Abend</option><option value="Flexibel">Flexibel</option></select></label><button type="submit" class="primary-btn">Habit hinzufügen</button></form></section></div>`;
+ return `<div class="habit569-page">${morningHubView(state,{settings:morningSettingsOpen,goals:lifeGoals(state)})}<section class="work-card"><div class="work-heading"><span>${ico('checkSquare',18)} Habit Tracker</span><button type="button" class="secondary-btn" data-action="habit-quick-open">Heute abhaken</button></div><p class="muted-line">Einfach, schnell und motivierend. Ein Häkchen pro Habit genügt.</p><div class="habit569-kpis"><div><small>Heute</small><strong>${done}/${items.length}</strong></div><div><small>14-Tage-Konsistenz</small><strong>${avg14}%</strong></div><div><small>Aktive Habits</small><strong>${items.length}</strong></div></div></section><section class="work-card"><div class="work-heading"><span>Deine Habits</span><span class="quiet-tag">${items.length}</span></div><div class="habit569-cards">${items.map(item=>{const streak=habitStreak(state,item.id);const dots=habitDoneLastDays(state,item.id,14);const doneToday=habitIsDone(state,item.id);return '<article class="habit569-card"><div class="habit569-card-head"><div><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</div><button type="button" class="secondary-btn" data-action="habit-toggle" data-id="'+h(item.id)+'">'+(doneToday?'Heute erledigt ✓':'Heute abhaken')+'</button></div><div class="habit569-stats"><span>Streak <strong>'+(streak||0)+'</strong></span><span>14 Tage <strong>'+dots.filter(dot=>dot.done).length+'/14</strong></span></div><div class="habit569-dots">'+dots.map(dot=>'<span class="'+(dot.done?'is-done':'')+'" title="'+h(dot.day)+'"></span>').join('')+'</div></article>';}).join('')}</div></section><section class="work-card"><div class="work-heading"><span>Neues Habit hinzufügen</span></div><form id="habit69-new-form" class="habit569-form"><label>Titel<input type="text" name="title" maxlength="80" placeholder="z. B. Journaling" value="${h(habitDraftTitle)}" required/></label><label>Zeitfenster<select name="slot"><option value="Morgen">Morgen</option><option value="Mittag">Mittag</option><option value="Abend">Abend</option><option value="Flexibel">Flexibel</option></select></label><button type="submit" class="primary-btn">Habit hinzufügen</button></form></section></div>`;
 }
 function inboxPreview(){
  const list=rows().slice(0,3);
@@ -1267,8 +1286,8 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal};}
-function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;}
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,miracleMorning:ensureMorning(st)};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});setHabitDoneState(st,'miracle-morning',session.day||session.finishedAt.slice(0,10),true,session.finishedAt);}}}
 async function syncPersonalJournal(){
  if(journalSyncBusy||!authToken||!state?.privateDeviceMirror?.key||!navigator.onLine)return;
  journalSyncBusy=true;const cfg=state.privateDeviceMirror;
@@ -1698,7 +1717,8 @@ function render(){
  const insightScrollBefore=tab==='insights'&&insightTab==='feelings'?{page:window.scrollY||0,log:app.querySelector('.fw681-full-log')?.scrollTop||0,content:app.querySelector('.content')?.scrollTop||0}:null;
  const feelingScrollBefore=feelingOverlayOpen?app.querySelector('#fw65-dialog')?.scrollTop||0:0;
  const captureFocus=snapshotCaptureDraft();
- if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[]):'')+(nutritionQuickOpen?nutritionQuickOverlay():'');bind();restoreCaptureDraft(captureFocus);return;}
+ morningSaveNoteFromScreen();
+ if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[]):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  let html;
  try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
@@ -1730,6 +1750,12 @@ function bind() {
   app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=ev=>{ev?.preventDefault?.();const target=el.dataset.tab;if(!target)return;tab=target;calmNavGroup=['overview','projects','templates','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':['insights','activity','progress','recovery'].includes(tab)?'insights':'';if(tab==='finance')calmNavGroup='finance';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery'||tab==='insights')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const balanceGoalsForm=app.querySelector('#lbr63-goals-form');
   if(balanceGoalsForm)balanceGoalsForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(balanceGoalsForm);const values=validateBalanceGoals({sleepMinutes:Number(fd.get('sleepHours'))*60,stepsDaily:Number(fd.get('stepsDaily')),weeklyHours:Number(fd.get('weeklyHours')),weightKg:String(fd.get('weightKg')||''),bodyFatTargetPct:String(fd.get('bodyFatTargetPct')||'')});await mutate(s=>{s.lifeBalanceGoals=values;});toast('Persönliche Richtwerte im Vault gespeichert.');}catch(ex){toast(ex.message,true);}};
+  const morningForm=app.querySelector('#mm570-settings-form');if(morningForm)morningForm.onsubmit=async ev=>{
+    ev.preventDefault();try{const fd=new FormData(morningForm);const durations=Object.fromEntries(MORNING_STEPS.map(step=>[step.id,Number(fd.get('duration-'+step.id))]));
+      const config=normalizeMorningConfig({durations,affirmations:String(fd.get('affirmations')||'').split(/\r?\n/),visualization:fd.get('visualization'),goalId:fd.get('goalId'),exercises:String(fd.get('exercises')||'').split(/\r?\n/),readingBook:fd.get('readingBook'),journalPrompt:fd.get('journalPrompt'),updatedAt:stamp()});
+      journalSyncStatus='lokal';await mutate(st=>{ensureMorning(st).config=config;});morningConfig=config;morningPublicWrite();toast('Morning-Konfiguration im Tresor gespeichert.');
+    }catch(ex){toast(ex.message,true);}
+  };
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
@@ -1749,6 +1775,7 @@ function bind() {
             if(capture.kind==='worktime'){applyWorktimeEvent(state,capture.entry||{});continue;}
             if(capture.kind==='habit'){applyHabitEvent(state,capture.entry||{});continue;}
             if(capture.kind==='nutrition'){if(!state.nutritionJournal?.entries?.some(e=>e.id===capture.entry?.id))addNutrition(state,capture.entry);continue;}
+            if(capture.kind==='morning'){const entry=capture.entry;if(!entry?.id||!entry?.finishedAt)throw Error('Morgenroutine beschädigt.');storeMorningSession(state,entry);if(entry.steps?.some(step=>!step.skipped)&&entry.finishedAt){const habits=ensureHabitState(state);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});setHabitDoneState(state,'miracle-morning',entry.day||entry.finishedAt.slice(0,10),true,entry.finishedAt);}continue;}
             if(state.records[capture.id])continue;const record={id:capture.id,title:capture.title,note:capture.note||'',tags:[],deleted:false,updatedAt:capture.createdAt||stamp()};state.records[record.id]=record;state.pending.push(makeMutation(record));state.history.push({type:'captured',at:record.updatedAt,id:record.id});
           }
           await persist(); // Only acknowledge after durable encrypted vault write.
@@ -1756,6 +1783,8 @@ function bind() {
           recoveryMessage=` · ${pending.length} verschlüsselte Schnellnotiz(en) übernommen`;
         }
       }catch(captureError){recoveryMessage=' · Schnellerfassung prüfen: '+captureError.message;}
+      morningRestoreConfig();
+      const savedMorningDraft=state?.miracleMorning?.draft;if(morningSession&&savedMorningDraft?.id===morningSession.id&&savedMorningDraft.note){morningSession.note=savedMorningDraft.note;}
       syncQuickPublicFromState();
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
@@ -2519,6 +2548,27 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
+ if(action==='mm570-settings'){if(!state)return toast('Konfiguration nur bei entsperrtem Tresor.',true);morningSettingsOpen=!morningSettingsOpen;render();return;}
+ if(action==='mm570-open'){
+   if(!state&&!sealedCaptureAvailable)return toast('Bitte einmal entsperren, damit die verschlüsselte Schnellerfassung eingerichtet wird.',true);
+   morningRestoreConfig();
+   if(!morningSession||morningSession.finishedAt)morningSession=newMorningSession(id==='quick'?MORNING_PRESETS.quick:morningConfig.durations);
+   morningPublicWrite();habitQuickOpen=false;nutritionQuickOpen=false;captureOverlayOpen=false;feelingOverlayOpen=false;worktimeQuickOpen=false;morningPlayerOpen=true;render();return;
+ }
+ if(action==='mm570-close'){morningCloseOverlay();render();return;}
+ if(action==='mm570-restart'){if(!confirm('Bisherigen Ablauf verwerfen und neue Morgenroutine starten?'))return;morningSession=newMorningSession(morningConfig.durations);morningPublicWrite();render();return;}
+ if(action==='mm570-go-step'){if(!morningSession)return;const i=Number(id);if(Number.isInteger(i)&&i===morningSession.stepIndex){render();}return;}
+ if(action==='mm570-start'||action==='mm570-pause'||action==='mm570-finish'||action==='mm570-skip'){
+   if(!morningSession||morningSaving)return;
+   morningSaveNoteFromScreen();const mode=action.split('-')[1];const next=transitionMorning(morningSession,mode,stamp());
+   if(next.finishedAt){morningSaving=true;try{
+      if(!state){await vault.appendSealedMorning(next);}
+      else{journalSyncStatus='lokal';await mutate(st=>{storeMorningSession(st,next);delete ensureMorning(st).draft;if(next.steps?.some(step=>!step.skipped)){const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});setHabitDoneState(st,'miracle-morning',next.day||next.finishedAt.slice(0,10),true,next.finishedAt);}});}
+      morningSession=null;morningPlayerOpen=false;morningPublicWrite();toast(!state?'Morning verschlüsselt vorgemerkt · nach Entsperren in der Historie.':'Morning abgeschlossen und verschlüsselt gespeichert.');
+   }catch(ex){toast('Morning nicht gesichert: '+ex.message,true);}finally{morningSaving=false;}return;}
+   morningSession=next;morningPublicWrite();render();return;
+ }
+
  if(action==='pj92-food-open'){if(!state&&!sealedCaptureAvailable)return toast('Bitte zuerst einmal den Tresor entsperren.',true);nutritionQuickOpen=true;habitQuickOpen=false;worktimeQuickOpen=false;feelingOverlayOpen=false;captureOverlayOpen=false;render();return;}
  if(action==='pj92-food-close'||action==='pj92-food-close-backdrop'){nutritionQuickOpen=false;render();return;}
  if(action==='pj92-food-insights'){nutritionQuickOpen=false;if(!state)return toast('Zum Ansehen der Ernährungshistorie bitte Tresor entsperren.',true);tab='insights';insightTab='nutrition';calmNavGroup='insights';render();return;}
@@ -3388,7 +3438,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
       await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
     }
-    if(action==='lock'){feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){
@@ -3667,6 +3717,7 @@ document.addEventListener('keydown',ev=>{
     ev.preventDefault();runAction('capture-focus');return;
   }
   if(ev.key==='Tab'&&feelingOverlayOpen){const modal=app.querySelector('#fw65-dialog');const focusables=[...(modal?.querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled])')||[])];if(focusables.length){const i=focusables.indexOf(document.activeElement);if(ev.shiftKey&&(i<=0)){ev.preventDefault();focusables.at(-1).focus();}else if(!ev.shiftKey&&(i===focusables.length-1||i===-1)){ev.preventDefault();focusables[0].focus();}}return;}
+  if(ev.key==='Escape'&&morningPlayerOpen){ev.preventDefault();morningCloseOverlay();render();return;}
   if(ev.key==='Escape'&&feelingOverlayOpen){ev.preventDefault();feelingOverlayOpen=false;render();return;}
   if(ev.key==='Escape'&&captureOverlayOpen){ev.preventDefault();captureOverlayOpen=false;render();return;}
   if(!typing&&!ev.ctrlKey&&!ev.altKey&&!ev.metaKey&&ev.key.toLowerCase()==='n'&&state){ev.preventDefault();runAction('capture-focus');}
@@ -3682,7 +3733,7 @@ setInterval(()=>{
 },60000);
 window.addEventListener('offline',render);
 for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();},{passive:true});
-setInterval(()=>{if(state&&Date.now()-lastActivity>15*60*1000){feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
+setInterval(async()=>{if(state&&Date.now()-lastActivity>15*60*1000){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
 (async()=>{
   try{config=await fetch(`${import.meta.env.BASE_URL}runtime-config.json`,{cache:'no-store'}).then(r=>r.json());}
   catch{config={};}

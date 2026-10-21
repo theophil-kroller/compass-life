@@ -159,6 +159,10 @@ export async function appendSealedNutrition(entry){
  if(!entry?.id||!entry?.foodId)throw Error('Ungültiger Ernährungseintrag.');
  return appendSealedRecord({id:entry.id,kind:'nutrition',entry:{id:String(entry.id),foodId:String(entry.foodId),at:entry.at||new Date().toISOString()},createdAt:entry.at||new Date().toISOString()});
 }
+export async function appendSealedMorning(entry){
+ if(!entry?.id||!entry?.finishedAt||!Array.isArray(entry.steps))throw Error('Morning-Eintrag ungültig.');
+ return appendSealedRecord({kind:'morning',id:entry.id,entry,createdAt:entry.finishedAt});
+}
 export async function appendSealedHabit(entry){
  if(!entry?.habitId||!entry?.day)throw Error('Habit-Eintrag ist ungültig.');
  const id=crypto.randomUUID();

@@ -1,0 +1,36 @@
+Compass 0.5.70 – Miracle Morning
+================================
+
+PATCH von 0.5.69.2:
+1. Verschlüsseltes Vault-Backup bzw. funktionsfähigen aktuellen Stand sichern.
+2. Inhalt der Datei Compass_0.5.70_PATCH_FROM_0.5.69.2.zip in das STAMMVERZEICHNIS des Repositories entpacken.
+   Wichtig: Ordnerstruktur client/, tests/ und package.json beibehalten. Keine extra Unterordner-Ebene.
+3. Änderungen committen und den GitHub-Actions-Workflow "Deploy Compass Web" abwarten.
+4. Erst nach einem GRÜNEN Workflow die Webseite neu laden; bei installierter PWA ggf. schließen und erneut öffnen.
+
+FULL SOURCE:
+Compass_0.5.70_FULL_SOURCE.zip enthält den vollständigen aktualisierten Codebestand.
+
+NEUE D1 MIGRATION: KEINE.
+NEUER WORKER: KEINER gegenüber 0.5.69.2.
+Für die geräteübergreifende Synchronisierung muss der bestehende journalfähige Worker von 0.5.69.2 inklusive D1-Migration 0018 bereits aktiv sein. GitHub-Webdeploy alleine aktualisiert NICHT den Cloudflare Worker.
+
+ERSTTEST:
+1. Compass entsperren → Insights → Habits → Miracle Morning.
+2. Konfigurieren: eine Affirmation hinterlegen und Reading-Buch wählen. Speichern.
+3. Standardroutine starten, Timer starten und mit Fertig weitergehen. Übung überspringen ausprobieren.
+4. Bei Reading zwischen Compass und Kindle wechseln; bei Rückkehr muss die verstrichene Zeit korrekt berücksichtigt werden.
+5. Bei Scribing eine kurze Diktiernotiz erfassen; Routine abschließen.
+6. Nach Abschluss: Insights → Habits zeigt die abgeschlossene Routine in der Chronik; das Habit "Miracle Morning" ist für heute abgehakt.
+7. Tresor sperren → Titelzeile Habits → Miracle Morning. Player starten; private Affirmationen dürfen NICHT angezeigt werden. Routine beenden; anschließend Tresor entsperren und Eintrag in der Chronik prüfen.
+8. Wenn beide Geräte verbunden sind: im Zeitjournal/Ernährung "Jetzt abgleichen" prüfen; danach am Zweitgerät entsperren und erneut abgleichen. Die fertigen Morning-Sessions sollen übereinstimmen.
+
+BEKANNTE GRENZEN:
+- Hintergrund-Signaltöne/Benachrichtigungen auf iOS/Android nicht garantiert.
+- Keine eigenständige Garmin-Watch-App.
+- Keine kalorien- oder gesundheitliche Bewertung.
+- Unfertige Timer werden nicht live zwischen zwei Geräten synchronisiert.
+- Bei noch nicht abgeschlossenem Scribing kann ein Browserabsturz den aktuellen Text verlieren; laufender Zeitfortschritt bleibt lokal rekonstruierbar.
+- Vite-Produktionsbuild ist hier nicht ausgeführt worden; GitHub Actions soll npm install, npm run check, npm run build ausführen.
+
+Teststand: 713/713 Tests, JavaScript-Syntax der Kernmodule erfolgreich.

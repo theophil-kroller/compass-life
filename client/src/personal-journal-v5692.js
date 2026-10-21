@@ -1,3 +1,4 @@
+import {mergeMorningData} from './miracle-morning-v570.js';
 /** Compass 0.5.69.2 – Personal Time Journal + nutrition; pure data transformations. */
 export const TIME_AREAS=[
  ['work','💼','Berufliche Arbeit'],['project','🛠️','Privatprojekt'],['family','❤️','Familie & Beziehungen'],
@@ -121,6 +122,7 @@ export function mergeJournalData(local,remote){
  return {
   timeJournal:{entries:byId(lc.timeJournal?.entries,rc.timeJournal?.entries),overrides:unionObject(lc.timeJournal?.overrides,rc.timeJournal?.overrides)},
   nutritionJournal:{entries:byId(lc.nutritionJournal?.entries,rc.nutritionJournal?.entries),customFoods:byId(lc.nutritionJournal?.customFoods,rc.nutritionJournal?.customFoods)},
-  quickWorktime:{sessions:byId(localWork.sessions,remoteWork.sessions),activeStart:active.activeStart||'',activeCategory:active.activeCategory||'work',updatedAt:active.updatedAt||''}
+  quickWorktime:{sessions:byId(localWork.sessions,remoteWork.sessions),activeStart:active.activeStart||'',activeCategory:active.activeCategory||'work',updatedAt:active.updatedAt||''},
+  ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{})
  };
 }
