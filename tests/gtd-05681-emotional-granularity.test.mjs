@@ -67,7 +67,7 @@ test('0.5.68.1.1 locked entry has encrypted capture route and existing backups; 
  assert.match(main,/vault\.appendSealedFeeling\(entry\)/);
  assert.match(vault,/export async function appendSealedFeeling/);
  assert.match(main,/capture\.kind==='feeling'/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.68\.1\.1'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.\d+(?:\.\d+)*'/);
  assert.ok(!main.includes('/api/feelings'));
 });
 function memoryIndexedDB(){

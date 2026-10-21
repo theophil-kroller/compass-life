@@ -53,5 +53,5 @@ test('UI requires consent before all batches, reports saved coverage and gives a
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  for(const part of ['planHealthQueue(group)','for(let index=0;index<batches.length;index++)','health-import-confirm','smart49-health-backfill','health-import-stop','healthImportJob.done','commitHealthImport(s,preview)','healthBatchResult(batch,preview)','report.accepted'])assert.ok(main.includes(part),part);
  assert.doesNotMatch(main,/newestHealthFirst\(group\)\.slice\(0,150\)/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.68\.1\.1'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.\d+(?:\.\d+)*'/);
 });

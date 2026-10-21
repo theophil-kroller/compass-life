@@ -87,7 +87,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.69';
+const COMPASS_CLIENT_VERSION='0.5.69.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -151,7 +151,6 @@ async function resumeSession(){
 }
 
 let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),feelingDays=30,feelingView='overview',feelingSelectedId='',feelingHistoryLimit=30,feelingEditingId='',connectionEmotion='anger',connectionDays=30;
-let captureOverlayOpen=false;
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 const QUICK_PUBLIC_KEY='compass.quick.public.v569';
 const DEFAULT_HABITS=[
@@ -160,6 +159,7 @@ const DEFAULT_HABITS=[
   {id:'wim-hof',title:'Wim-Hof Atempraxis',slot:'Abend',active:true}
 ];
 let quickPublic=readQuickPublic();
+let captureOverlayOpen=false;
 let sealedCaptureAvailable=false,contactSaveStatus='',contactSaving=false;
 let contactSettingsOpen=false,calendarSuggestionsOpen=true;
 let peopleScrollRestoration=null;

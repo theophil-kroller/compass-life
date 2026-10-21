@@ -1,0 +1,21 @@
+Compass 0.5.69.1 – Deployment-Fix für GitHub Actions
+=====================================================
+
+Empfehlung: PATCH, wenn die 0.5.69-Dateien aus den Runs #127/#128 bereits im Branch main liegen.
+
+1. Bestehenden Code und lokalen Tresor sichern.
+2. Compass_0.5.69.1_PATCH_FROM_0.5.69.zip öffnen.
+3. Alle ZIP-Inhalte mit derselben Ordnerstruktur direkt in das Stammverzeichnis von
+   `theophil-kroller/compass-life` kopieren – KEINEN zusätzlichen Überordner anlegen.
+4. Auch ALLE Testdateien unter tests/ hochladen und vorhandene Dateien ersetzen.
+5. Commit auslösen und GitHub > Actions > Deploy Compass Web öffnen.
+6. Ein neuer Lauf sollte `npm run check` bestehen und anschließend `npm run build` ausführen.
+7. Nach erfolgreichem Deploy Compass mit Strg+F5 aktualisieren und Version 0.5.69.1 prüfen.
+
+Alternativ: Compass_0.5.69.1_FULL_SOURCE.zip enthält den vollständigen Quellstand
+mit korrekten Repository-Pfaden ab ZIP-Root.
+
+Falls der neue Workflow erneut fehlschlägt, den neuen Run-Link und den markierten
+Fehlerschritt prüfen. Nicht blind die gleichen Dateien mehrfach hochladen.
+
+Keine D1-Migration. Kein Vault-Reset.
