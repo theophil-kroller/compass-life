@@ -87,7 +87,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.68.1';
+const COMPASS_CLIENT_VERSION='0.5.68.1.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -499,6 +499,7 @@ function chrome(content){
  <button type="button" class="calm-group-toggle ${calmNavGroup==='insights'?'is-open':''}" data-action="calm-nav-group" data-id="insights" aria-expanded="${calmNavGroup==='insights'}" aria-controls="calm-nav-insights">${ico('layers',19)}<span>Insights</span>${ico('arrow',14)}</button>
  ${calmNavGroup==='insights'?`<div class="calm-subitems" id="calm-nav-insights">
  <button type="button" class="calm-mobile-nav-back" data-action="calm-nav-group" data-id="insights" aria-label="Zur Hauptnavigation zurück">${ico('arrow',15)}<span>Menü</span></button>
+ <button type="button" class="nav-item ${tab==='insights'&&insightTab==='feelings'?'is-active':''}" data-action="calm-insight-view" data-id="feelings" aria-current="${tab==='insights'&&insightTab==='feelings'?'page':'false'}">${ico('heart',19)}<span>Gefühlswelt</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&['sleep','energy','stress','body'].includes(insightTab)?'is-active':''}" data-action="calm-insight-view" data-id="sleep">${ico('moon',19)}<span>Gesundheit</span></button>
  ${navItem('activity','Aktivitäten','activity')}
  ${navItem('recovery','Erholung','heart')}
@@ -1003,7 +1004,7 @@ function vaultScreen(){
  <form class="vault-form" id="vault-form" autocomplete="off"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" placeholder="Passphrase (mindestens 12 Zeichen)" autocomplete="off" />
  ${!hasVault?'<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" minlength="12" required autocomplete="off" placeholder="Passphrase wiederholen"/>':''}
  <button class="primary-btn" type="submit">${hasVault?'Entsperren':'Einrichten'} ${ico('arrow',15)}</button>
- ${!hasVault?'<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/>':''}</form>${hasVault?`<div class="locked-capture-help"><button type="button" class="secondary-btn" data-action="feeling-open" ${!sealedCaptureAvailable?'disabled':''}>☀️ Gefühl erfassen – ohne Entsperren</button><button type="button" class="primary-btn" data-action="capture-focus" ${!sealedCaptureAvailable?'disabled':''}>⚡ Gedanken erfassen – ohne Entsperren</button><small>${sealedCaptureAvailable?'Schreibgeschützt verschlüsselter Eingangspuffer · wird nach Entsperren übernommen':'Einmal entsperren, um die verschlüsselte Schnellerfassung für dieses Gerät einzurichten.'}</small></div>`:''}</section>${todayWork(true)}`);
+ ${!hasVault?'<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/>':''}</form></section>${todayWork(true)}`);
 }
 function todayScreen(){return chrome(`${calendarDeadlinePanel()}${occasionPanel()}${todayWork()}`);}
 function homeScreen(){
@@ -1411,7 +1412,7 @@ function insightsScreen(){
  const model=buildSleepInsights(state?.healthImports||{},today,insightPeriod);
  const healthIds=['sleep','energy','stress','body'];
  const healthMode=healthIds.includes(insightTab);
- const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühle','heart'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
+ const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
  const tabs=compactInsights.map(([id,label,icon])=>`<button type="button" class="calm-insight-tab ${(id==='sleep'?healthMode:insightTab===id)?'selected':''}" data-action="insights-tab" data-id="${id}" aria-pressed="${id==='sleep'?healthMode:insightTab===id}">${ico(icon,16)}<span>${label}</span></button>`).join('');
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');

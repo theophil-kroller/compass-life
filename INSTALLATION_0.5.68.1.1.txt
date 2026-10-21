@@ -1,0 +1,19 @@
+Compass 0.5.68.1.1 – Installation
+================================
+
+A) Patch für vorhandenes 0.5.68.1
+1. Backup des GitHub-Projekts und deiner lokalen Vault-Daten anlegen.
+2. Inhalt von Compass_0.5.68.1.1_PATCH_FROM_0.5.68.1.zip direkt in das Hauptverzeichnis deines Compass-Repositories entpacken; vorhandene Dateien ersetzen.
+3. Änderungen committen und die vorhandene GitHub-Pages-Deployment-Pipeline ausführen.
+4. Im Browser neu laden (ggf. Hard-Refresh).
+5. Unter Insights in der linken Navigation „Gefühlswelt“ auswählen. Die Ansicht mit Überblick, Chronik und Muster muss sichtbar sein.
+6. Tresor sperren und auf „Heute“ prüfen: keine zusätzlichen großen Gefühl-/Gedankenbuttons. Die vorhandenen Schnellzugriffe in der Kopfzeile bleiben sichtbar.
+
+B) Full Build
+- Statt Patch den Inhalt von Compass_0.5.68.1.1_FULL_SOURCE.zip als vollständigen Repository-Stand verwenden.
+- Nicht gleichzeitig Full Build und Patch übereinander anwenden.
+
+WICHTIG: Es gibt keine D1-Migration und keine Änderung am gespeicherten Vault.
+Falls der globale Schnellzugriff bei gesperrtem Tresor nicht funktioniert, den Tresor einmal entsperren, damit der verschlüsselte Eingangspuffer auf dem Gerät initialisiert ist.
+
+QA: 694/694 Node-Tests bestanden; Syntaxprüfungen OK. Kein erfolgreicher Vite-Build in dieser Umgebung (vite: Permission denied), keine Browser-Abnahme.
