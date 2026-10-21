@@ -110,6 +110,20 @@ export function nutritionInsightsView(state,{period=30,editingId=''}={}){
  const stats=nutritionStats(state,period),foods=nutritionFoods(state),editing=nutritionEntries(state).find(e=>e.id===editingId);
  return `<div class="pj92-shell"><section class="work-card"><div class="work-heading"><span>🥗 Ernährungstagebuch</span><span class="quiet-tag">${period} Tage</span></div><p class="muted-line">Was esse und trinke ich – und wann? Ohne Bewertung oder automatische Ernährungsnoten.</p><div class="pj92-period">${[7,30,90].map(n=>`<button type="button" class="${n===period?'active':''}" data-action="pj92-nutrition-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${stats.entries.length}</strong><small>erfasste Lebensmittel und Getränke</small></div><div class="pj92-category-bars">${stats.ranked.slice(0,12).map(([id,count])=>{const food=foods.find(f=>f.id===id);return `<div class="pj92-bar-row"><span>${food?.emoji||'🍴'} ${esc(food?.title||'Eigenes Lebensmittel')}</span><div><i style="width:${Math.round(count/(stats.ranked[0]?.[1]||1)*100)}%"></i></div><strong>${count}×</strong></div>`;}).join('')||'<p class="muted-line">Noch keine Einträge in diesem Zeitraum.</p>'}</div></section><section class="work-card"><div class="work-heading"><span>Letzte Einträge</span><button type="button" class="secondary-btn" data-action="pj92-nutrition-add">Neues Lebensmittel erfassen</button></div><div class="pj92-entry-list">${stats.entries.slice(0,60).map(e=>{const food=foods.find(f=>f.id===e.foodId);return `<button class="pj92-time-row" type="button" data-action="pj92-food-edit" data-id="${esc(e.id)}"><span><strong>${food?.emoji||'🍴'} ${esc(food?.title||'Eintrag')}</strong><small>${esc([e.amount,e.note].filter(Boolean).join(' · ')||'Zum Bearbeiten öffnen')}</small></span><span><strong>${dayFormat(e.at)}</strong><small>${hourFormat(e.at)}</small></span></button>`;}).join('')||'<p class="muted-line">Einfach über das Ernährungssymbol in der Titelzeile beginnen.</p>'}</div></section>${editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>Ernährungseintrag</span><button type="button" data-action="pj92-food-edit-cancel">Schließen</button></div><form id="pj92-food-detail-form"><input type="hidden" name="id" value="${esc(editing.id)}"><label>Zeitpunkt<input type="datetime-local" name="at" value="${esc(toInputDate(editing.at))}" required></label><label>Menge (optional)<input name="amount" maxlength="60" value="${esc(editing.amount||'')}" placeholder="z. B. eine Handvoll"></label><label>Notiz (optional)<textarea name="note" rows="2" maxlength="500">${esc(editing.note||'')}</textarea></label><div class="pj92-form-actions"><button type="submit" class="primary-btn">Speichern</button><button type="button" class="secondary-btn" data-action="pj92-food-delete" data-id="${esc(editing.id)}">Löschen</button></div></form></section>`:''}<section class="work-card"><h3>Eigene Lebensmittel hinzufügen</h3><form id="pj92-add-food-form" class="pj92-inline-form"><label>Bezeichnung<input name="title" maxlength="80" placeholder="z. B. Haferbrei" required></label><button type="submit" class="secondary-btn">Hinzufügen</button></form></section></div>`;
 }
+// Merge encrypted emotion check-ins by immutable ID. Preserve all historical entries
+// from both devices; an explicit later edit wins, with deterministic ties.
+export function mergeFeelingCheckins(local=[],remote=[]){
+ const byId=new Map();
+ for(const row of [...(Array.isArray(local)?local:[]),...(Array.isArray(remote)?remote:[])]){
+  if(!row||typeof row.id!=='string'||!Array.isArray(row.items))continue;
+  const previous=byId.get(row.id);
+  if(!previous){byId.set(row.id,row);continue;}
+  const revision=x=>String(x.editedAt||x.updatedAt||x.at||'');
+  const a=revision(previous),b=revision(row);
+  if(b>a||(b===a&&JSON.stringify(row)>JSON.stringify(previous)))byId.set(row.id,row);
+ }
+ return [...byId.values()].sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||a.id.localeCompare(b.id));
+}
 export function mergeJournalData(local,remote){
  // Versioned per-ID merge; a remote device must never erase a newer local entry.
  const lc=local&&typeof local==='object'?local:{},rc=remote&&typeof remote==='object'?remote:{};
@@ -123,6 +137,7 @@ export function mergeJournalData(local,remote){
   timeJournal:{entries:byId(lc.timeJournal?.entries,rc.timeJournal?.entries),overrides:unionObject(lc.timeJournal?.overrides,rc.timeJournal?.overrides)},
   nutritionJournal:{entries:byId(lc.nutritionJournal?.entries,rc.nutritionJournal?.entries),customFoods:byId(lc.nutritionJournal?.customFoods,rc.nutritionJournal?.customFoods)},
   quickWorktime:{sessions:byId(localWork.sessions,remoteWork.sessions),activeStart:active.activeStart||'',activeCategory:active.activeCategory||'work',updatedAt:active.updatedAt||''},
+  feelingCheckins:mergeFeelingCheckins(lc.feelingCheckins,rc.feelingCheckins),
   ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{})
  };
 }

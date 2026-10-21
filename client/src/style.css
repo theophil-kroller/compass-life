@@ -2954,3 +2954,8 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .journal-diagnostics small { display:block; color:#4d665f; font-size:.74rem; line-height:1.35; overflow-wrap:anywhere; }
 .journal-diagnostics .journal-diagnostics-error { color:#a04646; }
 .journal-diagnostics button { margin-top:2px; }
+
+/* v0.5.70.3: compact, optional contact homebase */
+.person-homebase-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.person-homebase-fields label{min-width:0}
+@media(max-width:540px){.person-homebase-fields{grid-template-columns:1fr}}

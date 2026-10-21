@@ -54,7 +54,8 @@ export function mapDrop(person,x,y,center=235,maxRadius=185){
 export function safePersonDetails(form){
  const v=k=>String(form?.[k]??'').trim();
  const fields={partnerName:v('partnerName'),childrenInfo:v('childrenInfo'),sharedHobbies:v('sharedHobbies'),importantEvents:v('importantEvents'),catchUpNotes:v('catchUpNotes')};
- if(Object.entries(fields).some(([k,value])=>value.length>(k==='catchUpNotes'||k==='importantEvents'?1200:400)))throw Error('Kontaktangaben sind zu lang.');
+ if(Object.hasOwn(form||{},'homeCity')||Object.hasOwn(form||{},'homeCountry')){fields.homeCity=v('homeCity');fields.homeCountry=v('homeCountry');}
+ if(Object.entries(fields).some(([k,value])=>value.length>(k==='catchUpNotes'||k==='importantEvents'?1200:['homeCity','homeCountry'].includes(k)?120:400)))throw Error('Kontaktangaben sind zu lang.');
  return fields;
 }
 export function relatedProjectIds(person,projects){return (Array.isArray(person?.relatedProjectIds)?person.relatedProjectIds:[]).filter(id=>!!projects?.[id]);}

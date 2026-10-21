@@ -1,0 +1,27 @@
+Compass 0.5.70.3 – Installation und Validierung
+================================================
+
+PATCH VON 0.5.70.2:
+1. Vorher verschlüsselte Tresor-Backups anfertigen, jeweils am Computer und am Handy.
+2. Compass_0.5.70.3_PATCH_FROM_0.5.70.2.zip in das Repository-Stammverzeichnis entpacken (Dateistruktur client/src/ usw.). Gleichnamige Dateien ersetzen.
+3. Änderungen committen. GitHub Actions: "Deploy Compass Web" muss grün abschließen.
+4. Auf Handy und Computer Compass/PWA neu starten und sicherstellen, dass in beiden Version 0.5.70.3 steht. Browser-/Website-Daten NICHT löschen.
+5. Auf beiden Geräten den Tresor entsperren und denselben Compass-Google-Account verwenden. Unter Einstellungen den privaten Geräteabgleich nachsehen: Schlüssel/Phrase müssen zusammenpassen.
+
+PRÜFUNG ARBEITSZEIT:
+1. Handy: Im entsperrten Compass ein-/ausstempeln oder vorhandenen Timer belassen. Im Popover "Jetzt abgleichen" klicken.
+2. Meldung und Cloud-Versionsnummer notieren; sie belegen nur den Abgleich des jeweiligen Geräts.
+3. Laptop: Arbeitszeit öffnen, "Jetzt abgleichen" drücken.
+4. Vergleichen: Konto, Cloud-Versionsnummer und "Cloud-Timer seit ..." auf beiden Geräten. Timer muss jetzt im lokalen Laptop-Popover sichtbar sein.
+5. Wenn die Cloud-Versionen trotz Nachladen verschieden bleiben, bitte beide vollständigen Diagnosezeilen melden. Bestehende Zeitintervalle NICHT löschen.
+
+PRÜFUNG GEFÜHLSWELT:
+1. Auf dem entsperrten Handy einen neuen Test-Check-in erfassen; darauf achten, dass der Journal-Abgleich abgeschlossen ist.
+2. Auf dem Laptop "Jetzt abgleichen" verwenden (Arbeitszeit-Popover reicht) und anschließend unter Insights → Gefühlswelt → Chronik nachsehen.
+3. Alte vorhandene Check-ins und nachbearbeitete Nuancen sollen unverändert bleiben.
+
+HINWEISE:
+- Keine neue D1-Migration, sofern 0018 vorhanden; Cloudflare Worker für "journal" aus 0.5.69.2 weiterhin erforderlich.
+- Bei gesperrtem Tresor erfolgt die Cloud-Übertragung erst nach dem nächsten Entsperren.
+- Personen-Homebase wird lokal verschlüsselt gespeichert. Die Profile selbst sind in dieser Version nicht über den Journal-Abgleich synchronisiert.
+- 728/728 automatisierte Tests bestanden und Worker-JavaScript-Syntaxprüfung grün. Vite-Produktionsbuild und echte Cross-Device-Browserprüfung hier nicht möglich.
