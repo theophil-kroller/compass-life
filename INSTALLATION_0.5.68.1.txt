@@ -1,0 +1,44 @@
+Compass 0.5.68.1 – Installation / Update
+=======================================
+
+BASIS
+Das PATCH-Paket kann AUSSCHLIESSLICH auf Compass 0.5.68 angewendet werden.
+Bei anderem Quellstand den vollständigen FULL_SOURCE-Build verwenden.
+
+PATCH
+1. Vorher ein verschlüsseltes Compass-Tresor-Backup exportieren.
+2. PATCH_FROM_0.5.68.zip über das Quellverzeichnis von 0.5.68 entpacken.
+3. Vorhandene Dateien überschreiben, neue Dateien übernehmen.
+4. Bestehende IndexedDB-Daten bzw. den lokalen Vault NICHT löschen.
+5. Im Client die aktuelle Version 0.5.68.1 verifizieren.
+
+FULL SOURCE
+1. FULL_SOURCE.zip in ein neues Quellverzeichnis entpacken.
+2. Keine Nutzdaten aus dem bisherigen lokalen Tresor löschen.
+3. Abhängigkeiten im Projekt installieren (normalerweise npm install).
+4. Anschließend npm run build -w client und npm test ausführen.
+
+TESTEN
+- Zwei vorhandene Gefühls-Check-ins sind weiterhin in Insights → Gefühlswelt → Chronik sichtbar.
+- Die bisherige Wortskala bei Freude bleibt Erfreut/Fröhlich/Glücklich/Begeistert/Euphorisch.
+- Die zusätzliche visuelle 1–10-Skala wird von pastellfarben zu satt und folgt derselben Intensität.
+- Optimismus → Inspiriert auswählen; Check-in speichern und rechts im Feeling Inspector öffnen.
+- Eintrag im Inspector nachträglich bearbeiten; ursprünglicher Zeitstempel bleibt erhalten.
+- Tresor sperren → Gefühl erfassen → verschlüsselt speichern → entsperren → im Verlauf prüfen.
+  Hinweis: Für die gesperrte Schnellerfassung muss der Schreibschlüssel einmalig in einem
+  entsperrten Tresor auf diesem Gerät eingerichtet worden sein.
+
+DATEN / MIGRATION
+Keine D1-Migration. Bestehende Gefühlseinträge werden nicht gelöscht oder überschrieben.
+Gespeichert wird weiterhin lokal verschlüsselt im Tresor. Das installierte Gerät benötigt
+seinen vorhandenen IndexedDB-Vault (oder ein verschlüsseltes Backup).
+
+WICHTIGE BEGRENZUNG
+Die automatische Synchronisierung des Gefühlsjournals zwischen mehreren Geräten ist
+in dieser Version noch NICHT enthalten. Synchronisationsfähigkeit ist eine spätere Aufgabe;
+vertraue zurzeit auf lokale verschlüsselte Backups. Nicht mehrere Tresore ohne Abgleich
+überschreiben.
+
+VALIDIERUNG DER QUELLDATEN
+691/691 automatisierte Tests bestanden. Worker-Syntax okay.
+Produktionsbuild konnte hier nicht ausgeführt werden: Vite-Abhängigkeit nicht installiert.

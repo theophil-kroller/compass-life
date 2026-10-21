@@ -111,3 +111,16 @@ Unter **Planen → Projekte** können verfügbare konkrete Aufgaben einzeln für
 ## 0.5.55 (Conference Radar, Arbeitszeitvergleich, Mobile Navigation)
 
 Siehe [CHANGELOG_0.5.55.md](CHANGELOG_0.5.55.md) und [INSTALLATION_0.5.55.txt](INSTALLATION_0.5.55.txt). Der Conference Radar ist kuratiert, noch kein autonomer CFP-Scanner.
+
+### Compass 0.5.68.1 – Gefühlswelt
+
+Das sechsteilige Feeling Wheel und die bisherigen emotionsspezifischen Wort-Slider bleiben
+unverändert. Ergänzend: abgestufter 1–10-Farbintensitätsbalken, freiwillige Gefühlsfamilie
+und Nuance, Körper/Bedürfnis/Impuls, optionaler Reflexionstext. Unter Insights bieten
+Überblick, Chronik, Muster und Feeling Inspector eine durchsuchbare, datentreue
+Selbsterfahrungshistorie. Gesperrte Schnell-Check-ins nutzen den verschlüsselten
+0.5.68-Schreib-Puffer und werden nach Entsperren übernommen.
+
+**Datenschutz:** kein automatischer Upload persönlicher Gefühle. E2EE-Geräteabgleich
+für die Gefühlswelt ist noch nicht implementiert; verschlüsselte Tresor-Backups verwenden.
+Siehe `CHANGELOG_0.5.68.1.md` und `INSTALLATION_0.5.68.1.txt`.

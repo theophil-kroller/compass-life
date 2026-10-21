@@ -15,7 +15,7 @@ import {inboxFlagged,visibleInboxTags,setInboxFlag} from './inbox-flags-v27.js';
 import {inboxOrdered,inboxMove,inboxNudge} from './inbox-order-v34.js';
 import {FOLDER_ICONS,folderIcon} from './folder-icons-v35.js';
 import {CONTACT_TYPES,CONTACT_REVIEW_DAYS,contactTypeLabel,addContactEntry,contactSummary,contactReviewQueue,updateContactReviewDays} from './people-relationships-v24.js';
-import {FEELINGS,feelingWord,newFeelingDraft,chooseFeeling,intensityFor,validatedCheckin,appendCheckin,feelingOverlay,feelingInsights,feelingReview} from './feeling-wheel-v565.js';
+import {FEELINGS,feelingWord,newFeelingDraft,chooseFeeling,intensityFor,validatedCheckin,appendCheckin,replaceCheckin,draftFromCheckin,setFeelingDetail,toggleFeelingObservation,feelingOverlay,feelingInsights,feelingReview} from './feeling-wheel-v565.js';
 import {personalConnections,personalConnectionsView} from './personal-connections-v566.js';
 import {relationshipMapView,MAP567,closenessAt} from './relationship-map-v567.js';
 import {CONTACT_MODES,careMode,relationshipReview,activeCare} from './relationship-intelligence-v568.js';
@@ -87,7 +87,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.68';
+const COMPASS_CLIENT_VERSION='0.5.68.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -150,7 +150,7 @@ async function resumeSession(){
   }
 }
 
-let feelingOverlayOpen=false,feelingDraft=newFeelingDraft(),feelingDays=30,connectionEmotion='anger',connectionDays=30;
+let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),feelingDays=30,feelingView='overview',feelingSelectedId='',feelingHistoryLimit=30,feelingEditingId='',connectionEmotion='anger',connectionDays=30;
 let captureOverlayOpen=false;
 let sealedCaptureAvailable=false,contactSaveStatus='',contactSaving=false;
 let contactSettingsOpen=false,calendarSuggestionsOpen=true;
@@ -529,7 +529,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${state&&feelingOverlayOpen?feelingOverlay(feelingDraft,state.feelingCheckins||[]):``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[]):``}</div>`;
 }
 
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
@@ -1003,7 +1003,7 @@ function vaultScreen(){
  <form class="vault-form" id="vault-form" autocomplete="off"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" placeholder="Passphrase (mindestens 12 Zeichen)" autocomplete="off" />
  ${!hasVault?'<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" minlength="12" required autocomplete="off" placeholder="Passphrase wiederholen"/>':''}
  <button class="primary-btn" type="submit">${hasVault?'Entsperren':'Einrichten'} ${ico('arrow',15)}</button>
- ${!hasVault?'<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/>':''}</form>${hasVault?`<div class="locked-capture-help"><button type="button" class="primary-btn" data-action="capture-focus" ${!sealedCaptureAvailable?'disabled':''}>⚡ Gedanken erfassen – ohne Entsperren</button><small>${sealedCaptureAvailable?'Schreibgeschützt verschlüsselter Eingangspuffer · wird nach Entsperren übernommen':'Einmal entsperren, um die verschlüsselte Schnellerfassung für dieses Gerät einzurichten.'}</small></div>`:''}</section>${todayWork(true)}`);
+ ${!hasVault?'<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/>':''}</form>${hasVault?`<div class="locked-capture-help"><button type="button" class="secondary-btn" data-action="feeling-open" ${!sealedCaptureAvailable?'disabled':''}>☀️ Gefühl erfassen – ohne Entsperren</button><button type="button" class="primary-btn" data-action="capture-focus" ${!sealedCaptureAvailable?'disabled':''}>⚡ Gedanken erfassen – ohne Entsperren</button><small>${sealedCaptureAvailable?'Schreibgeschützt verschlüsselter Eingangspuffer · wird nach Entsperren übernommen':'Einmal entsperren, um die verschlüsselte Schnellerfassung für dieses Gerät einzurichten.'}</small></div>`:''}</section>${todayWork(true)}`);
 }
 function todayScreen(){return chrome(`${calendarDeadlinePanel()}${occasionPanel()}${todayWork()}`);}
 function homeScreen(){
@@ -1416,7 +1416,7 @@ function insightsScreen(){
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?feelingInsights(state?.feelingCheckins||[],today,feelingDays):insightTab==='balance'?lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis}):insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today,false)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode)+worktimeImportPanel(state?.workTime||{},workPreview):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='balance'?lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis}):insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today,false)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode)+worktimeImportPanel(state?.workTime||{},workPreview):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <div class="calm-insight-toolbar" aria-label="Mobile Insights-Navigation"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
  <div class="insight-view-header ${insightTab==='sources'?'insight-source-heading':''}"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
@@ -1539,8 +1539,10 @@ function restorePeopleScroll(position){if(!position||tab!=='people'||position.se
 function render(){
  const scrollBeforeRender=rememberPeopleScroll();
  const feelingFocused=feelingOverlayOpen&&typeof document!=='undefined'&&document.activeElement?.closest?.('#fw65-dialog')?{id:document.activeElement.id||'',name:document.activeElement.dataset?.id||'',intensity:document.activeElement.dataset?.feelingIntensity||'',start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;
+ const insightScrollBefore=tab==='insights'&&insightTab==='feelings'?{page:window.scrollY||0,log:app.querySelector('.fw681-full-log')?.scrollTop||0,content:app.querySelector('.content')?.scrollTop||0}:null;
+ const feelingScrollBefore=feelingOverlayOpen?app.querySelector('#fw65-dialog')?.scrollTop||0:0;
  const captureFocus=snapshotCaptureDraft();
- if(!state){feelingOverlayOpen=false;feelingDraft=newFeelingDraft();app.innerHTML=vaultScreen();bind();restoreCaptureDraft(captureFocus);return;}
+ if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[]):'');bind();restoreCaptureDraft(captureFocus);return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  let html;
  try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
@@ -1551,7 +1553,7 @@ function render(){
    const rows=Object.values(state?.projects||{}).filter(p=>p&&!p.isTemplate).slice(0,200);
    html=chrome(`<section class="work-card" role="alert"><h2>Projektansicht eingeschränkt</h2><p>Beim Darstellen der Projekte ist ein Fehler aufgetreten. Deine Projektdaten wurden nicht verändert.</p><p>${rows.length} Projekte/Ordner gefunden.</p><button type="button" class="secondary-btn" data-tab="next">Next Actions öffnen</button></section>`);
  }
- app.innerHTML=html;bind();restoreCaptureDraft(captureFocus);restorePeopleScroll(scrollBeforeRender);
+ app.innerHTML=html;bind();restoreCaptureDraft(captureFocus);restorePeopleScroll(scrollBeforeRender);if(insightScrollBefore){const target=app.querySelector('.fw681-full-log');if(target)target.scrollTop=insightScrollBefore.log;const content=app.querySelector('.content');if(content)content.scrollTop=insightScrollBefore.content;requestAnimationFrame(()=>window.scrollTo?.({top:insightScrollBefore.page,behavior:'instant'}));}if(feelingOverlayOpen){const modal=app.querySelector('#fw65-dialog');if(modal)modal.scrollTop=feelingScrollBefore;}
  if(feelingFocused){let field=feelingFocused.id?app.querySelector('#'+feelingFocused.id):null;if(!field&&feelingFocused.name)field=app.querySelector('.fw65-emotion[data-id="'+feelingFocused.name+'"]');if(field?.focus){field.focus({preventScroll:true});if(Number.isInteger(feelingFocused.start)&&Number.isInteger(feelingFocused.end)&&typeof field.setSelectionRange==='function')try{field.setSelectionRange(feelingFocused.start,feelingFocused.end);}catch{}}}
  if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto!==false&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
    requestAnimationFrame(()=>refreshPublicKrakenPrices(false));
@@ -1576,7 +1578,15 @@ function bind() {
         await vault.setupSealedCapture();sealedCaptureAvailable=true;
         const pending=await vault.readSealedCaptures();
         if(pending.length){
-          for(const capture of pending){if(state.records[capture.id])continue;const record={id:capture.id,title:capture.title,note:capture.note||'',tags:[],deleted:false,updatedAt:capture.createdAt||stamp()};state.records[record.id]=record;state.pending.push(makeMutation(record));state.history.push({type:'captured',at:record.updatedAt,id:record.id});}
+          for(const capture of pending){
+            if(capture.kind==='feeling'){
+              const item=capture.entry;
+              if(!item||item.id!==capture.id||!Array.isArray(item.items)||!item.items.length||!item.items.every(i=>FEELINGS.some(f=>f.id===i.id)&&Number.isInteger(i.intensity)&&i.intensity>=1&&i.intensity<=10))throw Error('Verschlüsselter Gefühls-Check-in ist beschädigt.');
+              if(!(state.feelingCheckins||[]).some(e=>e.id===item.id))appendCheckin(state,item);
+              continue;
+            }
+            if(state.records[capture.id])continue;const record={id:capture.id,title:capture.title,note:capture.note||'',tags:[],deleted:false,updatedAt:capture.createdAt||stamp()};state.records[record.id]=record;state.pending.push(makeMutation(record));state.history.push({type:'captured',at:record.updatedAt,id:record.id});
+          }
           await persist(); // Only acknowledge after durable encrypted vault write.
           await vault.acknowledgeSealedCaptures(pending.map(x=>x.id));
           recoveryMessage=` · ${pending.length} verschlüsselte Schnellnotiz(en) übernommen`;
@@ -2276,10 +2286,11 @@ function bind() {
     if(ev.key==='Escape'){ev.preventDefault();inlineEditingTaskId=null;render();}
   });
   const feelingNote=app.querySelector('#fw65-note');if(feelingNote)feelingNote.oninput=()=>{feelingDraft.note=feelingNote.value;};
+  const feelingHypothesis=app.querySelector('#fw681-hypothesis');if(feelingHypothesis)feelingHypothesis.oninput=()=>{feelingDraft.hypothesis=feelingHypothesis.value;};
   app.querySelectorAll('[data-feeling-intensity]').forEach(el=>el.oninput=()=>{
     try{feelingDraft=intensityFor(feelingDraft,el.dataset.feelingIntensity,Number(el.value));
       const card=el.closest('.fw65-intensity'),def=FEELINGS.find(x=>x.id===el.dataset.feelingIntensity);
-      if(card){const name=card.querySelector('.fw65-word');if(name)name.textContent=feelingWord(def.id,Number(el.value));const value=card.querySelector('.fw65-intensity-head strong');if(value)value.textContent=el.value+'/10';card.querySelectorAll('.fw65-words span').forEach((node,i)=>node.classList.toggle('active',i===Math.floor((el.value-1)/2)));}
+      if(card){const name=card.querySelector('.fw65-word');if(name)name.textContent=feelingWord(def.id,Number(el.value));const value=card.querySelector('.fw65-intensity-head strong');if(value)value.textContent=el.value+'/10';card.querySelectorAll('.fw65-words span').forEach((node,i)=>node.classList.toggle('active',i===Math.floor((el.value-1)/2)));card.querySelectorAll('.fw681-scale-step').forEach((node,i)=>{node.classList.toggle('active',i===Number(el.value)-1);node.setAttribute('aria-pressed',String(i===Number(el.value)-1));});const presence=card.querySelector('.fw681-presence strong');if(presence)presence.textContent=Number(el.value)<=2?'Sehr leise wahrnehmbar':Number(el.value)<=4?'Leicht spürbar':Number(el.value)<=6?'Deutlich präsent':Number(el.value)<=8?'Nimmt viel Raum ein':'Sehr intensiv und vereinnahmend';}
     }catch{}
   });
   app.querySelectorAll('.fw65-emotion').forEach(el=>{el.onmouseenter=()=>{const def=FEELINGS.find(x=>x.id===el.dataset.id),hint=app.querySelector('#fw65-hint');if(def&&hint)hint.textContent=def.label+' · '+def.description;};el.onmouseleave=()=>{const hint=app.querySelector('#fw65-hint');if(hint)hint.textContent='Wähle ein oder mehrere Gefühle.';};});
@@ -2343,14 +2354,36 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
- if(action==='feeling-open'){captureOverlayOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
- if(action==='feeling-close'){feelingOverlayOpen=false;render();app.querySelector('.fw65-top-trigger')?.focus({preventScroll:true});return;}
+ if(action==='feeling-open'){if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}feelingEditingId='';captureOverlayOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
+ if(action==='feeling-close'){feelingEditingId='';feelingOverlayOpen=false;render();app.querySelector('.fw65-top-trigger')?.focus({preventScroll:true});return;}
  if(action==='feeling-toggle'){try{feelingDraft=chooseFeeling(feelingDraft,id);render();}catch(ex){toast(ex.message,true);}return;}
+ if(action==='feeling-family'||action==='feeling-nuance'||action==='feeling-observation'){
+   try{const modal=app.querySelector('#fw65-dialog'),scroll=modal?.scrollTop||0;
+     if(action==='feeling-family')feelingDraft=setFeelingDetail(feelingDraft,id,{family:stepId});
+     else if(action==='feeling-nuance')feelingDraft=setFeelingDetail(feelingDraft,id,{nuance:stepId});
+     else feelingDraft=toggleFeelingObservation(feelingDraft,id,stepId);
+     render();const next=app.querySelector('#fw65-dialog');if(next)next.scrollTop=scroll;
+   }catch(ex){toast(ex.message,true);}return;
+ }
+ if(action==='feeling-intensity-step'){try{feelingDraft=intensityFor(feelingDraft,id,Number(stepId));render();}catch(ex){toast(ex.message,true);}return;}
+ if(action==='feeling-view'){if(['overview','history','patterns'].includes(id)){feelingView=id;render();}return;}
+ if(action==='feeling-entry-select'){if(state?.feelingCheckins?.some(e=>e.id===id)){feelingSelectedId=id;render();}return;}
+ if(action==='feeling-load-more'){feelingHistoryLimit+=30;render();return;}
+ if(action==='feeling-entry-edit'){const item=state?.feelingCheckins?.find(e=>e.id===id);if(!item)return;feelingEditingId=id;feelingDraft=draftFromCheckin(item);feelingOverlayOpen=true;render();return;}
  if(action==='connection-emotion'){if(FEELINGS.some(e=>e.id===id)){connectionEmotion=id;render();}return;}
  if(action==='connection-period'){if(['7','30','90'].includes(id)){connectionDays=Number(id);render();}return;}
  if(action==='feeling-period'){if(['7','30','90'].includes(id)){feelingDays=Number(id);render();}return;}
  if(action==='feeling-open-history'){feelingOverlayOpen=false;tab='insights';insightTab='feelings';calmNavGroup='insights';render();return;}
- if(action==='feeling-save'){try{const entry=validatedCheckin(feelingDraft,{id:crypto.randomUUID(),at:stamp(),day:localDate()});await mutate(s=>appendCheckin(s,entry));feelingDraft=newFeelingDraft();feelingOverlayOpen=false;toast('Emotionaler Check-in sicher im lokalen Vault gespeichert.');}catch(ex){toast(ex.message,true);}return;}
+ if(action==='feeling-save'){
+   if(feelingSaving)return;feelingSaving=true;
+   try{
+     const previous=feelingEditingId?state?.feelingCheckins?.find(e=>e.id===feelingEditingId):null;
+     const entry=validatedCheckin(feelingDraft,{id:previous?.id||crypto.randomUUID(),at:previous?.at||stamp(),day:previous?.day||localDate()});
+     if(!state){if(!sealedCaptureAvailable)throw Error('Verschlüsselter Eingangspuffer ist nicht eingerichtet.');await vault.appendSealedFeeling(entry);feelingOverlayOpen=false;feelingDraft=newFeelingDraft();toast('Gefühl verschlüsselt gesichert · nach Entsperren in der Chronik.');}
+     else{if(previous){await mutate(s=>replaceCheckin(s,entry));feelingSelectedId=entry.id;}else{await mutate(s=>appendCheckin(s,entry));feelingSelectedId=entry.id;}
+       feelingDraft=newFeelingDraft();feelingEditingId='';feelingOverlayOpen=false;toast(previous?'Gefühls-Check-in aktualisiert und verschlüsselt gespeichert.':'Gefühl im lokalen Vault gespeichert.');}
+   }catch(ex){toast(ex.message,true);}finally{feelingSaving=false;}return;
+ }
  if(action==='balance-select'){if(id===''||['sleep','activity','gtd','finance','people','body','recovery','work'].includes(id)){balanceSelectedAxis=id||null;render();}return;}
  if(action==='balance-history'){if(['0','1','2'].includes(id)){balanceHistoryCount=Number(id);render();}return;}
  if(action==='balance-period'){if(['7','30'].includes(id)){balancePeriod=Number(id);render();}return;}

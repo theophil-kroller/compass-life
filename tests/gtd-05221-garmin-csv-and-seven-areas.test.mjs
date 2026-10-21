@@ -39,6 +39,6 @@ test('0.5.22.1 real link exposed in both source panels; version correct',()=>{
  const r=readFileSync(new URL('../client/src/review-import-hub.js',import.meta.url),'utf8');
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  for(const src of [h,r])assert.match(src,/https:\/\/connect\.garmin\.com\/app\/activities/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.68'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.68\.1'/);
  assert.match(main,/name="lifeArea"/);assert.match(main,/data-action="life-goal-area"/);
 });

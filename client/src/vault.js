@@ -124,25 +124,31 @@ export async function setupSealedCapture(){
  await kvPut(publicCaptureKey,to64(new Uint8Array(spki)));
 }
 export async function sealedCaptureReady(){return !!(await kvGet(publicCaptureKey)&&await kvGet(privateCaptureKey));}
-export async function appendSealedCapture(title,note=''){
- const cleanTitle=String(title||'').trim(),cleanNote=String(note||'').trim();
- if(!cleanTitle||cleanTitle.length>1000||cleanNote.length>10000)throw Error('Titel oder Notiz ist ungültig.');
+async function appendSealedRecord(record){
  const run=async()=>{
   const encoded=await kvGet(publicCaptureKey);if(!encoded)throw Error('Einmal den Tresor entsperren, um die sichere Schnellerfassung zu aktivieren.');
   const publicKey=await crypto.subtle.importKey('spki',from64(encoded),{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);
   const aesBytes=crypto.getRandomValues(new Uint8Array(32)),aesKey=await crypto.subtle.importKey('raw',aesBytes,'AES-GCM',false,['encrypt']);
   const iv=crypto.getRandomValues(new Uint8Array(12));
-  const id=crypto.randomUUID();
-  const payload=enc.encode(JSON.stringify({id,title:cleanTitle,note:cleanNote,createdAt:new Date().toISOString()}));
+  const id=record.id;const payload=enc.encode(JSON.stringify(record));
+  if(payload.byteLength>14000)throw Error('Eintrag für sicheren Eingangspuffer zu groß.');
   const encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv},aesKey,payload);
   const wrappedKey=await crypto.subtle.encrypt({name:'RSA-OAEP'},publicKey,aesBytes);
   const queue=await kvGet(lockedQueueKey)||[];
   if(queue.length>=100)throw Error('Sicherer Eingangspuffer voll. Bitte den Tresor entsperren.');
   queue.push({id,iv:to64(iv),data:to64(new Uint8Array(encrypted)),wrapped:to64(new Uint8Array(wrappedKey))});
-  await kvPut(lockedQueueKey,queue);
-  return queue.length;
+  await kvPut(lockedQueueKey,queue);return queue.length;
  };
  const result=captureQueueSerial.then(run);captureQueueSerial=result.catch(()=>{});return result;
+}
+export async function appendSealedCapture(title,note=''){
+ const cleanTitle=String(title||'').trim(),cleanNote=String(note||'').trim();
+ if(!cleanTitle||cleanTitle.length>1000||cleanNote.length>10000)throw Error('Titel oder Notiz ist ungültig.');
+ return appendSealedRecord({id:crypto.randomUUID(),title:cleanTitle,note:cleanNote,createdAt:new Date().toISOString()});
+}
+export async function appendSealedFeeling(entry){
+ if(!entry?.id||!Array.isArray(entry.items)||!entry.items.length)throw Error('Gefühls-Check-in ist ungültig.');
+ return appendSealedRecord({kind:'feeling',id:entry.id,entry,createdAt:entry.at});
 }
 export async function readSealedCaptures(){
  if(!key)throw Error('Tresor gesperrt.');
