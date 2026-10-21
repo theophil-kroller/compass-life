@@ -1,0 +1,24 @@
+COMPASS 0.5.70.5 – Installation
+==============================
+
+PATCH von 0.5.70.4
+1. WICHTIG: Vor dem Update vorhandenen verschlüsselten lokalen Tresor sichern.
+2. Compass_0.5.70.5_PATCH_FROM_0.5.70.4.zip im Repository-Stammverzeichnis entpacken und gleichnamige Dateien ersetzen.
+3. GitHub-Änderungen committen und warten, bis „Deploy Compass Web“ grün abgeschlossen ist.
+4. Browser neu laden; bei installierter PWA schließen und neu starten. Aktualisierte Version 0.5.70.5 prüfen.
+
+FULL SOURCE
+Compass_0.5.70.5_FULL_SOURCE.zip ist der vollständige Quellstand.
+
+TESTEN
+- Gefühlssymbol oben: Feeling Wheel und Intensität sind unverändert bedienbar.
+- „In eigenen Worten“ öffnen und „Ich bin gerade gestresst“ eingeben.
+- Begriffe wie Angespannt/Überfordert/Gereizt anklicken, im nächsten Schritt abwählen.
+- Einen Check-in mit Originaltext und Begriff(en) speichern, in Insights > Gefühlswelt > Chronik wiederfinden.
+- Frei formulierten Check-in ohne Zuordnung speichern und im Inspector prüfen.
+- Bei gesperrtem Tresor erfassen und nach Entsperren übernehmen.
+- Handy/Computer: in bestehendem Journal-Abgleich nachsehen, ob beide die Originalworte empfangen.
+- Ernährung: Kachel „Tee ungesüßt“ separat von „Tee mit Honig“ erfassen.
+
+KEINE D1-MIGRATION / KEIN WORKER-DEPLOY ERFORDERLICH.
+Nicht im Testumfang: Vite-Produktionsbuild und visuelle Abnahme auf dem echten Smartphone.

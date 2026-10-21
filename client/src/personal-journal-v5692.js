@@ -6,7 +6,7 @@ export const TIME_AREAS=[
 ];
 export const FOOD_PRESETS=[
  ['matcha','🍵','Matcha mit Honig','Getränke'],['oat-latte','☕','Hafermilch-Latte mit Karamellsirup','Getränke'],
- ['smoothie','🥤','Smoothie','Getränke'],['tea-honey','🫖','Tee mit Honig','Getränke'],
+ ['smoothie','🥤','Smoothie','Getränke'],['tea-unsweetened','🍵','Tee ungesüßt','Getränke'],['tea-honey','🫖','Tee mit Honig','Getränke'],
  ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke'],['coffee','☕','Kaffee','Getränke'],
  ['mensa','🍲','Mensaessen','Mahlzeiten'],['buffet','🍽️','Buffet / auswärts','Mahlzeiten'],
  ['bread-cheese','🥪','Käsebrot','Mahlzeiten'],['cheddar','🧀','Cheddar-Scheibe','Snacks'],

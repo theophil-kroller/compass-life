@@ -2959,3 +2959,39 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .person-homebase-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 .person-homebase-fields label{min-width:0}
 @media(max-width:540px){.person-homebase-fields{grid-template-columns:1fr}}
+
+/* Compass 0.5.70.5 · emotion network input; stays inside the existing wheel modal */
+.fw705-modebar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px 6px;border-top:1px solid rgba(255,255,255,.09)}
+.fw705-modebar button{border:1px solid rgba(156,204,209,.26);border-radius:999px;background:rgba(202,229,227,.07);color:#b3d6d4;padding:8px 14px;font:inherit;font-size:.82rem;cursor:pointer}
+.fw705-modebar button.active{color:#fff;background:rgba(82,174,160,.27);border-color:rgba(124,215,197,.7)}
+.fw705-search{width:100%;min-width:0}
+.fw705-search label{display:block;color:#d8eae7;font-weight:700;margin:5px 0 9px;font-size:.92rem}
+.fw705-search input{display:block;width:100%;box-sizing:border-box;background:rgba(15,35,47,.76);border:1px solid rgba(144,209,200,.45);border-radius:14px;padding:13px;color:#edf8f5;font:inherit;font-size:1rem;outline-offset:3px}
+.fw705-search input:focus{border-color:#84dfc2;box-shadow:0 0 0 3px rgba(132,223,194,.12)}
+.fw705-search input::placeholder{color:#9bb6b7}
+.fw705-network-graph{position:relative;min-height:410px;width:100%;isolation:isolate}
+.fw705-network-graph svg{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.fw705-network-center{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);border:1px solid rgba(115,211,188,.5);border-radius:999px;width:min(43%,175px);min-height:58px;padding:15px 11px;display:flex;align-items:center;justify-content:center;text-align:center;background:#234e54;color:#fff;font-size:.83rem;font-weight:750;overflow-wrap:anywhere;box-shadow:0 0 28px rgba(48,167,151,.14);z-index:1}
+.fw705-nodes{position:absolute;inset:0}
+.fw705-node{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);min-width:78px;max-width:108px;min-height:37px;border:1px solid var(--node-color);border-radius:22px;padding:8px 9px;color:#163037;background:var(--node-color);font:inherit;font-weight:700;font-size:.78rem;cursor:pointer;line-height:1.2;box-shadow:0 5px 13px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;gap:4px;z-index:2;text-align:center}
+.fw705-node.active{outline:3px solid #ffffffbd;outline-offset:2px;box-shadow:0 0 0 5px rgba(90,179,164,.13)}
+.fw705-node:hover{filter:brightness(1.1);transform:translate(-50%,-50%) scale(1.035)}
+.fw705-node b{font-size:.68rem}
+.fw705-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 12px;color:#c5d9dc;font-size:.68rem}
+.fw705-legend span{display:flex;align-items:center;gap:5px}
+.fw705-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.fw705-hint,.fw705-network-empty{color:#c0d0d2;font-size:.76rem;text-align:center;line-height:1.45}
+.fw705-summary{border-radius:13px;background:rgba(92,167,154,.12);border:1px solid rgba(92,167,154,.24);padding:12px 13px;margin-bottom:12px;color:#daeee9}
+.fw705-summary p{margin:7px 0 0;color:#cee4e2;overflow-wrap:anywhere;font-size:.88rem}
+.fw705-summary-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.fw705-summary-chips button{border:1px solid rgba(120,215,195,.46);background:rgba(56,110,110,.4);color:#e3f5ef;border-radius:100px;padding:6px 9px;cursor:pointer;font:inherit;font-size:.76rem}
+@media(max-width:800px){
+ .fw705-modebar{padding:10px 12px 8px}
+ .fw705-modebar button{flex:1;font-size:.78rem;padding:9px 8px}
+ .fw705-network-graph{min-height:unset;display:flex;flex-direction:column;gap:15px;margin-top:16px}
+ .fw705-network-graph svg{display:none}
+ .fw705-network-center{position:relative;left:auto;top:auto;transform:none;width:100%;max-width:none;min-height:unset;padding:11px;box-sizing:border-box;border-radius:13px}
+ .fw705-nodes{position:static;display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+ .fw705-node{position:static;left:auto;top:auto;transform:none;max-width:none;min-width:unset;min-height:36px;padding:9px 12px;font-size:.82rem}
+ .fw705-node:hover{transform:none}
+}

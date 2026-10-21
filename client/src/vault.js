@@ -147,7 +147,7 @@ export async function appendSealedCapture(title,note=''){
  return appendSealedRecord({id:crypto.randomUUID(),title:cleanTitle,note:cleanNote,createdAt:new Date().toISOString()});
 }
 export async function appendSealedFeeling(entry){
- if(!entry?.id||!Array.isArray(entry.items)||!entry.items.length)throw Error('Gefühls-Check-in ist ungültig.');
+ if(!entry?.id||!Array.isArray(entry.items)||(!entry.items.length&&!String(entry.ownWords||'').trim()&&!entry.networkTerms?.length))throw Error('Gefühls-Check-in ist ungültig.');
  return appendSealedRecord({kind:'feeling',id:entry.id,entry,createdAt:entry.at});
 }
 export async function appendSealedWorktime(entry){

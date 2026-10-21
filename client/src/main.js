@@ -16,6 +16,7 @@ import {inboxOrdered,inboxMove,inboxNudge} from './inbox-order-v34.js';
 import {FOLDER_ICONS,folderIcon} from './folder-icons-v35.js';
 import {CONTACT_TYPES,CONTACT_REVIEW_DAYS,CONTACT_INITIATORS,contactInitiatorLabel,contactTypeLabel,addContactEntry,contactSummary,contactReviewQueue,updateContactReviewDays} from './people-relationships-v24.js';
 import {FEELINGS,feelingWord,newFeelingDraft,chooseFeeling,intensityFor,validatedCheckin,appendCheckin,replaceCheckin,draftFromCheckin,setFeelingDetail,toggleFeelingObservation,feelingOverlay,feelingInsights,feelingReview} from './feeling-wheel-v565.js';
+import {renderFeelingNetwork,toggleNetworkTerm} from './feeling-network-v5705.js';
 import {personalConnections,personalConnectionsView} from './personal-connections-v566.js';
 import {relationshipMapView,MAP567,closenessAt} from './relationship-map-v567.js';
 import {CONTACT_MODES,careMode,relationshipReview,activeCare} from './relationship-intelligence-v568.js';
@@ -89,7 +90,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.70.4';
+const COMPASS_CLIENT_VERSION='0.5.70.5';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -152,6 +153,7 @@ async function resumeSession(){
   }
 }
 
+let feelingInputMode='wheel';
 let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),feelingDays=30,feelingView='overview',feelingSelectedId='',feelingHistoryLimit=30,feelingEditingId='',connectionEmotion='anger',connectionDays=30;
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
@@ -580,7 +582,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[]):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
 }
 
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
@@ -1770,7 +1772,7 @@ function render(){
  const feelingScrollBefore=feelingOverlayOpen?app.querySelector('#fw65-dialog')?.scrollTop||0:0;
  const captureFocus=snapshotCaptureDraft();
  morningSaveNoteFromScreen();
- if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[]):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);return;}
+ if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[],{inputMode:feelingInputMode}):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  let html;
  try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
@@ -1820,7 +1822,7 @@ function bind() {
           for(const capture of pending){
             if(capture.kind==='feeling'){
               const item=capture.entry;
-              if(!item||item.id!==capture.id||!Array.isArray(item.items)||!item.items.length||!item.items.every(i=>FEELINGS.some(f=>f.id===i.id)&&Number.isInteger(i.intensity)&&i.intensity>=1&&i.intensity<=10))throw Error('Verschlüsselter Gefühls-Check-in ist beschädigt.');
+              if(!item||item.id!==capture.id||!Array.isArray(item.items)||(!item.items.length&&!String(item.ownWords||'').trim()&&!item.networkTerms?.length)||!item.items.every(i=>FEELINGS.some(f=>f.id===i.id)&&Number.isInteger(i.intensity)&&i.intensity>=1&&i.intensity<=10))throw Error('Verschlüsselter Gefühls-Check-in ist beschädigt.');
               if(!(state.feelingCheckins||[]).some(e=>e.id===item.id))appendCheckin(state,item);
               continue;
             }
@@ -2537,6 +2539,17 @@ function bind() {
     if(ev.key==='Enter'){ev.preventDefault();if(id)runAction('task-rename-save',id);}
     if(ev.key==='Escape'){ev.preventDefault();inlineEditingTaskId=null;render();}
   });
+  const ownInput=app.querySelector('#fw705-search-input');if(ownInput)ownInput.oninput=()=>{
+    feelingDraft.ownWords=ownInput.value;
+    // Updating just the connected word cloud avoids rebuilding the input and
+    // interrupting the mobile keyboard/caret after every keystroke.
+    const results=app.querySelector('#fw705-network-results');if(results)results.innerHTML=renderFeelingNetwork(feelingDraft);
+    const save=app.querySelector('.fw65-actions [data-action="feeling-save"]');if(save)save.disabled=!(Object.keys(feelingDraft.selected||{}).length||feelingDraft.ownWords.trim()||feelingDraft.networkTerms?.length);
+  };
+  const netContainer=app.querySelector('#fw705-network-results');if(netContainer)netContainer.onclick=ev=>{
+    const control=ev.target.closest('[data-action="feeling-network-term"]');if(!control||!netContainer.contains(control))return;
+    runAction('feeling-network-term',control.dataset.id);
+  };
   const feelingNote=app.querySelector('#fw65-note');if(feelingNote)feelingNote.oninput=()=>{feelingDraft.note=feelingNote.value;};
   const feelingHypothesis=app.querySelector('#fw681-hypothesis');if(feelingHypothesis)feelingHypothesis.oninput=()=>{feelingDraft.hypothesis=feelingHypothesis.value;};
   app.querySelectorAll('[data-feeling-intensity]').forEach(el=>el.oninput=()=>{
@@ -2546,7 +2559,7 @@ function bind() {
     }catch{}
   });
   app.querySelectorAll('.fw65-emotion').forEach(el=>{el.onmouseenter=()=>{const def=FEELINGS.find(x=>x.id===el.dataset.id),hint=app.querySelector('#fw65-hint');if(def&&hint)hint.textContent=def.label+' · '+def.description;};el.onmouseleave=()=>{const hint=app.querySelector('#fw65-hint');if(hint)hint.textContent='Wähle ein oder mehrere Gefühle.';};});
-  app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
+  app.querySelectorAll('[data-action]').forEach(el=>{if(el.closest('#fw705-network-results'))return;el.onclick=ev=>{
     if(['capture-close-backdrop','pj92-food-close-backdrop','worktime-quick-close-backdrop'].includes(el.dataset.action)&&ev.target!==el)return;
     if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
       const field=el.closest('form')?.querySelector(`[name="${el.dataset.field}"]`);
@@ -2557,7 +2570,7 @@ function bind() {
     }
     if(el.dataset.action==='person-quick-log')quickContactType=el.dataset.kind||'call';
     runAction(el.dataset.action,el.dataset.id,el.dataset.step,el.dataset.day);
-  });
+  }});
   app.querySelectorAll('.v48-date-form').forEach(form=>form.onsubmit=async ev=>{
     ev.preventDefault();
     const taskId=form.dataset.id,task=state?.tasks?.[taskId];
@@ -2649,7 +2662,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='pj92-food-delete'){if(!state||!confirm('Ernährungseintrag entfernen?'))return;try{journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===id);if(item){item.deleted=true;item.updatedAt=stamp();}});nutritionEditId='';toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
  if(action==='pj92-sync-now'){try{const ok=await syncPersonalJournal();if(ok)toast('Zeitjournal und Ernährung verschlüsselt abgeglichen.');else toast('Kein Cloud-Abgleich möglich: bitte anmelden und Geräteabgleich einrichten.',true);}catch(ex){toast(ex.message,true);}return;}
 
- if(action==='feeling-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}feelingEditingId='';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
+ if(action==='feeling-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}feelingEditingId='';feelingInputMode='wheel';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
  if(action==='worktime-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;habitQuickOpen=false;worktimeQuickOpen=true;render();if(state?.privateDeviceMirror?.key&&authToken)syncPersonalJournal().catch(ex=>toast('Arbeitszeit-Abgleich: '+ex.message,true));return;}
  if(action==='worktime-quick-close'||action==='worktime-quick-close-backdrop'){worktimeQuickOpen=false;render();return;}
  if(action==='habit-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=true;render();return;}
@@ -2671,6 +2684,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
    }catch(ex){toast(ex.message,true);}
    return;
  }
+ if(action==='feeling-mode'){if(['wheel','words'].includes(id)){feelingInputMode=id;render();if(id==='words')app.querySelector('#fw705-search-input')?.focus({preventScroll:true});}return;}
+ if(action==='feeling-network-term'){try{const modal=app.querySelector('#fw65-dialog');const scroll=modal?.scrollTop||0;feelingDraft=toggleNetworkTerm(feelingDraft,id);render();const next=app.querySelector('#fw65-dialog');if(next)next.scrollTop=scroll;}catch(ex){toast(ex.message,true);}return;}
  if(action==='feeling-close'){feelingEditingId='';feelingOverlayOpen=false;render();app.querySelector('.fw65-top-trigger')?.focus({preventScroll:true});return;}
  if(action==='feeling-toggle'){try{feelingDraft=chooseFeeling(feelingDraft,id);render();}catch(ex){toast(ex.message,true);}return;}
  if(action==='feeling-family'||action==='feeling-nuance'||action==='feeling-observation'){
@@ -2685,7 +2700,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='feeling-view'){if(['overview','history','patterns'].includes(id)){feelingView=id;render();}return;}
  if(action==='feeling-entry-select'){if(state?.feelingCheckins?.some(e=>e.id===id)){feelingSelectedId=id;render();}return;}
  if(action==='feeling-load-more'){feelingHistoryLimit+=30;render();return;}
- if(action==='feeling-entry-edit'){const item=state?.feelingCheckins?.find(e=>e.id===id);if(!item)return;feelingEditingId=id;feelingDraft=draftFromCheckin(item);feelingOverlayOpen=true;render();return;}
+ if(action==='feeling-entry-edit'){const item=state?.feelingCheckins?.find(e=>e.id===id);if(!item)return;feelingEditingId=id;feelingDraft=draftFromCheckin(item);feelingInputMode=item.ownWords||item.networkTerms?.length?'words':'wheel';feelingOverlayOpen=true;render();return;}
  if(action==='connection-emotion'){if(FEELINGS.some(e=>e.id===id)){connectionEmotion=id;render();}return;}
  if(action==='connection-period'){if(['7','30','90'].includes(id)){connectionDays=Number(id);render();}return;}
  if(action==='feeling-period'){if(['7','30','90'].includes(id)){feelingDays=Number(id);render();}return;}
