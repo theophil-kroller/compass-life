@@ -1,0 +1,17 @@
+Compass 0.5.70.4 — Installation und Test
+========================================
+
+1. Auf BEIDEN Geräten (Handy und Laptop) zuerst ein verschlüsseltes Tresor-Backup anlegen; nichts löschen.
+2. Falls das Handy noch einen offenen Timer seit 11:34 zeigt, dessen Startzeit notieren und NICHT zurücksetzen.
+3. Patch Compass_0.5.70.4_PATCH_FROM_0.5.70.3.zip in das Repository-Stammverzeichnis entpacken, gleiche Dateien ersetzen, committen. Oder Full Source verwenden.
+4. GitHub Actions → Deploy Compass Web muss erfolgreich (grün) abschließen.
+5. Auf beiden Geräten Compass neu öffnen und prüfen, ob Versionsnummer 0.5.70.4 angezeigt wird. PWA gegebenenfalls beenden und neu starten. KEINE Website-Daten oder Vaults löschen.
+6. ZUERST auf dem Handy, falls dort der Timer noch läuft: Tresor entsperren, „Arbeit“ öffnen, „Jetzt abgleichen“ klicken und auf Cloud-Prüfung warten. Timer NICHT durch neues Play überschreiben.
+7. DANACH auf dem Laptop: Tresor entsperren, „Arbeit“ öffnen, „Jetzt abgleichen“ klicken. Die Uhr sollte jetzt den originalen Start anzeigen, sofern er am Handy noch vorhanden war.
+8. Testweise den bestehenden Timer am Handy oder Laptop stoppen, erneut synchronisieren und prüfen, dass auf BEIDEN Geräten die abgeschlossene Zeit statt eines aktiven Timers erscheint.
+
+Keine neue D1-Migration, kein Cloudflare-Worker-Deployment erforderlich.
+
+Wenn weiterhin kein Timer erscheint: Auf beiden Geräten die Statuszeilen „Cloud-Prüfung: Version ...“, „Cloud-Timer seit ...“ sowie den lokalen Timerstatus vergleichen. Keine lokalen Daten löschen; einen verlorenen Start kann Compass nur rekonstruieren, wenn noch eine Kopie existiert.
+
+Tests: 734/734; JavaScript-Syntax bestanden. Vite-Produktionsbuild und zwei echte Browser nicht verifiziert.

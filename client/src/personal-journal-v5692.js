@@ -132,12 +132,44 @@ export function mergeJournalData(local,remote){
  };
  const unionObject=(a,b)=>{const out={...(a||{})};for(const [key,val] of Object.entries(b||{}))if(!out[key]||String(out[key].updatedAt||'')<String(val?.updatedAt||''))out[key]=val;return out;};
  const localWork=lc.quickWorktime||{},remoteWork=rc.quickWorktime||{};
- const active=[localWork,remoteWork].sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||{};
  return {
   timeJournal:{entries:byId(lc.timeJournal?.entries,rc.timeJournal?.entries),overrides:unionObject(lc.timeJournal?.overrides,rc.timeJournal?.overrides)},
   nutritionJournal:{entries:byId(lc.nutritionJournal?.entries,rc.nutritionJournal?.entries),customFoods:byId(lc.nutritionJournal?.customFoods,rc.nutritionJournal?.customFoods)},
-  quickWorktime:{sessions:byId(localWork.sessions,remoteWork.sessions),activeStart:active.activeStart||'',activeCategory:active.activeCategory||'work',updatedAt:active.updatedAt||''},
+  quickWorktime:mergeQuickWorktime(localWork,remoteWork),
   feelingCheckins:mergeFeelingCheckins(lc.feelingCheckins,rc.feelingCheckins),
   ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{})
  };
 }
+
+/**
+ * 0.5.70.4: merge punch-clock state by evidence of an actual start/stop.
+ * The previous last-updated-wins merge discarded a phone's active clock whenever
+ * an idle desktop copy happened to have a later updatedAt. An empty status is NOT
+ * evidence of a stop. A completed interval with the same start time is.
+ *
+ * This also works when merging historical 0.5.69.x / 0.5.70.x snapshots, which
+ * have no clock event ledger. It does not reconstruct starts missing everywhere.
+ */
+export function mergeQuickWorktime(local,remote){
+ const left=local&&typeof local==='object'?local:{};
+ const right=remote&&typeof remote==='object'?remote:{};
+ const byId=new Map();
+ for(const row of [...(Array.isArray(left.sessions)?left.sessions:[]),...(Array.isArray(right.sessions)?right.sessions:[])]){
+  if(!row?.id||!Number.isFinite(Date.parse(row.start||''))||!Number.isFinite(Date.parse(row.end||'')))continue;
+  const previous=byId.get(row.id);
+  if(!previous||String(row.updatedAt||row.end)>String(previous.updatedAt||previous.end))byId.set(row.id,row);
+ }
+ const sessions=[...byId.values()].sort((a,b)=>String(a.start).localeCompare(String(b.start))||String(a.id).localeCompare(String(b.id)));
+ const completedStarts=new Set(sessions.map(s=>Date.parse(s.start)));
+ const candidates=[left,right].filter(s=>Number.isFinite(Date.parse(s.activeStart||''))&&!completedStarts.has(Date.parse(s.activeStart)));
+ // A genuine open start survives a stale or newer empty status from another device.
+ // When two devices independently start, use the newer start; both are retained in
+ // their original vaults until the next reconciliation.
+ candidates.sort((a,b)=>Date.parse(b.activeStart)-Date.parse(a.activeStart)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+ const active=candidates[0];
+ const updatedAt=[left.updatedAt,right.updatedAt,...sessions.map(s=>s.updatedAt||s.end),active?.activeStart]
+  .filter(value=>typeof value==='string'&&Number.isFinite(Date.parse(value)))
+  .sort((a,b)=>Date.parse(b)-Date.parse(a))[0]||'';
+ return {sessions,activeStart:active?.activeStart||'',activeCategory:active?.activeCategory||'work',updatedAt};
+}
+
