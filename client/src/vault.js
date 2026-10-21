@@ -150,6 +150,16 @@ export async function appendSealedFeeling(entry){
  if(!entry?.id||!Array.isArray(entry.items)||!entry.items.length)throw Error('Gefühls-Check-in ist ungültig.');
  return appendSealedRecord({kind:'feeling',id:entry.id,entry,createdAt:entry.at});
 }
+export async function appendSealedWorktime(entry){
+ if(!entry||!['start','stop'].includes(entry.type))throw Error('Arbeitszeit-Ereignis ist ungültig.');
+ const id=crypto.randomUUID();
+ return appendSealedRecord({kind:'worktime',id,entry:{type:entry.type,at:entry.at||new Date().toISOString()},createdAt:entry.at||new Date().toISOString()});
+}
+export async function appendSealedHabit(entry){
+ if(!entry?.habitId||!entry?.day)throw Error('Habit-Eintrag ist ungültig.');
+ const id=crypto.randomUUID();
+ return appendSealedRecord({kind:'habit',id,entry:{habitId:String(entry.habitId),title:String(entry.title||entry.habitId),slot:String(entry.slot||''),day:String(entry.day),done:entry.done!==false,at:entry.at||new Date().toISOString()},createdAt:entry.at||new Date().toISOString()});
+}
 export async function readSealedCaptures(){
  if(!key)throw Error('Tresor gesperrt.');
  await captureQueueSerial;

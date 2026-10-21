@@ -1,0 +1,25 @@
+Compass 0.5.69 – Installation
+=============================
+
+PATCH von 0.5.68.1.1:
+1. Funktionierenden Stand und lokalen verschlüsselten Vault sichern.
+2. Compass_0.5.69_PATCH_FROM_0.5.68.1.1.zip ins Repository-Stammverzeichnis entpacken und gleichnamige Dateien ersetzen.
+3. Änderungen committen und den üblichen Deployment-Workflow auslösen.
+4. Browser neu laden; bei installierter PWA schließen und neu starten.
+
+FULL SOURCE:
+Compass_0.5.69_FULL_SOURCE.zip ist die komplette aktualisierte Quellversion.
+
+KEINE D1-MIGRATION, KEIN VAULT-RESET.
+
+ZUERST TESTEN:
+- Gesperrter Tresor: Utility-Bar zeigt „Arbeit“ und „Habits“ weiterhin an.
+- Arbeit öffnen → Play drücken: Status springt auf „Eingestempelt“.
+- Arbeit öffnen → Stopp drücken: Intervall erscheint, heutige Zeit steigt.
+- Tresor gesperrt: Play/Stopp und Habit-Haken werden vorgemerkt und nach dem Entsperren übernommen.
+- Insights → Habits: Standard-Habits sichtbar, Haken heute sichtbar, Streak-Karten laden.
+- Neues Habit anlegen: erscheint sofort in Habits-Insights und im Quick Tool.
+- Insights → Arbeitszeit: neue kompakte Karte „Tatsächliche Arbeitszeit“ oben sichtbar.
+
+PRÜFSTAND: JavaScript-Syntaxprüfung für main.js und vault.js erfolgreich.
+NICHT BESTÄTIGT: Vite-Produktionsbuild / tatsächliche Browseransicht / vollständiger UI-Regressionstest.

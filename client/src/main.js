@@ -87,7 +87,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.68.1.1';
+const COMPASS_CLIENT_VERSION='0.5.69';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -152,6 +152,14 @@ async function resumeSession(){
 
 let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),feelingDays=30,feelingView='overview',feelingSelectedId='',feelingHistoryLimit=30,feelingEditingId='',connectionEmotion='anger',connectionDays=30;
 let captureOverlayOpen=false;
+let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
+const QUICK_PUBLIC_KEY='compass.quick.public.v569';
+const DEFAULT_HABITS=[
+  {id:'vocal-image',title:'Vocal Image',slot:'Morgen',active:true},
+  {id:'hakka-5',title:'5 Hakka Übungen',slot:'Abend',active:true},
+  {id:'wim-hof',title:'Wim-Hof Atempraxis',slot:'Abend',active:true}
+];
+let quickPublic=readQuickPublic();
 let sealedCaptureAvailable=false,contactSaveStatus='',contactSaving=false;
 let contactSettingsOpen=false,calendarSuggestionsOpen=true;
 let peopleScrollRestoration=null;
@@ -395,6 +403,7 @@ async function mutate(fn) {
       if(state.privateDeviceMirror?.mode==='source')state.privateDeviceMirror.dirty=true;
     }
     await persist();
+    syncQuickPublicFromState();
   }catch(ex){state=previous;render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
   render();
   if(busy)syncResyncRequested=true;
@@ -455,7 +464,9 @@ const symbol = {
   suitcase:'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M9 7V4h6v3M3 12h18"/>',
   bolt:'<path d="m13 2-9 12h7l-1 8 10-13h-7z"/>',
   chevronDown:'<path d="m6 9 6 6 6-6"/>',
-  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>'
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+  play:'<circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/>',
+  stop:'<circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/>'
 };
 function ico(name, size=19) {return `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${symbol[name]||symbol.compass}</svg>`;}
 const rows=()=>inboxRecords(state);
@@ -508,6 +519,7 @@ function chrome(content){
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='balance'?'is-active':''}" data-action="calm-insight-view" data-id="balance">${ico('compass',19)}<span>Life Balance Radar</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='focus'?'is-active':''}" data-action="calm-insight-view" data-id="focus">${ico('target',19)}<span>Produktivität</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='worktime'?'is-active':''}" data-action="calm-insight-view" data-id="worktime">${ico('clock',19)}<span>Arbeitszeit</span></button>
+ <button type="button" class="nav-item ${tab==='insights'&&insightTab==='habits'?'is-active':''}" data-action="calm-insight-view" data-id="habits">${ico('checkSquare',19)}<span>Habits</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='explore'?'is-active':''}" data-action="calm-insight-view" data-id="explore">${ico('spark',19)}<span>Explore</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='sources'?'is-active':''}" data-action="calm-insight-view" data-id="sources">${ico('settings',19)}<span>Datenquellen</span></button>
  </div>`:''}
@@ -524,13 +536,13 @@ function chrome(content){
  </nav><div class="sidebar-foot">${ico('shield',16)} <span>Dein persönlicher Arbeitsraum</span></div>
  </aside><main class="workspace"><div class="utility-bar">
  <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>Ctrl / ⌘ K</kbd></button>
- <div class="utility-right"><button class="fw65-top-trigger" type="button" data-action="feeling-open" aria-label="Feeling Wheel öffnen – Gefühl erfassen" title="Wie fühlst du dich gerade? · Feeling Wheel" aria-haspopup="dialog"><span class="fw65-top-wheel" aria-hidden="true">✦</span><span class="fw65-top-caption">Gefühl</span></button><button class="icon-utility" type="button" data-action="smart49-open" title="Smart Import Hub öffnen" aria-label="Dateien zentral importieren">${ico('upload',18)}</button>${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
+ <div class="utility-right"><button class="fw65-top-trigger" type="button" data-action="feeling-open" aria-label="Feeling Wheel öffnen – Gefühl erfassen" title="Wie fühlst du dich gerade? · Feeling Wheel" aria-haspopup="dialog"><span class="fw65-top-wheel" aria-hidden="true">✦</span><span class="fw65-top-caption">Gefühl</span></button>${worktimeQuickButton()}${habitQuickButton()}<button class="icon-utility" type="button" data-action="smart49-open" title="Smart Import Hub öffnen" aria-label="Dateien zentral importieren">${ico('upload',18)}</button>${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
  <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?(state.privateDeviceMirror?'Planung + privater Geräteabgleich':'Planung synchronisiert · Importe lokal'):'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[]):``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[]):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}</div>`;
 }
 
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
@@ -539,6 +551,120 @@ function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}
  ${sub?`<p class="module-subtitle">${h(sub)}</p>`:''}${body}</section>`;
 }
 const placeholder=(text='Noch keine Einträge')=>`<div class="empty-minimal"><span class="empty-circle">${ico('plus',17)}</span><span>${h(text)}</span></div>`;
+
+function defaultHabitItems(){return DEFAULT_HABITS.map(item=>({...item}));}
+function normalizeQuickPublic(raw){
+ const safe=raw&&typeof raw==='object'?raw:{};
+ const habitMap=new Map(defaultHabitItems().map(item=>[item.id,{...item}]));
+ for(const item of Array.isArray(safe.habits)?safe.habits:[]){
+  if(!item||!item.id)continue;
+  habitMap.set(item.id,{id:String(item.id),title:String(item.title||item.id),slot:String(item.slot||''),active:item.active!==false});
+ }
+ const doneToday=[...new Set((Array.isArray(safe.doneToday)?safe.doneToday:[]).map(String))];
+ const sessions=(Array.isArray(safe.worktime?.sessions)?safe.worktime.sessions:[])
+   .filter(item=>item&&item.start)
+   .slice(-12)
+   .map(item=>({id:String(item.id||crypto.randomUUID()),start:String(item.start),end:item.end?String(item.end):''}));
+ return {habits:[...habitMap.values()].filter(item=>item.active!==false),doneToday,worktime:{activeStart:safe.worktime?.activeStart?String(safe.worktime.activeStart):'',sessions}};
+}
+function readQuickPublic(){
+ try{return normalizeQuickPublic(JSON.parse(localStorage.getItem(QUICK_PUBLIC_KEY)||'null'));}
+ catch{return normalizeQuickPublic(null);}
+}
+function writeQuickPublic(){try{localStorage.setItem(QUICK_PUBLIC_KEY,JSON.stringify(quickPublic));}catch{}}
+function publicHabitItems(){return normalizeQuickPublic(quickPublic).habits;}
+function ensureHabitState(target){
+ if(!target.habitsQuick||typeof target.habitsQuick!=='object')target.habitsQuick={items:defaultHabitItems(),completions:[]};
+ if(!Array.isArray(target.habitsQuick.items))target.habitsQuick.items=defaultHabitItems();
+ if(!Array.isArray(target.habitsQuick.completions))target.habitsQuick.completions=[];
+ const existing=new Set(target.habitsQuick.items.map(item=>item?.id).filter(Boolean));
+ for(const item of defaultHabitItems())if(!existing.has(item.id))target.habitsQuick.items.push(item);
+ target.habitsQuick.items=target.habitsQuick.items.filter(item=>item&&item.id).map(item=>({id:String(item.id),title:String(item.title||item.id),slot:String(item.slot||''),active:item.active!==false}));
+ target.habitsQuick.completions=target.habitsQuick.completions.filter(item=>item&&item.habitId&&item.day).map(item=>({habitId:String(item.habitId),day:String(item.day),done:item.done!==false,doneAt:item.doneAt?String(item.doneAt):stamp()}));
+ return target.habitsQuick;
+}
+function ensureWorktimeState(target){
+ if(!target.quickWorktime||typeof target.quickWorktime!=='object')target.quickWorktime={sessions:[],activeStart:''};
+ if(!Array.isArray(target.quickWorktime.sessions))target.quickWorktime.sessions=[];
+ target.quickWorktime.sessions=target.quickWorktime.sessions.filter(item=>item&&item.start&&item.end).map(item=>({id:String(item.id||crypto.randomUUID()),start:String(item.start),end:String(item.end)}));
+ target.quickWorktime.activeStart=target.quickWorktime.activeStart?String(target.quickWorktime.activeStart):'';
+ return target.quickWorktime;
+}
+function habitItems(target){return target?(ensureHabitState(target).items.filter(item=>item.active!==false)):publicHabitItems();}
+function habitIsDone(target,habitId,day=localDate()){return target?(ensureHabitState(target).completions.some(item=>item.habitId===habitId&&item.day===day&&item.done!==false)):(quickPublic.doneToday||[]).includes(habitId);}
+function todayHabitIds(target,day=localDate()){return habitItems(target).filter(item=>habitIsDone(target,item.id,day)).map(item=>item.id);}
+function setHabitDoneState(target,habitId,day=localDate(),done=true,doneAt=stamp()){
+ const habits=ensureHabitState(target);const idx=habits.completions.findIndex(item=>item.habitId===habitId&&item.day===day);
+ if(done){const row={habitId,day,done:true,doneAt};if(idx>=0)habits.completions[idx]=row;else habits.completions.push(row);}else if(idx>=0)habits.completions.splice(idx,1);
+}
+function toggleHabitDoneState(target,habitId,day=localDate()){const next=!habitIsDone(target,habitId,day);setHabitDoneState(target,habitId,day,next);return next;}
+function habitStreak(target,habitId,anchor=localDate()){
+ let count=0;let cursor=new Date(anchor+'T12:00:00');
+ for(let i=0;i<365;i+=1){const day=localDateString(cursor);if(!habitIsDone(target,habitId,day))break;count+=1;cursor.setDate(cursor.getDate()-1);}return count;
+}
+function habitDoneLastDays(target,habitId,days=14,anchor=localDate()){
+ const end=new Date(anchor+'T12:00:00');const dots=[];
+ for(let offset=days-1;offset>=0;offset-=1){const current=new Date(end);current.setDate(end.getDate()-offset);const day=localDateString(current);dots.push({day,done:habitIsDone(target,habitId,day)});}return dots;
+}
+function worktimeSource(target){if(target){const box=ensureWorktimeState(target);return {activeStart:box.activeStart||'',sessions:box.sessions||[]};}return normalizeQuickPublic(quickPublic).worktime;}
+function isWorktimeActive(target){return !!worktimeSource(target).activeStart;}
+function worktimeSessionsForDay(target,day=localDate()){
+ const source=worktimeSource(target);const rows=[];
+ for(const item of source.sessions||[]){if((item.start||'').slice(0,10)===day||(item.end||'').slice(0,10)===day)rows.push({...item});}
+ if(source.activeStart&&source.activeStart.slice(0,10)===day)rows.push({id:'active-'+day,start:source.activeStart,end:''});
+ return rows.sort((a,b)=>String(a.start).localeCompare(String(b.start)));
+}
+function worktimeMinutesForDay(target,day=localDate()){
+ return worktimeSessionsForDay(target,day).reduce((sum,item)=>{const start=new Date(item.start).getTime();const end=item.end?new Date(item.end).getTime():Date.now();if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return sum;return sum+Math.round((end-start)/60000);},0);
+}
+function formatTimeShort(value){return value?new Date(value).toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}):'–';}
+function formatMinutesCompact(minutes){const total=Math.max(0,Math.round(Number(minutes)||0));const hours=Math.floor(total/60),mins=total%60;return hours?mins?hours+' h '+String(mins).padStart(2,'0')+' min':hours+' h':mins+' min';}
+function applyWorktimeEvent(target,entry){
+ const box=ensureWorktimeState(target);const at=entry?.at||stamp();
+ if(entry?.type==='start'){if(!box.activeStart)box.activeStart=at;return;}
+ if(entry?.type==='stop'&&box.activeStart){if(new Date(at).getTime()>new Date(box.activeStart).getTime())box.sessions.push({id:crypto.randomUUID(),start:box.activeStart,end:at});box.activeStart='';}
+}
+function applyHabitEvent(target,entry){
+ if(!entry?.habitId)return;const habits=ensureHabitState(target);
+ if(!habits.items.some(item=>item.id===entry.habitId))habits.items.push({id:String(entry.habitId),title:String(entry.title||entry.habitId),slot:String(entry.slot||''),active:true});
+ setHabitDoneState(target,String(entry.habitId),String(entry.day||localDate()),entry.done!==false,entry.at||stamp());
+}
+function syncQuickPublicFromState(){
+ if(!state)return;const habits=habitItems(state).map(item=>({id:item.id,title:item.title,slot:item.slot||'',active:item.active!==false}));
+ quickPublic={habits,doneToday:todayHabitIds(state),worktime:{activeStart:worktimeSource(state).activeStart||'',sessions:worktimeSessionsForDay(state).filter(item=>item.end).map(item=>({id:item.id,start:item.start,end:item.end})).slice(-12)}};
+ writeQuickPublic();
+}
+function syncQuickPublicHabit(habitId,done){
+ const set=new Set(quickPublic.doneToday||[]);if(done)set.add(habitId);else set.delete(habitId);quickPublic={...normalizeQuickPublic(quickPublic),doneToday:[...set]};writeQuickPublic();
+}
+function syncQuickPublicWorktime(entry){
+ const normalized=normalizeQuickPublic(quickPublic);const at=entry?.at||stamp();
+ if(entry?.type==='start'){normalized.worktime.activeStart=normalized.worktime.activeStart||at;}
+ else if(entry?.type==='stop'&&normalized.worktime.activeStart){normalized.worktime.sessions=[...normalized.worktime.sessions,{id:crypto.randomUUID(),start:normalized.worktime.activeStart,end:at}].slice(-12);normalized.worktime.activeStart='';}
+ quickPublic=normalized;writeQuickPublic();
+}
+function worktimeQuickButton(){
+ const active=isWorktimeActive(state);return `<button class="quick-utility-button ${active?'is-active':''}" type="button" data-action="worktime-quick-open" title="Arbeitszeit erfassen" aria-haspopup="dialog">${ico(active?'clock':'clock',18)}<span class="quick-utility-label">Arbeit</span>${active?'<small>Eingestempelt</small>':''}</button>`;
+}
+function habitQuickButton(){
+ const items=habitItems(state),done=todayHabitIds(state).length;return `<button class="quick-utility-button ${done&&items.length&&done===items.length?'is-complete':''}" type="button" data-action="habit-quick-open" title="Habits abhaken" aria-haspopup="dialog">${ico('checkSquare',18)}<span class="quick-utility-label">Habits</span>${items.length?'<small>'+done+'/'+items.length+'</small>':''}</button>`;
+}
+function worktimeQuickOverlay(){
+ const source=worktimeSource(state);const active=!!source.activeStart;const sessions=worktimeSessionsForDay(state);const total=worktimeMinutesForDay(state);
+ return `<div class="quick-panel-backdrop" data-action="worktime-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="worktime-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ARBEITSZEIT · SCHNELLERFASSUNG</p><h2 id="worktime-quick-title">Ein- und ausstempeln</h2></div><button type="button" class="capture-modal-close" data-action="worktime-quick-close" aria-label="Arbeitszeit schließen">${ico('x',18)}</button></div><p class="muted-line">So einfach wie möglich: Starten, stoppen, fertig.</p><div class="work569-actions"><button type="button" class="work569-action is-play" data-action="worktime-quick-start">${ico('play',24)}<span>Play</span></button><button type="button" class="work569-action is-stop" data-action="worktime-quick-stop">${ico('stop',24)}<span>Stopp</span></button></div><div class="work569-status ${active?'is-active':''}"><strong>${active?'Eingestempelt':'Nicht eingestempelt'}</strong><span>${active&&source.activeStart?'Seit '+formatTimeShort(source.activeStart):'Heute '+formatMinutesCompact(total)}</span></div><div class="work569-day"><div class="work569-day-head"><strong>Heute</strong><span>${formatMinutesCompact(total)}</span></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Noch kein Arbeitsblock erfasst.</p>'}</div><p class="quick-panel-hint">${state?'Wird direkt im lokalen Tresor gespeichert.':'Wird verschlüsselt vorgemerkt und nach dem Entsperren übernommen.'}</p></section></div>`;
+}
+function habitQuickOverlay(){
+ const items=habitItems(state);const doneSet=new Set(todayHabitIds(state));
+ return `<div class="quick-panel-backdrop" data-action="habit-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="habit-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">HABITS · HEUTE ERLEDIGT</p><h2 id="habit-quick-title">Gewohnheiten abhaken</h2></div><button type="button" class="capture-modal-close" data-action="habit-quick-close" aria-label="Habits schließen">${ico('x',18)}</button></div><div class="habit569-summary"><strong>${doneSet.size}/${items.length}</strong><span>heute erledigt</span></div><div class="habit569-list">${items.map(item=>{const done=doneSet.has(item.id);const lockedDone=!state&&done;return '<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle" data-id="'+h(item.id)+'" '+(lockedDone?'disabled':'')+'><span><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</span><span class="habit569-check">'+(done?'✓':'')+'</span></button>';}).join('')}</div><div class="quick-panel-row"><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div><p class="quick-panel-hint">${state?'Motivierend statt perfektionistisch: ein Häkchen genügt.':'Bei gesperrtem Tresor werden Erledigungen verschlüsselt vorgemerkt.'}</p></section></div>`;
+}
+function quickWorktimeInsights(){
+ const sessions=worktimeSessionsForDay(state);const total=worktimeMinutesForDay(state);const weekTotal=[0,1,2,3,4,5,6].reduce((sum,offset)=>{const d=new Date(localDate()+'T12:00:00');d.setDate(d.getDate()-offset);return sum+worktimeMinutesForDay(state,localDateString(d));},0);
+ return `<section class="work-card work569-insight-card"><div class="work-heading"><span>${ico('clock',18)} Tatsächliche Arbeitszeit</span><button type="button" class="secondary-btn" data-action="worktime-quick-open">Schnellzugriff</button></div><div class="work569-insight-grid"><div><small>Heute</small><strong>${formatMinutesCompact(total)}</strong></div><div><small>7 Tage</small><strong>${formatMinutesCompact(weekTotal)}</strong></div><div><small>Status</small><strong>${isWorktimeActive(state)?'Eingestempelt':'Nicht aktiv'}</strong></div></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Heute noch keine Arbeitsblöcke gestempelt.</p>'}</section>`;
+}
+function habitInsightsView(){
+ const items=habitItems(state);const done=todayHabitIds(state).length;const avg14=items.length?Math.round(items.reduce((sum,item)=>sum+habitDoneLastDays(state,item.id,14).filter(dot=>dot.done).length,0)/(items.length*14)*100):0;
+ return `<div class="habit569-page"><section class="work-card"><div class="work-heading"><span>${ico('checkSquare',18)} Habit Tracker</span><button type="button" class="secondary-btn" data-action="habit-quick-open">Heute abhaken</button></div><p class="muted-line">Einfach, schnell und motivierend. Ein Häkchen pro Habit genügt.</p><div class="habit569-kpis"><div><small>Heute</small><strong>${done}/${items.length}</strong></div><div><small>14-Tage-Konsistenz</small><strong>${avg14}%</strong></div><div><small>Aktive Habits</small><strong>${items.length}</strong></div></div></section><section class="work-card"><div class="work-heading"><span>Deine Habits</span><span class="quiet-tag">${items.length}</span></div><div class="habit569-cards">${items.map(item=>{const streak=habitStreak(state,item.id);const dots=habitDoneLastDays(state,item.id,14);const doneToday=habitIsDone(state,item.id);return '<article class="habit569-card"><div class="habit569-card-head"><div><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</div><button type="button" class="secondary-btn" data-action="habit-toggle" data-id="'+h(item.id)+'">'+(doneToday?'Heute erledigt ✓':'Heute abhaken')+'</button></div><div class="habit569-stats"><span>Streak <strong>'+(streak||0)+'</strong></span><span>14 Tage <strong>'+dots.filter(dot=>dot.done).length+'/14</strong></span></div><div class="habit569-dots">'+dots.map(dot=>'<span class="'+(dot.done?'is-done':'')+'" title="'+h(dot.day)+'"></span>').join('')+'</div></article>';}).join('')}</div></section><section class="work-card"><div class="work-heading"><span>Neues Habit hinzufügen</span></div><form id="habit69-new-form" class="habit569-form"><label>Titel<input type="text" name="title" maxlength="80" placeholder="z. B. Journaling" value="${h(habitDraftTitle)}" required/></label><label>Zeitfenster<select name="slot"><option value="Morgen">Morgen</option><option value="Mittag">Mittag</option><option value="Abend">Abend</option><option value="Flexibel">Flexibel</option></select></label><button type="submit" class="primary-btn">Habit hinzufügen</button></form></section></div>`;
+}
 function inboxPreview(){
  const list=rows().slice(0,3);
  return moduleCard({name:'Inbox',iconName:'inbox',cls:'inbox-preview',active:true,sub:list.length?`${rows().length} offene Einträge`:'Dein Eingang ist leer.',body:list.length?`<div class="compact-items">${list.map(r=>`<div class="compact-item"><span class="tiny-square"></span><span>${h(r.title)}</span></div>`).join('')}</div>`:placeholder('Alles erfasst – nichts wartet.' )})
@@ -1412,12 +1538,12 @@ function insightsScreen(){
  const model=buildSleepInsights(state?.healthImports||{},today,insightPeriod);
  const healthIds=['sleep','energy','stress','body'];
  const healthMode=healthIds.includes(insightTab);
- const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
+ const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['habits','Habits','checkSquare'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
  const tabs=compactInsights.map(([id,label,icon])=>`<button type="button" class="calm-insight-tab ${(id==='sleep'?healthMode:insightTab===id)?'selected':''}" data-action="insights-tab" data-id="${id}" aria-pressed="${id==='sleep'?healthMode:insightTab===id}">${ico(icon,16)}<span>${label}</span></button>`).join('');
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='balance'?lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis}):insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today,false)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode)+worktimeImportPanel(state?.workTime||{},workPreview):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='balance'?lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis}):insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?quickWorktimeInsights()+worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today,false)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode)+worktimeImportPanel(state?.workTime||{},workPreview):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <div class="calm-insight-toolbar" aria-label="Mobile Insights-Navigation"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
  <div class="insight-view-header ${insightTab==='sources'?'insight-source-heading':''}"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
@@ -1586,6 +1712,8 @@ function bind() {
               if(!(state.feelingCheckins||[]).some(e=>e.id===item.id))appendCheckin(state,item);
               continue;
             }
+            if(capture.kind==='worktime'){applyWorktimeEvent(state,capture.entry||{});continue;}
+            if(capture.kind==='habit'){applyHabitEvent(state,capture.entry||{});continue;}
             if(state.records[capture.id])continue;const record={id:capture.id,title:capture.title,note:capture.note||'',tags:[],deleted:false,updatedAt:capture.createdAt||stamp()};state.records[record.id]=record;state.pending.push(makeMutation(record));state.history.push({type:'captured',at:record.updatedAt,id:record.id});
           }
           await persist(); // Only acknowledge after durable encrypted vault write.
@@ -1593,6 +1721,7 @@ function bind() {
           recoveryMessage=` · ${pending.length} verschlüsselte Schnellnotiz(en) übernommen`;
         }
       }catch(captureError){recoveryMessage=' · Schnellerfassung prüfen: '+captureError.message;}
+      syncQuickPublicFromState();
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
@@ -2355,7 +2484,27 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
- if(action==='feeling-open'){if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}feelingEditingId='';captureOverlayOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
+ if(action==='feeling-open'){if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}feelingEditingId='';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
+ if(action==='worktime-quick-open'){if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;habitQuickOpen=false;worktimeQuickOpen=true;render();return;}
+ if(action==='worktime-quick-close'||action==='worktime-quick-close-backdrop'){worktimeQuickOpen=false;render();return;}
+ if(action==='habit-quick-open'){if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=true;render();return;}
+ if(action==='habit-quick-close'||action==='habit-quick-close-backdrop'){habitQuickOpen=false;render();return;}
+ if(action==='habit-open-insights'){habitQuickOpen=false;tab='insights';insightTab='habits';calmNavGroup='insights';render();return;}
+ if(action==='worktime-quick-start'||action==='worktime-quick-stop'){
+   const entry={type:action==='worktime-quick-start'?'start':'stop',at:stamp()};
+   try{
+     if(!state){await vault.appendSealedWorktime(entry);syncQuickPublicWorktime(entry);toast(entry.type==='start'?'Arbeitszeit vorgemerkt: eingestempelt.':'Arbeitszeit vorgemerkt: ausgestempelt.');}
+     else{await mutate(s=>applyWorktimeEvent(s,entry));toast(entry.type==='start'?'Arbeitszeit gestartet.':'Arbeitszeit gestoppt.');}
+   }catch(ex){toast(ex.message,true);}
+   return;
+ }
+ if(action==='habit-toggle'){
+   try{
+     if(!state){if((quickPublic.doneToday||[]).includes(id)){toast('Für heute bereits vorgemerkt.',true);return;}const source=publicHabitItems().find(item=>item.id===id);const entry={habitId:id,title:source?.title||id,slot:source?.slot||'',day:localDate(),done:true,at:stamp()};await vault.appendSealedHabit(entry);syncQuickPublicHabit(id,true);render();toast('Habit für heute vorgemerkt.');}
+     else{let done=false;await mutate(s=>{done=toggleHabitDoneState(s,id,localDate());});habitQuickOpen=habitQuickOpen;toast(done?'Habit für heute abgehakt.':'Habit für heute wieder geöffnet.');}
+   }catch(ex){toast(ex.message,true);}
+   return;
+ }
  if(action==='feeling-close'){feelingEditingId='';feelingOverlayOpen=false;render();app.querySelector('.fw65-top-trigger')?.focus({preventScroll:true});return;}
  if(action==='feeling-toggle'){try{feelingDraft=chooseFeeling(feelingDraft,id);render();}catch(ex){toast(ex.message,true);}return;}
  if(action==='feeling-family'||action==='feeling-nuance'||action==='feeling-observation'){
@@ -2646,7 +2795,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='calm-finance-group'){const group=FINANCE_GROUPS.find(g=>g.title===id);if(group){tab='finance';calmNavGroup='finance';financePane=group.panes[0];financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-finance-view'){if(FINANCE_TABS.some(p=>p.title===id)){tab='finance';calmNavGroup='finance';financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-nav-group'){calmNavGroup=calmNavGroup===id?'':id;render();return;}
-    if(action==='calm-insight-view'){if(INSIGHT_TABS.some(t=>t.id===id)){tab='insights';calmNavGroup='insights';insightTab=id;if(id==='places')insightPeriod='all';render();if(authToken){reloadWatchSessions().catch(()=>{});reloadHealth().catch(()=>{});}}return;}
+    if(action==='calm-insight-view'){if(INSIGHT_TABS.some(t=>t.id===id)||['habits','feelings','balance','focus','worktime','places','explore','sources','sleep'].includes(id)){tab='insights';calmNavGroup='insights';insightTab=id;if(id==='places')insightPeriod='all';render();if(authToken){reloadWatchSessions().catch(()=>{});reloadHealth().catch(()=>{});}}return;}
     if(action==='nav-more'){await mutate(s=>{s.uiPreferences??={};s.uiPreferences.advancedNav=!(s.uiPreferences.advancedNav===true);});return;}
     if(action==='recovery-idea-remove'){if(!String(id).startsWith('idea-'))return;await mutate(s=>{s.recoveryIdeas=(s.recoveryIdeas||[]).filter(i=>i.id!==id);});return;}
     if(action==='recovery-idea-hide'){if(!String(id).startsWith('starter-'))return;await mutate(s=>{s.hiddenStarterIdeas=[...new Set([...(s.hiddenStarterIdeas||[]),id])];});return;}
