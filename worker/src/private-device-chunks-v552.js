@@ -11,7 +11,7 @@ async function body(req,max=205000){
  try{const txt=await req.text();return txt.length<=max?JSON.parse(txt):null;}catch{return null;}
 }
 export async function privateMirrorChunks(req,env,identity){
- const u=new URL(req.url),m=u.pathname.match(/^\/api\/private-device\/(finance|health)\/(parts|commit)$/);
+ const u=new URL(req.url),m=u.pathname.match(/^\/api\/private-device\/(finance|health|journal)\/(parts|commit)$/);
  if(!m)return json({error:'not-found'},404);
  const [,kind,action]=m,owner=identity.sub;
  if(action==='parts'&&req.method==='GET'){

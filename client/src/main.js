@@ -65,6 +65,7 @@ import {exploreDays,exploreView,EXPLORE_FIELDS} from './insights-explorer.js';
 import {INSIGHT_TABS,INSIGHT_PERIODS,buildSleepInsights,insightsSleepView,insightsPlannedView} from './insights.js';
 import {healthFindings,rankHealthFindingsLocally} from './health-intelligence-v551.js';
 import {inspectWorktimeFile,mergeWorktime,worktimeView,worktimeImportPanel} from './worktime-v553.js';
+import {TIME_AREAS,FOOD_PRESETS,timeCategoryOptions,timeLabel,ensureJournal,validTimeEntry,timeEntries,putTimeEntry,deleteTimeEntry,addNutrition,addCustomFood,nutritionFoods,nutritionEntries,timeJournalView,nutritionQuickView,nutritionInsightsView,mergeJournalData} from './personal-journal-v5692.js';
 import {markSuccessfulImport} from './import-status-v558.js';
 import {worktimeYearComparisonView} from './worktime-multiyear-v555.js';
 import {recoveryCandidates,recoveryEvidence,recoveryView} from './recovery-timeoff-v554.js';
@@ -87,7 +88,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.69.1';
+const COMPASS_CLIENT_VERSION='0.5.69.2';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -152,6 +153,8 @@ async function resumeSession(){
 
 let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),feelingDays=30,feelingView='overview',feelingSelectedId='',feelingHistoryLimit=30,feelingEditingId='',connectionEmotion='anger',connectionDays=30;
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
+let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
+let worktimeSelectedCategory='work';
 const QUICK_PUBLIC_KEY='compass.quick.public.v569';
 const DEFAULT_HABITS=[
   {id:'vocal-image',title:'Vocal Image',slot:'Morgen',active:true},
@@ -465,6 +468,7 @@ const symbol = {
   bolt:'<path d="m13 2-9 12h7l-1 8 10-13h-7z"/>',
   chevronDown:'<path d="m6 9 6 6 6-6"/>',
   bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+  food:'<path d="M4 2v8a3 3 0 0 0 6 0V2M7 2v20M17 2c-4 3-4 9 0 12h2V2M19 14v8"/>',
   play:'<circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/>',
   stop:'<circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/>'
 };
@@ -519,6 +523,8 @@ function chrome(content){
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='balance'?'is-active':''}" data-action="calm-insight-view" data-id="balance">${ico('compass',19)}<span>Life Balance Radar</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='focus'?'is-active':''}" data-action="calm-insight-view" data-id="focus">${ico('target',19)}<span>Produktivität</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='worktime'?'is-active':''}" data-action="calm-insight-view" data-id="worktime">${ico('clock',19)}<span>Arbeitszeit</span></button>
+ <button type="button" class="nav-item ${tab==='insights'&&insightTab==='timejournal'?'is-active':''}" data-action="calm-insight-view" data-id="timejournal">${ico('clock',19)}<span>Zeitjournal</span></button>
+ <button type="button" class="nav-item ${tab==='insights'&&insightTab==='nutrition'?'is-active':''}" data-action="calm-insight-view" data-id="nutrition">${ico('food',19)}<span>Ernährung</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='habits'?'is-active':''}" data-action="calm-insight-view" data-id="habits">${ico('checkSquare',19)}<span>Habits</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='explore'?'is-active':''}" data-action="calm-insight-view" data-id="explore">${ico('spark',19)}<span>Explore</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='sources'?'is-active':''}" data-action="calm-insight-view" data-id="sources">${ico('settings',19)}<span>Datenquellen</span></button>
@@ -536,13 +542,13 @@ function chrome(content){
  </nav><div class="sidebar-foot">${ico('shield',16)} <span>Dein persönlicher Arbeitsraum</span></div>
  </aside><main class="workspace"><div class="utility-bar">
  <button type="button" class="search-shell capture-shortcut" data-action="capture-focus" title="Zur Schnellerfassung">${ico('search',17)}<span>Schnell erfassen ...</span><kbd>Ctrl / ⌘ K</kbd></button>
- <div class="utility-right"><button class="fw65-top-trigger" type="button" data-action="feeling-open" aria-label="Feeling Wheel öffnen – Gefühl erfassen" title="Wie fühlst du dich gerade? · Feeling Wheel" aria-haspopup="dialog"><span class="fw65-top-wheel" aria-hidden="true">✦</span><span class="fw65-top-caption">Gefühl</span></button>${worktimeQuickButton()}${habitQuickButton()}<button class="icon-utility" type="button" data-action="smart49-open" title="Smart Import Hub öffnen" aria-label="Dateien zentral importieren">${ico('upload',18)}</button>${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
+ <div class="utility-right"><button class="fw65-top-trigger" type="button" data-action="feeling-open" aria-label="Feeling Wheel öffnen – Gefühl erfassen" title="Wie fühlst du dich gerade? · Feeling Wheel" aria-haspopup="dialog"><span class="fw65-top-wheel" aria-hidden="true">✦</span><span class="fw65-top-caption">Gefühl</span></button>${worktimeQuickButton()}${habitQuickButton()}<button type="button" class="quick-utility-button pj92-food-trigger" data-action="pj92-food-open" title="Ernährung schnell erfassen" aria-label="Ernährung erfassen" aria-haspopup="dialog">${ico('food',18)}<span class="quick-utility-label">Ernährung</span></button><button class="icon-utility" type="button" data-action="smart49-open" title="Smart Import Hub öffnen" aria-label="Dateien zentral importieren">${ico('upload',18)}</button>${weather.status==='loaded'?`<button class="weather-quick" type="button" data-action="weather-city" title="Wetterstandort ändern">${ico('sun',15)} <span>${h(weather.city)} · ${h(weather.temperature)} °C · ${h(weather.label)}</span></button>`:`<button class="weather-quick" type="button" data-action="weather-load" title="Wetter für Graz abrufen">${ico('sun',15)} <span>${weather.status==='loading'?'Wetter lädt …':'Wetter · Graz'}</span></button>`}
  <span class="connection"><span class="connection-dot ${state?(authToken?'green':'amber'):'gray'}"></span><span>${state?(authToken?(state.privateDeviceMirror?'Planung + privater Geräteabgleich':'Planung synchronisiert · Importe lokal'):'Nur lokal · kein Sync'):'Tresor gesperrt'}</span></span>
  <span class="avatar" aria-label="Persönlicher Arbeitsbereich">${ico('compass',18)}</span>${state?`<button class="icon-utility" type="button" data-action="lock" title="Tresor sperren" aria-label="Tresor sperren">${ico('lock',19)}</button>`:''}</div></div>
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[]):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[]):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}</div>`;
 }
 
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
@@ -564,8 +570,8 @@ function normalizeQuickPublic(raw){
  const sessions=(Array.isArray(safe.worktime?.sessions)?safe.worktime.sessions:[])
    .filter(item=>item&&item.start)
    .slice(-12)
-   .map(item=>({id:String(item.id||crypto.randomUUID()),start:String(item.start),end:item.end?String(item.end):''}));
- return {habits:[...habitMap.values()].filter(item=>item.active!==false),doneToday,worktime:{activeStart:safe.worktime?.activeStart?String(safe.worktime.activeStart):'',sessions}};
+   .map(item=>({id:String(item.id||crypto.randomUUID()),start:String(item.start),end:item.end?String(item.end):'',category:item.category||'work',updatedAt:item.updatedAt||item.end||''}));
+ return {habits:[...habitMap.values()].filter(item=>item.active!==false),doneToday,worktime:{activeStart:safe.worktime?.activeStart?String(safe.worktime.activeStart):'',activeCategory:safe.worktime?.activeCategory||'work',updatedAt:safe.worktime?.updatedAt||'',sessions}};
 }
 function readQuickPublic(){
  try{return normalizeQuickPublic(JSON.parse(localStorage.getItem(QUICK_PUBLIC_KEY)||'null'));}
@@ -586,7 +592,7 @@ function ensureHabitState(target){
 function ensureWorktimeState(target){
  if(!target.quickWorktime||typeof target.quickWorktime!=='object')target.quickWorktime={sessions:[],activeStart:''};
  if(!Array.isArray(target.quickWorktime.sessions))target.quickWorktime.sessions=[];
- target.quickWorktime.sessions=target.quickWorktime.sessions.filter(item=>item&&item.start&&item.end).map(item=>({id:String(item.id||crypto.randomUUID()),start:String(item.start),end:String(item.end)}));
+ target.quickWorktime.sessions=target.quickWorktime.sessions.filter(item=>item&&item.start&&item.end).map(item=>({id:String(item.id||crypto.randomUUID()),start:String(item.start),end:String(item.end),category:String(item.category||'work'),updatedAt:String(item.updatedAt||item.end)}));
  target.quickWorktime.activeStart=target.quickWorktime.activeStart?String(target.quickWorktime.activeStart):'';
  return target.quickWorktime;
 }
@@ -606,12 +612,12 @@ function habitDoneLastDays(target,habitId,days=14,anchor=localDate()){
  const end=new Date(anchor+'T12:00:00');const dots=[];
  for(let offset=days-1;offset>=0;offset-=1){const current=new Date(end);current.setDate(end.getDate()-offset);const day=localDateString(current);dots.push({day,done:habitIsDone(target,habitId,day)});}return dots;
 }
-function worktimeSource(target){if(target){const box=ensureWorktimeState(target);return {activeStart:box.activeStart||'',sessions:box.sessions||[]};}return normalizeQuickPublic(quickPublic).worktime;}
+function worktimeSource(target){if(target){const box=ensureWorktimeState(target);return {activeStart:box.activeStart||'',activeCategory:box.activeCategory||'work',updatedAt:box.updatedAt||'',sessions:box.sessions||[]};}return normalizeQuickPublic(quickPublic).worktime;}
 function isWorktimeActive(target){return !!worktimeSource(target).activeStart;}
 function worktimeSessionsForDay(target,day=localDate()){
  const source=worktimeSource(target);const rows=[];
- for(const item of source.sessions||[]){if((item.start||'').slice(0,10)===day||(item.end||'').slice(0,10)===day)rows.push({...item});}
- if(source.activeStart&&source.activeStart.slice(0,10)===day)rows.push({id:'active-'+day,start:source.activeStart,end:''});
+ for(const item of source.sessions||[]){if(localDateString(new Date(item.start))===day||localDateString(new Date(item.end))===day)rows.push({...item});}
+ if(source.activeStart&&localDateString(new Date(source.activeStart))===day)rows.push({id:'active-'+day,start:source.activeStart,end:''});
  return rows.sort((a,b)=>String(a.start).localeCompare(String(b.start)));
 }
 function worktimeMinutesForDay(target,day=localDate()){
@@ -621,8 +627,8 @@ function formatTimeShort(value){return value?new Date(value).toLocaleTimeString(
 function formatMinutesCompact(minutes){const total=Math.max(0,Math.round(Number(minutes)||0));const hours=Math.floor(total/60),mins=total%60;return hours?mins?hours+' h '+String(mins).padStart(2,'0')+' min':hours+' h':mins+' min';}
 function applyWorktimeEvent(target,entry){
  const box=ensureWorktimeState(target);const at=entry?.at||stamp();
- if(entry?.type==='start'){if(!box.activeStart)box.activeStart=at;return;}
- if(entry?.type==='stop'&&box.activeStart){if(new Date(at).getTime()>new Date(box.activeStart).getTime())box.sessions.push({id:crypto.randomUUID(),start:box.activeStart,end:at});box.activeStart='';}
+ if(entry?.type==='start'){if(!box.activeStart){box.activeStart=at;box.activeCategory=entry.category||'work';box.updatedAt=at;}return;}
+ if(entry?.type==='stop'&&box.activeStart){if(new Date(at).getTime()>new Date(box.activeStart).getTime())box.sessions.push({id:entry.id||crypto.randomUUID(),start:box.activeStart,end:at,category:box.activeCategory||'work',updatedAt:at});box.activeStart='';box.updatedAt=at;}
 }
 function applyHabitEvent(target,entry){
  if(!entry?.habitId)return;const habits=ensureHabitState(target);
@@ -631,7 +637,7 @@ function applyHabitEvent(target,entry){
 }
 function syncQuickPublicFromState(){
  if(!state)return;const habits=habitItems(state).map(item=>({id:item.id,title:item.title,slot:item.slot||'',active:item.active!==false}));
- quickPublic={habits,doneToday:todayHabitIds(state),worktime:{activeStart:worktimeSource(state).activeStart||'',sessions:worktimeSessionsForDay(state).filter(item=>item.end).map(item=>({id:item.id,start:item.start,end:item.end})).slice(-12)}};
+ quickPublic={habits,doneToday:todayHabitIds(state),worktime:{activeStart:worktimeSource(state).activeStart||'',activeCategory:worktimeSource(state).activeCategory||'work',updatedAt:worktimeSource(state).updatedAt||'',sessions:worktimeSessionsForDay(state).filter(item=>item.end).map(item=>({id:item.id,start:item.start,end:item.end,category:item.category||'work'})).slice(-12)}};
  writeQuickPublic();
 }
 function syncQuickPublicHabit(habitId,done){
@@ -639,27 +645,31 @@ function syncQuickPublicHabit(habitId,done){
 }
 function syncQuickPublicWorktime(entry){
  const normalized=normalizeQuickPublic(quickPublic);const at=entry?.at||stamp();
- if(entry?.type==='start'){normalized.worktime.activeStart=normalized.worktime.activeStart||at;}
- else if(entry?.type==='stop'&&normalized.worktime.activeStart){normalized.worktime.sessions=[...normalized.worktime.sessions,{id:crypto.randomUUID(),start:normalized.worktime.activeStart,end:at}].slice(-12);normalized.worktime.activeStart='';}
+ if(entry?.type==='start'){normalized.worktime.activeStart=normalized.worktime.activeStart||at;normalized.worktime.activeCategory=entry.category||'work';normalized.worktime.updatedAt=at;}
+ else if(entry?.type==='stop'&&normalized.worktime.activeStart){normalized.worktime.sessions=[...normalized.worktime.sessions,{id:entry.id||crypto.randomUUID(),start:normalized.worktime.activeStart,end:at,category:normalized.worktime.activeCategory||'work',updatedAt:at}].slice(-12);normalized.worktime.activeStart='';normalized.worktime.updatedAt=at;}
  quickPublic=normalized;writeQuickPublic();
 }
 function worktimeQuickButton(){
- const active=isWorktimeActive(state);return `<button class="quick-utility-button ${active?'is-active':''}" type="button" data-action="worktime-quick-open" title="Arbeitszeit erfassen" aria-haspopup="dialog">${ico(active?'clock':'clock',18)}<span class="quick-utility-label">Arbeit</span>${active?'<small>Eingestempelt</small>':''}</button>`;
+ const active=isWorktimeActive(state);return `<button class="quick-utility-button ${active?'is-active':''}" type="button" data-action="worktime-quick-open" title="Arbeitszeit erfassen" aria-haspopup="dialog">${ico(active?'clock':'clock',18)}<span class="quick-utility-label">Arbeit</span>${active?'<small class="pj92-work-status">●</small>':''}</button>`;
 }
 function habitQuickButton(){
- const items=habitItems(state),done=todayHabitIds(state).length;return `<button class="quick-utility-button ${done&&items.length&&done===items.length?'is-complete':''}" type="button" data-action="habit-quick-open" title="Habits abhaken" aria-haspopup="dialog">${ico('checkSquare',18)}<span class="quick-utility-label">Habits</span>${items.length?'<small>'+done+'/'+items.length+'</small>':''}</button>`;
+ const items=habitItems(state),done=todayHabitIds(state).length;return `<button class="quick-utility-button ${done&&items.length&&done===items.length?'is-complete':''}" type="button" data-action="habit-quick-open" title="Habits abhaken" aria-haspopup="dialog">${ico('checkSquare',18)}<span class="quick-utility-label">Habits</span>${items.length?'<small class="pj92-habit-count">'+done+'/'+items.length+'</small>':''}</button>`;
 }
 function worktimeQuickOverlay(){
  const source=worktimeSource(state);const active=!!source.activeStart;const sessions=worktimeSessionsForDay(state);const total=worktimeMinutesForDay(state);
- return `<div class="quick-panel-backdrop" data-action="worktime-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="worktime-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ARBEITSZEIT · SCHNELLERFASSUNG</p><h2 id="worktime-quick-title">Ein- und ausstempeln</h2></div><button type="button" class="capture-modal-close" data-action="worktime-quick-close" aria-label="Arbeitszeit schließen">${ico('x',18)}</button></div><p class="muted-line">So einfach wie möglich: Starten, stoppen, fertig.</p><div class="work569-actions"><button type="button" class="work569-action is-play" data-action="worktime-quick-start">${ico('play',24)}<span>Play</span></button><button type="button" class="work569-action is-stop" data-action="worktime-quick-stop">${ico('stop',24)}<span>Stopp</span></button></div><div class="work569-status ${active?'is-active':''}"><strong>${active?'Eingestempelt':'Nicht eingestempelt'}</strong><span>${active&&source.activeStart?'Seit '+formatTimeShort(source.activeStart):'Heute '+formatMinutesCompact(total)}</span></div><div class="work569-day"><div class="work569-day-head"><strong>Heute</strong><span>${formatMinutesCompact(total)}</span></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Noch kein Arbeitsblock erfasst.</p>'}</div><p class="quick-panel-hint">${state?'Wird direkt im lokalen Tresor gespeichert.':'Wird verschlüsselt vorgemerkt und nach dem Entsperren übernommen.'}</p></section></div>`;
+ return `<div class="quick-panel-backdrop" data-action="worktime-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="worktime-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ARBEITSZEIT · SCHNELLERFASSUNG</p><h2 id="worktime-quick-title">Ein- und ausstempeln</h2></div><button type="button" class="capture-modal-close" data-action="worktime-quick-close" aria-label="Arbeitszeit schließen">${ico('x',18)}</button></div><p class="muted-line">Play startet ein Intervall, Stopp beendet es. Projekt und Details kannst du später zuordnen.</p><label class="pj92-quick-category">Bereich <select id="pj92-current-category">${timeCategoryOptions(active?source.activeCategory||'work':worktimeSelectedCategory)}</select></label><div class="work569-actions"><button type="button" class="work569-action is-play" data-action="worktime-quick-start">${ico('play',24)}<span>Play</span></button><button type="button" class="work569-action is-stop" data-action="worktime-quick-stop">${ico('stop',24)}<span>Stopp</span></button></div><div class="work569-status ${active?'is-active':''}"><strong>${active?'Eingestempelt':'Nicht eingestempelt'}</strong><span>${active&&source.activeStart?'Seit '+formatTimeShort(source.activeStart):'Heute '+formatMinutesCompact(total)}</span></div><div class="work569-day"><div class="work569-day-head"><strong>Heute</strong><span>${formatMinutesCompact(total)}</span></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Noch kein Arbeitsblock erfasst.</p>'}</div><p class="quick-panel-hint">${state?'Im lokalen Tresor gespeichert · Geräteabgleich nach Verbindung.':'Auf diesem Gerät verschlüsselt vorgemerkt · Geräteabgleich erst nach Entsperren.'}</p></section></div>`;
 }
 function habitQuickOverlay(){
  const items=habitItems(state);const doneSet=new Set(todayHabitIds(state));
  return `<div class="quick-panel-backdrop" data-action="habit-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="habit-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">HABITS · HEUTE ERLEDIGT</p><h2 id="habit-quick-title">Gewohnheiten abhaken</h2></div><button type="button" class="capture-modal-close" data-action="habit-quick-close" aria-label="Habits schließen">${ico('x',18)}</button></div><div class="habit569-summary"><strong>${doneSet.size}/${items.length}</strong><span>heute erledigt</span></div><div class="habit569-list">${items.map(item=>{const done=doneSet.has(item.id);const lockedDone=!state&&done;return '<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle" data-id="'+h(item.id)+'" '+(lockedDone?'disabled':'')+'><span><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</span><span class="habit569-check">'+(done?'✓':'')+'</span></button>';}).join('')}</div><div class="quick-panel-row"><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div><p class="quick-panel-hint">${state?'Motivierend statt perfektionistisch: ein Häkchen genügt.':'Bei gesperrtem Tresor werden Erledigungen verschlüsselt vorgemerkt.'}</p></section></div>`;
 }
+function nutritionQuickOverlay(){
+ return `<div class="quick-panel-backdrop" data-action="pj92-food-close-backdrop"><section class="quick-panel pj92-food-panel" role="dialog" aria-modal="true" aria-labelledby="pj92-food-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ERNÄHRUNG · EIN TIPP GENÜGT</p><h2 id="pj92-food-title">Was gab es gerade?</h2></div><button type="button" class="capture-modal-close" data-action="pj92-food-close" aria-label="Ernährung schließen">${ico('x',18)}</button></div>${nutritionQuickView(state)}<button type="button" data-action="pj92-food-insights" class="secondary-btn">Ernährungstagebuch ansehen →</button>${!state?'<small>Ohne Entsperren: Einträge bleiben bis zum nächsten Entsperren nur auf diesem Gerät gespeichert.</small>':''}</section></div>`;
+}
+function journalSyncPanel(){const ready=Boolean(state?.privateDeviceMirror?.key&&authToken);return `<section class="work-card pj92-sync-status"><span>${ico('sync',16)} Zeitjournal & Ernährung: ${ready?journalSyncStatus==='ok'?'verschlüsselt abgeglichen ✓':'lokal gespeichert · Abgleich ausstehend':'nur lokal – Geräteabgleich einrichten'}</span>${ready?'<button type="button" class="secondary-btn" data-action="pj92-sync-now">Jetzt abgleichen</button>':'<button type="button" class="secondary-btn" data-tab="system">Geräteabgleich einrichten</button>'}</section>`;}
 function quickWorktimeInsights(){
  const sessions=worktimeSessionsForDay(state);const total=worktimeMinutesForDay(state);const weekTotal=[0,1,2,3,4,5,6].reduce((sum,offset)=>{const d=new Date(localDate()+'T12:00:00');d.setDate(d.getDate()-offset);return sum+worktimeMinutesForDay(state,localDateString(d));},0);
- return `<section class="work-card work569-insight-card"><div class="work-heading"><span>${ico('clock',18)} Tatsächliche Arbeitszeit</span><button type="button" class="secondary-btn" data-action="worktime-quick-open">Schnellzugriff</button></div><div class="work569-insight-grid"><div><small>Heute</small><strong>${formatMinutesCompact(total)}</strong></div><div><small>7 Tage</small><strong>${formatMinutesCompact(weekTotal)}</strong></div><div><small>Status</small><strong>${isWorktimeActive(state)?'Eingestempelt':'Nicht aktiv'}</strong></div></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Heute noch keine Arbeitsblöcke gestempelt.</p>'}</section>`;
+ return `<section class="work-card work569-insight-card"><div class="work-heading"><span>${ico('clock',18)} Tatsächliche Arbeitszeit</span><button type="button" class="secondary-btn" data-action="pj92-open-timejournal">Zeitjournal öffnen →</button></div><div class="work569-insight-grid"><div><small>Heute</small><strong>${formatMinutesCompact(total)}</strong></div><div><small>7 Tage</small><strong>${formatMinutesCompact(weekTotal)}</strong></div><div><small>Status</small><strong>${isWorktimeActive(state)?'Eingestempelt':'Nicht aktiv'}</strong></div></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Heute noch keine Arbeitsblöcke gestempelt.</p>'}</section>`;
 }
 function habitInsightsView(){
  const items=habitItems(state);const done=todayHabitIds(state).length;const avg14=items.length?Math.round(items.reduce((sum,item)=>sum+habitDoneLastDays(state,item.id,14).filter(dot=>dot.done).length,0)/(items.length*14)*100):0;
@@ -1257,6 +1267,25 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;}
+async function syncPersonalJournal(){
+ if(journalSyncBusy||!authToken||!state?.privateDeviceMirror?.key||!navigator.onLine)return;
+ journalSyncBusy=true;const cfg=state.privateDeviceMirror;
+ try{
+  for(let attempt=0;attempt<4;attempt++){
+   const remote=await mirrorGet('journal');if(remote&&remote.salt!==cfg.salt)throw Error('Anderer Synchronisierungsschlüssel – Journal nicht verändert.');
+   const remoteData=remote?await decryptSection(cfg.key,'journal',remote):{};
+   const merged=mergeJournalData(journalSyncPayload(state),remoteData);
+   if(JSON.stringify(merged)!==JSON.stringify(journalSyncPayload(state))){applyJournalPayload(state,merged);await persist();syncQuickPublicFromState();render();}
+   if(remote&&JSON.stringify(merged)===JSON.stringify(mergeJournalData(remoteData,{}))){journalSyncStatus='ok';return;}
+   const encrypted=await encryptSection(cfg.key,'journal',merged);
+   try{await mirrorPublishEncrypted('journal',encrypted,cfg.salt,remote?.version||0);journalSyncStatus='ok';return;}
+   catch(ex){if(ex.status!==409)throw ex;}
+  }
+  throw Error('Journal wurde gleichzeitig geändert. Bitte erneut abgleichen.');
+ }catch(ex){journalSyncStatus='fehler';throw ex;}finally{journalSyncBusy=false;}
+}
 async function mirrorGet(kind){
  let record;try{record=(await request(config.apiUrl,authToken,`/api/private-device/${kind}`)).record;}catch(ex){if(ex.status===404)throw Error('Cloud-Worker zu alt: bitte zuerst die neue D1-Migration und Worker-Version installieren.');throw ex;}
  if(record?.chunked){
@@ -1332,7 +1361,7 @@ async function setupPrivateMirror(mode,phrase){
 function privateMirrorSettings(){
  const mirror=state.privateDeviceMirror;
  const loaded=state.healthImports?.garminSessions?.length||0,finance=state.financeTransactions?.length||0;
- return `<section class="work-card private-device-sync" aria-label="Privater Geräteabgleich"><div class="work-heading"><span>${ico('sync',18)} Finanz- & Garmin-Daten auf mehreren Geräten</span><span class="quiet-tag">Ende-zu-Ende verschlüsselt · freiwillig</span></div>
+ return `<section class="work-card private-device-sync" aria-label="Privater Geräteabgleich"><div class="work-heading"><span>${ico('sync',18)} Geräteabgleich · Finanzen, Garmin, Zeit & Ernährung</span><span class="quiet-tag">Ende-zu-Ende verschlüsselt · freiwillig</span></div>
  <p class="muted-line">Aktuell in diesem Tresor: ${finance.toLocaleString('de-AT')} Bankbuchungen und ${loaded.toLocaleString('de-AT')} importierte Garmin-Einheiten. Planung/Inbox synchronisieren bereits separat; importierte Daten erst mit diesem optionalen Geräteabgleich.</p>
  ${mirror?`<div class="ux-settings-row"><div><strong>${mirror.mode==='source'?'Hauptgerät · sendet verschlüsselte Daten':'Empfangsgerät · lokaler Offline-Spiegel'}</strong><small>${mirror.lastAt?'Letzter erfolgreicher Abgleich: '+h(date(mirror.lastAt)):'Noch kein erfolgreicher Abgleich'} · Cloudflare speichert nur Ciphertext</small></div><button type="button" class="secondary-btn" data-action="private-mirror-refresh" ${!authToken||busy?'disabled':''}>Jetzt abgleichen</button></div><button type="button" class="secondary-btn" data-action="private-mirror-disconnect">Auf diesem Gerät deaktivieren</button>${mirror.mode==='source'?'<button type="button" class="secondary-btn" data-action="private-mirror-cloud-delete">Verschlüsselte Cloud-Kopien löschen</button>':''}`:
  `<form id="private-device-sync-setup" class="private-device-form"><label>Gerätetyp <select name="mode"><option value="source">Hauptgerät (Computer) · Daten senden</option><option value="receiver">Handy / Zweitgerät · Daten empfangen</option></select></label><label>Eigene Synchronisierungs-Passphrase (mind. 16 Zeichen) <input type="password" name="phrase" minlength="16" maxlength="200" required autocomplete="new-password" placeholder="Auf beiden Geräten dieselbe Passphrase"/></label><button class="primary-btn" type="submit" ${!authToken?'disabled':''}>Verschlüsselten Geräteabgleich aktivieren</button></form>`}
@@ -1538,12 +1567,12 @@ function insightsScreen(){
  const model=buildSleepInsights(state?.healthImports||{},today,insightPeriod);
  const healthIds=['sleep','energy','stress','body'];
  const healthMode=healthIds.includes(insightTab);
- const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['habits','Habits','checkSquare'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
+ const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['timejournal','Zeitjournal','clock'],['nutrition','Ernährung','food'],['habits','Habits','checkSquare'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
  const tabs=compactInsights.map(([id,label,icon])=>`<button type="button" class="calm-insight-tab ${(id==='sleep'?healthMode:insightTab===id)?'selected':''}" data-action="insights-tab" data-id="${id}" aria-pressed="${id==='sleep'?healthMode:insightTab===id}">${ico(icon,16)}<span>${label}</span></button>`).join('');
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='balance'?lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis}):insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?quickWorktimeInsights()+worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today,false)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode)+worktimeImportPanel(state?.workTime||{},workPreview):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='timejournal'?timeJournalView(state,{period:timeJournalPeriod,editingId:timeJournalEditId,showForm:timeJournalShowForm})+journalSyncPanel():insightTab==='nutrition'?nutritionInsightsView(state,{period:nutritionPeriod,editingId:nutritionEditId})+journalSyncPanel():insightTab==='balance'?lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis}):insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?quickWorktimeInsights()+worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today,false)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode)+worktimeImportPanel(state?.workTime||{},workPreview):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <div class="calm-insight-toolbar" aria-label="Mobile Insights-Navigation"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
  <div class="insight-view-header ${insightTab==='sources'?'insight-source-heading':''}"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
@@ -1669,7 +1698,7 @@ function render(){
  const insightScrollBefore=tab==='insights'&&insightTab==='feelings'?{page:window.scrollY||0,log:app.querySelector('.fw681-full-log')?.scrollTop||0,content:app.querySelector('.content')?.scrollTop||0}:null;
  const feelingScrollBefore=feelingOverlayOpen?app.querySelector('#fw65-dialog')?.scrollTop||0:0;
  const captureFocus=snapshotCaptureDraft();
- if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[]):'');bind();restoreCaptureDraft(captureFocus);return;}
+ if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[]):'')+(nutritionQuickOpen?nutritionQuickOverlay():'');bind();restoreCaptureDraft(captureFocus);return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  let html;
  try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
@@ -1688,6 +1717,11 @@ function render(){
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
 }
 function bind() {
+ const quickCategory=app.querySelector('#pj92-current-category');if(quickCategory)quickCategory.onchange=()=>{worktimeSelectedCategory=quickCategory.value;};
+ const timeForm=app.querySelector('#pj92-time-form');if(timeForm)timeForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(timeForm);const conv=v=>new Date(String(v)).toISOString();const entry=validTimeEntry({id:fd.get('id')||undefined,start:conv(fd.get('start')),end:conv(fd.get('end')),category:String(fd.get('category')),title:fd.get('title'),project:fd.get('project'),updatedAt:stamp()});journalSyncStatus='lokal';await mutate(s=>putTimeEntry(s,entry));timeJournalShowForm=false;timeJournalEditId='';toast('Zeitintervall gespeichert.');}catch(ex){toast(ex.message,true);}};
+ const foodDetail=app.querySelector('#pj92-food-detail-form');if(foodDetail)foodDetail.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodDetail);journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===fd.get('id'));if(!item)throw Error('Eintrag fehlt.');item.at=new Date(String(fd.get('at'))).toISOString();item.amount=String(fd.get('amount')||'').slice(0,60);item.note=String(fd.get('note')||'').slice(0,500);item.updatedAt=stamp();});nutritionEditId='';toast('Ernährungseintrag gespeichert.');}catch(ex){toast(ex.message,true);}};
+ const foodCustom=app.querySelector('#pj92-add-food-form');if(foodCustom)foodCustom.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodCustom);journalSyncStatus='lokal';await mutate(s=>addCustomFood(s,fd.get('title')));toast('Lebensmittel hinzugefügt.');}catch(ex){toast(ex.message,true);}};
+
  const recPanel=app.querySelector('#rec554-panel');if(recPanel)recPanel.addEventListener('toggle',()=>{if(recPanel.isConnected)timeoffOpen=recPanel.open;});
  const plannerElement=app.querySelector('#v47-plan');if(plannerElement)plannerElement.addEventListener('toggle',()=>{plannerExpanded=plannerElement.open;});
  if(state)wireSmartTags(app,()=>state);
@@ -1714,6 +1748,7 @@ function bind() {
             }
             if(capture.kind==='worktime'){applyWorktimeEvent(state,capture.entry||{});continue;}
             if(capture.kind==='habit'){applyHabitEvent(state,capture.entry||{});continue;}
+            if(capture.kind==='nutrition'){if(!state.nutritionJournal?.entries?.some(e=>e.id===capture.entry?.id))addNutrition(state,capture.entry);continue;}
             if(state.records[capture.id])continue;const record={id:capture.id,title:capture.title,note:capture.note||'',tags:[],deleted:false,updatedAt:capture.createdAt||stamp()};state.records[record.id]=record;state.pending.push(makeMutation(record));state.history.push({type:'captured',at:record.updatedAt,id:record.id});
           }
           await persist(); // Only acknowledge after durable encrypted vault write.
@@ -2425,7 +2460,7 @@ function bind() {
   });
   app.querySelectorAll('.fw65-emotion').forEach(el=>{el.onmouseenter=()=>{const def=FEELINGS.find(x=>x.id===el.dataset.id),hint=app.querySelector('#fw65-hint');if(def&&hint)hint.textContent=def.label+' · '+def.description;};el.onmouseleave=()=>{const hint=app.querySelector('#fw65-hint');if(hint)hint.textContent='Wähle ein oder mehrere Gefühle.';};});
   app.querySelectorAll('[data-action]').forEach(el=>el.onclick=ev=>{
-    if(el.dataset.action==='capture-close-backdrop'&&ev.target!==el)return;
+    if(['capture-close-backdrop','pj92-food-close-backdrop','worktime-quick-close-backdrop'].includes(el.dataset.action)&&ev.target!==el)return;
     if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
       const field=el.closest('form')?.querySelector(`[name="${el.dataset.field}"]`);
       if(!field)return;
@@ -2484,17 +2519,40 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
- if(action==='feeling-open'){if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}feelingEditingId='';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
- if(action==='worktime-quick-open'){if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;habitQuickOpen=false;worktimeQuickOpen=true;render();return;}
+ if(action==='pj92-food-open'){if(!state&&!sealedCaptureAvailable)return toast('Bitte zuerst einmal den Tresor entsperren.',true);nutritionQuickOpen=true;habitQuickOpen=false;worktimeQuickOpen=false;feelingOverlayOpen=false;captureOverlayOpen=false;render();return;}
+ if(action==='pj92-food-close'||action==='pj92-food-close-backdrop'){nutritionQuickOpen=false;render();return;}
+ if(action==='pj92-food-insights'){nutritionQuickOpen=false;if(!state)return toast('Zum Ansehen der Ernährungshistorie bitte Tresor entsperren.',true);tab='insights';insightTab='nutrition';calmNavGroup='insights';render();return;}
+ if(action==='pj92-food-tap'){
+  try{const item={id:crypto.randomUUID(),foodId:id,at:stamp()};
+   if(!state){await vault.appendSealedNutrition(item);foodQueuedCount++;nutritionQuickOpen=false;toast('Ernährung verschlüsselt vorgemerkt.');}
+   else{journalSyncStatus='lokal';await mutate(s=>addNutrition(s,item));nutritionQuickOpen=false;toast('Ernährung erfasst.');}
+  }catch(ex){toast(ex.message,true);}return;
+ }
+ if(action==='pj92-open-timejournal'){tab='insights';insightTab='timejournal';calmNavGroup='insights';render();return;}
+ if(action==='pj92-period'){timeJournalPeriod=Number(id)||7;render();return;}
+ if(action==='pj92-nutrition-period'){nutritionPeriod=Number(id)||30;render();return;}
+ if(action==='pj92-time-add'){timeJournalEditId='';timeJournalShowForm=true;render();return;}
+ if(action==='pj92-time-edit'){timeJournalEditId=id;timeJournalShowForm=true;render();return;}
+ if(action==='pj92-time-cancel'){timeJournalEditId='';timeJournalShowForm=false;render();return;}
+ if(action==='pj92-time-delete'){if(!state||!confirm('Dieses Zeitintervall wirklich entfernen?'))return;try{journalSyncStatus='lokal';await mutate(s=>deleteTimeEntry(s,id));timeJournalEditId='';timeJournalShowForm=false;toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
+ if(action==='pj92-nutrition-add'){nutritionQuickOpen=true;render();return;}
+ if(action==='pj92-food-edit'){nutritionEditId=id;render();return;}
+ if(action==='pj92-food-edit-cancel'){nutritionEditId='';render();return;}
+ if(action==='pj92-food-delete'){if(!state||!confirm('Ernährungseintrag entfernen?'))return;try{journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===id);if(item){item.deleted=true;item.updatedAt=stamp();}});nutritionEditId='';toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
+ if(action==='pj92-sync-now'){try{await syncPersonalJournal();toast('Zeitjournal und Ernährung verschlüsselt abgeglichen.');}catch(ex){toast(ex.message,true);}return;}
+
+ if(action==='feeling-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}feelingEditingId='';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
+ if(action==='worktime-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;habitQuickOpen=false;worktimeQuickOpen=true;render();return;}
  if(action==='worktime-quick-close'||action==='worktime-quick-close-backdrop'){worktimeQuickOpen=false;render();return;}
- if(action==='habit-quick-open'){if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=true;render();return;}
+ if(action==='habit-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=true;render();return;}
  if(action==='habit-quick-close'||action==='habit-quick-close-backdrop'){habitQuickOpen=false;render();return;}
  if(action==='habit-open-insights'){habitQuickOpen=false;tab='insights';insightTab='habits';calmNavGroup='insights';render();return;}
  if(action==='worktime-quick-start'||action==='worktime-quick-stop'){
-   const entry={type:action==='worktime-quick-start'?'start':'stop',at:stamp()};
+   const entry={type:action==='worktime-quick-start'?'start':'stop',at:stamp(),category:worktimeSelectedCategory,id:crypto.randomUUID()};
+   if((entry.type==='start')===isWorktimeActive(state))return toast(entry.type==='start'?'Bereits eingestempelt.':'Es läuft aktuell kein Intervall.',true);
    try{
      if(!state){await vault.appendSealedWorktime(entry);syncQuickPublicWorktime(entry);toast(entry.type==='start'?'Arbeitszeit vorgemerkt: eingestempelt.':'Arbeitszeit vorgemerkt: ausgestempelt.');}
-     else{await mutate(s=>applyWorktimeEvent(s,entry));toast(entry.type==='start'?'Arbeitszeit gestartet.':'Arbeitszeit gestoppt.');}
+     else{journalSyncStatus='lokal';await mutate(s=>applyWorktimeEvent(s,entry));toast(entry.type==='start'?'Arbeitszeit gestartet.':'Arbeitszeit gestoppt.');}
    }catch(ex){toast(ex.message,true);}
    return;
  }
@@ -2795,7 +2853,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='calm-finance-group'){const group=FINANCE_GROUPS.find(g=>g.title===id);if(group){tab='finance';calmNavGroup='finance';financePane=group.panes[0];financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-finance-view'){if(FINANCE_TABS.some(p=>p.title===id)){tab='finance';calmNavGroup='finance';financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-nav-group'){calmNavGroup=calmNavGroup===id?'':id;render();return;}
-    if(action==='calm-insight-view'){if(INSIGHT_TABS.some(t=>t.id===id)||['habits','feelings','balance','focus','worktime','places','explore','sources','sleep'].includes(id)){tab='insights';calmNavGroup='insights';insightTab=id;if(id==='places')insightPeriod='all';render();if(authToken){reloadWatchSessions().catch(()=>{});reloadHealth().catch(()=>{});}}return;}
+    if(action==='calm-insight-view'){if(INSIGHT_TABS.some(t=>t.id===id)||['habits','feelings','balance','focus','worktime','timejournal','nutrition','places','explore','sources','sleep'].includes(id)){tab='insights';calmNavGroup='insights';insightTab=id;if(id==='places')insightPeriod='all';render();if(authToken){reloadWatchSessions().catch(()=>{});reloadHealth().catch(()=>{});}}return;}
     if(action==='nav-more'){await mutate(s=>{s.uiPreferences??={};s.uiPreferences.advancedNav=!(s.uiPreferences.advancedNav===true);});return;}
     if(action==='recovery-idea-remove'){if(!String(id).startsWith('idea-'))return;await mutate(s=>{s.recoveryIdeas=(s.recoveryIdeas||[]).filter(i=>i.id!==id);});return;}
     if(action==='recovery-idea-hide'){if(!String(id).startsWith('starter-'))return;await mutate(s=>{s.hiddenStarterIdeas=[...new Set([...(s.hiddenStarterIdeas||[]),id])];});return;}
@@ -3585,6 +3643,7 @@ async function syncNow() {
     await syncReview();
     if(state?.privateDeviceMirror?.mode==='source')await publishPrivateMirror();
     else if(state?.privateDeviceMirror?.mode==='receiver')await receivePrivateMirror();
+    if(state?.privateDeviceMirror?.key)await syncPersonalJournal();
     lastSyncAt=Date.now();
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
     error='';

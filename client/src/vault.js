@@ -153,7 +153,11 @@ export async function appendSealedFeeling(entry){
 export async function appendSealedWorktime(entry){
  if(!entry||!['start','stop'].includes(entry.type))throw Error('Arbeitszeit-Ereignis ist ungültig.');
  const id=crypto.randomUUID();
- return appendSealedRecord({kind:'worktime',id,entry:{type:entry.type,at:entry.at||new Date().toISOString()},createdAt:entry.at||new Date().toISOString()});
+ return appendSealedRecord({kind:'worktime',id,entry:{type:entry.type,at:entry.at||new Date().toISOString(),id:String(entry.id||crypto.randomUUID()),category:String(entry.category||'work')} ,createdAt:entry.at||new Date().toISOString()});
+}
+export async function appendSealedNutrition(entry){
+ if(!entry?.id||!entry?.foodId)throw Error('Ungültiger Ernährungseintrag.');
+ return appendSealedRecord({id:entry.id,kind:'nutrition',entry:{id:String(entry.id),foodId:String(entry.foodId),at:entry.at||new Date().toISOString()},createdAt:entry.at||new Date().toISOString()});
 }
 export async function appendSealedHabit(entry){
  if(!entry?.habitId||!entry?.day)throw Error('Habit-Eintrag ist ungültig.');

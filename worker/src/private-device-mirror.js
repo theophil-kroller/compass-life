@@ -2,7 +2,7 @@ const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:
 const valid64=(s,min,max)=>typeof s==='string'&&s.length>=min&&s.length<=max&&/^[A-Za-z0-9+/]*={0,2}$/.test(s);
 export async function privateMirror(req,env,identity){
  const path=new URL(req.url).pathname,kind=path.split('/').at(-1);
- if(!['finance','health'].includes(kind))return json({error:'unknown-kind'},404);
+ if(!['finance','health','journal'].includes(kind))return json({error:'unknown-kind'},404);
  const owner=identity.sub;
  if(req.method==='GET'){
   const row=await env.DB.prepare('SELECT version,salt,iv,ciphertext,compressed,updated_at,chunk_id,chunk_count FROM private_device_mirror WHERE owner_sub=? AND kind=?').bind(owner,kind).first();

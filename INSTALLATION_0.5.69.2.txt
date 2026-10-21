@@ -1,0 +1,32 @@
+Compass 0.5.69.2 – Installation & Geräteabgleich
+=================================================
+
+PATCH von Version 0.5.69.1:
+1. Aktuellen Stand und lokalen verschlüsselten Tresor sichern.
+2. Den Inhalt von Compass_0.5.69.2_PATCH_FROM_0.5.69.1.zip in das Repository-Stammverzeichnis kopieren (Ordner client/, worker/, tests/ erhalten).
+3. Auf GitHub committen. GitHub Actions → Deploy Compass Web muss grün werden.
+4. Mobile PWA/Browser nach dem Deployment neu laden.
+
+FULL SOURCE:
+Compass_0.5.69.2_FULL_SOURCE.zip ist der vollständige Codebestand.
+
+WICHTIG FÜR GERÄTEÜBERGREIFENDE SYNCHRONISIERUNG:
+Die GitHub-Pages-Webseite alleine reicht NICHT. Für den neuen verschlüsselten Journal-Abgleich sind außerdem zwei Cloudflare-Schritte erforderlich:
+  A. D1-Migration 0018_personal_journal_mirror.sql auf die REMOTE-Datenbank anwenden.
+     In einem Terminal mit konfiguriertem Wrangler: npm run db:remote
+     (bzw. wrangler d1 migrations apply <datenbankname> --remote im Worker-Verzeichnis).
+  B. Aktualisierten Worker deployen: npm run deploy:api
+  C. In Compass auf beiden Geräten anmelden, den lokalen Tresor entsperren und unter Einstellungen den privaten Geräteabgleich mit gleichem Schlüssel aktivieren.
+  D. Unter Insights → Zeitjournal oder Insights → Ernährung den Status prüfen / „Jetzt abgleichen“ drücken.
+
+Die Funktion „Ernährung erfassen“ funktioniert auch bei gesperrtem Tresor auf dem jeweiligen Gerät; die E2EE-Cloud-Synchronisierung benötigt anschließend ein entsperrtes Gerät.
+Ohne aktivierten Geräteabgleich bleiben neue Einträge lokal – sie werden nicht automatisch geräteübergreifend übertragen.
+
+NUTZUNG:
+- Titelzeile: Uhrsymbol → Bereich wählen → Play / Stopp.
+- Titelzeile: Bestecksymbol → häufiges Lebensmittel oder Getränk antippen. Ein Tipp genügt.
+- Insights → Zeitjournal: Intervalle nachtragen, ändern, Projekte zuordnen und Zeitbilanz ansehen.
+- Insights → Ernährung: Häufigkeiten/Verlauf ansehen, Einträge nachbearbeiten und eigene Lebensmittel hinzufügen.
+
+KEIN TRESOR-RESET. Bestehende Play/Stopp-Intervalle und andere Daten werden beibehalten.
+Teststand: automatisierte Node-Tests bestanden, Worker-Syntaxprüfung bestanden. Vite-Build nicht lokal verifiziert.

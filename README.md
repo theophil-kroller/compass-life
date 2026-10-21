@@ -124,3 +124,8 @@ Selbsterfahrungshistorie. Gesperrte Schnell-Check-ins nutzen den verschlüsselte
 **Datenschutz:** kein automatischer Upload persönlicher Gefühle. E2EE-Geräteabgleich
 für die Gefühlswelt ist noch nicht implementiert; verschlüsselte Tresor-Backups verwenden.
 Siehe `CHANGELOG_0.5.68.1.md` und `INSTALLATION_0.5.68.1.txt`.
+
+
+## Version 0.5.69.2 – Zeitjournal & Ernährung
+
+Siehe [Changelog](CHANGELOG_0.5.69.2.md) und [Installation](INSTALLATION_0.5.69.2.txt). Für den neuen Journal-Geräteabgleich sind Worker-Deployment und D1-Migration 0018 notwendig.

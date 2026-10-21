@@ -2833,3 +2833,52 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
   .work569-insight-grid,.habit569-kpis{grid-template-columns:1fr}
   .habit569-form{grid-template-columns:1fr}
 }
+
+/* Compass 0.5.69.2 – icon-first mobile captures, personal time and nutrition journal. */
+.utility-right .quick-utility-button{position:relative;padding:9px;min-width:37px;justify-content:center;border-radius:12px}
+.utility-right .quick-utility-label,.utility-right .pj92-work-status{display:none}
+.utility-right .pj92-food-trigger{font-size:0}
+.utility-right .fw65-top-caption{display:none}
+.utility-right .fw65-top-trigger{min-width:38px;padding:7px 9px}
+.pj92-quick-category{display:flex;flex-direction:column;gap:5px;font-size:.84rem;color:#617185;font-weight:650}
+.pj92-quick-category select{border-radius:12px;border:1px solid #dfe7e6;background:#fff;padding:10px;color:#27483d;font:inherit;width:100%}
+.pj92-food-panel{width:min(530px,100%);gap:12px}
+.pj92-food-grid{display:flex;flex-direction:column;gap:13px;max-height:min(65vh,550px);overflow:auto;overscroll-behavior:contain}
+.pj92-food-group h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.055em;text-transform:uppercase;color:#627972}
+.pj92-food-group>div{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.pj92-food-tile{border:1px solid #dde8e2;border-radius:14px;background:#f8fbf8;min-height:88px;padding:9px 5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:background .14s,border-color .14s;color:#26483a;overflow-wrap:anywhere}
+.pj92-food-tile:hover,.pj92-food-tile:focus-visible{background:#e7f3e9;border-color:#7cba97;outline-offset:2px}
+.pj92-food-tile span{font-size:1.65rem;line-height:1.2}
+.pj92-food-tile small{font-size:.72rem;line-height:1.2;font-weight:650;text-align:center}
+.pj92-footnote{font-size:.78rem;color:#677b73;line-height:1.55;margin:0}
+.pj92-shell{display:flex;flex-direction:column;gap:16px;max-width:1160px}
+.pj92-shell>.work-card{padding:20px}
+.pj92-period{display:flex;gap:6px;margin:16px 0}
+.pj92-period button{cursor:pointer;background:#f3f8f4;border:1px solid #e2ebe6;border-radius:10px;padding:7px 14px;color:#4b6c5f}
+.pj92-period button.active{background:#e1efe6;border-color:#69a788;color:#237454;font-weight:750}
+.pj92-metric{display:flex;align-items:baseline;gap:10px;margin:7px 0 18px}
+.pj92-metric strong{font-size:1.65rem;color:#1b5142;font-variant-numeric:tabular-nums}
+.pj92-metric small{color:#72877d}
+.pj92-category-bars{display:flex;flex-direction:column;gap:11px}
+.pj92-bar-row{display:grid;grid-template-columns:minmax(160px,2fr) minmax(70px,3fr) 55px;gap:13px;align-items:center;font-size:.88rem}
+.pj92-bar-row>div{height:9px;border-radius:20px;background:#ecf2ed;overflow:hidden}
+.pj92-bar-row>div i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#9ad9b9,#3c9972)}
+.pj92-bar-row strong{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pj92-entry-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.pj92-time-row{padding:12px 14px;border-radius:11px;background:#f8faf8;border:1px solid #eaf0ec;display:flex;justify-content:space-between;gap:14px;align-items:center;text-align:left;cursor:pointer;color:#25493b}
+.pj92-time-row:hover{background:#eef6f0}
+.pj92-time-row span{display:flex;flex-direction:column;gap:3px}
+.pj92-time-row span:last-child{text-align:right;white-space:nowrap}
+.pj92-time-row small{font-size:.76rem;color:#789184}
+.pj92-editor form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.pj92-editor form label,.pj92-inline-form label{display:flex;flex-direction:column;gap:7px;color:#526b5d;font-weight:700;font-size:.85rem}
+.pj92-editor form input,.pj92-editor form select,.pj92-editor form textarea,.pj92-inline-form input{padding:11px 12px;background:white;border:1px solid #dce5dd;border-radius:11px;font:inherit;color:#274f40;min-width:0}
+.pj92-form-actions{grid-column:1/-1;display:flex;gap:10px;justify-content:flex-start}
+.pj92-inline-form{display:flex;gap:12px;align-items:flex-end}
+.pj92-inline-form label{flex:1}
+.pj92-sync-status{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.85rem}
+.pj92-alert{border-radius:10px;padding:12px;background:#fff4dd;color:#765519}
+@media(max-width:900px){.pj92-food-group>div{grid-template-columns:repeat(3,minmax(0,1fr))}.pj92-editor form{grid-template-columns:1fr}.pj92-bar-row{grid-template-columns:minmax(105px,2fr) minmax(50px,2fr) 55px;gap:8px;font-size:.78rem}.pj92-time-row{padding:10px}.pj92-food-panel{max-height:calc(100vh - 90px)}.pj92-sync-status{flex-wrap:wrap}}
+@media(max-width:480px){.utility-right .quick-utility-button{padding:6px;min-width:31px}.pj92-food-group>div{grid-template-columns:repeat(3,minmax(0,1fr))}.pj92-food-tile{min-height:79px}.pj92-time-row span:last-child{white-space:normal}.pj92-inline-form{flex-wrap:wrap}}
+
+.utility-right .pj92-habit-count{display:none}

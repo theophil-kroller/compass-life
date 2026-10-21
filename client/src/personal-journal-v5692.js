@@ -1,0 +1,126 @@
+/** Compass 0.5.69.2 – Personal Time Journal + nutrition; pure data transformations. */
+export const TIME_AREAS=[
+ ['work','💼','Berufliche Arbeit'],['project','🛠️','Privatprojekt'],['family','❤️','Familie & Beziehungen'],
+ ['leisure','⚽','Sport & Freizeit'],['health','🌿','Gesundheit & Erholung'],['personal','🏡','Alltag'],['other','○','Unklassifiziert']
+];
+export const FOOD_PRESETS=[
+ ['matcha','🍵','Matcha mit Honig','Getränke'],['oat-latte','☕','Hafermilch-Latte mit Karamellsirup','Getränke'],
+ ['smoothie','🥤','Smoothie','Getränke'],['tea-honey','🫖','Tee mit Honig','Getränke'],
+ ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke'],['coffee','☕','Kaffee','Getränke'],
+ ['mensa','🍲','Mensaessen','Mahlzeiten'],['buffet','🍽️','Buffet / auswärts','Mahlzeiten'],
+ ['bread-cheese','🥪','Käsebrot','Mahlzeiten'],['cheddar','🧀','Cheddar-Scheibe','Snacks'],
+ ['peanuts','🥜','Gesalzene Erdnüsse','Snacks'],['mixed-nuts','🌰','Bio-Nussmischung','Snacks'],
+ ['dried-mango','🥭','Getrocknete Mango','Snacks'],['rice-pudding','🍚','Milchreis','Snacks'],
+ ['apple','🍎','Apfel','Snacks'],['chocolate','🍫','Schokoriegel','Snacks'],
+ ['snickers','🍫','Snickers','Snacks'],['other-food','➕','Anderes','Sonstiges']
+].map(([id,emoji,title,group])=>({id,emoji,title,group}));
+const isoTime=x=>typeof x==='string'&&Number.isFinite(new Date(x).getTime());
+export function timeLabel(k){return TIME_AREAS.find(c=>c[0]===k)?.[2]||'Unklassifiziert';}
+export function timeCategoryOptions(selected='work'){
+ return TIME_AREAS.map(([id,emoji,name])=>`<option value="${id}" ${selected===id?'selected':''}>${emoji} ${name}</option>`).join('');
+}
+export function ensureJournal(state){
+ if(!state.timeJournal||typeof state.timeJournal!=='object')state.timeJournal={entries:[],overrides:{}};
+ if(!Array.isArray(state.timeJournal.entries))state.timeJournal.entries=[];
+ if(!state.timeJournal.overrides||typeof state.timeJournal.overrides!=='object')state.timeJournal.overrides={};
+ if(!state.nutritionJournal||typeof state.nutritionJournal!=='object')state.nutritionJournal={entries:[],customFoods:[]};
+ if(!Array.isArray(state.nutritionJournal.entries))state.nutritionJournal.entries=[];
+ if(!Array.isArray(state.nutritionJournal.customFoods))state.nutritionJournal.customFoods=[];
+ return state;
+}
+export function validTimeEntry(entry){
+ if(!entry||!isoTime(entry.start)||!isoTime(entry.end))throw Error('Start- und Endzeit bitte vollständig eingeben.');
+ const minutes=(Date.parse(entry.end)-Date.parse(entry.start))/60000;
+ if(minutes<=0||minutes>2880)throw Error('Das Intervall muss zwischen 1 Minute und 48 Stunden liegen.');
+ if(!TIME_AREAS.some(x=>x[0]===entry.category))throw Error('Ungültiger Lebensbereich.');
+ return {...entry,id:String(entry.id||crypto.randomUUID()),category:entry.category,project:String(entry.project||'').trim().slice(0,120),title:String(entry.title||'').trim().slice(0,160),updatedAt:entry.updatedAt||new Date().toISOString(),deleted:entry.deleted===true};
+}
+export function timeEntries(state){
+ const journal=ensureJournal(state).timeJournal;
+ const manual=journal.entries.filter(e=>e&&e.id).map(e=>({...e,source:'manual'}));
+ const quick=(state.quickWorktime?.sessions||[]).filter(e=>e&&e.id&&isoTime(e.start)&&isoTime(e.end))
+  .map(e=>({id:e.id,start:e.start,end:e.end,category:e.category||'work',project:e.project||'',title:e.title||'',source:'quick',updatedAt:e.updatedAt||e.end}));
+ const rows=[...quick,...manual].map(e=>({...e,...(journal.overrides[e.id]||{})})).filter(e=>!e.deleted&&isoTime(e.start)&&isoTime(e.end));
+ return rows.sort((a,b)=>String(b.start).localeCompare(String(a.start)));
+}
+export function putTimeEntry(state,entry){
+ ensureJournal(state);const saved=validTimeEntry(entry);const quick=(state.quickWorktime?.sessions||[]).some(e=>e.id===saved.id);
+ if(quick){state.timeJournal.overrides[saved.id]={start:saved.start,end:saved.end,category:saved.category,project:saved.project,title:saved.title,updatedAt:saved.updatedAt,deleted:false};}
+ else {const idx=state.timeJournal.entries.findIndex(x=>x.id===saved.id);if(idx===-1)state.timeJournal.entries.push(saved);else state.timeJournal.entries[idx]=saved;}
+ return saved;
+}
+export function deleteTimeEntry(state,id){
+ ensureJournal(state);const item=timeEntries(state).find(x=>x.id===id);if(!item)throw Error('Zeitintervall nicht gefunden.');
+ const override={...(state.timeJournal.overrides[id]||{}),deleted:true,updatedAt:new Date().toISOString()};
+ if(item.source==='quick')state.timeJournal.overrides[id]=override;
+ else{const idx=state.timeJournal.entries.findIndex(e=>e.id===id);if(idx>=0)state.timeJournal.entries[idx]={...state.timeJournal.entries[idx],...override};}
+}
+export function durationMinutes(e){return Math.max(0,Math.round((Date.parse(e.end)-Date.parse(e.start))/60000)||0);}
+export function timeBreakdown(state,days=7,now=new Date()){
+ const cutoff=new Date(now.getTime()-(days-1)*86400000);cutoff.setHours(0,0,0,0);
+ const end=now.getTime();const totals=Object.fromEntries(TIME_AREAS.map(([k])=>[k,0]));
+ let sum=0;const items=[];
+ for(const e of timeEntries(state)){
+  const s=Math.max(cutoff.getTime(),Date.parse(e.start)),t=Math.min(end,Date.parse(e.end));
+  if(t<=s)continue;const min=Math.round((t-s)/60000);
+  totals[e.category]??=0;totals[e.category]+=min;sum+=min;items.push(e);
+ }
+ return {days,totalMinutes:sum,totals,items};
+}
+export function overlapWarnings(state){
+ const rows=timeEntries(state).sort((a,b)=>a.start.localeCompare(b.start));
+ return rows.flatMap((r,i)=>i&&Date.parse(r.start)<Date.parse(rows[i-1].end)?[[rows[i-1].id,r.id]]:[]);
+}
+export function addNutrition(state,{foodId,at,amount='',note='',id,deleted=false}){
+ ensureJournal(state);const foods=[...FOOD_PRESETS,...state.nutritionJournal.customFoods];
+ if(!foods.some(f=>f.id===foodId))throw Error('Lebensmittel nicht gefunden.');
+ const item={id:String(id||crypto.randomUUID()),foodId:String(foodId),at:isoTime(at)?at:new Date().toISOString(),amount:String(amount).slice(0,60),note:String(note).slice(0,500),updatedAt:new Date().toISOString(),deleted};
+ const idx=state.nutritionJournal.entries.findIndex(e=>e.id===item.id);
+ if(idx<0)state.nutritionJournal.entries.push(item);else state.nutritionJournal.entries[idx]=item;
+ return item;
+}
+export function addCustomFood(state,title,emoji='🍴'){
+ ensureJournal(state);const name=String(title||'').trim();if(!name||name.length>80)throw Error('Bitte eine kurze Bezeichnung eingeben.');
+ if([...FOOD_PRESETS,...state.nutritionJournal.customFoods].some(f=>f.title.toLowerCase()===name.toLowerCase()))throw Error('Dieser Eintrag existiert bereits.');
+ const item={id:crypto.randomUUID(),title:name,emoji:String(emoji||'🍴').slice(0,6),group:'Eigene'};
+ state.nutritionJournal.customFoods.push(item);return item;
+}
+export function nutritionFoods(state){return [...FOOD_PRESETS,...(state?.nutritionJournal?.customFoods||[])];}
+export function nutritionEntries(state){return (state?.nutritionJournal?.entries||[]).filter(e=>!e.deleted&&isoTime(e.at)).slice().sort((a,b)=>b.at.localeCompare(a.at));}
+export function nutritionStats(state,days=30,now=new Date()){
+ const since=now.getTime()-days*86400000,entries=nutritionEntries(state).filter(e=>Date.parse(e.at)>=since&&Date.parse(e.at)<=now.getTime());
+ const counts=new Map();for(const e of entries)counts.set(e.foodId,(counts.get(e.foodId)||0)+1);
+ return {entries,counts,ranked:[...counts].sort((a,b)=>b[1]-a[1])};
+}
+function dayFormat(value){return new Date(value).toLocaleDateString('de-AT',{day:'2-digit',month:'short'});}
+function hourFormat(value){return new Date(value).toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'});}
+function toInputDate(value){const d=new Date(value);if(!Number.isFinite(d.getTime()))return '';const z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;}
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export function timeJournalView(state,{period=7,editingId='',showForm=false}={}){
+ const summary=timeBreakdown(state,period),rows=timeEntries(state).slice(0,200),overlap=overlapWarnings(state),editing=rows.find(e=>e.id===editingId)||null;
+ const inputStart=editing?toInputDate(editing.start):toInputDate(new Date(Date.now()-3600000)),inputEnd=editing?toInputDate(editing.end):toInputDate(new Date());
+ return `<div class="pj92-shell"><section class="work-card pj92-summary"><div class="work-heading"><span>⏱️ Zeitjournal · Wohin fließt meine Zeit?</span><button class="secondary-btn" data-action="pj92-time-add" type="button">+ Zeit nachtragen</button></div><p class="muted-line">Beruf, Privatprojekte, Familie, Bewegung und Erholung. Unbekannte Stunden bleiben unbekannt.</p><div class="pj92-period">${[7,30,90].map(n=>`<button class="${period===n?'active':''}" type="button" data-action="pj92-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${Math.round(summary.totalMinutes/60*10)/10} h</strong><small>erfasste Zeit in ${period} Tagen</small></div><div class="pj92-category-bars">${TIME_AREAS.filter(([id])=>summary.totals[id]).map(([id,icon,title])=>`<div class="pj92-bar-row"><span>${icon} ${title}</span><div><i style="width:${Math.round(summary.totals[id]/(summary.totalMinutes||1)*100)}%"></i></div><strong>${(summary.totals[id]/60).toFixed(1)} h</strong></div>`).join('')||'<p class="muted-line">Noch keine Zeitintervalle erfasst.</p>'}</div>${overlap.length?`<p class="pj92-alert">⚠ ${overlap.length} überlappende Zeitintervalle – bitte prüfen; Werte können doppelt gezählt sein.</p>`:''}</section><section class="work-card"><div class="work-heading"><span>Chronologie · ${rows.length} Intervalle</span></div><div class="pj92-entry-list">${rows.map(e=>`<button type="button" data-action="pj92-time-edit" data-id="${esc(e.id)}" class="pj92-time-row"><span><strong>${TIME_AREAS.find(x=>x[0]===e.category)?.[1]||'○'} ${esc(e.title||timeLabel(e.category))}</strong><small>${esc(e.project||timeLabel(e.category))}</small></span><span><strong>${dayFormat(e.start)}</strong><small>${hourFormat(e.start)}–${hourFormat(e.end)} · ${durationMinutes(e)} min</small></span></button>`).join('')||'<p class="muted-line">Mit Play/Stopp erfassen oder rückwirkend eine Aktivität hinzufügen.</p>'}</div></section>${showForm||editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>${editing?'Intervall bearbeiten':'Aktivität nachtragen'}</span><button type="button" data-action="pj92-time-cancel">Schließen</button></div><form id="pj92-time-form"><input type="hidden" name="id" value="${esc(editing?.id||'')}"><label>Von<input type="datetime-local" name="start" required value="${esc(inputStart)}"></label><label>Bis<input type="datetime-local" name="end" required value="${esc(inputEnd)}"></label><label>Bereich<select name="category">${timeCategoryOptions(editing?.category||'project')}</select></label><label>Aktivität<input name="title" maxlength="160" placeholder="z. B. Fußball mit meinem Sohn" value="${esc(editing?.title||'')}"></label><label>Projekt / Kontext<input name="project" maxlength="120" placeholder="z. B. Compass oder Beziehungsdynamiken" value="${esc(editing?.project||'')}"></label><div class="pj92-form-actions"><button class="primary-btn" type="submit">Speichern</button>${editing?`<button type="button" class="secondary-btn" data-action="pj92-time-delete" data-id="${esc(editing.id)}">Löschen</button>`:''}</div></form></section>`:''}</div>`;
+}
+export function nutritionQuickView(state,{selectedFoodId='',dateToday}={}){
+ const foods=nutritionFoods(state),groups=[...new Set(foods.map(f=>f.group))];
+ return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3><div>${foods.filter(f=>f.group===group).map(f=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}</small></button>`).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. Kein Kalorienzählen. Details können später ergänzt werden. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
+}
+export function nutritionInsightsView(state,{period=30,editingId=''}={}){
+ const stats=nutritionStats(state,period),foods=nutritionFoods(state),editing=nutritionEntries(state).find(e=>e.id===editingId);
+ return `<div class="pj92-shell"><section class="work-card"><div class="work-heading"><span>🥗 Ernährungstagebuch</span><span class="quiet-tag">${period} Tage</span></div><p class="muted-line">Was esse und trinke ich – und wann? Ohne Bewertung oder automatische Ernährungsnoten.</p><div class="pj92-period">${[7,30,90].map(n=>`<button type="button" class="${n===period?'active':''}" data-action="pj92-nutrition-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${stats.entries.length}</strong><small>erfasste Lebensmittel und Getränke</small></div><div class="pj92-category-bars">${stats.ranked.slice(0,12).map(([id,count])=>{const food=foods.find(f=>f.id===id);return `<div class="pj92-bar-row"><span>${food?.emoji||'🍴'} ${esc(food?.title||'Eigenes Lebensmittel')}</span><div><i style="width:${Math.round(count/(stats.ranked[0]?.[1]||1)*100)}%"></i></div><strong>${count}×</strong></div>`;}).join('')||'<p class="muted-line">Noch keine Einträge in diesem Zeitraum.</p>'}</div></section><section class="work-card"><div class="work-heading"><span>Letzte Einträge</span><button type="button" class="secondary-btn" data-action="pj92-nutrition-add">Neues Lebensmittel erfassen</button></div><div class="pj92-entry-list">${stats.entries.slice(0,60).map(e=>{const food=foods.find(f=>f.id===e.foodId);return `<button class="pj92-time-row" type="button" data-action="pj92-food-edit" data-id="${esc(e.id)}"><span><strong>${food?.emoji||'🍴'} ${esc(food?.title||'Eintrag')}</strong><small>${esc([e.amount,e.note].filter(Boolean).join(' · ')||'Zum Bearbeiten öffnen')}</small></span><span><strong>${dayFormat(e.at)}</strong><small>${hourFormat(e.at)}</small></span></button>`;}).join('')||'<p class="muted-line">Einfach über das Ernährungssymbol in der Titelzeile beginnen.</p>'}</div></section>${editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>Ernährungseintrag</span><button type="button" data-action="pj92-food-edit-cancel">Schließen</button></div><form id="pj92-food-detail-form"><input type="hidden" name="id" value="${esc(editing.id)}"><label>Zeitpunkt<input type="datetime-local" name="at" value="${esc(toInputDate(editing.at))}" required></label><label>Menge (optional)<input name="amount" maxlength="60" value="${esc(editing.amount||'')}" placeholder="z. B. eine Handvoll"></label><label>Notiz (optional)<textarea name="note" rows="2" maxlength="500">${esc(editing.note||'')}</textarea></label><div class="pj92-form-actions"><button type="submit" class="primary-btn">Speichern</button><button type="button" class="secondary-btn" data-action="pj92-food-delete" data-id="${esc(editing.id)}">Löschen</button></div></form></section>`:''}<section class="work-card"><h3>Eigene Lebensmittel hinzufügen</h3><form id="pj92-add-food-form" class="pj92-inline-form"><label>Bezeichnung<input name="title" maxlength="80" placeholder="z. B. Haferbrei" required></label><button type="submit" class="secondary-btn">Hinzufügen</button></form></section></div>`;
+}
+export function mergeJournalData(local,remote){
+ // Versioned per-ID merge; a remote device must never erase a newer local entry.
+ const lc=local&&typeof local==='object'?local:{},rc=remote&&typeof remote==='object'?remote:{};
+ const byId=(a,b)=>{
+  const m=new Map();for(const v of [...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])]){if(!v?.id)continue;const prev=m.get(v.id);if(!prev||String(prev.updatedAt||prev.end||prev.at||'')<=String(v.updatedAt||v.end||v.at||''))m.set(v.id,v);}return [...m.values()];
+ };
+ const unionObject=(a,b)=>{const out={...(a||{})};for(const [key,val] of Object.entries(b||{}))if(!out[key]||String(out[key].updatedAt||'')<String(val?.updatedAt||''))out[key]=val;return out;};
+ const localWork=lc.quickWorktime||{},remoteWork=rc.quickWorktime||{};
+ const active=[localWork,remoteWork].sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||{};
+ return {
+  timeJournal:{entries:byId(lc.timeJournal?.entries,rc.timeJournal?.entries),overrides:unionObject(lc.timeJournal?.overrides,rc.timeJournal?.overrides)},
+  nutritionJournal:{entries:byId(lc.nutritionJournal?.entries,rc.nutritionJournal?.entries),customFoods:byId(lc.nutritionJournal?.customFoods,rc.nutritionJournal?.customFoods)},
+  quickWorktime:{sessions:byId(localWork.sessions,remoteWork.sessions),activeStart:active.activeStart||'',activeCategory:active.activeCategory||'work',updatedAt:active.updatedAt||''}
+ };
+}
