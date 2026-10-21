@@ -17,7 +17,7 @@ test('journal sync is re-checked on network return and tab foreground',()=>{
  assert.match(source,/visibilitychange[^\n]*\n[^\n]*scheduleJournalSync\(0\)/);
 });
 test('status is specific to journal and not a generic green account indicator',()=>{
- assert.match(source,/journalSyncStatus==='ok'\?'Journal abgeglichen'/);
+ assert.match(source,/journalSyncStatus==='ok'\?'Journal auf diesem Gerät abgeglichen'/);
  assert.doesNotMatch(source,/Planung \+ privater Geräteabgleich/);
 });
 test('mobile utility bar scrolls without overflowing the viewport, and redundant microcopy is gone',()=>{

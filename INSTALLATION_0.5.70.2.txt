@@ -1,0 +1,18 @@
+Compass 0.5.70.2 – Patch und Tests
+===================================
+
+Ausgangsbasis: 0.5.70.1
+
+1) Auf Computer und Handy keine lokalen Browserdaten, IndexedDB oder Website-Daten löschen. Vorher verschlüsseltes Vault-Backup erstellen.
+2) PATCH_ROOT-Inhalt im GitHub-Repository über den bestehenden Dateien entpacken/hochladen; nur geänderte Dateien übernehmen. Alternativ den Full Source verwenden.
+3) GitHub Actions „Deploy Compass Web“ auf grünen Status prüfen.
+4) Beide Browser/PWAs schließen und neu öffnen und Version 0.5.70.2 auf BEIDEN Geräten prüfen. Bei altem Web-App-Cache neu laden, aber niemals Site Data löschen.
+5) Beide Tresore entsperren. Beide Geräte müssen in Einstellungen den privaten Geräteabgleich mit demselben Konto und demselben privaten Schlüssel eingerichtet haben. Die allgemeine Planungssynchronisierung genügt nicht.
+6) Auf dem Handy beim Timer „Jetzt abgleichen“ drücken. Dort muss der Cloud-Timerbeginn nach erfolgreicher Übertragung sichtbar sein.
+7) Dann am Laptop „Jetzt abgleichen“ drücken. Prüfen, ob dieselbe Cloud-Journalversion und derselbe Timerbeginn erscheinen.
+8) Bei Fehler die Diagnosezeilen (Gerätetyp, Cloud-Version, Cloud-Timer, Fehlermeldung) auf beiden Geräten vergleichen. Den vorhandenen Timer nicht löschen.
+9) Kontakte: In der Beziehungslandkarte Datum öffnen, Notiz eingeben, kurz warten. In andere Seite navigieren und zurück; der verschlüsselt gespeicherte ENTWURF muss sichtbar sein. „Kontakt festhalten“ bestätigt ihn erst danach.
+
+Keine D1-Migration. Kein Vault-Reset. Die Daten eines bereits auf dem Handy gespeicherten Zeitblocks sollen NICHT gelöscht werden.
+
+Wichtig: Ein gesperrter Tresor verwendet bis zum Entsperren nur den lokalen verschlüsselten Eingangspuffer und kann noch nicht an ein anderes Gerät synchronisieren.
