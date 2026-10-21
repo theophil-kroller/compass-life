@@ -1,0 +1,22 @@
+Compass 0.5.70.6 – Installation
+==============================
+
+PATCH von 0.5.70.5:
+1. Lokalen verschlüsselten Vault zur Sicherheit exportieren; Browserdaten nicht löschen.
+2. Compass_0.5.70.6_PATCH_FROM_0.5.70.5.zip ins Repository-Stammverzeichnis entpacken und Dateien ersetzen.
+3. Commit erstellen. Warten, bis „Deploy Compass Web“ auf GitHub grün abgeschlossen ist.
+4. Browser/PWA neu laden, angezeigte Version 0.5.70.6 kontrollieren.
+
+FULL SOURCE:
+Compass_0.5.70.6_FULL_SOURCE.zip enthält den vollständigen Quellstand.
+
+TESTEN:
+A) Bei gesperrtem Tresor: Gefühlssymbol öffnen -> „In eigenen Worten" wählen -> „gestresst" eingeben -> Vorschläge auswählen.
+B) Dialog schließen, erneut öffnen: „In eigenen Worten" ist weiterhin ausgewählt.
+C) Falls Schnellerfassung bereits eingerichtet: beim gesperrten Tresor Check-in speichern -> nach Entsperren in der Chronik wiederfinden.
+D) Falls Schnellerfassung noch nicht eingerichtet: Begriffswolke sichtbar, Speichern deaktiviert. Einmalig Tresor entsperren und Schnellerfassung einrichten.
+E) Bei entsperrtem Tresor bleibt das klassische Wheel samt Intensitätsskala verfügbar.
+
+KEINE D1-MIGRATION, KEIN CLOUDFLARE-WORKER-UPDATE.
+QUALITÄT: 747/747 Node-Tests, JavaScript-Syntaxprüfung erfolgreich.
+NICHT BESTÄTIGT: Vite-Produktionsbuild und visuelle Live-Browserabnahme.

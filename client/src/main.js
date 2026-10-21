@@ -90,7 +90,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.70.5';
+const COMPASS_CLIENT_VERSION='0.5.70.6';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -153,7 +153,17 @@ async function resumeSession(){
   }
 }
 
-let feelingInputMode='wheel';
+// The feeling vocabulary is public app code; only saving private check-ins
+// requires the one-time setup of the vault's write-only capture key.
+const FEELING_MODE_KEY='compass.feeling.inputMode.v5706';
+function rememberedFeelingInputMode(){
+ try{return localStorage.getItem(FEELING_MODE_KEY)==='words'?'words':'wheel';}catch{return 'wheel';}
+}
+function chooseFeelingInputMode(mode){
+ feelingInputMode=mode==='words'?'words':'wheel';
+ try{localStorage.setItem(FEELING_MODE_KEY,feelingInputMode);}catch{}
+}
+let feelingInputMode=rememberedFeelingInputMode();
 let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),feelingDays=30,feelingView='overview',feelingSelectedId='',feelingHistoryLimit=30,feelingEditingId='',connectionEmotion='anger',connectionDays=30;
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
@@ -582,7 +592,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
 }
 
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
@@ -1772,7 +1782,7 @@ function render(){
  const feelingScrollBefore=feelingOverlayOpen?app.querySelector('#fw65-dialog')?.scrollTop||0:0;
  const captureFocus=snapshotCaptureDraft();
  morningSaveNoteFromScreen();
- if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[],{inputMode:feelingInputMode}):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);return;}
+ if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[],{inputMode:feelingInputMode,captureReady:sealedCaptureAvailable}):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  let html;
  try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
@@ -2544,7 +2554,7 @@ function bind() {
     // Updating just the connected word cloud avoids rebuilding the input and
     // interrupting the mobile keyboard/caret after every keystroke.
     const results=app.querySelector('#fw705-network-results');if(results)results.innerHTML=renderFeelingNetwork(feelingDraft);
-    const save=app.querySelector('.fw65-actions [data-action="feeling-save"]');if(save)save.disabled=!(Object.keys(feelingDraft.selected||{}).length||feelingDraft.ownWords.trim()||feelingDraft.networkTerms?.length);
+    const save=app.querySelector('.fw65-actions [data-action="feeling-save"]');if(save)save.disabled=(!state&&!sealedCaptureAvailable)||!(Object.keys(feelingDraft.selected||{}).length||feelingDraft.ownWords.trim()||feelingDraft.networkTerms?.length);
   };
   const netContainer=app.querySelector('#fw705-network-results');if(netContainer)netContainer.onclick=ev=>{
     const control=ev.target.closest('[data-action="feeling-network-term"]');if(!control||!netContainer.contains(control))return;
@@ -2662,7 +2672,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='pj92-food-delete'){if(!state||!confirm('Ernährungseintrag entfernen?'))return;try{journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===id);if(item){item.deleted=true;item.updatedAt=stamp();}});nutritionEditId='';toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
  if(action==='pj92-sync-now'){try{const ok=await syncPersonalJournal();if(ok)toast('Zeitjournal und Ernährung verschlüsselt abgeglichen.');else toast('Kein Cloud-Abgleich möglich: bitte anmelden und Geräteabgleich einrichten.',true);}catch(ex){toast(ex.message,true);}return;}
 
- if(action==='feeling-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}feelingEditingId='';feelingInputMode='wheel';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector('#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
+ if(action==='feeling-open'){nutritionQuickOpen=false;feelingEditingId='';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector(feelingInputMode==='words'?'#fw705-search-input':'#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
  if(action==='worktime-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;habitQuickOpen=false;worktimeQuickOpen=true;render();if(state?.privateDeviceMirror?.key&&authToken)syncPersonalJournal().catch(ex=>toast('Arbeitszeit-Abgleich: '+ex.message,true));return;}
  if(action==='worktime-quick-close'||action==='worktime-quick-close-backdrop'){worktimeQuickOpen=false;render();return;}
  if(action==='habit-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=true;render();return;}
@@ -2684,7 +2694,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
    }catch(ex){toast(ex.message,true);}
    return;
  }
- if(action==='feeling-mode'){if(['wheel','words'].includes(id)){feelingInputMode=id;render();if(id==='words')app.querySelector('#fw705-search-input')?.focus({preventScroll:true});}return;}
+ if(action==='feeling-mode'){if(['wheel','words'].includes(id)){chooseFeelingInputMode(id);render();if(id==='words')app.querySelector('#fw705-search-input')?.focus({preventScroll:true});}return;}
  if(action==='feeling-network-term'){try{const modal=app.querySelector('#fw65-dialog');const scroll=modal?.scrollTop||0;feelingDraft=toggleNetworkTerm(feelingDraft,id);render();const next=app.querySelector('#fw65-dialog');if(next)next.scrollTop=scroll;}catch(ex){toast(ex.message,true);}return;}
  if(action==='feeling-close'){feelingEditingId='';feelingOverlayOpen=false;render();app.querySelector('.fw65-top-trigger')?.focus({preventScroll:true});return;}
  if(action==='feeling-toggle'){try{feelingDraft=chooseFeeling(feelingDraft,id);render();}catch(ex){toast(ex.message,true);}return;}
