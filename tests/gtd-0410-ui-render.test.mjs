@@ -24,6 +24,7 @@ import * as gtd23 from '../client/src/gtd-intelligence-v23.js';
 import * as personLinks from '../client/src/person-links.js';
 import * as discoveryFilter from '../client/src/discovery-category-filter.js';
 import * as discoveryResearch577 from '../client/src/discovery-research-v577.js';
+import * as cinemaModule5772 from '../client/src/cinema-program-v5772.js';
 import * as review from '../client/src/guided-review.js';
 import * as tags from '../client/src/smart-tags.js';
 import * as personMatching from '../client/src/people-matching.js';
@@ -55,7 +56,7 @@ function context(){
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
  Object.assign(ctx,dailyPlanning,capacity,deadline,projectExchange,treeWorkspace,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,contactCare568,calendarSuggestions568);
- Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,relationships);
+ Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,cinemaModule5772,relationships);
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
@@ -165,4 +166,22 @@ test('0.5.54 regression: project title really opens a collapsed project, inspect
  assert.match(html,/<details class="project-properties" open>/);
  await ui.testAction('tree-task-select',t);html=ui.testUI(ui.readState(),'projects');
  assert.match(html,/Aufgabendetails/);
+});
+
+test('0.5.77.2 cinema view renders each film once, with distinct showtime links retained',async()=>{
+ const ui=context(),today=tasks.localDate();
+ const base={date:today,city:'Graz',country:'Österreich',category:'Kino',sourceUrl:'https://www.example.org/film',description:'Dokumentarfilm.'};
+ const events=[{...base,title:'Atmosphere',venue:'KIZ',startTime:'18:00'},{...base,title:'Atmosphere',venue:'Annenhof',startTime:'20:00'},{...base,title:'Alte Liebe',venue:'KIZ',startTime:'19:00'}];
+ const state=tasks.prepareTasks({format:1,records:{},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[],discoveredEvents:events});
+ const before=ui.testUI(state,'recovery');
+ assert.match(before,/3 Termine/);
+ await ui.testAction('discovery-view-cinema');
+ const html=ui.testUI(state,'recovery');
+ assert.match(html,/2 Filme · 3 Vorführungen/);
+ assert.equal((html.match(/<h3>Atmosphere<\/h3>/g)||[]).length,1);
+ assert.match(html,/Annenhof/);
+ assert.match(html,/KIZ/);
+ assert.match(html,/18:00/);
+ assert.match(html,/20:00/);
+ assert.match(html,/data-action="discovery-save"/);
 });

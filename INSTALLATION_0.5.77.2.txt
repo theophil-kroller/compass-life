@@ -1,0 +1,32 @@
+Compass 0.5.77.2 — Kinoprogramm übersichtlich
+=============================================
+
+AUSGANGSVERSION: 0.5.77.1
+
+PATCH
+1. Bei Bedarf vorher den lokalen verschlüsselten Compass-Tresor sichern.
+2. Compass_0.5.77.2_PATCH_FROM_0.5.77.1.zip öffnen und sämtliche enthaltenen Dateien in das STAMMVERZEICHNIS deines GitHub-Repositories hochladen; vorhandene Dateien ersetzen. Ordnerstruktur client/, tests/ usw. beibehalten.
+3. Commit auslösen und den GitHub-Workflow „Deploy Compass Web“ überprüfen.
+4. Web/PWA neu laden, ggf. nach dem Deploy einmal schließen und erneut öffnen. Versionsangabe muss 0.5.77.2 anzeigen.
+
+FULL SOURCE
+Compass_0.5.77.2_FULL_SOURCE.zip ist der vollständige Stand von 0.5.77.2, einschließlich aller Korrekturen aus 0.5.77 und 0.5.77.1. Verwende diesen Stand, wenn noch 0.5.76.1 oder älter installiert ist. Bestehenden lokalen Tresor und D1-Daten nicht löschen.
+
+SCHNELLTEST
+- Erholung öffnen -> 🎬 Kinoprogramm auswählen.
+- Bei einem vorher 245-mal gelisteten Kino-Import sind die Anzahl verschiedener Filmtitel und die Anzahl der Vorführungen getrennt ersichtlich.
+- Atmosphere, Alte Liebe usw. erscheinen je Film nur einmal; konkrete Termine mit Kino und Startzeit stehen unter dem Titel.
+- „Weitere Spielzeiten anzeigen“ öffnen, eine einzelne Vorstellung merken, anschließend Merkliste prüfen.
+- Filmtitel/Kino im Suchfeld filtern; danach „Alle Termine“ und „7 Tage“ vergleichen.
+- Den Filter „Kino & Kabarett“ ausprobieren: Kinofilm-Karten mit Kabarett-Abschnitt. Anschließend „Termine nach Datum“ für die klassische Darstellung.
+- Bei einem neuen JSON-Import auf Statistik „N verschiedene Filmtitel · M Vorführungen“ achten, bevor der Import bestätigt wird.
+- Bestehende gespeicherte Veranstaltungen anderer Kategorien und Schlaf-/Gesundheitsansichten aufrufen und prüfen.
+
+DATENBANK / CLOUD
+Keine neue D1-Migration oder Worker-Version. Bestehender Event-Sync und Import bleiben unangetastet.
+
+VALIDIERUNG
+811/811 Tests bestanden. Worker- und Frontend-JavaScript-Syntax erfolgreich. Vite-Produktionsbuild mangels Dependencies hier nicht möglich; GitHub Actions muss grün sein.
+
+HINWEIS
+245 JSON-Einträge sind nicht gleich 245 unterschiedliche Filme. Bei geringer Titelvielfalt den verbesserten Kino-Rechercheprompt für mehr tatsächliche Filmtitel ausführen. Compass erfindet keine fehlenden Filme.

@@ -1,3 +1,5 @@
+> **Neu in Compass 0.5.77.2:** Kinoprogramm jetzt nach Filmtiteln gruppiert, Vorführungen je Film aufklappbar, separater Überblick `Filmtitel / Vorführungen / Kinos` sowie Import-Qualitätswarnung. Siehe [Changelog](CHANGELOG_0.5.77.2.md) und [Installation](INSTALLATION_0.5.77.2.txt).
+
 > **Compass 0.5.77.1** — Schlafarchiv mit Jahresnavigation, konsistente Datumsachsen und sichtbare Garmin-Importabdeckung. Siehe [Changelog](CHANGELOG_0.5.77.1.md) und [Installation](INSTALLATION_0.5.77.1.txt).
 
 > Aktueller Release: **Compass 0.5.68 – Secure Quick Capture & Relationship Intelligence**. Siehe `CHANGELOG_0.5.68.md` und `INSTALLATION_0.5.68.txt`.
