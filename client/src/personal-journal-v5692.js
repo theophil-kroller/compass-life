@@ -1,4 +1,5 @@
 import {mergeMorningData} from './miracle-morning-v570.js';
+import {mergeHabitQuick} from './habit-device-sync-v5731.js';
 /** Compass 0.5.69.2 – Personal Time Journal + nutrition; pure data transformations. */
 export const TIME_AREAS=[
  ['work','💼','Berufliche Arbeit'],['project','🛠️','Privatprojekt'],['family','❤️','Familie & Beziehungen'],
@@ -171,6 +172,7 @@ export function mergeJournalData(local,remote){
   nutritionJournal:{entries:byId(lc.nutritionJournal?.entries,rc.nutritionJournal?.entries),customFoods:byId(lc.nutritionJournal?.customFoods,rc.nutritionJournal?.customFoods)},
   quickWorktime:mergeQuickWorktime(localWork,remoteWork),
   feelingCheckins:mergeFeelingCheckins(lc.feelingCheckins,rc.feelingCheckins),
+  ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),
   ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{})
  };
 }

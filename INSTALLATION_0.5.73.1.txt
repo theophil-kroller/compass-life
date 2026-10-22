@@ -1,0 +1,20 @@
+Compass Life 0.5.73.1 — GitHub-Hotfix
+=====================================
+Basis: Compass 0.5.73
+PATCH: ZIP entpacken; alle enthaltenen Dateien mit ihrer Verzeichnisstruktur auf GitHub in den main-Branch hochladen (überschreiben). KEIN apply-Skript.
+FULL: Vollständigen Source-Stand aus dem dazu passenden FULL-SOURCE-ZIP hochladen. Keine D1-Migration, kein Worker-Update erforderlich.
+
+VOR DER INSTALLATION: Auf Handy und Desktop optional unter System ein verschlüsseltes Tresor-Backup exportieren. Der Fix ändert die gespeicherte Bedeutung von "nicht abgehakt" von Löschung zu einem expliziten `done:false`-Eintrag, alte Checks bleiben erhalten.
+
+WICHTIG: Auf BEIDEN Geräten 0.5.73.1 verwenden. Bestehende, nicht aktualisierte Geräte können Habits beim alten Journal-Merge verlieren. Beide Geräte müssen denselben Compass-Account und dieselbe Sync-Passphrase haben.
+
+TEST
+1. Auf beiden Geräten Compass öffnen, PWA neu laden, v0.5.73.1 prüfen.
+2. System → Geräteabgleich: prüfen, ob auf BEIDEN Geräten mit derselben Passphrase eingerichtet und online angemeldet. Ohne Geräteabgleich kein Habit-Cloud-Sync.
+3. Handy Tresor entsperren und vorhandenen Morning-Habit abhaken; unter Habits den Sync-Status prüfen, bei Bedarf 'Jetzt abgleichen'.
+4. Desktop Tresor entsperren, ebenfalls Habits → 'Jetzt abgleichen'. Der gleiche Tag muss aufscheinen.
+5. Desktop Häkchen entfernen und synchronisieren; Handy ebenfalls abgleichen. Es muss entfernt bleiben (auch nach neuem Abgleich).
+6. Offline-Test: unterschiedliche Habits auf beiden Geräten abhaken, dann nacheinander online synchronisieren; beide müssen erhalten bleiben.
+7. Gesperrte Handy-Schnellerfassung: Erst nach dem Entsperren und Übernehmen der versiegelten Einträge ist geräteübergreifender Sync möglich.
+
+Bekannte Grenzen: Google-Calendar-Offlinecache und dessen Geräte-Sync sind Teil des separaten 0.5.74-Builds, nicht dieses Hotfixes. Bei nicht erreichbarer Cloud bleiben Einträge lokal, bis der Abgleich wieder funktioniert.
