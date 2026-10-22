@@ -58,7 +58,7 @@ test('UI exposes separate destructive cinema action and research prompt requests
  assert.match(src,/removeCinemaEvents\(st\)/);
  assert.match(src,/Film-Metadaten prüfen/);
  assert.match(src,/Kein Film-Posterlink im importierten JSON/);
- assert.match(src,/COMPASS_CLIENT_VERSION='0\.5\.77\.4'/);
+ assert.match(src,/COMPASS_CLIENT_VERSION='0\.5\.77\.5'/);
  const p=researchPrompt('cinema-program',['Kino','Filmfestival']);
  assert.match(p,/Wiederhole die verifizierte Inhaltsangabe/);
  assert.match(p,/Posterlink bei jeder Vorführung/);

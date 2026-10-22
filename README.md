@@ -1,3 +1,5 @@
+> **Compass 0.5.77.5** – Kinoposter-Reparatur mit externer Vorschau, Bildprüfung und manueller URL-Ergänzung. Siehe `CHANGELOG_0.5.77.5.md` und `INSTALLATION_0.5.77.5.txt`.
+
 > **Compass 0.5.77.4:** Kinoprogramm separat löschen, andere Veranstaltungskategorien behalten, Filmimport-Qualität vor Bestätigung kontrollieren. Siehe [Changelog](CHANGELOG_0.5.77.4.md) und [Installation](INSTALLATION_0.5.77.4.txt).
 
 > **Compass 0.5.77.3:** Kinoprogramm mit Tagesnavigation, großem Poster-Grid, verifizierten Kurzbeschreibungen und separatem JSON-Nachimport für fehlende Filmtexte/Poster. Siehe [Changelog](CHANGELOG_0.5.77.3.md) und [Installation](INSTALLATION_0.5.77.3.txt).

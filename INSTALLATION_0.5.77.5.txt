@@ -1,0 +1,11 @@
+Compass 0.5.77.5 – POSTER FIX
+
+1. Verschlüsseltes Vault-Backup sicherstellen.
+2. Patch ZIP auf Version 0.5.77.4 im Repository-Stammverzeichnis entpacken (Ordnerstruktur client/, tests/ beachten).
+3. Geänderte Dateien auf GitHub hochladen, Deploy Compass Web (grün) abwarten.
+4. Browser/PWA neu starten; Anzeige muss 0.5.77.5 lauten.
+5. Entdecken → Kinoprogramm → „Poster automatisch suchen“ → Vorschau anschauen → auswählen → Bilder testen und speichern.
+6. Falls für einzelne Titel keine eindeutigen Treffer vorliegen, auf „Posterlink ergänzen“ tippen und einen real erreichbaren direkten HTTPS-Bildlink einsetzen.
+7. Import eines alten films-JSON ohne imageUrl zeigt künftig Warnung; Inhalte werden trotzdem übernommen.
+
+Keine D1-Migration, kein Worker-Update. Lokale Galerie zeigt nur externe Posterlinks und speichert keine Bilddateien. Cinemeta ist ein externer, nicht garantiert verfügbarer Drittanbieterdienst; Rechte des Bildanbieters beachten.
