@@ -6,6 +6,7 @@ import {renderSleepIntelligence} from './sleep-intelligence-v550.js';
 import {healthFindings,healthFindingsView} from './health-intelligence-v551.js';
 import {sleepDistributionChart,hrvReferenceView,sleepHrvScatter} from './insights-stats.js';
 
+
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const palette={green:'#337864',purple:'#8065A9',deep:'#4367A5',light:'#A0B4DD',rem:'#AE86C3',awake:'#DCA471',muted:'#8CA399'};
 const dateUTC=day=>Date.parse(`${day}T12:00:00Z`);
@@ -15,6 +16,10 @@ const readableMinutes=v=>Number.isFinite(v)?`${Math.floor(v/60)} h ${String(Math
 const dayShift=(day,n)=>new Date(dateUTC(day)+n*86400000).toISOString().slice(0,10);
 const fmtClock=m=>Number.isFinite(m)?`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(Math.round(m%60)).padStart(2,'0')}`:'–';
 export const INSIGHT_TABS=[
+ {id:'nutrition',label:'Ernährung',icon:'food',state:'live',subtitle:'Ernährungstagebuch · Tagesverlauf und geschätzte Kalorien'},
+ {id:'touch',label:'Berührung & Nähe',icon:'heart',state:'live',subtitle:'Berührung & Nähe · persönliche Chronik'},
+ {id:'habits',label:'Habits',icon:'checkSquare',state:'live',subtitle:'Routinen und Gewohnheiten im Verlauf'},
+ {id:'timejournal',label:'Zeitjournal',icon:'clock',state:'live',subtitle:'Wofür du deine Zeit verwendest'},
  {id:'feelings',label:'Gefühlswelt',icon:'heart',state:'live',subtitle:'Deine emotionalen Check-ins – freiwillig und ohne Bewertung'},
  {id:'connections',label:'Zusammenhänge',icon:'spark',state:'live',subtitle:'Gefühle, Schlaf, Bewegung, Arbeitsbelastung und Erholung gemeinsam betrachten'},
  {id:'balance',label:'Life Balance Radar',icon:'compass',state:'live',subtitle:'Persönliche Zielnähe über mehrere Lebensbereiche'},

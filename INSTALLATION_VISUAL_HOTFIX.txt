@@ -1,0 +1,15 @@
+Compass 0.5.76.1 – Visual Hotfix, Basis: erfolgreicher CI-Hotfix.
+
+ENTPACKEN UND GENAU DIE VIER DATEIEN DIREKT AUF GITHUB ERSETZEN:
+ client/src/insights.js
+ client/src/nutrition-quick-meter-v576.js
+ client/src/nutrition-history-v577.js
+ client/src/nutrition-touch-v577.css
+
+Ergebnis: korrekter Seitentitel Ernährung; stets sichtbarer 5-Farben-Gradient
+(dunkelgrün, hellgrün, orange, hellrot, dunkelrot), markierte kcal-Spanne
+im Schnellmenü und in der Historie; kein graues Leer-Tage-Raster mehr.
+Ohne persönliche Ziele ist die Skala rein illustrativ – keine Gewichtsprognose.
+
+Wichtig: Der bestehende Build 0.5.76.1 und alle übrigen Dateien bleiben unverändert.
+Diese vier Dateien gehören zu diesem Hotfix und sind kein vollständiges Repo.
