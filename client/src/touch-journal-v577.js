@@ -33,7 +33,7 @@ export function suggestedTouchKinds(state,personId,limit=3){
  return [...counts].sort((a,b)=>b[1]-a[1]).slice(0,limit).map(([id])=>id);
 }
 export function touchPersonOptions(state,selected='',fallbackName=''){
- const people=Object.values(state?.people||{}).filter(p=>p?.id&&p?.name).sort((a,b)=>a.name.localeCompare(b.name,'de'));
+ const people=Object.values(state?.people||{}).filter(p=>p?.id&&p?.name&&['family','partner','friend'].includes(p.relationKind)).sort((a,b)=>a.name.localeCompare(b.name,'de'));
  const chosen=people.find(p=>p.id===selected);
  return `<option value="">Ohne Person</option>${people.map(p=>`<option value="${esc(p.id)}" ${p.id===selected?'selected':''}>${esc(p.name)}</option>`).join('')}${selected&&!chosen?`<option value="" selected>Person nicht mehr vorhanden${fallbackName?' · '+esc(fallbackName):''}</option>`:''}`;
 }

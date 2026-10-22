@@ -8,25 +8,25 @@ export const TIME_AREAS=[
  ['leisure','⚽','Sport & Freizeit'],['health','🌿','Gesundheit & Erholung'],['personal','🏡','Alltag'],['other','○','Unklassifiziert']
 ];
 export const FOOD_PRESETS=[
- ['matcha','🍵','Matcha mit Honig','Getränke'],['oat-latte','☕','Hafermilch-Latte mit Karamellsirup','Getränke'],
- ['smoothie','🥤','Smoothie','Getränke'],['tea-unsweetened','🍵','Tee ungesüßt','Getränke'],['tea-honey','🫖','Tee mit Honig','Getränke'],
- ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke'],['coffee','☕','Kaffee','Getränke'],
+ ['matcha','🍵','Matcha mit Honig','Getränke','1 Tasse (250 ml)',70,160],['oat-latte','☕','Hafermilch-Latte mit Karamellsirup','Getränke','1 Glas (300 ml)',160,310],
+ ['smoothie','🥤','Smoothie','Getränke','1 Glas (300 ml)',120,280],['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['tea-honey','🫖','Tee mit Honig','Getränke','1 Tasse (250 ml)',20,75],
+ ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke','1 Tasse (250 ml)',130,270],['coffee','☕','Kaffee','Getränke','1 Tasse (200 ml)',0,10],
  ['latella','🥛','Lattella','Getränke','500 ml',250,360],
  ['aperol-spritz','🍹','Aperol Spritz','Getränke','1 Glas (200 ml)',160,250],
  ['red-wine','🍷','Rotwein','Getränke','1 Glas (125 ml)',95,120],
  ['white-wine','🥂','Weißwein','Getränke','1 Glas (125 ml)',85,115],
  ['whiskey','🥃','Whiskey','Getränke','1 Glas (40 ml)',85,105],
- ['mensa','🍲','Mensaessen','Mahlzeiten'],
+ ['mensa','🍲','Mensaessen','Mahlzeiten','1 Teller',400,1000],
  ['wholegrain-toast-butter-jam','🍞','Vollkorn-Toast mit Butter & Marmelade','Frühstück','1 Stück',140,260],
  ['fried-egg','🍳','Spiegelei','Frühstück','1 Stück',95,160],
  ['dark-bread-butter','🍞','Schwarzbrot mit Butter','Frühstück','1 Scheibe',140,260],
  ['mensa-study-veggie','🥗','Vegetarischer Study-Teller','Mahlzeiten','1 Teller',450,900],
-['buffet','🍽️','Buffet / auswärts','Mahlzeiten'],
- ['bread-cheese','🥪','Käsebrot','Mahlzeiten'],['cheddar','🧀','Cheddar-Scheibe','Snacks'],
- ['peanuts','🥜','Gesalzene Erdnüsse','Snacks'],['mixed-nuts','🌰','Bio-Nussmischung','Snacks'],
- ['dried-mango','🥭','Getrocknete Mango','Snacks'],['rice-pudding','🍚','Milchreis','Snacks'],
- ['apple','🍎','Apfel','Snacks'],['chocolate','🍫','Schokoriegel','Snacks'],
- ['snickers','🍫','Snickers','Snacks'],
+['buffet','🍽️','Buffet / auswärts','Mahlzeiten','1 Portion',450,1100],
+ ['bread-cheese','🥪','Käsebrot','Mahlzeiten','1 Stück',220,420],['cheddar','🧀','Cheddar-Scheibe','Snacks','1 Scheibe',65,125],
+ ['peanuts','🥜','Gesalzene Erdnüsse','Snacks','1 Portion (50 g)',270,320],['mixed-nuts','🌰','Bio-Nussmischung','Snacks','1 Portion (50 g)',270,340],
+ ['dried-mango','🥭','Getrocknete Mango','Snacks','1 Portion (50 g)',140,195],['rice-pudding','🍚','Milchreis','Snacks','1 Schale (200 g)',190,340],
+ ['apple','🍎','Apfel','Snacks','1 Stück',60,120],['chocolate','🍫','Schokoriegel','Snacks','1 Riegel (50 g)',220,300],
+ ['snickers','🍫','Snickers','Snacks','1 Riegel (50 g)',225,275],
  ['pistachio-butter-cups','🍬','Pistachio Butter Cups','Snacks','3 Stück',150,330],
  ['pringles','🥔','Pringles','Snacks','1 Dose (165 g)',830,920],
  ['chio-chips','🥔','Chio Chips','Snacks','1 Packung (150 g)',740,830],
@@ -99,10 +99,12 @@ export function addNutrition(state,{foodId,at,amount,note='',id,deleted=false}){
  if(idx<0)state.nutritionJournal.entries.push(item);else state.nutritionJournal.entries[idx]=item;
  return item;
 }
-export function addCustomFood(state,title,emoji='🍴'){
+export function addCustomFood(state,title,emoji='🍴',options={}){
  ensureJournal(state);const name=String(title||'').trim();if(!name||name.length>80)throw Error('Bitte eine kurze Bezeichnung eingeben.');
  if([...FOOD_PRESETS,...state.nutritionJournal.customFoods].some(f=>f.title.toLowerCase()===name.toLowerCase()))throw Error('Dieser Eintrag existiert bereits.');
- const item={id:crypto.randomUUID(),title:name,emoji:String(emoji||'🍴').slice(0,6),group:'Eigene'};
+ const low=Number(options.kcalLow),high=Number(options.kcalHigh),amount=String(options.defaultAmount||'1 Portion').trim().slice(0,60);
+ const valid=options.kcalLow!==''&&options.kcalLow!=null&&options.kcalHigh!==''&&options.kcalHigh!=null&&Number.isFinite(low)&&Number.isFinite(high)&&low>=0&&high>=low&&high<=5000;
+ const item={id:crypto.randomUUID(),title:name,emoji:String(emoji||'🍴').slice(0,6),group:'Eigene',defaultAmount:amount,kcalLow:valid?low:null,kcalHigh:valid?high:null};
  state.nutritionJournal.customFoods.push(item);return item;
 }
 export function nutritionFoods(state){return [...FOOD_PRESETS,...(state?.nutritionJournal?.customFoods||[])];}
@@ -111,7 +113,7 @@ export function nutritionEntries(state){return (state?.nutritionJournal?.entries
  * override presets when a compatible count or g/ml amount can be parsed. */
 export function nutritionKcalEstimate(food,amount){
  if(!food||!Number.isFinite(food.kcalLow)||!Number.isFinite(food.kcalHigh))return null;
- const original=String(food.defaultAmount||'').toLowerCase(),given=String(amount??food.defaultAmount??'').toLowerCase().trim();
+ const original=String(food.defaultAmount||'').toLowerCase(),given=String(amount||food.defaultAmount||'').toLowerCase().trim();
  if(!given)return null;
  const parseNumber=v=>Number(String(v).replace(',','.'));
  const quantity=v=>{const m=v.match(/(\d+(?:[.,]\d+)?)\s*(stücke|stück|scheiben|scheibe|g|gramm|ml|liter|l\b|packung|dose|teller)/i);return m?{value:parseNumber(m[1]),unit:m[2].toLowerCase()}:null;};
@@ -188,6 +190,10 @@ export function mergeJournalData(local,remote){
   ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{})
  };
 }
+
+
+
+
 
 
 

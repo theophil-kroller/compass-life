@@ -1,14 +1,10 @@
-Compass 0.5.76.1 – CI-Hotfix für Workflow #153
+Compass 0.5.76.1 · kcal-Presets + Kontaktefilter
 
-Ursache: Der isolierte VM-Test der Personenansicht entfernte im Testaufbau
-die ES-Modulimporte und stellte touchPersonSummary nicht im VM-Kontext bereit.
+Basis: aktueller GitHub-Stand 0.5.76.1 (letzter erfolgreicher Deploy #154).
+GitHub: entpacken und beide Dateien unter client/src/ ersetzen. Keine Skripte, keine Datenbankmigration.
 
-Änderung (nur Testcode):
-- Import von touchPersonSummary aus touch-journal-v577.js
-- Injection als ctx.touchPersonSummary im VM-Testaufbau
+Alle konkret benannten vordefinierten Speisen und Getränke haben eine Defaultportion und eine vorläufige kcal-Bandbreite; bisherige Einträge ohne Portionsangabe nutzen die Defaultportion. Die angezeigte Zahl "ohne Schätzung" kann für "Anderes", ältere eigene Lebensmittel oder nicht interpretierbare manuelle Mengen erhalten bleiben. Das ist absichtlich kein frei erfundener kcal-Wert.
 
-Keine Änderung an der Anwendung, am Vault oder der Datenbank.
-Installation: Inhalt dieses ZIP in die bestehende GitHub-Repository-Wurzel
-hochladen; tests/gtd-0411-people-timeline.test.mjs ersetzen.
-Prüfung: node --check erfolgreich. Der vollständige GitHub-CI-Durchlauf
-kann erst nach dem Commit von GitHub bestätigt werden.
+Bei Berührung & Nähe werden im Dropdown nur Kontakte mit relationKind family/partner/friend angeboten. Kontakte mit fehlender Kategorie erscheinen erst nach Zuordnung unter Menschen. Historische bereits gespeicherte Einträge werden nicht gelöscht.
+
+Die vorliegenden Änderungen wurden mit node --check geprüft, kein kompletter Produktionsbuild durchgeführt.
