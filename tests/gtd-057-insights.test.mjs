@@ -16,8 +16,8 @@ const fixture={
  fitdays:[{day:'2026-09-25',at:'2026-09-25T06:56:00',weightKg:86.9}]
 };
 test('Insights tabs include Life Balance Radar, sleep, body and data sources as active',()=>{
- assert.deepEqual(INSIGHT_TABS.map(x=>x.id),['feelings','connections','balance','sleep','energy','stress','activity','worktime','focus','body','places','explore','sources']);
- assert.equal(INSIGHT_TABS.filter(x=>x.state==='live').length,13);
+ for(const id of ['feelings','connections','balance','sleep','energy','stress','activity','worktime','focus','body','places','explore','sources','nutrition','touch'])assert.ok(INSIGHT_TABS.some(x=>x.id===id&&x.state==='live'),id);
+ assert.equal(new Set(INSIGHT_TABS.map(x=>x.id)).size,INSIGHT_TABS.length);
 });
 test('sleep minutes exclude awake time, missing data are null, invalid zero is not fabricated',()=>{
  assert.equal(sleepMinutes(fixture.garminNights[0]),400);

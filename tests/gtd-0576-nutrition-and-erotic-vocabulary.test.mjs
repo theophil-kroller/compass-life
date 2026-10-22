@@ -31,7 +31,8 @@ test('0.5.76 early-day kcal band is transparent about missing data',()=>{
 test('0.5.76 calorie indicator cannot infer target from locked or opt-out vault',()=>{
  assert.match(quickEnergyMeter(null),/Tresor entsperren/);
  const s=state();s.nutritionJournal.energyGoal={...goal,enabled:false};
- assert.doesNotMatch(quickEnergyMeter(s,{now:NOW}),/pj576-energy-track/);
+ assert.match(quickEnergyMeter(s,{now:NOW}),/pj576-energy-track/);
+ assert.match(quickEnergyMeter(s,{now:NOW}),/neutrale Referenzskala/);
  assert.match(quickEnergyMeter(s,{now:NOW}),/freiwillig aktivieren/);
 });
 test('0.5.76 stress context: only one scrollbar, quick goal near top and version',()=>{
