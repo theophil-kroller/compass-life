@@ -16,9 +16,10 @@ function database(){
 }
 const sample=(title,date='2026-11-02',other={})=>({title,date,city:'Graz',venue:'Orpheum',category:'Kabarett',sourceUrl:'https://events.example.com/source',...other});
 const post=(rows)=>new Request('https://example.test/api/events/batch',{method:'POST',body:JSON.stringify({events:rows})});
-test('Import accepts 250 events, catches item 251 and preserves sourced images, end dates, genres',()=>{
+test('Import supports large cinema batches up to 2000 events, preserves sourced images and rejects oversize batches',()=>{
  const raw={events:Array.from({length:250},(_,i)=>sample('Kabarett '+i,'2026-11-02',{description:'Ein offiziell bestätigtes Programm',imageUrl:'https://example.org/poster.jpg'}))};const p=parseEventImport(JSON.stringify(raw));assert.equal(p.added.length,250);assert.equal(p.total,250);
- assert.throws(()=>parseEventImport(JSON.stringify({events:[...raw.events,sample('Too many')]})),/maximal 250/);
+ assert.equal(parseEventImport(JSON.stringify({events:[...raw.events,sample('More screenings')]})).total,251);
+ assert.throws(()=>parseEventImport(JSON.stringify({events:Array.from({length:2001},(_,i)=>sample('Movie '+i))})),/maximal 2.000/);
  assert.equal(validEvent(sample('Festival','2026-10-18',{endDate:'2026-10-21'})),true);
  assert.equal(upcomingImportedEvents([sample('Festival','2026-10-18',{endDate:'2026-10-21'})],'2026-10-20').length,1);
  assert.match(discoveryPromptRegional,/30 Tage/);assert.match(discoveryPromptTravel,/6 Monaten/);
@@ -43,9 +44,9 @@ test('Old unsynced local catalog migrates without erasing preferences and past e
  assert.equal(pendingEventBatch(s)[0].removed,true);assert.equal(s.eventPending[eventKey(sample('Old','2026-09-01'))],true);
  const n=mergeEventSnapshot(eventState({}),[{key:eventKey(sample('Upcoming','2026-11-09')),event:sample('Upcoming','2026-11-09'),status:'open',removed:false,version:1}]);assert.equal(n,1);
 });
-test('Week paging and 2-mode discoverable prompts exist in the actual UI; D1 migration is additive',()=>{
+test('Week paging and category-specific research are accessible; D1 migration is additive',()=>{
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- for(const v of ['discovery-week-prev','discovery-week-next','discovery-week-today','discovery-import-confirm','discovery-prompt-regional','discovery-prompt-travel','syncEvents','discovery-conflict-cloud'])assert.ok(source.includes(v),v);
+ for(const v of ['discovery-week-prev','discovery-week-next','discovery-week-today','discovery-import-confirm','discovery-prompt','discovery-filter-group','syncEvents','discovery-conflict-cloud'])assert.ok(source.includes(v),v);
  const sql=readFileSync(join(dir,'0011_discovery_events.sql'),'utf8');assert.doesNotMatch(sql,/\b(?:DROP|TRUNCATE)\b/i);
 });
 test('Legacy local imports are reconciled against existing cloud favorites without spurious conflicts',()=>{

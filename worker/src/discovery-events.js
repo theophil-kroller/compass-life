@@ -2,7 +2,7 @@ import {eventKey,validEvent} from '../../client/src/event-import.js';
 const out=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const asEvent=row=>({key:row.event_key,event:row.event_json?JSON.parse(row.event_json):null,status:row.status,removed:!!row.removed,version:row.version});
 export async function listDiscoveryEvents(env,owner){
- const rows=await env.DB.prepare('SELECT event_key,event_json,status,removed,version FROM discovery_events WHERE owner_sub=? ORDER BY updated_at DESC LIMIT 1500').bind(owner.sub).all();
+ const rows=await env.DB.prepare('SELECT event_key,event_json,status,removed,version FROM discovery_events WHERE owner_sub=? ORDER BY updated_at DESC LIMIT 5000').bind(owner.sub).all();
  return out({events:(rows.results||[]).map(asEvent)});
 }
 function validMutation(x){return Boolean(x&&typeof x.key==='string'&&x.key.length<=260&&typeof x.status==='string'&&['open','saved','hidden'].includes(x.status)&&typeof x.removed==='boolean'&&Number.isSafeInteger(x.baseVersion)&&x.baseVersion>=0&& (x.removed?(x.event===null||x.event===undefined):validEvent(x.event)&&eventKey(x.event)===x.key));}

@@ -23,6 +23,7 @@ import * as life from '../client/src/life-intelligence-v22.js';
 import * as gtd23 from '../client/src/gtd-intelligence-v23.js';
 import * as personLinks from '../client/src/person-links.js';
 import * as discoveryFilter from '../client/src/discovery-category-filter.js';
+import * as discoveryResearch577 from '../client/src/discovery-research-v577.js';
 import * as review from '../client/src/guided-review.js';
 import * as tags from '../client/src/smart-tags.js';
 import * as personMatching from '../client/src/people-matching.js';
@@ -54,7 +55,7 @@ function context(){
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
  Object.assign(ctx,dailyPlanning,capacity,deadline,projectExchange,treeWorkspace,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,contactCare568,calendarSuggestions568);
- Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,relationships);
+ Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,relationships);
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;

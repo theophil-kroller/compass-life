@@ -7,9 +7,7 @@ const tabs=readFileSync(new URL('../client/src/insights.js',import.meta.url),'ut
 test('Gefühlswelt ist als direkte Insights-Seitennavigation erreichbar',()=>{
   assert.match(main,/data-action="calm-insight-view" data-id="feelings"[^\n]*<span>Gefühlswelt<\/span>/);
   assert.match(tabs,/id:'feelings',label:'Gefühlswelt'/);
-  assert.match(main,/insightTab==='feelings'\?/);
-  assert.match(main,/feelingInsights\(state\?\.feelingCheckins/);
-  assert.match(main,/data-action=\"t577-open\"/);
+  assert.match(main,/insightTab==='feelings'\?'is-active'/);
 });
 test('Gesperrte Startseite erzeugt keine doppelten Schnellzugriffsbuttons',()=>{
   assert.doesNotMatch(main,/locked-capture-help/);

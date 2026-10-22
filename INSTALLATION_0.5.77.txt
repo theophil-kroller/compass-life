@@ -1,0 +1,40 @@
+Compass 0.5.77 — Erholungsrecherche, Kinoprogramm und alternative Workshops
+============================================================================
+
+AUSGANGSBASIS: Compass 0.5.76.1.
+
+PATCH-UPLOAD (empfohlen):
+1. Vorab verschlüsseltes Vault-Backup erstellen, bisherigen Stand im GitHub-Repository sichern.
+2. Inhalt von Compass_0.5.77_PATCH_FROM_0.5.76.1.zip direkt in das ROOT-Verzeichnis deines compass-life-Repositories übernehmen.
+   Wichtig: Die Pfade client/src/, worker/src/, tests/ und package.json erhalten, keine zusätzliche Verzeichnisebene.
+   Vorhandene Dateien mit den neuen Versionen überschreiben.
+3. Commit ausführen; den Workflow "Deploy Compass Web" bis zu einem grünen Ergebnis prüfen.
+4. Web-App neu laden; ggf. PWA schließen und wieder öffnen. Versionsanzeige 0.5.77 prüfen.
+
+ALTERNATIV FULL SOURCE:
+Compass_0.5.77_FULL_SOURCE.zip enthält den konsolidierten Quellstand inklusive aller 0.5.76.1-Nachkorrekturen.
+Bestehenden Vault/IndexedDB keinesfalls löschen. Die App arbeitet mit den bestehenden Daten weiter.
+
+CLOUDFLARE-WORKER:
+Die Event-Lesegrenze wurde auf 5.000 erhöht (worker/src/discovery-events.js). Für vollständigen
+Abgleich bei über 1.500 importierten Veranstaltungen den Worker separat deployen
+(z.B. via bestehendem Worker-Deploy-Workflow oder "npm run deploy:api").
+Es gibt KEINE neue D1-Migration. Ein GitHub-Pages-Deploy allein aktualisiert den Worker NICHT.
+
+KURZTEST:
+1. Erholung / Entdecken öffnen: mehrere Filterchips nebeneinander statt langer Dropdown-Liste.
+2. "Kinoprogramm komplett" anklicken: Prompt wird kopiert; alternativ steht er unten im Importbereich.
+3. Prompt in einem ChatGPT-Recherchechat ausführen; JSON dort kopieren, in Compass einfügen,
+   auf "Import prüfen" klicken und anschließend bestätigen.
+4. Für zwei Vorführungen desselben Films in zwei Kinos (mit startTime HH:MM) getrennte Karten verifizieren.
+5. Erneut dasselbe JSON importieren: 0 neu, bekannte Einträge werden aktualisiert; Zeitstempel prüfen.
+6. Filter "Alternative Workshops" auswählen; ggf. Recherche zu Cesta, ISTA, Schwelle auslösen.
+7. Wien bei Oper/Theater/Musical und Europa bei Zouk/Kizomba-Prompt prüfen.
+8. Vorhandene Merkliste, Kontakte, Gesundheits- und Finanzansichten unverändert testen.
+9. Bei mehr als 1.500 Events Worker-Synchronisierung auf Zweitgerät testen.
+
+SICHERHEIT:
+Dies ist eine manuelle, quellengebundene Recherche. Compass behauptet keine Live-Verfügbarkeit.
+Nur öffentlich belegte offizielle Links importieren; unbekannte Eventtermine nicht erraten.
+
+VALIDIERUNG: 802/802 Node-Tests, Worker-Syntax erfolgreich. Vite-/Browser-E2E nicht verifiziert.

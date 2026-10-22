@@ -1,0 +1,23 @@
+/* Compass 0.5.77: all category groups visible; manual research workflow */
+.discovery-research-panel{margin:14px 0;padding:14px 15px;border:1px solid #e1eae3;border-radius:14px;background:#fbfcfb}
+.discovery-research-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.discovery-research-head strong{font-size:13px;color:#345744}
+.discovery-research-head small{color:#768d7d;font-size:11px}
+.discovery-research-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(218px,1fr));gap:8px}
+.discovery-research-button{background:#fff;border:1px solid #dce8de;border-radius:11px;padding:10px 11px;min-height:72px;text-align:left;display:flex;flex-direction:column;gap:4px;cursor:pointer;color:#395b49;min-width:0}
+.discovery-research-button:hover,.discovery-research-button:focus-visible{background:#eff8f0;border-color:#83ab90}
+.discovery-research-button.is-selected{border-color:#4e8965;box-shadow:inset 0 0 0 1px #4e8965;background:#f1f8f3}
+.discovery-research-button>span{font-weight:650;font-size:12px}
+.discovery-research-button small{font-size:10px;line-height:1.35;color:#738477}
+.discovery-filter-groups{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:10px 0 13px}
+.discovery-filter-groups>strong{color:#668471;font-size:11px;margin-right:5px}
+.discovery-filter-chip{border:1px solid #dde8e0;background:white;color:#446652;border-radius:99px;padding:7px 11px;font-size:11px;cursor:pointer}
+.discovery-filter-chip[aria-pressed="true"]{background:#35684e;border-color:#35684e;color:#fff}
+.discovery-filter-chip:hover{border-color:#548968}
+.discovery-import-timestamp{display:inline-block;font-size:10px;color:#778d7e;margin-top:6px}
+.discovery-prompt-preview{margin:9px 0;border:1px solid #dbe7e0;border-radius:10px;padding:9px;background:#fff}
+.discovery-prompt-preview summary{cursor:pointer;font-size:11px;color:#3f6d50}
+.discovery-prompt-preview textarea{box-sizing:border-box;width:100%;max-width:100%;min-height:145px;margin-top:9px;overflow-wrap:anywhere;font-size:11px}
+.discovery-import-drawer textarea[name="events"]{max-width:100%;box-sizing:border-box}
+@media(max-width:650px){.discovery-research-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.discovery-research-button{padding:9px;min-height:80px}.discovery-research-button>span{font-size:11px}}
+@media(max-width:390px){.discovery-research-grid{grid-template-columns:1fr}}
