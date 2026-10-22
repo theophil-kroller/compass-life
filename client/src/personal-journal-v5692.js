@@ -12,6 +12,10 @@ export const FOOD_PRESETS=[
  ['smoothie','🥤','Smoothie','Getränke'],['tea-unsweetened','🍵','Tee ungesüßt','Getränke'],['tea-honey','🫖','Tee mit Honig','Getränke'],
  ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke'],['coffee','☕','Kaffee','Getränke'],
  ['latella','🥛','Lattella','Getränke','500 ml',250,360],
+ ['aperol-spritz','🍹','Aperol Spritz','Getränke','1 Glas (200 ml)',160,250],
+ ['red-wine','🍷','Rotwein','Getränke','1 Glas (125 ml)',95,120],
+ ['white-wine','🥂','Weißwein','Getränke','1 Glas (125 ml)',85,115],
+ ['whiskey','🥃','Whiskey','Getränke','1 Glas (40 ml)',85,105],
  ['mensa','🍲','Mensaessen','Mahlzeiten'],
  ['wholegrain-toast-butter-jam','🍞','Vollkorn-Toast mit Butter & Marmelade','Frühstück','1 Stück',140,260],
  ['fried-egg','🍳','Spiegelei','Frühstück','1 Stück',95,160],
@@ -164,6 +168,7 @@ export function mergeFeelingCheckins(local=[],remote=[]){
  }
  return [...byId.values()].sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||a.id.localeCompare(b.id));
 }
+function mergeTouchRecords(a={},b={}){const map=new Map();for(const e of [...(a?.entries||[]),...(b?.entries||[])]){if(!e?.id)continue;const x=map.get(e.id);if(!x||String(e.updatedAt||'')>String(x.updatedAt||'')||(String(e.updatedAt||'')===String(x.updatedAt||'')&&e.deleted===true))map.set(e.id,e);}return {entries:[...map.values()].sort((x,y)=>String(x.id).localeCompare(String(y.id)))};}
 export function mergeJournalData(local,remote){
  // Versioned per-ID merge; a remote device must never erase a newer local entry.
  const lc=local&&typeof local==='object'?local:{},rc=remote&&typeof remote==='object'?remote:{};
@@ -175,6 +180,7 @@ export function mergeJournalData(local,remote){
  return {
   timeJournal:{entries:byId(lc.timeJournal?.entries,rc.timeJournal?.entries),overrides:unionObject(lc.timeJournal?.overrides,rc.timeJournal?.overrides)},
   nutritionJournal:{entries:byId(lc.nutritionJournal?.entries,rc.nutritionJournal?.entries),customFoods:byId(lc.nutritionJournal?.customFoods,rc.nutritionJournal?.customFoods),...(lc.nutritionJournal?.energyGoal||rc.nutritionJournal?.energyGoal?{energyGoal:(()=>{const left=lc.nutritionJournal?.energyGoal,right=rc.nutritionJournal?.energyGoal;if(!left)return energyGoalSettings(right);if(!right)return energyGoalSettings(left);return energyGoalSettings(String(left.updatedAt||'')>=String(right.updatedAt||'')?left:right);})()}:{} )},
+  touchJournal:mergeTouchRecords(lc.touchJournal,rc.touchJournal),
   quickWorktime:mergeQuickWorktime(localWork,remoteWork),
   feelingCheckins:mergeFeelingCheckins(lc.feelingCheckins,rc.feelingCheckins),
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),
@@ -182,6 +188,8 @@ export function mergeJournalData(local,remote){
   ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{})
  };
 }
+
+
 
 
 /**

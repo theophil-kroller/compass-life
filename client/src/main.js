@@ -71,6 +71,9 @@ import {healthFindings,rankHealthFindingsLocally} from './health-intelligence-v5
 import {inspectWorktimeFile,mergeWorktime,worktimeView,worktimeImportPanel} from './worktime-v553.js';
 import {MORNING_STEPS,MORNING_PRESETS,defaultMorningConfig,normalizeMorningConfig,ensureMorning,newMorningSession,morningSafeMeta,morningFromSafeMeta,transitionMorning,elapsedStepSeconds,storeMorningSession,morningHubView,morningOverlayView} from './miracle-morning-v570.js';
 import {morningIntelligenceHeader,morningCreateView,morningInsightsView,addMorningAffirmation,removeMorningAffirmation,saveMorningVision,removeMorningVision,putMorningNote,removeMorningNote,sessionToMorningNote} from './morning-intelligence-v571.js';
+import {nutritionHistoryView} from './nutrition-history-v577.js';
+import {TOUCH_KINDS,touchHistoryView,putTouch,deleteTouch} from './touch-journal-v577.js';
+import './nutrition-touch-v577.css';
 import {TIME_AREAS,FOOD_PRESETS,timeCategoryOptions,timeLabel,ensureJournal,validTimeEntry,timeEntries,putTimeEntry,deleteTimeEntry,addNutrition,addCustomFood,nutritionFoods,nutritionKcalEstimate,nutritionEntries,timeJournalView,nutritionQuickView,nutritionInsightsView,mergeJournalData} from './personal-journal-v5692.js';
 import {energyGoalSettings,dayEnergyStatus} from './energy-goal-v575.js';
 import {quickEnergyMeter} from './nutrition-quick-meter-v576.js';
@@ -97,8 +100,10 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 
+
+
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.76';
+const COMPASS_CLIENT_VERSION='0.5.76.1';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -163,6 +168,8 @@ async function resumeSession(){
 }
 
 
+
+
 // The feeling vocabulary is public app code; only saving private check-ins
 // requires the one-time setup of the vault's write-only capture key.
 const FEELING_MODE_KEY='compass.feeling.inputMode.v5706';
@@ -176,14 +183,17 @@ function chooseFeelingInputMode(mode){
 let feelingInputMode=rememberedFeelingInputMode();
 let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),feelingDays=30,feelingView='overview',feelingSelectedId='',feelingHistoryLimit=30,feelingEditingId='',connectionEmotion='anger',connectionDays=30;
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
+let touchPeriod=30,touchEditingId='';
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
 let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLastConfirmedAt=0;
-function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null]);}
+function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null]);}
 function scheduleJournalSync(delay=0){
  clearTimeout(journalSyncTimer);journalSyncTimer=null;
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
  journalSyncTimer=setTimeout(()=>{journalSyncTimer=null;syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);render();});},delay);
 }
+
+
 
 
 let worktimeSelectedCategory='work';
@@ -230,6 +240,8 @@ async function morningBeforeLock(){await morningFlushDraft();morningSaveNoteFrom
 function morningRenderOverlay(){if(!morningPlayerOpen||!morningSession)return '';const goals=state?lifeGoals(state):[];const goal=goals.find(g=>g.id===morningConfig.goalId);return morningOverlayView(morningSession,morningConfig,{locked:!state,goalTitle:goal?.title||'',goalTitles:Object.fromEntries(goals.map(g=>[g.id,g.title]))});}
 function morningTimerRefresh(){if(!morningPlayerOpen||!morningSession)return;const active=MORNING_STEPS[morningSession.stepIndex],limit=Number(morningSession.durations?.[active.id]||active.minutes)*60;const remaining=Math.max(0,limit-elapsedStepSeconds(morningSession));const node=app.querySelector('[data-mm570-remaining]');if(node)node.textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(Math.ceil(remaining%60)).padStart(2,'0');}
 if(typeof setInterval==='function')setInterval(morningTimerRefresh,1000);
+
+
 
 
 const QUICK_PUBLIC_KEY='compass.quick.public.v569';
@@ -304,6 +316,8 @@ if(bootView==='health'||bootView==='places')tab='insights';
 if(bootCapture){captureAfterUnlock=true;tab='inbox';}
 
 
+
+
 let watchPairCode='', watchPairExpires='', watchSessions=[], watchDevices=[], watchError='';
 let healthDays=[],healthDevices=[],healthPairCode='',healthError='',healthLastUpdated='';
 let widgetPairCode='',widgetDevices=[],widgetConnectError='';
@@ -318,7 +332,7 @@ let insightTab=bootView==='places'?'places':bootView==='health'?'sources':'sleep
 // Non-sensitive presentation only. Deep links always override the last-view preference.
 const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.calm.lastView')||'null');}catch{return null;}})();
 if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
-if(!bootView&&!bootCapture&&calmLastView?.insight&&INSIGHT_TABS.some(v=>v.id===calmLastView.insight))insightTab=calmLastView.insight;
+if(!bootView&&!bootCapture&&calmLastView?.insight&&(calmLastView.insight==='touch'||INSIGHT_TABS.some(v=>v.id===calmLastView.insight)))insightTab=calmLastView.insight;
 if(!bootView&&!bootCapture&&calmLastView?.finance&&FINANCE_TABS.some(v=>v.title===calmLastView.finance))financePane=calmLastView.finance;
 let calmNavGroup=['projects','overview','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'||tab==='recovery'?'insights':tab==='finance'?'finance':'';
 let financeSankeyFocus='all',financeMerchantSelected='';
@@ -356,6 +370,8 @@ async function scanSmartFolder(id){
  }catch(ex){smartHubNotice='Ordnerprüfung: '+String(ex.message||ex);}
  finally{smartHubBusy=false;render();}
 }
+
+
 
 
 let placesPreview=null,placesImportBusy=false,selectedPlaceKey='',placesMapRegion='world',placesMapZoom=1,placesListLimit=25;
@@ -490,6 +506,8 @@ function watchOverview(){
 }
 
 
+
+
 let weather={status:'idle',city:'Graz',temperature:null,label:''};
 function persist() {
   const snapshot=structuredClone(state);
@@ -534,6 +552,8 @@ async function addCapture(title,note=''){
     s.records[r.id]=r;s.pending.push(makeMutation(r));s.history.push({type:'captured',at:stamp(),id:r.id});
   });
 }
+
+
 
 
 const stamp=()=>new Date().toISOString();
@@ -630,7 +650,8 @@ function chrome(content){
  <button type="button" class="calm-mobile-nav-back" data-action="calm-nav-group" data-id="insights" aria-label="Zur Hauptnavigation zurück">${ico('arrow',15)}<span>Menü</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='feelings'?'is-active':''}" data-action="calm-insight-view" data-id="feelings" aria-current="${tab==='insights'&&insightTab==='feelings'?'page':'false'}">${ico('heart',19)}<span>Gefühlswelt</span></button>
  <button type="button" class="nav-item ${tab==='insights'&&['sleep','energy','stress','body'].includes(insightTab)?'is-active':''}" data-action="calm-insight-view" data-id="sleep">${ico('moon',19)}<span>Gesundheit</span></button>
- ${navItem('activity','Aktivitäten','activity')}
+ <button type="button" class="nav-item ${tab==='insights'&&insightTab==='touch'?'is-active':''}" data-action="calm-insight-view" data-id="touch">${ico('heart',19)}<span>Berührung & Nähe</span></button>
+  ${navItem('activity','Aktivitäten','activity')}
  ${navItem('recovery','Erholung','heart')}
  <button type="button" class="nav-item ${tab==='insights'&&insightTab==='places'?'is-active':''}" data-action="calm-insight-view" data-id="places">${ico('compass',19)}<span>Orte & Weltkarte</span></button>
  ${navItem('progress','Fortschritt','target')}
@@ -666,12 +687,16 @@ function chrome(content){
 }
 
 
+
+
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
  return `<section class="module-card ${cls} ${active?'module-active':'module-inactive'}" aria-label="${h(name)}">
  <div class="module-head"><div class="module-title">${ico(iconName,21)}<h2>${h(name)}</h2></div>${action?disabledButton(action):''}</div>
  ${sub?`<p class="module-subtitle">${h(sub)}</p>`:''}${body}</section>`;
 }
 const placeholder=(text='Noch keine Einträge')=>`<div class="empty-minimal"><span class="empty-circle">${ico('plus',17)}</span><span>${h(text)}</span></div>`;
+
+
 
 
 function defaultHabitItems(){return DEFAULT_HABITS.map(item=>({...item}));}
@@ -815,6 +840,8 @@ function dashboardCards(locked=false){
  ${moduleCard({name:'Wochenreview',iconName:'sync',cls:'grid-review',active:true,sub:'Klarheit gewinnen. Regelmäßig.',body:`<div class="review-steps review-steps-icon"><div>${ico('inbox',16)} Eingang klären</div><div>${ico('checkSquare',16)} Nächste Schritte</div><div>${ico('calendar',16)} Fristen prüfen</div></div><button class="text-link" type="button" data-tab="review">Wochenreview öffnen ${ico('arrow',14)}</button>`})}
  ${moduleCard({name:'Projekte',iconName:'folder',cls:'grid-projects',active:true,sub:'Aktive Ergebnisse und nächste Schritte',body:`<div class="project-summary"><strong>${Object.values(state?.projects||{}).filter(p=>p.status==='active').length}</strong><span>aktive Projekte</span><small>${Object.values(state?.projects||{}).filter(p=>p.status==='active'&&!nextActions(state).some(t=>t.projectId===p.id)).length} ohne nächste Aktion</small></div><button type="button" class="text-link" data-tab="projects">Projekte öffnen ${ico('arrow',14)}</button>`})}
  ${moduleCard({name:'Kalender & Fokus',iconName:'calendar',cls:'grid-calendar',active:true,sub:'Deine Termine (Google, nur lesend)',body:calendarToken?calendarCardRows(localDateString(new Date())):calendarConnectUI()})}
+
+
 
 
  ${moduleCard({name:'Menschen',iconName:'people',cls:'grid-people',active:true,sub:'Gespräche & Agenden',body:`<div class="project-summary"><strong>${Object.keys(state?.people||{}).length}</strong><span>Kontakte im Tresor</span></div><button type="button" class="text-link" data-tab="people">Menschen öffnen ${ico('arrow',14)}</button>`})}
@@ -1101,6 +1128,8 @@ function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)r
 }
 
 
+
+
 function gtdTodaySummary(){
  const hlt=projectHealth(state),waiting=waitingReview(state);
  return `<div class="gtd-quick-overview"><span>${hlt.dueReviews} Projekt-Reviews fällig</span><span>${hlt.withoutAction} Projekte ohne nächste Aktion</span><span>${waiting.attention} Waiting For zur Durchsicht</span></div><button type="button" class="text-link" data-tab="review">Wochenreview öffnen →</button><small>Hinweise aus vorhandenen Daten; keine automatisch erzeugten Termine.</small>`;
@@ -1266,6 +1295,8 @@ function homeScreen(){
 }
 
 
+
+
 function captureOverlay(){
  return `<div class="capture-modal-layer" data-action="capture-close-backdrop">
  <section class="capture-modal" role="dialog" aria-modal="true" aria-labelledby="capture-modal-title" tabindex="-1">
@@ -1315,6 +1346,8 @@ function inboxScreen(){
  </form>`:
  `<div class="inbox-mvp-empty detail-empty">${ico('pencil',32)}<strong>Ein Gedanke genügt.</strong><span>Öffne die Schnellerfassung und halte fest, was dich beschäftigt.</span></div>`}</aside></div>`);
 }
+
+
 
 
 function clarifyControls(currentId=null){
@@ -1368,6 +1401,8 @@ function reviewStepBody(step,queue){
  const healthText=!healthDates.length?'Noch keine Garmin-Daten importiert.':missing.length?`${missing.length} Tage nach dem letzten Garmin-Import vorgeschlagen (${missing[0]} bis ${missing.at(-1)}).`:'Keine offenen Tage nach dem letzten Garmin-Import erkannt.';
 
 
+
+
  const healthReview=reviewImportHub({state,healthFilePreview,placesPreview,financePreview,healthText});
  const emotionalReview=feelingReview(state.feelingCheckins||[],localDate());
  return `<div class="assistant-finish"><h3>Was ist jetzt noch offen?</h3><div class="assistant-finish-grid"><span><strong>${queue.inbox.length}</strong> Inbox</span><span><strong>${queue.due.length}</strong> fällige Projekte</span><span><strong>${queue.waiting.length}</strong> Waiting For</span><span><strong>${queue.unassigned.length}</strong> Einzelaktionen</span></div><label>Gedanken zum Abschluss<textarea id="review-end-notes" maxlength="1200" rows="3" placeholder="Was ist jetzt klarer? Was soll beim nächsten Review wieder auftauchen?">${h(state.weeklyReview?.notes||'')}</textarea></label><p class="muted-line">Du kannst den Review vollständig oder bewusst teilweise abschließen. Ein vollständiger Schritt bedeutet „durchgesehen“, nicht zwingend „alles erledigt“.</p>${emotionalReview}<p class="pc66-review-bridge"><button type="button" class="secondary-btn" data-action="insights-tab" data-id="connections">Gefühle & Alltag gemeinsam betrachten ↗</button> <small>Freiwillige, deskriptive Auswertung – keine Pflicht im Weekly Review.</small></p>${healthReview}</div>`;
@@ -1386,8 +1421,8 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null};}
-function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.feelingCheckins=m.feelingCheckins;if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.feelingCheckins=m.feelingCheckins;if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
 async function syncPersonalJournal(){
  // One E2EE journal flight per device. Mutations during flight queue an immediate
  // follow-up instead of being hidden by a generic "synced" status.
@@ -1601,6 +1636,8 @@ function peopleMapMarkup(people,selected){
 }
 
 
+
+
 function relationshipInspectorMarkup(person,projects,today){
  const p=preference(person),impulse=contactImpulse(person,today);
  const linked=relatedProjectIds(person,projects);
@@ -1638,6 +1675,8 @@ function peopleScreen(){
  <div class="people-calendar"><div class="work-heading"><span>${ico('calendar',16)} Gemeinsame Google-Termine</span><span class="quiet-tag">${personEvents.upcoming.length} kommende</span></div>${personEvents.upcoming.slice(0,5).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · geplant</small></div>`).join('')||'<p class="muted-line">Keine zugeordneten künftigen Kalendertermine.</p>'}${personEvents.past.length?`<details><summary>${personEvents.past.length} vergangene Termine</summary>${personEvents.past.slice(0,6).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · Durchführung nicht bestätigt</small></div>`).join('')}</details>`:''}<small class="muted-line">Google Kalender wird nur im angemeldeten Browser gelesen. Vergangene Termine sind kein bestätigter Kontakt.</small></div>
 
 
+
+
  ${calendarContactPanel(selected)}
  <details class="people-admin-details"><summary>Weitere Kontaktangaben und Einstellungen</summary> <form id="person-tag-form" class="compact-stack" data-id="${h(selected.id)}"><label>Personen-Tag<input name="tag" data-smart-tags maxlength="50" value="${h(selected.tag)}" required/></label><label>Namensvarianten für Kalender (optional)<input name="aliases" maxlength="200" value="${h(selected.aliases||'')}" placeholder="Spitzname, Kurzform …"/></label><button class="secondary-btn" type="submit">Zuordnung speichern</button><small>Das Tag verbindet offene Aufgaben und ungeklärte Inbox-Einträge mit dieser Person. Die Inbox-Einträge werden nicht automatisch zu Aufgaben. Kalendertermine werden anhand des Namens oder der angegebenen Varianten erkannt.</small></form>
  <form id="person-birthday-form" data-id="${h(selected.id)}" class="compact-stack person-birthday-form"><div class="work-heading"><span>${ico('calendar',16)} Geburtstag</span><span class="quiet-tag">${selected.birthdayMonthDay?`${h(selected.birthdayMonthDay.slice(3))}.${h(selected.birthdayMonthDay.slice(0,2))}.${selected.birthdayYear||''}`:'Nicht eingetragen'}</span></div>
@@ -1647,6 +1686,8 @@ function peopleScreen(){
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form></details>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
 function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,financeWhatIf,financeWhatIfDraft,financeAiSuggestions,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote,portfolioTab:financePortfolioTab,portfolioMarket:financePortfolioMarket,flatexSort:{key:flatexPositionSort,descending:flatexPositionDescending},flatexChart:{isin:flatexChartIsin,ticker:flatexChartTicker,period:flatexChartPeriod,busy:flatexChartBusy,error:flatexChartError,data:flatexChartData,settings:flatexChartSettings}}));}
+
+
 
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
@@ -1727,21 +1768,23 @@ function cachedSleepInsights(data,today,period){
 }
 function invalidateDerivedInsights(){sleepMemo.data=null;sleepMemo.value=null;}
 function insightsScreen(){
- const tabDef=INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0];
+ const tabDef=insightTab==='touch'?{label:'Berührung & Nähe',subtitle:'Freiwillig dokumentierte körperliche Nähe'}:(INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0]);
  const today=localDate();
  const model=(insightTab==='sleep'||insightTab==='places')?cachedSleepInsights(state?.healthImports||{},today,insightPeriod):null;
  const healthIds=['sleep','energy','stress','body'];
  const healthMode=healthIds.includes(insightTab);
- const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['timejournal','Zeitjournal','clock'],['nutrition','Ernährung','food'],['habits','Habits','checkSquare'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
+ const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['timejournal','Zeitjournal','clock'],['nutrition','Ernährung','food'],['touch','Berührung','heart'],['habits','Habits','checkSquare'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
  const tabs=compactInsights.map(([id,label,icon])=>`<button type="button" class="calm-insight-tab ${(id==='sleep'?healthMode:insightTab===id)?'selected':''}" data-action="insights-tab" data-id="${id}" aria-pressed="${id==='sleep'?healthMode:insightTab===id}">${ico(icon,16)}<span>${label}</span></button>`).join('');
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='timejournal'?timeJournalView(state,{period:timeJournalPeriod,editingId:timeJournalEditId,showForm:timeJournalShowForm})+journalSyncPanel():insightTab==='nutrition'?nutritionInsightsView(state,{period:nutritionPeriod,editingId:nutritionEditId})+journalSyncPanel():insightTab==='balance'?lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis}):insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?quickWorktimeInsights()+worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today,false)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode)+worktimeImportPanel(state?.workTime||{},workPreview):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity,14,insightStressPage):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
+ const content=insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?`<div style="margin-bottom:12px"><button type="button" class="t577-tab-shortcut" data-action="t577-open">🫂 Berührung & Nähe erfassen →</button></div>`+feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='timejournal'?timeJournalView(state,{period:timeJournalPeriod,editingId:timeJournalEditId,showForm:timeJournalShowForm})+journalSyncPanel():insightTab==='nutrition'?nutritionHistoryView(state,{period:nutritionPeriod})+nutritionInsightsView(state,{period:nutritionPeriod,editingId:nutritionEditId})+journalSyncPanel():insightTab==='touch'?touchHistoryView(state,{period:touchPeriod,editingId:touchEditingId})+journalSyncPanel():insightTab==='balance'?lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis}):insightTab==='focus'?productivityInsightsView(buildProductivityInsights({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),activeActivities(watchSessions,state),calendarStatus,Boolean(calendarToken&&Date.now()<calendarExpires)):insightTab==='sleep'?insightsSleepView(model,insightNight,ico,today,state?.healthImports||{},{order:healthAiOrder,status:healthAiStatus},insightYearMode,insightWeekAnchor):insightTab==='worktime'?quickWorktimeInsights()+worktimeView(state?.workTime||{},workYear,workThreshold,workPreview,today,false)+worktimeYearComparisonView(state?.workTime?.days||[],today,workCompareMode)+worktimeImportPanel(state?.workTime||{},workPreview):insightTab==='stress'?insightsStressView(state?.healthImports,insightPeriod,today,insightWellnessDay,insightStressGranularity,14,insightStressPage):insightTab==='energy'?insightsEnergyView(state?.healthImports,insightPeriod,today,insightWellnessDay):insightTab==='body'?healthBodyView(state?.healthImports||{},insightPeriod,insightBodyComposition):insightTab==='activity'?fitnessInsightsView(state?.healthImports||{},healthDays,insightPeriod,today,activeActivities(watchSessions,state),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,today).label,today}):insightTab==='sources'?healthSummaryPanel('sources'):insightTab==='places'?placesInsightsView({visits:state?.placesVisits||[],mapRegion:placesMapRegion,mapZoom:placesMapZoom,listLimit:placesListLimit,labels:state?.placesLabels||{},nights:state?.healthImports?.garminNights||[],range:model.range,selected:selectedPlaceKey,preview:placesPreview}):insightTab==='explore'?exploreView(exploreDays({imported:state?.healthImports||{},activities:activeActivities(watchSessions,state),calendarEvents,rules:effectiveCalendarRules(state),overrides:state?.calendarOverrides||{},calendarCoverage,today,period:insightPeriod}),exploreX,exploreY,exploreLag):insightsPlannedView(insightTab,state?.healthImports||{},healthDays,activeActivities(watchSessions,state));
  return chrome(`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">
  <div class="calm-insight-toolbar" aria-label="Mobile Insights-Navigation"><nav class="calm-insights-nav" aria-label="Insights-Kategorien">${tabs}</nav><button type="button" class="calm-source-action" data-action="insights-tab" data-id="sources" title="Garmin und Fitdays importieren">${ico('settings',16)}<span>Datenquellen</span></button></div>
  <div class="insight-view-header ${insightTab==='sources'?'insight-source-heading':''}"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
  ${insightTab==='feelings'?`<div class="fw65-periods" role="group" aria-label="Gefühlsverlauf Zeitraum"><button data-action="feeling-period" data-id="7" class="${feelingDays===7?'selected':''}">7 Tage</button><button data-action="feeling-period" data-id="30" class="${feelingDays===30?'selected':''}">30 Tage</button><button data-action="feeling-period" data-id="90" class="${feelingDays===90?'selected':''}">90 Tage</button></div>`:''}${content}
+
+
 
 
  </div>`);
@@ -1806,6 +1849,8 @@ function discoveryPanel(){
 }
 
 
+
+
 function recoveryScreen(){
  const today=localDate(),endDate=new Date(today+'T12:00:00');endDate.setDate(endDate.getDate()+30);const end=localDate(endDate);
  const cal=calendarEvents.filter(e=>e.status!=='cancelled'&&calendarDate(e)>=today&&calendarDate(e)<=end&&eventAppearance(e).category==='Erholung'&&!eventAppearance(e).hidden);
@@ -1830,6 +1875,8 @@ function recoveryScreen(){
  <div class="recovery-view"><section class="work-card"><div class="work-heading"><span>${ico('calendar',19)} Geplante Erholung · 30 Tage</span><span class="quiet-tag">${cal.length} Termine</span></div>${cal.length?cal.map(e=>`<button type="button" class="recovery-row" data-action="agenda-open" data-id="${h(e.id)}"><span>${h(eventAppearance(e).emoji)}</span><strong>${h(eventAppearance(e).displayTitle)}</strong><small>${h(calendarDate(e))}</small></button>`).join(''):`<p class="muted-line">${calendarToken?'Keine erkannten Erholungstermine in den nächsten 30 Tagen.':'Verbinde Google Calendar, um Erholungstermine anzuzeigen.'}</p>`}${calendarToken?calendarFilterToggle():calendarConnectUI()}</section>
  <section class="work-card"><div class="work-heading"><span>${ico('activity',19)} Erlebte Erholung</span><span class="quiet-tag">${acts.length} Aktivitäten</span></div>${acts.map(a=>`<button type="button" class="recovery-row" data-action="activity-open" data-id="${h(a.id)}"><span>🌿</span><strong>${h(a.title)}</strong><small>${h(a.startedAt.slice(0,10))} · ${a.durationMinutes} min</small></button>`).join('')||'<p class="muted-line">Du kannst in Aktivitäten eine Garmin-Session oder eine manuelle Aktivität als Erholung kennzeichnen.</p>'}<button type="button" class="text-link" data-tab="activity">Aktivitäten bearbeiten ${ico('arrow',14)}</button></section></div>`);
 }
+
+
 
 
 function activityScreen(){
@@ -1899,7 +1946,10 @@ function bind() {
   }catch(ex){toast('Energieziel: '+ex.message,true);}
  };
  const foodDetail=app.querySelector('#pj92-food-detail-form');if(foodDetail)foodDetail.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodDetail);journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===fd.get('id'));if(!item)throw Error('Eintrag fehlt.');item.at=new Date(String(fd.get('at'))).toISOString();item.amount=String(fd.get('amount')||'').slice(0,60);item.note=String(fd.get('note')||'').slice(0,500);item.updatedAt=stamp();});nutritionEditId='';toast('Ernährungseintrag gespeichert.');}catch(ex){toast(ex.message,true);}};
+ const touchEditForm=app.querySelector('#t577-edit-form');if(touchEditForm)touchEditForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(touchEditForm);const dateValue=new Date(String(fd.get('at')));if(!Number.isFinite(dateValue.getTime()))throw Error('Ungültiges Datum.');await mutate(s=>putTouch(s,{id:String(fd.get('id')),kind:String(fd.get('kind')),at:dateValue.toISOString(),person:String(fd.get('person')||''),note:String(fd.get('note')||'')}));touchEditingId='';toast('Nähe-Eintrag verschlüsselt gespeichert.');}catch(ex){toast(ex.message,true);}};
  const foodCustom=app.querySelector('#pj92-add-food-form');if(foodCustom)foodCustom.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodCustom);journalSyncStatus='lokal';await mutate(s=>addCustomFood(s,fd.get('title')));toast('Lebensmittel hinzugefügt.');}catch(ex){toast(ex.message,true);}};
+
+
 
 
  const recPanel=app.querySelector('#rec554-panel');if(recPanel)recPanel.addEventListener('toggle',()=>{if(recPanel.isConnected)timeoffOpen=recPanel.open;});
@@ -1985,6 +2035,8 @@ function bind() {
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
+
+
 
 
   const privateSetup=app.querySelector('#private-device-sync-setup');if(privateSetup)privateSetup.onsubmit=async ev=>{
@@ -2100,6 +2152,8 @@ function bind() {
    });}
 
 
+
+
   const careForm=app.querySelector('#contact-care-form');if(careForm){careForm.closest('details')?.addEventListener('toggle',ev=>{contactSettingsOpen=ev.currentTarget.open;});careForm.onsubmit=async ev=>{ev.preventDefault();const id=careForm.dataset.id;const fd=new FormData(careForm);if(!state?.people?.[id])return;const mode=String(fd.get('mode')||'occasional');if(!CONTACT_MODES.some(([k])=>k===mode))return;await mutate(s=>{s.people[id].contactMode=fd.has('sharesHousehold')?'regular':mode;s.people[id].sharesHousehold=fd.has('sharesHousehold');s.people[id].contactPaused=mode==='paused';});contactSettingsOpen=true;contactSaveStatus='Kontaktmodus gespeichert ✓';render();};}
   const contactForm=app.querySelector('#person-contact-form');
   if(contactForm){
@@ -2118,6 +2172,8 @@ function bind() {
     const scroll=rememberPeopleScroll();
     try {clearTimeout(contactDraftSaveTimer);await mutate(s=>{s.people[id]=addContactEntry(s.people[id],entry,localDate()).person;if(s.contactDrafts)delete s.contactDrafts[id];});quickContactType='';contactSaveStatus='✓ Kontakt gespeichert – im Verlauf sichtbar';contactSaving=false;render();restorePeopleScroll(scroll);}
     catch(ex){contactSaving=false;contactSaveStatus='Speichern fehlgeschlagen · bitte erneut versuchen';render();restorePeopleScroll(scroll);const f=app.querySelector('#person-contact-form');if(f){f.elements.day.value=entry.day;f.elements.type.value=entry.type;f.elements.note.value=entry.note;f.elements.initiator.value=entry.initiator;}error=ex.message;}
+
+
 
 
   };
@@ -2522,6 +2578,8 @@ function bind() {
   };
 
 
+
+
   const finSearch=app.querySelector('#finance-ledger-query');if(finSearch)finSearch.onchange=()=>{financeLedgerQuery=finSearch.value.slice(0,100);financeLedgerPage=0;render();};
   const finFilter=app.querySelector('#finance-ledger-filter');if(finFilter)finFilter.onchange=()=>{financeLedgerFilter=finFilter.value;financeLedgerPage=0;render();};
   app.querySelectorAll('form[data-finance-edit]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeEdit;const data=new FormData(form),category=String(data.get('category')||''),flow=String(data.get('flow')||'');if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')return toast('Bitte eine konkrete Kategorie auswählen.',true);try{let affected=0;const remember=data.get('remember')==='yes';
@@ -2803,8 +2861,17 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  }
 
 
+
+
  if(action==='insights-stress-prev'){insightStressPage=Math.max(-1000,insightStressPage-1);insightWellnessDay='';render();return;}
  if(action==='insights-stress-next'){insightStressPage=Math.min(0,insightStressPage+1);insightWellnessDay='';render();return;}
+ if(action==='t577-open'){if(!state)return toast('Bitte Tresor entsperren.',true);tab='insights';insightTab='touch';calmNavGroup='insights';render();return;}
+ if(action==='t577-close'){render();return;}
+ if(action==='t577-quick'){if(!state)return toast('Bitte Tresor entsperren.',true);if(!TOUCH_KINDS.some(k=>k.id===id))return;try{await mutate(s=>putTouch(s,{kind:id,at:stamp()}));toast('Nähe erfasst.');}catch(ex){toast(ex.message,true);}return;}
+ if(action==='t577-period'){touchPeriod=[7,30,90].includes(Number(id))?Number(id):30;touchEditingId='';render();return;}
+ if(action==='t577-edit'){touchEditingId=id;render();return;}
+ if(action==='t577-cancel'){touchEditingId='';render();return;}
+ if(action==='t577-delete'){if(!state||!confirm('Diesen Nähe-Eintrag entfernen?'))return;try{await mutate(s=>deleteTouch(s,id));touchEditingId='';toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
  if(action==='pj92-food-open'){if(!state&&!sealedCaptureAvailable)return toast('Bitte zuerst einmal den Tresor entsperren.',true);nutritionQuickOpen=true;habitQuickOpen=false;worktimeQuickOpen=false;feelingOverlayOpen=false;captureOverlayOpen=false;render();return;}
  if(action==='pj92-food-close'||action==='pj92-food-close-backdrop'){nutritionQuickOpen=false;render();return;}
  if(action==='pj92-food-insights'){nutritionQuickOpen=false;if(!state)return toast('Zum Ansehen der Ernährungshistorie bitte Tresor entsperren.',true);tab='insights';insightTab='nutrition';calmNavGroup='insights';render();return;}
@@ -2829,6 +2896,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='pj92-food-edit-cancel'){nutritionEditId='';render();return;}
  if(action==='pj92-food-delete'){if(!state||!confirm('Ernährungseintrag entfernen?'))return;try{journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===id);if(item){item.deleted=true;item.updatedAt=stamp();}});nutritionEditId='';toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
  if(action==='pj92-sync-now'){try{const ok=await syncPersonalJournal();if(ok)toast('Habits, Zeitjournal und Ernährung verschlüsselt abgeglichen.');else toast('Kein Cloud-Abgleich möglich: bitte anmelden und Geräteabgleich einrichten.',true);}catch(ex){toast(ex.message,true);}return;}
+
+
 
 
  if(action==='feeling-open'){nutritionQuickOpen=false;feelingEditingId='';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector(feelingInputMode==='words'?'#fw705-search-input':'#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
@@ -3145,7 +3214,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='calm-finance-group'){const group=FINANCE_GROUPS.find(g=>g.title===id);if(group){tab='finance';calmNavGroup='finance';financePane=group.panes[0];financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-finance-view'){if(FINANCE_TABS.some(p=>p.title===id)){tab='finance';calmNavGroup='finance';financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='calm-nav-group'){calmNavGroup=calmNavGroup===id?'':id;render();return;}
-    if(action==='calm-insight-view'){if(INSIGHT_TABS.some(t=>t.id===id)||['habits','feelings','balance','focus','worktime','timejournal','nutrition','places','explore','sources','sleep'].includes(id)){tab='insights';calmNavGroup='insights';insightTab=id;if(id==='places')insightPeriod='all';render();if(authToken){reloadWatchSessions().catch(()=>{});reloadHealth().catch(()=>{});}}return;}
+    if(action==='calm-insight-view'){if(INSIGHT_TABS.some(t=>t.id===id)||['touch','habits','feelings','balance','focus','worktime','timejournal','nutrition','places','explore','sources','sleep'].includes(id)){tab='insights';calmNavGroup='insights';insightTab=id;if(id==='places')insightPeriod='all';render();if(authToken){reloadWatchSessions().catch(()=>{});reloadHealth().catch(()=>{});}}return;}
     if(action==='nav-more'){await mutate(s=>{s.uiPreferences??={};s.uiPreferences.advancedNav=!(s.uiPreferences.advancedNav===true);});return;}
     if(action==='recovery-idea-remove'){if(!String(id).startsWith('idea-'))return;await mutate(s=>{s.recoveryIdeas=(s.recoveryIdeas||[]).filter(i=>i.id!==id);});return;}
     if(action==='recovery-idea-hide'){if(!String(id).startsWith('starter-'))return;await mutate(s=>{s.hiddenStarterIdeas=[...new Set([...(s.hiddenStarterIdeas||[]),id])];});return;}
@@ -3286,6 +3355,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='calendar-rule-up'||action==='calendar-rule-down'){
       await mutate(s=>{const rules=effectiveCalendarRules(s).map(r=>({...r}));const i=rules.findIndex(r=>r.id===id),j=i+(action==='calendar-rule-up'?-1:1);if(i>=0&&j>=0&&j<rules.length){[rules[i],rules[j]]=[rules[j],rules[i]];s.calendarRules=rules;}});return;
     }
+
+
 
 
     if(action==='agenda-open'){const e=calendarEvents.find(x=>x.id===id);if(e){selectedDay=calendarDate(e);tab='today';}selectedAgendaEventId=id;render();requestAnimationFrame(()=>{const panel=app.querySelector('#agenda-details');if(panel){panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest',behavior:'smooth'});}});return;}
@@ -3476,6 +3547,10 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
 
 
 
+
+
+
+
     if(action==='finance-recurring-fixed'||action==='finance-recurring-clear'||action==='finance-recurring-exclude'){
       if(!id||id.length>90)return;
       const value=action==='finance-recurring-fixed'?'fixed':action==='finance-recurring-exclude'?'exclude':null;
@@ -3612,7 +3687,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       placesPreview=null;selectedPlaceKey='';toast('Alle lokalen Standortdaten gelöscht.');return;
     }
     if(action==='open-worldmap'){tab='insights';insightTab='places';insightPeriod='all';selectedPlaceKey='';render();return;}
-    if(action==='insights-tab'){if(INSIGHT_TABS.some(t=>t.id===id)){tab='insights';calmNavGroup='insights';if(id==='places'&&insightTab!=='places')insightPeriod='all';insightTab=id;render();if(id==='focus'&&authToken){reloadWatchSessions().catch(()=>{});}}return;}
+    if(action==='insights-tab'){if(id==='touch'||INSIGHT_TABS.some(t=>t.id===id)){tab='insights';calmNavGroup='insights';if(id==='places'&&insightTab!=='places')insightPeriod='all';insightTab=id;render();if(id==='focus'&&authToken){reloadWatchSessions().catch(()=>{});}}return;}
     if(action==='sports-mode'){if(SPORTS_MODES.some(([v])=>v===id)){sportsMode=id;sportsAnchor=localDate();render();}return;}
     if(action==='sports-shift'){if(['-1','1'].includes(id)&&sportsMode!=='all'){sportsAnchor=sportsShiftAnchor(sportsMode,sportsAnchor,Number(id),localDate());render();}return;}
     if(action==='sports-metric'){if(['time','count','distance'].includes(id)){sportsMetric=id;render();}return;}

@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {TOUCH_KINDS,putTouch,deleteTouch,mergeTouchJournal,touchEntries,touchHistoryView} from '../client/src/touch-journal-v577.js';
+import {FOOD_PRESETS,addNutrition,nutritionKcalEstimate,mergeJournalData} from '../client/src/personal-journal-v5692.js';
+import {nutritionDailyHistory,nutritionHistoryView} from '../client/src/nutrition-history-v577.js';
+test('drink presets incl energy',()=>{for(const id of ['aperol-spritz','red-wine','white-wine','whiskey']){const x=FOOD_PRESETS.find(f=>f.id===id);assert.ok(x);assert.ok(x.kcalHigh>x.kcalLow)}});
+test('touch lifecycle and deletion',()=>{const s={};const a=putTouch(s,{kind:'hug',at:'2026-10-22T12:00:00.000Z'});assert.equal(touchEntries(s).length,1);assert.match(touchHistoryView(s,{period:90}),/Umarmung/);deleteTouch(s,a.id);assert.equal(touchEntries(s).length,0)});
+test('touch encrypted-journal merge respects tombstone',()=>{const a={touchJournal:{entries:[{id:'a',kind:'hug',at:'2026-10-22T12:00:00Z',updatedAt:'2026-10-22T12:01:00Z'}]}};const b={touchJournal:{entries:[{id:'a',kind:'hug',at:'2026-10-22T12:00:00Z',updatedAt:'2026-10-22T12:02:00Z',deleted:true}]}};assert.equal(mergeJournalData(a,b).touchJournal.entries[0].deleted,true)});
+test('nutrition day ranges and missing records',()=>{const s={};addNutrition(s,{id:'a',foodId:'whiskey',at:'2026-10-22T12:00:00.000Z'});const rows=nutritionDailyHistory(s,{period:7,now:new Date('2026-10-22T18:00:00Z')});assert.equal(rows[0].known,1);assert.equal(rows[1].known,0);assert.match(nutritionHistoryView(s,{period:7,now:new Date('2026-10-22T18:00:00Z')}),/Tagesverlauf/)});

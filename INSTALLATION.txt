@@ -1,0 +1,15 @@
+Compass 0.5.76.1 | Basis 0.5.76
+
+PATCH: Dateien aus dem ZIP mit denselben Pfaden in GitHub hochladen (Upload files). Bereits vorhandene Dateien überschreiben. Es gibt KEIN Apply-Skript.
+
+Wichtig: FULL-SOURCE bezeichnet in dieser Ausgabe den vollständigen Quelltext der tatsächlich geänderten Dateien plus neue Module, NICHT die gesamte App. Die unveränderten Dateien bleiben im GitHub-Repository erhalten.
+
+Geänderte Dateien:
+client/src/main.js
+client/src/personal-journal-v5692.js
+Neue Dateien:
+client/src/nutrition-history-v577.js
+client/src/touch-journal-v577.js
+client/src/nutrition-touch-v577.css
+
+Keine Worker-Migration. Vite laden/Cloudflare Pages builden wie bisher.
