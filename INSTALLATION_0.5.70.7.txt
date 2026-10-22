@@ -1,0 +1,22 @@
+Compass 0.5.70.7 – Heute-Fokus-Inspector
+========================================
+
+PATCH (von 0.5.70.6):
+1. Optional ein verschlüsseltes Vault-Backup erstellen; keine Datenmigration notwendig.
+2. Inhalt von Compass_0.5.70.7_PATCH_FROM_0.5.70.6.zip ins GitHub-Repository im Root entpacken; vorhandene Dateien überschreiben.
+3. Änderungen nach main committen und Deploy Compass Web auf grün prüfen.
+4. Browser/PWA neu starten und prüfen, dass Compass 0.5.70.7 angezeigt wird.
+
+FULL SOURCE:
+Compass_0.5.70.7_FULL_SOURCE.zip enthält das vollständige Repository-Quellpaket.
+
+SMOKE TEST:
+- Heute öffnen: rechts nur „Was passt jetzt?“ (ohne leeren Aufgaben-Inspector und andere Extrakarten).
+- Ein To-do in „Meine Aufgaben für heute“ anklicken: rechts nur Inspector.
+- X oben im Inspector anklicken: rechts wieder „Was passt jetzt?“.
+- Anderes To-do wählen, schließen und erneut öffnen.
+- Aufgabe im Inspector bearbeiten und speichern; der Inspector bleibt verfügbar.
+- Smartphone: Tippen auf To-do bringt den Inspector in Sichtweite; Schließen zeigt wieder Vorschläge.
+
+Keine D1-Migration, kein Worker-Update.
+Vite/Browser-E2E nicht verifiziert; Node-Tests grün.

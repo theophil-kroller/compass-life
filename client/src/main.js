@@ -90,7 +90,7 @@ import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.70.6';
+const COMPASS_CLIENT_VERSION='0.5.70.7';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -100,6 +100,7 @@ let selectedDay=localDateString(new Date());
 let selectedInboxId=null;
 let selectedDreamId=null;
 let selectedTaskId=null;
+let todayInspectorOpen=false;
 let inlineEditingTaskId=null;
 let selectedProjectId=null;
 let exchangePreview=null;
@@ -909,11 +910,7 @@ function todayWork(locked=false){
  <div class="capture-inline"><form id="capture-form"><label class="sr-only" for="capture">Schnell in die Inbox erfassen</label><input id="capture" name="title" maxlength="1000" required placeholder="Gedanken sofort in der Inbox festhalten …" ${locked?'disabled':''}/><button type="submit" class="primary-btn" ${locked?'disabled':''}>${ico('plus',17)} Erfassen</button></form><small>Inbox bleibt ein eigener Eingang; eine Aufgabe erhält bewusst ein Datum.</small></div></section>
  <div class="below-today"><section class="work-card deadline-card"><div class="work-heading"><span>${ico('flag',18)} Fristen & Vorausschau</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">${dueTasks(state,4).map(t=>`<div class="deadline-inline"><strong>${h(t.dueDate)}</strong> ${h(t.title)}</div>`).join('')||'Noch keine offenen Deadlines erfasst.'}</div></section>
  <section class="work-card review-card"><div class="work-heading"><span>${ico('sync',18)} Review</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">${gtdTodaySummary()}</div></section></div>
- </div><aside class="inspector-rail" aria-label="Aufgabendetails und Personen-Kontext">${todaySmartPanel()}<section class="work-card inspector-card"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabendetails</span><span class="quiet-tag">Planung</span></div>
- ${taskEditor()}
- <div class="inspector-other"><span>Projekt</span><b>–</b><span>Kontext</span><b>–</b><span>Personen</span><b>–</b><span>Aufwand</span><b>–</b></div></section>
- <section class="work-card person-preview"><div class="work-heading"><span>${ico('people',18)} Offene Gesprächsthemen</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">Person auswählen → alle offenen Agenda-Punkte sehen. Personen-Agendas folgen im GTD-Ausbau.</div></section>
- <button type="button" class="overview-nudge" data-tab="overview">${ico('layers',17)} Große Übersicht ansehen ${ico('arrow',14)}</button></aside></div>`;
+ </div><aside class="inspector-rail today-context-rail" aria-label="${todayInspectorOpen?'Aufgaben-Inspector':'Was passt jetzt?'}">${todayInspectorOpen&&state?.tasks?.[selectedTaskId]&&!state.tasks[selectedTaskId].archived?`<section class="work-card inspector-card today-focus-inspector"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabe bearbeiten</span><button type="button" class="today-inspector-close" data-action="today-inspector-close" title="Inspector schließen" aria-label="Inspector schließen – Was passt jetzt? anzeigen">${ico('x',17)}</button></div>${taskEditor()}</section>`:todaySmartPanel()}</aside></div>`;
 }
 function radarScreen(){
  const forecast=localCapacity(localDate(),30);
@@ -1811,7 +1808,7 @@ function bind() {
  if(state)wireSmartTags(app,()=>state);
  if(tab==='finance'&&financePane==='Portfolio'&&krakenChartData?.candles?.length)app.querySelectorAll('.fin39-price-card .fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,krakenChartData.candles,krakenChartSettings));
  if(tab==='finance'&&financePane==='Portfolio'&&flatexChartData?.candles?.length)app.querySelectorAll('.fin41-market-card .fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,flatexChartData.candles,{...flatexChartSettings,currency:flatexChartData.currency}));
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=ev=>{ev?.preventDefault?.();const target=el.dataset.tab;if(!target)return;tab=target;calmNavGroup=['overview','projects','templates','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':['insights','activity','progress','recovery'].includes(tab)?'insights':'';if(tab==='finance')calmNavGroup='finance';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery'||tab==='insights')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=ev=>{ev?.preventDefault?.();const target=el.dataset.tab;if(!target)return;if(target==='today')todayInspectorOpen=false;tab=target;calmNavGroup=['overview','projects','templates','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':['insights','activity','progress','recovery'].includes(tab)?'insights':'';if(tab==='finance')calmNavGroup='finance';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();if((tab==='activity'||tab==='overview'||tab==='progress'||tab==='recovery'||tab==='insights')&&authToken)reloadWatchSessions().catch(()=>{});if((tab==='progress'||tab==='recovery'||tab==='insights')&&authToken){reloadHealth().catch(()=>{});reloadWidgetDevices().catch(()=>{});}});
   const balanceGoalsForm=app.querySelector('#lbr63-goals-form');
   if(balanceGoalsForm)balanceGoalsForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(balanceGoalsForm);const values=validateBalanceGoals({sleepMinutes:Number(fd.get('sleepHours'))*60,stepsDaily:Number(fd.get('stepsDaily')),weeklyHours:Number(fd.get('weeklyHours')),weightKg:String(fd.get('weightKg')||''),bodyFatTargetPct:String(fd.get('bodyFatTargetPct')||'')});await mutate(s=>{s.lifeBalanceGoals=values;});toast('Persönliche Richtwerte im Vault gespeichert.');}catch(ex){toast(ex.message,true);}};
   const morningForm=app.querySelector('#mm570-settings-form');if(morningForm)morningForm.onsubmit=async ev=>{
@@ -3027,7 +3024,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!validLocalTask(t)){toast('Eintrag konnte nicht aktiviert werden.',true);return;}
       await mutate(s=>{s.tasks[t.id]=t;s.taskPending[t.id]=true;const dream=s.records[id];dream.deleted=true;dream.updatedAt=stamp();s.pending.push(makeMutation(dream));});selectedDreamId=null;selectedTaskId=t.id;tab='next';toast('Dream als Next Action aktiviert.');return;
     }
-    if(action==='task-view'){const t=state?.tasks?.[id];if(!t)return;selectedTaskId=id;selectedDay=t.dueDate||t.plannedDate||localDate();tab='today';render();return;}
+    if(action==='task-view'){const t=state?.tasks?.[id];if(!t)return;selectedTaskId=id;selectedDay=t.dueDate||t.plannedDate||localDate();tab='today';todayInspectorOpen=true;render();return;}
     if(action==='timeline-horizon'){const n=Number(id);if([14,30,90].includes(n)){overviewHorizon=n;overviewWeek=0;selectedTimelineDay='';render();}return;}
     if(action==='timeline-week-next'||action==='timeline-week-prev'){overviewWeek=Math.max(0,Math.min(Math.ceil(overviewHorizon/7)-1,overviewWeek+(action==='timeline-week-next'?1:-1)));selectedTimelineDay='';render();return;}
     if(action==='timeline-day'){const today=localDate(),first=shiftDay(today,overviewWeek*7),last=shiftDay(first,Math.min(7,overviewHorizon-overviewWeek*7)-1);if(id>=first&&id<=last){selectedTimelineDay=id;render();}return;}
@@ -3223,8 +3220,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       captureOverlayOpen=true;render();return;
     }
     if(action==='capture-close'||action==='capture-close-backdrop'){captureOverlayOpen=false;render();return;}
-    if(action==='select-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;selectedDay=id;calendarMonth=new Date(`${id}T12:00:00`);render();return;}
-    if(action==='reset-today'){selectedDay=localDateString(new Date());calendarMonth=new Date();render();return;}
+    if(action==='select-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;selectedDay=id;todayInspectorOpen=false;calendarMonth=new Date(`${id}T12:00:00`);render();return;}
+    if(action==='reset-today'){selectedDay=localDateString(new Date());todayInspectorOpen=false;calendarMonth=new Date();render();return;}
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
     if(action==='weather-city'){const city=prompt('Stadt für Wetteranzeige',weather.city);if(city?.trim())await loadWeather(city.trim().slice(0,100));return;}
@@ -3579,7 +3576,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(title!==existing.title){await mutate(s=>{s.tasks[id].title=title;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});}
       inlineEditingTaskId=null;render();return;
     }
-    if(action==='task-select'){if(!state?.tasks?.[id])return;selectedTaskId=id;render();return;}
+    if(action==='task-select'){if(!state?.tasks?.[id])return;selectedTaskId=id;if(tab==='today')todayInspectorOpen=true;render();if(tab==='today'&&window.matchMedia?.('(max-width:800px)')?.matches)requestAnimationFrame(()=>app.querySelector('.today-focus-inspector')?.scrollIntoView?.({behavior:'smooth',block:'start'}));return;}
+    if(action==='today-inspector-close'){todayInspectorOpen=false;selectedTaskId=null;render();return;}
     if(action==='flag-existing'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].flagged=true;s.taskPending??={};s.taskPending[id]=true;});return;}
     if(action==='inbox-flag'){const r=state?.records?.[id];if(!r||r.deleted||r.tags?.includes('dreams'))return;let tags;try{tags=setInboxFlag(r.tags,!inboxFlagged(r));}catch(ex){toast(ex.message,true);return;}selectedInboxId=id;await mutate(s=>{const record=s.records[id];record.tags=tags;record.updatedAt=stamp();s.pending.push(makeMutation(record));});return;}
     if(action==='task-progress-plus'||action==='task-progress-minus'){
@@ -3592,7 +3590,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     }
     if(action==='task-flag'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].flagged=!s.tasks[id].flagged;s.taskPending[id]=true;});return;}
     if(action==='task-toggle'){if(!state?.tasks?.[id])return;if(state.projects?.[state.tasks[id].projectId]?.isTemplate){toast('Vorlage bleibt unverändert. Erstelle eine neue Liste daraus.');return;}await mutate(s=>{s.tasks[id].completed=!s.tasks[id].completed;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});return;}
-    if(action==='task-archive'){if(!confirm('Aufgabe archivieren?'))return;await mutate(s=>{s.tasks[id].archived=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});selectedTaskId=null;return;}
+    if(action==='task-archive'){if(!confirm('Aufgabe archivieren?'))return;await mutate(s=>{s.tasks[id].archived=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});selectedTaskId=null;todayInspectorOpen=false;return;}
     if(action==='task-conflict-local'||action==='task-conflict-remote'){
        const conflict=state.taskConflicts[id];if(!conflict)return;
        await mutate(s=>{if(action==='task-conflict-remote'&&conflict.remote){s.tasks[id]=conflict.remote;s.taskVersions[id]=conflict.remote.version;delete s.taskPending[id];}

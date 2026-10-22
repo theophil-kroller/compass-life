@@ -2995,3 +2995,11 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
  .fw705-node{position:static;left:auto;top:auto;transform:none;max-width:none;min-width:unset;min-height:36px;padding:9px 12px;font-size:.82rem}
  .fw705-node:hover{transform:none}
 }
+
+/* 0.5.70.7 — Heute: nur der ausgewählte Inspector ODER „Was passt jetzt?“ */
+.today-context-rail{min-width:0}
+.today-focus-inspector{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.today-focus-inspector .work-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.today-inspector-close{width:32px;height:32px;min-width:32px;display:grid;place-items:center;border:1px solid #d7e4da;border-radius:10px;background:#fff;color:#315947;cursor:pointer;padding:0}
+.today-inspector-close:hover,.today-inspector-close:focus-visible{background:#eef5ef;border-color:#9bb9a7}
+@media(max-width:800px){.today-focus-inspector{scroll-margin-top:18px}.today-context-rail{width:100%;display:flex;flex-direction:column}}
