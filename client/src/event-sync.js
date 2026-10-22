@@ -1,11 +1,30 @@
 // Durable event synchronization state. Each local change is retained until the server confirms it.
 import {eventKey,validEvent} from './event-import.js';
+export const CINEMA_EVENT_CATEGORIES=Object.freeze(['Kino','Filmfestival']);
+export const isCinemaEvent=e=>CINEMA_EVENT_CATEGORIES.includes(e?.category);
 const dayOffset=(day,n)=>{const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
 export function eventState(s){s.discoveredEvents??=[];s.eventPreferences??={};s.eventVersions??={};s.eventPending??={};s.eventDeleted??={};s.eventConflicts??={};return s;}
 export function queueEvent(s,e){eventState(s);const k=eventKey(e);if(!validEvent(e))throw Error('Ungültige Veranstaltung');const i=s.discoveredEvents.findIndex(x=>eventKey(x)===k);if(i<0)s.discoveredEvents.push(e);else s.discoveredEvents[i]=e;delete s.eventDeleted[k];s.eventPending[k]=true;return k;}
 export function queueEventPreference(s,k,status){eventState(s);if(!['open','saved','hidden'].includes(status))throw Error('Ungültiger Status');if(!s.discoveredEvents.some(e=>eventKey(e)===k))throw Error('Event nicht vorhanden');if(status==='open')delete s.eventPreferences[k];else s.eventPreferences[k]=status;s.eventPending[k]=true;}
+/** Delete only cinema screenings, never concerts, cabaret, sport, workshops or other events.
+ * Uses the same durable cloud tombstones as the existing 'remove all' function.
+ * Explicitly removes saved cinema screenings too: the UI must warn before confirming.
+ */
+export function removeCinemaEvents(s){
+ eventState(s);let removed=0,saved=0;const retained=[];
+ for(const e of s.discoveredEvents){
+  if(!isCinemaEvent(e)){retained.push(e);continue;}
+  const k=eventKey(e);if(s.eventPreferences[k]==='saved')saved++;
+  // Explicit cinema reset also resolves an outstanding cloud conflict in favor of deletion.
+  const remoteVersion=s.eventConflicts[k]?.remote?.version;
+  if(Number.isSafeInteger(remoteVersion)&&remoteVersion>=0)s.eventVersions[k]=remoteVersion;
+  delete s.eventConflicts[k];
+  s.eventDeleted[k]=true;s.eventPending[k]=true;delete s.eventPreferences[k];removed++;
+ }
+ s.discoveredEvents=retained;return {removed,saved};
+}
 export function removeEvents(s){eventState(s);for(const e of s.discoveredEvents){const k=eventKey(e);s.eventDeleted[k]=true;s.eventPending[k]=true;delete s.eventPreferences[k];}s.discoveredEvents=[];}
-export function prunePastEvents(s,today,grace=14){eventState(s);const cutoff=dayOffset(today,-grace);let removed=0;for(const e of [...s.discoveredEvents]){const k=eventKey(e),end=e.endDate||e.date;if(end<cutoff&&s.eventPreferences[k]!=='saved'&&!s.eventConflicts[k]){s.eventDeleted[k]=true;s.eventPending[k]=true;s.discoveredEvents=s.discoveredEvents.filter(x=>eventKey(x)!==k);delete s.eventPreferences[k];removed++;}}return removed;}
+export function prunePastEvents(s,today,grace=14){eventState(s);const cutoff=dayOffset(today,-grace);const cinemaCutoff=dayOffset(today,-7);let removed=0;for(const e of [...s.discoveredEvents]){const k=eventKey(e),end=e.endDate||e.date;if(end<(isCinemaEvent(e)?cinemaCutoff:cutoff)&&s.eventPreferences[k]!=='saved'&&!s.eventConflicts[k]){s.eventDeleted[k]=true;s.eventPending[k]=true;s.discoveredEvents=s.discoveredEvents.filter(x=>eventKey(x)!==k);delete s.eventPreferences[k];removed++;}}return removed;}
 export function pendingEventBatch(s,n=25){eventState(s);return Object.keys(s.eventPending).filter(k=>!s.eventConflicts[k]).slice(0,n).flatMap(k=>{const event=s.discoveredEvents.find(x=>eventKey(x)===k);if(!event&&!s.eventDeleted[k])return [];return [{key:k,event:event||null,removed:!!s.eventDeleted[k],status:s.eventPreferences[k]||'open',baseVersion:s.eventVersions[k]||0}];});}
 export function acknowledgeEventBatch(s,batch,response){eventState(s);for(const x of response.results||[]){const sent=batch.find(y=>y.key===x.key);if(!sent)continue;if(x.status==='applied'||x.status==='unchanged'){
   s.eventVersions[x.key]=x.version;

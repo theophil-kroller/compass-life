@@ -1,0 +1,32 @@
+Compass 0.5.77.4 – Nur Kinoprogramm löschen / sauber neu importieren
+===================================================================
+
+BASIS: Compass 0.5.77.3
+
+PATCH:
+1. Vorher optional ein verschlüsseltes Tresor-Backup sichern.
+2. ZIP Compass_0.5.77.4_PATCH_FROM_0.5.77.3.zip ins STAMMVERZEICHNIS des GitHub-Repositories entpacken.
+3. Ordnerstruktur client/, tests/ beibehalten, vorhandene Dateien überschreiben.
+4. Änderungen committen, GitHub-Actions-Workflow abwarten, Compass neu laden.
+5. Versionsanzeige auf 0.5.77.4 prüfen.
+
+FULL SOURCE:
+Compass_0.5.77.4_FULL_SOURCE.zip enthält den vollständigen, konsolidierten Source-Stand einschließlich 0.5.77.3.
+
+SO GEHT DER KINO-NEUIMPORT:
+1. Insights > Erholung > Kinoprogramm öffnen.
+2. „🎬 Nur Kino löschen (N)“ klicken. Der Dialog nennt die Zahl der Filme und Vorführungen sowie eventuell gemerkte Vorführungen. Nur bei Zustimmung löschen.
+3. Auf andere Kategorien gehen: Konzerte, Workshops etc. müssen erhalten geblieben sein.
+4. „Kinoprogramm komplett“ anklicken, Rechercheprompt in ChatGPT verwenden und das neue JSON in Compass einsetzen.
+5. „Import prüfen“ zeigt Filmtitel, Vorführungen, Poster-URLs und aussagekräftige Inhaltsbeschreibungen. Falls 0 Poster angegeben sind, vor dem Import prüfen und ggf. nachrecherchieren.
+6. Import bestätigen. Mit Poster- und Tagesansicht kontrollieren.
+
+WICHTIG:
+* „Alle Veranstaltungen löschen“ existiert weiterhin, ist aber getrennt und löscht alles.
+* Kino-Löschen entfernt auch GEMERKTE Kinovorführungen (wird vor der Bestätigung explizit angezeigt).
+* Cloud-Sync verarbeitet die Löschung in bestehenden Versionen/Batches; bei Offlinebetrieb erst nach erneuter Verbindung.
+* Bilder werden NICHT selbstständig recherchiert. Ohne echte imageUrl bleiben 🎬-Platzhalter sichtbar.
+* Abgelaufene ungemerkte Kinovorführungen werden nach 7 Tagen automatisch ausgeblendet/aus aktiver Datenhaltung entfernt; Event-Tombstones in D1 bleiben für Sync erhalten.
+* Keine D1-Migration oder Worker-Änderung.
+
+VALIDIERUNG: 823/823 Tests; Worker-Syntaxcheck grün. Vite-Production-Build und visueller Test in Zielumgebung über GitHub Actions/Browser erforderlich.
