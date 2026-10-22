@@ -64,7 +64,7 @@ test('script does not pass health or Google titles to server; tab is wired as li
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.\d+(?:\.\d+)*'/);
  assert.match(source,/insightTab==='focus'\?productivityInsightsView/);
- assert.match(source,/start\.setDate\(start\.getDate\(\)-90\)/);
+ assert.match(source,/calendarFetchWindows\(state\.calendarArchive,state\.healthImports/);
  assert.match(source,/calendarCoverage=/);
  assert.equal(INSIGHT_TABS.find(t=>t.id==='focus').state,'live');
 });

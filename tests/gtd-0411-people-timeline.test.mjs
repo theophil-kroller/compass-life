@@ -1,3 +1,5 @@
+import * as habitSync5731 from '../client/src/habit-device-sync-v5731.js';
+import * as calendarCache574 from '../client/src/calendar-cache-v574.js';
 import * as contactCare568 from '../client/src/relationship-intelligence-v568.js';
 import * as calendarSuggestions568 from '../client/src/calendar-intelligence-v568.js';
 import * as feelingWheel65 from '../client/src/feeling-wheel-v565.js';
@@ -40,6 +42,7 @@ function setup(){
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const ctx={document,window:{addEventListener:()=>{}},location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(Error('offline')),setTimeout,clearTimeout};
  Object.assign(ctx,lifeBalance63,radar555,dailyPlanning,capacity,deadline,projectExchange,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,relationships,relationshipRadar,feelingWheel65,contactCare568,calendarSuggestions568);
+ Object.assign(ctx,habitSync5731,calendarCache574);
  ctx.technicalSettings=technicalSettings;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
  runInNewContext(compiled,ctx,{filename:'browser-ui-smoke.js',timeout:2000});

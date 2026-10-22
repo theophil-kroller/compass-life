@@ -1,3 +1,5 @@
+import * as habitSync5731 from '../client/src/habit-device-sync-v5731.js';
+import * as calendarCache574 from '../client/src/calendar-cache-v574.js';
 import * as contactCare568 from '../client/src/relationship-intelligence-v568.js';
 import * as calendarSuggestions568 from '../client/src/calendar-intelligence-v568.js';
 import * as feelingWheel65 from '../client/src/feeling-wheel-v565.js';
@@ -56,6 +58,7 @@ function context(){
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
+ Object.assign(ctx,habitSync5731,calendarCache574);
  Object.assign(ctx,smartImportHubModule,healthCoverage494,timeoff554,radar555,lifeBalance63,feelingWheel65);
  // Avoid timers, network, browser listeners: HTML view rendering and actions only.
  runInNewContext(compiled,ctx,{filename:'compass-main-browser-smoke.js',timeout:2000});

@@ -52,5 +52,5 @@ test('UI sends & receives Habits and exposes sync status',()=>{
  assert.match(src,/if\(m\.habitsQuick\)st\.habitsQuick=m\.habitsQuick/);
  assert.match(src,/s\?\.habitsQuick\|\|null/);
  assert.match(src,/const row=\{habitId,day,done:done===true,doneAt\}/);
- assert.match(src,/Habits, Zeitjournal & Ernährung/);
+ assert.match(src,/Habits, Zeitjournal, Ernährung & Kalender/);
 });

@@ -52,6 +52,7 @@ import {fetchTwelveDataQuote} from './finance-market-v36.js';
 import {fetchFlatexMarketHistory} from './flatex-market-history-v41.js';
 import {putBudgetEntry,putSavingsGoal,validateSavingsGoal,flexBudgetModel} from './finance-flex-budget-v30.js';
 import {PRIVATE_KINDS,privateSection,privateChanged,applyPrivateSection,newSalt,syncKeyFromPhrase,encryptSection,decryptSection} from './private-device-sync-v30.js';
+import {applyCalendarWindow,visibleCachedCalendar,calendarFetchWindows,shiftCalendarDay,normalizeCalendarArchive} from './calendar-cache-v574.js';
 import {privateMirrorNeedsChunks,privateMirrorParts,joinMirrorParts} from './private-device-chunks-v552.js';
 import {financeMerchantEdit} from './finance-merchant-editor.js';
 import {addWealthSnapshot} from './finance-wealth-consolidation.js';
@@ -95,7 +96,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.73.1';
+const COMPASS_CLIENT_VERSION='0.5.74';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -175,7 +176,7 @@ let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
 let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLastConfirmedAt=0;
-function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null]);}
+function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null]);}
 function scheduleJournalSync(delay=0){
  clearTimeout(journalSyncTimer);journalSyncTimer=null;
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
@@ -361,19 +362,33 @@ const discoveryExpandedDays=new Set();
 // Calendar OAuth is independent from Compass login; token stays in RAM only.
 let calendarToken='', calendarExpires=0, calendarEvents=[], calendarStatus='Nicht verbunden', calendarBusy=false;
 let calendarUpdatedAt=0,calendarCoverage=null;
+let calendarIndex=null,calendarIndexedArray=null;
+function restoreCalendarFromVault(st){
+ const archive=normalizeCalendarArchive(st?.calendarArchive);
+ calendarEvents=visibleCachedCalendar(archive);calendarIndex=null;calendarIndexedArray=null;
+ calendarUpdatedAt=Date.parse(archive.updatedAt)||0;calendarCoverage=archive.completed?{complete:true,start:archive.start,end:archive.end}:null;
+ if(calendarEvents.length)calendarStatus=`${calendarEvents.length} gespeicherte Termine · Stand ${new Date(calendarUpdatedAt).toLocaleDateString('de-AT')}`;
+}
+function indexedCalendarDay(day){
+ if(calendarIndexedArray!==calendarEvents){calendarIndex=new Map();calendarIndexedArray=calendarEvents;
+  for(const event of calendarEvents){const date=calendarDate(event);if(!calendarIndex.has(date))calendarIndex.set(date,[]);calendarIndex.get(date).push(event);}
+  for(const items of calendarIndex.values())items.sort((a,b)=>(a.start?.dateTime||a.start?.date||'').localeCompare(b.start?.dateTime||b.start?.date||''));
+ }
+ return calendarIndex.get(day)||[];
+}
 const CAL_SCOPE='https://www.googleapis.com/auth/calendar.events.readonly';
 function calendarDate(e){
  const value=e?.start?.dateTime;
  if(value){try{return localDateString(new Date(value));}catch{}}
  return (e?.start?.date||'').slice(0,10);
 }
-function dailyCalendar(day){return calendarEvents.filter(e=>calendarDate(e)===day&&e.status!=='cancelled').sort((a,b)=>(a.start?.dateTime||a.start?.date||'').localeCompare(b.start?.dateTime||b.start?.date||''));}
+function dailyCalendar(day){return indexedCalendarDay(day);}
 function calendarTime(e){
  const t=e?.start?.dateTime;
  if(!t)return 'Ganztägig';
  try{return new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit'}).format(new Date(t));}catch{return 'Termin';}
 }
-function visibleCalendarEvents(day){return visibleCalendarEventsForDay(calendarEvents,day,effectiveCalendarRules(state),state?.calendarOverrides||{},showHiddenCalendarEvents,showCalendarBlocks);}
+function visibleCalendarEvents(day){return visibleCalendarEventsForDay(indexedCalendarDay(day),day,effectiveCalendarRules(state),state?.calendarOverrides||{},showHiddenCalendarEvents,showCalendarBlocks);}
 function isRoutineBlock(e){return isRoutineCalendarBlock(e);}
 function eventAppearance(e){return classifyCalendarEvent(e,effectiveCalendarRules(state),state?.calendarOverrides||{});}
 function recoveryEvents(day){return visibleCalendarEvents(day).filter(e=>eventAppearance(e).category==='Erholung');}
@@ -411,34 +426,48 @@ function calendarConnectUI(){
  if(calendarBusy)return '<span class="calendar-connection">Google Calendar wird geladen …</span>';
  return calendarToken&&Date.now()<calendarExpires
   ?`<button type="button" class="secondary-btn" data-action="calendar-refresh">${ico('sync',15)} Kalender aktualisieren</button>`
-  :`<button type="button" class="secondary-btn" data-action="calendar-connect">${ico('calendar',15)} Google Calendar verbinden (nur lesen)</button>`;
+  :`<button type="button" class="secondary-btn" data-action="calendar-connect">${ico('calendar',15)} ${calendarEvents.length?'Kalender aktualisieren':'Google Calendar verbinden'} (Google-Freigabe)</button>`;
+}
+async function fetchGoogleCalendarWindow(startDay,endDay,signal){
+ const url=new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+ url.searchParams.set('timeMin',`${startDay}T00:00:00Z`);
+ url.searchParams.set('timeMax',`${endDay}T00:00:00Z`);
+ url.searchParams.set('singleEvents','true');url.searchParams.set('maxResults','2500');
+ const rows=[];let token='';
+ // Page all results; partial pages must never replace a complete archive.
+ for(let page=0;page<40;page++){
+  if(token)url.searchParams.set('pageToken',token);else url.searchParams.delete('pageToken');
+  const resp=await fetch(url,{headers:{Authorization:`Bearer ${calendarToken}`},cache:'no-store',signal});
+  if(!resp.ok)throw new Error(resp.status===403?'Google Calendar verweigert den Abruf. Berechtigung prüfen.':`Google Calendar HTTP ${resp.status}`);
+  const data=await resp.json();rows.push(...(Array.isArray(data.items)?data.items:[]));
+  token=data.nextPageToken||'';if(!token)return rows;
+ }
+ throw new Error('Kalender hat zu viele Seiten: Import unvollständig, kein Überschreiben.');
 }
 async function fetchCalendar(){
- if(!calendarToken||Date.now()>=calendarExpires)throw new Error('Kalenderfreigabe abgelaufen. Bitte erneut verbinden.');
+ if(!state)return toast('Zum Speichern des Kalenders bitte zuerst den Tresor entsperren.',true);
+ if(!calendarToken||Date.now()>=calendarExpires)throw new Error('Kalenderfreigabe abgelaufen. Gespeicherte Termine bleiben verfügbar.');
  if(calendarBusy)return;
- calendarBusy=true;calendarStatus='Lädt …';render();
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),18000);
+ calendarBusy=true;calendarStatus='Kalender wird abgeglichen …';render();
+ const controller=new AbortController();
  try{
-   const start=new Date();start.setHours(0,0,0,0);start.setDate(start.getDate()-90);
-   const end=new Date();end.setHours(0,0,0,0);end.setDate(end.getDate()+90);
-   const url=new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
-   url.searchParams.set('timeMin',start.toISOString());url.searchParams.set('timeMax',end.toISOString());
-   url.searchParams.set('singleEvents','true');url.searchParams.set('orderBy','startTime');
-   url.searchParams.set('maxResults','200');
-   const loaded=[];let pageToken='';
-   for(let page=0;page<5;page++){
-     if(pageToken)url.searchParams.set('pageToken',pageToken);else url.searchParams.delete('pageToken');
-     const response=await fetch(url,{headers:{Authorization:`Bearer ${calendarToken}`},signal:controller.signal,cache:'no-store'});
-     if(!response.ok)throw new Error(response.status===403?'Google Calendar API oder Berechtigung fehlt. Bitte Calendar API im Google-Cloud-Projekt aktivieren.':`Google Calendar: HTTP ${response.status}`);
-     const data=await response.json();
-     loaded.push(...(Array.isArray(data.items)?data.items.filter(x=>x&&x.start):[]));
-     pageToken=data.nextPageToken||'';if(!pageToken)break;
-   }
-   calendarEvents=loaded;
-   calendarCoverage={complete:!pageToken,start:[start.getFullYear(),String(start.getMonth()+1).padStart(2,'0'),String(start.getDate()).padStart(2,'0')].join('-'),end:[end.getFullYear(),String(end.getMonth()+1).padStart(2,'0'),String(end.getDate()).padStart(2,'0')].join('-')};
-   calendarUpdatedAt=Date.now();calendarStatus=`${calendarEvents.length} Kalendertermine geladen${pageToken?' (mehr vorhanden; Zeitraum unvollständig)':''}`;
- }catch(ex){calendarStatus=ex.name==='AbortError'?'Kalenderanfrage hat zu lange gedauert.':ex.message;}
- finally{clearTimeout(timeout);calendarBusy=false;render();}
+  const today=localDate(),windows=calendarFetchWindows(state.calendarArchive,state.healthImports||{},today);
+  let updated=state.calendarArchive||null;
+  for(let i=0;i<windows.length;i++){
+   if(Date.now()>=calendarExpires)throw new Error('Google-Zugriff abgelaufen. Erneute Freigabe für weitere Aktualisierung nötig.');
+   const w=windows[i];calendarStatus=`Kalender: Abschnitt ${i+1}/${windows.length} …`;
+   const rows=await fetchGoogleCalendarWindow(w.start,w.end,controller.signal);
+   updated=applyCalendarWindow(updated,rows,{start:w.start,end:w.end,seenAt:stamp()});
+   // A partial initial history remains incomplete until ALL windows succeed.
+   updated.completed=Boolean(state.calendarArchive?.completed);
+   await mutate(st=>{st.calendarArchive=updated;});
+  }
+  if(windows.length){updated={...updated,completed:true};await mutate(st=>{st.calendarArchive=updated;});}
+  restoreCalendarFromVault(state);
+  if(!windows.length)calendarStatus='Kalender vollständig aus dem Tresor verfügbar.';
+  else calendarStatus=`${calendarEvents.length} Termine verschlüsselt gesichert · ${windows.length} Zeitfenster überprüft`;
+ }catch(ex){restoreCalendarFromVault(state);calendarStatus='Kalenderabgleich unvollständig · gespeicherte Termine bleiben erhalten: '+String(ex.message||ex);}
+ finally{calendarBusy=false;render();}
 }
 async function connectCalendar(){
  await ensureGoogle();
@@ -449,7 +478,7 @@ async function connectCalendar(){
    calendarExpires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
    await fetchCalendar();
  }});
- client.requestAccessToken({prompt:'consent'});
+ client.requestAccessToken({prompt:state?.calendarArchive?.completed?'':'consent'});
 }
 function watchOverview(){
  const sessions=activeActivities(watchSessions,state);
@@ -481,7 +510,7 @@ async function mutate(fn) {
   const previous=structuredClone(state);
   const journalBefore=journalFingerprint(state);
   try {
-    fn(state);
+    fn(state);invalidateDerivedInsights();
     if(privateChanged(previous,state)){
       if(state.privateDeviceMirror?.mode==='receiver')throw Error('Finanz- und importierte Sportdaten sind auf diesem Gerät im Lesemodus. Bitte Änderungen am Hauptgerät durchführen.');
       if(state.privateDeviceMirror?.mode==='source')state.privateDeviceMirror.dirty=true;
@@ -753,7 +782,7 @@ function habitQuickOverlay(){
 function nutritionQuickOverlay(){
  return `<div class="quick-panel-backdrop" data-action="pj92-food-close-backdrop"><section class="quick-panel pj92-food-panel" role="dialog" aria-modal="true" aria-labelledby="pj92-food-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ERNÄHRUNG · EIN TIPP GENÜGT</p><h2 id="pj92-food-title">Was gab es gerade?</h2></div><button type="button" class="capture-modal-close" data-action="pj92-food-close" aria-label="Ernährung schließen">${ico('x',18)}</button></div>${nutritionQuickView(state)}<button type="button" data-action="pj92-food-insights" class="secondary-btn">Ernährungstagebuch ansehen →</button>${!state?'<small>Ohne Entsperren: Einträge bleiben bis zum nächsten Entsperren nur auf diesem Gerät gespeichert.</small>':''}</section></div>`;
 }
-function journalSyncPanel(){const ready=Boolean(state?.privateDeviceMirror?.key&&authToken);return `<section class="work-card pj92-sync-status"><span>${ico('sync',16)} Habits, Zeitjournal & Ernährung: ${ready?journalSyncStatus==='ok'?'verschlüsselt abgeglichen ✓':journalSyncStatus==='abgleich'?'Abgleich läuft …':journalSyncStatus==='fehler'?'Abgleich fehlgeschlagen – erneut versuchen':'lokal gespeichert · Abgleich ausstehend':'nur lokal – Geräteabgleich einrichten'}</span>${ready?'<button type="button" class="secondary-btn" data-action="pj92-sync-now">Jetzt abgleichen</button>':'<button type="button" class="secondary-btn" data-tab="system">Geräteabgleich einrichten</button>'}</section>`;}
+function journalSyncPanel(){const ready=Boolean(state?.privateDeviceMirror?.key&&authToken);return `<section class="work-card pj92-sync-status"><span>${ico('sync',16)} Habits, Zeitjournal, Ernährung & Kalender: ${ready?journalSyncStatus==='ok'?'verschlüsselt abgeglichen ✓':journalSyncStatus==='abgleich'?'Abgleich läuft …':journalSyncStatus==='fehler'?'Abgleich fehlgeschlagen – erneut versuchen':'lokal gespeichert · Abgleich ausstehend':'nur lokal – Geräteabgleich einrichten'}</span>${ready?'<button type="button" class="secondary-btn" data-action="pj92-sync-now">Jetzt abgleichen</button>':'<button type="button" class="secondary-btn" data-tab="system">Geräteabgleich einrichten</button>'}</section>`;}
 function quickWorktimeInsights(){
  const sessions=worktimeSessionsForDay(state);const total=worktimeMinutesForDay(state);const weekTotal=[0,1,2,3,4,5,6].reduce((sum,offset)=>{const d=new Date(localDate()+'T12:00:00');d.setDate(d.getDate()-offset);return sum+worktimeMinutesForDay(state,localDateString(d));},0);
  return `<section class="work-card work569-insight-card"><div class="work-heading"><span>${ico('clock',18)} Tatsächliche Arbeitszeit</span><button type="button" class="secondary-btn" data-action="pj92-open-timejournal">Zeitjournal öffnen →</button></div><div class="work569-insight-grid"><div><small>Heute</small><strong>${formatMinutesCompact(total)}</strong></div><div><small>7 Tage</small><strong>${formatMinutesCompact(weekTotal)}</strong></div><div><small>Status</small><strong>${isWorktimeActive(state)?'Eingestempelt':'Nicht aktiv'}</strong></div></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Heute noch keine Arbeitsblöcke gestempelt.</p>'}</section>`;
@@ -818,7 +847,7 @@ function lifeGoalsPanel(){
  <details class="calm-create"><summary>${ico('plus',15)} Lebensziel anlegen</summary><form id="life-goal-form" class="v22-goal-form"><label>Zielname<input name="title" required maxlength="120" placeholder="Was möchte ich erreichen?"/></label><label>Gewünschtes Ergebnis<textarea name="outcome" maxlength="600" rows="2" placeholder="Woran erkenne ich den Fortschritt?"></textarea></label><label>Compass-Bereich<select name="area">${categoryOptions()}</select></label><label>7 Lebensbereiche (optional)<select name="lifeArea"><option value="">Ohne Zuordnung</option>${LIFE_AREAS.map(([key,label])=>`<option value="${key}">${h(label)}</option>`).join('')}</select></label><label>Erstes Projekt (optional)<select name="projectId">${projectOptions()}</select></label><label>Zieldatum (optional, keine Deadline)<input name="targetDate" type="date"/></label><button type="submit" class="primary-btn">Ziel speichern</button></form></details></details>`;
 }
 function localCapacity(startDay=localDateString(new Date()),days=14){
- return capacityForecast({events:calendarEvents,connected:!!(calendarToken&&Date.now()<calendarExpires),coverage:calendarCoverage,updatedAt:calendarUpdatedAt,now:new Date(),startDay,days,settings:state?.uiPreferences?.capacity||{}});
+ return capacityForecast({events:calendarEvents,connected:!!(calendarToken&&Date.now()<calendarExpires)||Boolean(state?.calendarArchive?.completed),coverage:calendarCoverage,updatedAt:calendarUpdatedAt,now:new Date(),startDay,days,settings:state?.uiPreferences?.capacity||{}});
 }
 function compactCapacityHint(day=selectedDay){
  const model=localCapacity(day,1);
@@ -1355,8 +1384,8 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st)};}
-function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.feelingCheckins=m.feelingCheckins;if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.feelingCheckins=m.feelingCheckins;if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
 async function syncPersonalJournal(){
  // One E2EE journal flight per device. Mutations during flight queue an immediate
  // follow-up instead of being hidden by a generic "synced" status.
@@ -1689,10 +1718,16 @@ function maybeAutoRefreshPublicKraken(){
 if(typeof setInterval==='function')setInterval(maybeAutoRefreshPublicKraken,60*1000);
 if(typeof setInterval==='function')setInterval(maybeAutoSyncKraken,15*60*1000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){maybeAutoSyncKraken();maybeAutoRefreshPublicKraken();}});
+let sleepMemo={data:null,period:'',today:'',value:null};
+function cachedSleepInsights(data,today,period){
+ if(sleepMemo.data===data&&sleepMemo.today===today&&sleepMemo.period===period)return sleepMemo.value;
+ const value=buildSleepInsights(data,today,period);sleepMemo={data,period,today,value};return value;
+}
+function invalidateDerivedInsights(){sleepMemo.data=null;sleepMemo.value=null;}
 function insightsScreen(){
  const tabDef=INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0];
  const today=localDate();
- const model=buildSleepInsights(state?.healthImports||{},today,insightPeriod);
+ const model=(insightTab==='sleep'||insightTab==='places')?cachedSleepInsights(state?.healthImports||{},today,insightPeriod):null;
  const healthIds=['sleep','energy','stress','body'];
  const healthMode=healthIds.includes(insightTab);
  const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['timejournal','Zeitjournal','clock'],['nutrition','Ernährung','food'],['habits','Habits','checkSquare'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
@@ -1938,7 +1973,7 @@ function bind() {
       }catch(captureError){recoveryMessage=' · Schnellerfassung prüfen: '+captureError.message;}
       morningRestoreConfig();
       const savedMorningDraft=state?.miracleMorning?.draft;if(morningSession&&savedMorningDraft?.id===morningSession.id&&savedMorningDraft.note){morningSession.note=savedMorningDraft.note;}
-      syncQuickPublicFromState();
+      syncQuickPublicFromState();restoreCalendarFromVault(state);
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
