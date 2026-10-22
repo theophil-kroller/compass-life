@@ -15,3 +15,13 @@
 .discovery-poster-manual input{width:100%;max-width:100%;box-sizing:border-box;border:1px solid #d8e7dd;border-radius:8px;padding:11px}
 .discovery-poster-review .primary-btn{margin-bottom:8px}
 .discovery-poster-review>small{display:block;color:#6d8275;font-size:11px}
+
+/* 0.5.77.6: status clarity for unusable catalogue poster links. */
+.discovery-poster-alert{border:1px solid #ecd5c9;background:#fff8f3;color:#805543;border-radius:9px;padding:10px}
+.discovery-poster-broken{border-top:1px solid #e7ebe7;margin-top:12px;padding-top:12px;color:#746d64;font-size:12px}
+.discovery-poster-broken summary{cursor:pointer;font-weight:650}
+.discovery-poster-broken>div{margin:10px 0;display:grid;gap:7px}
+.discovery-poster-broken>div>div{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid #ebeeec;padding:5px 0}
+.discovery-poster-broken>small{display:block;line-height:1.55}
+.discovery-poster-review-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.discovery-poster-review-foot .secondary-btn{margin-left:0}

@@ -8,7 +8,7 @@ export const discoveryPrompt=`Recherchiere wirklich angekündigte Veranstaltunge
 // Legacy keys stay stable; only precisely timed cinema screenings gain a compact venue/time discriminator.
 function screeningHash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
 export function eventKey(e){const base=[norm(e.title),e.date,norm(e.city)].join('|');if(['Kino','Filmfestival'].includes(e.category)&&e.startTime&&e.venue){return [norm(e.title).slice(0,124),e.date,norm(e.city).slice(0,74),'screen-'+screeningHash(norm(e.venue)+'|'+e.startTime)].join('|');}return base;}
-function normalizeLink(link){return typeof link==='string'?link.replace(/\\([:./])/g,'$1'):link;}
+export function normalizeResearchLink(link){return typeof link==='string'?link.replace(/\\([:./_?&=%#-])/g,'$1'):link;}
 function httpsUrl(link){if(typeof link!=='string'||link.length>500||!/^https:\/\//.test(link))return false;try{const u=new URL(link);return u.protocol==='https:'&&!!u.hostname.includes('.')&&!u.username&&!u.password;}catch{return false;}}
 const countryName=s=>typeof s==='string'?s.trim().slice(0,80):'';
 export function eventCountry(e){if(e.country)return e.country;return ['Graz','Wien','Vienna','Linz','Salzburg','Innsbruck','Klagenfurt','Villach','St. Pölten','Leoben','Seiersberg'].includes(e.city)?'Österreich':'';}
@@ -16,25 +16,47 @@ export function eventArea(e){const country=eventCountry(e).toLocaleLowerCase('de
 
 export function validEvent(e){return Boolean(e&&typeof e==='object'&&!Array.isArray(e)&&typeof e.title==='string'&&e.title.trim().length>1&&e.title.length<=160&&iso(e.date)&&typeof e.city==='string'&&e.city.trim().length>1&&e.city.length<=80&&typeof e.venue==='string'&&e.venue.length<=140&&EVENT_CATEGORIES.includes(e.category)&&httpsUrl(e.sourceUrl)&&(!e.endDate||iso(e.endDate)&&e.endDate>=e.date)&&(!e.description||typeof e.description==='string'&&e.description.length<=420)&&(!e.imageUrl||httpsUrl(e.imageUrl))&&(!e.country||typeof e.country==='string'&&e.country.length<=80)&&(!e.startTime||validStartTime(e.startTime))&&(!e.lastImportedAt||typeof e.lastImportedAt==='string'&&Number.isFinite(Date.parse(e.lastImportedAt)))&&(!e.researchGroup||typeof e.researchGroup==='string'&&e.researchGroup.length<=60)&&(!e.synopsisSourceUrl||httpsUrl(e.synopsisSourceUrl))&&(!e.synopsisImportedAt||typeof e.synopsisImportedAt==='string'&&Number.isFinite(Date.parse(e.synopsisImportedAt))));}
 function normalizeRaw(raw){let text=raw.trim().replace(/^\uFEFF/,'');if(/^```(?:json)?\s*/i.test(text))text=text.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();return text;}
-function parseJson(raw){
- let text=normalizeRaw(raw);try{return JSON.parse(text);}catch(ex){
-  // Only repair the documented AI typo inside JSON string literals (\\: \\. \\/), never remove structural characters.
-  const cleaned=text.replace(/\\([:./])/g,'$1');
-  try{return JSON.parse(cleaned);}catch{throw Error('Kein gültiges JSON. Entferne einleitende Kommentare; erwarte {"events":[...]}. '+String(ex.message).slice(0,110));}
+/**
+ * Repair only malformed, presentation-style backslash escapes inside JSON strings.
+ * ChatGPT sometimes returns sourceUrl = "https\\://www\\.museum\\_name.at/...".
+ * Never remove JSON-structural escapes, never alter text outside string literals.
+ */
+export function repairResearchJsonEscapes(text){
+ let out='',inside=false;
+ const punctuation=new Set([':', '.', '_', '-', '?', '&', '=', '#', '%']);
+ for(let i=0;i<text.length;i++){
+  const c=text[i];
+  if(!inside){out+=c;if(c==='"')inside=true;continue;}
+  if(c==='\\'&&i+1<text.length){
+   const next=text[i+1];
+   if(punctuation.has(next)){out+=next;i++;continue;}
+   // Retain valid JSON escapes, including \", \\, \/, \n and \uXXXX.
+   out+=c+next;i++;continue;
+  }
+  out+=c;if(c==='"')inside=false;
+ }
+ return out;
+}
+export function parseResearchJson(raw){
+ if(typeof raw!=='string'||raw.length>4000000)throw Error('JSON zu groß (maximal 4 MB).');
+ const text=normalizeRaw(raw);
+ try{return JSON.parse(text);}catch(ex){
+  try{return JSON.parse(repairResearchJsonEscapes(text));}
+  catch{throw Error('Kein gültiges JSON (JSON-Syntaxfehler): '+String(ex.message).slice(0,180)+' · Bitte vollständiges JSON mit "events" oder "films" einfügen.');}
  }
 }
 export function parseEventImport(raw,existing=[]){
  if(typeof raw!=='string'||raw.length>4000000)throw Error('JSON zu groß (maximal 4 MB).');
- const payload=parseJson(raw);const events=Array.isArray(payload)?payload:payload?.events;
- if(!Array.isArray(events)||events.length>2000)throw Error('Erwartet JSON mit "events" (maximal 2.000 Einträge je Import).');
+ const payload=parseResearchJson(raw);const events=Array.isArray(payload)?payload:payload?.events;
+ if(!Array.isArray(events)||events.length>2000)throw Error('Erwartet {"events":[...]} mit maximal 2.000 Einträgen. Für Filmbeschreibungen {"films":[...]} verwenden.');
  const existingKeys=new Set(existing.filter(validEvent).map(eventKey));const known=new Set(existingKeys),added=[],refreshed=[];let duplicates=0;
  for(let i=0;i<events.length;i++){
   const item=events[i];if(!item||typeof item!=='object'||Array.isArray(item))throw Error(`Eintrag ${i+1}: kein Veranstaltungsobjekt.`);
-  const clean={title:String(item.title||'').trim(),date:item.date,city:String(item.city||'').trim(),venue:String(item.venue||'').trim(),category:aliases[item.category]||item.category,sourceUrl:normalizeLink(item.sourceUrl)};
+  const clean={title:String(item.title||'').trim(),date:item.date??item.startDate??item.start_date,city:String(item.city||'').trim(),venue:String(item.venue||'').trim(),category:aliases[item.category]||item.category,sourceUrl:normalizeResearchLink(item.sourceUrl??item.sourceURL)};
   if(item.country!=null)clean.country=countryName(item.country);
-  if(item.endDate!=null)clean.endDate=item.endDate;
-  if(item.startTime!=null)clean.startTime=String(item.startTime).trim();
-  if(item.imageUrl!=null)clean.imageUrl=normalizeLink(item.imageUrl);
+  if(item.endDate!=null||item.end_date!=null)clean.endDate=item.endDate??item.end_date;
+  if(item.startTime!=null||item.start_time!=null)clean.startTime=String(item.startTime??item.start_time).trim();
+  if(item.imageUrl!=null||item.posterUrl!=null)clean.imageUrl=normalizeResearchLink(item.imageUrl??item.posterUrl);
   if(item.description!=null)clean.description=String(item.description).trim().slice(0,420);
   if(!validEvent(clean)){
     const bad=[];

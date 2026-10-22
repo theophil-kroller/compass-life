@@ -1,0 +1,20 @@
+Compass 0.5.77.6 — Recherche-Import für alle Bereiche
+===================================================
+
+Basis für PATCH: 0.5.77.5. Bitte nicht auf frühere Versionen anwenden.
+1. Vor dem Upload einen verschlüsselten Tresor-Export als Backup erstellen.
+2. Inhalt Compass_0.5.77.6_PATCH_FROM_0.5.77.5.zip ins Repository-Stammverzeichnis (client/, tests/, package.json, etc.) kopieren. Gleichnamige Dateien ersetzen, keine zusätzliche Ordner-Ebene.
+3. Commit auf GitHub ausführen und Deploy Compass Web (GitHub Actions) auf grün prüfen.
+4. PWA/Webseite vollständig neu laden; die Versionsanzeige sollte 0.5.77.6 sein.
+
+ALTERNATIV: Compass_0.5.77.6_FULL_SOURCE.zip enthält den gesamten aktualisierten Quellstand. Die lokalen Vault-/IndexedDB-Daten NICHT löschen.
+
+SMOKE TEST
+A. Erholung -> Museums-/Kultur-Prompt -> bestehendes 132er-Museum-JSON einfügen -> Import prüfen: 132 erkannt, klare Vorschau; bestätigen -> neu/bekannt plausibel. Keine Backslash-Reparatur von Hand nötig.
+B. Erholung -> Kino -> Filmtexte/Poster-JSON: erkannt und aktualisierbar.
+C. Schlechtes JSON eingeben -> Import prüfen: rote Inline-Fehlermeldung, Text bleibt unverändert im Textfeld; korrigieren und erneut prüfen.
+D. Poster automatisch suchen -> defekte Bildlinks werden getrennt von überprüft ladbaren Postern gezeigt; „Nächste Filme prüfen“ möglich.
+E. Weitere Recherchebuttons (Oper, Tanz, Sport, Wintersport, Workshops) behalten das gemeinsame JSON-Vertragsschema.
+
+No D1 migration. No Cloudflare Worker change. Existing imported events and Merkliste stay as-is until confirmation.
+Tests: 839/839 Node; Worker syntax check green. Vite build not available locally; verify through CI.

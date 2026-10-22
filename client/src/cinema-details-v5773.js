@@ -1,3 +1,4 @@
+import {parseResearchJson,normalizeResearchLink} from './event-import.js';
 // Compass 0.5.77.3 – verified film synopses and poster enrichment, without resubmitting showtimes.
 import {cinemaFilmKey,groupCinemaScreenings,isCinemaEvent,meaningfulFilmDescription} from './cinema-program-v5772.js';
 
@@ -15,15 +16,15 @@ Falls überhaupt keine verwendbare Posterdatei verifizierbar ist: Gib {\"films\"
  return {text,next:start+portion.length>=missing.length?0:start+portion.length,count:portion.length,total:missing.length};
 }
 function cleanRaw(raw){let s=raw.trim().replace(/^\uFEFF/,'');if(/^```(?:json)?\s*/i.test(s))s=s.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'');return s;}
-export function isCinemaDetailsJSON(raw){if(typeof raw!=='string')return false;try{const data=JSON.parse(cleanRaw(raw));return !!data&&!Array.isArray(data)&&Array.isArray(data.films);}catch{return false;}}
+export function isCinemaDetailsJSON(raw){if(typeof raw!=='string')return false;try{const data=parseResearchJson(raw);return !!data&&!Array.isArray(data)&&Array.isArray(data.films);}catch{return false;}}
 export function parseCinemaDetailsImport(raw,existing){
  if(typeof raw!=='string'||raw.length>4000000)throw Error('Film-Metadaten JSON zu groß.');
- let data;try{data=JSON.parse(cleanRaw(raw));}catch{throw Error('Film-Metadaten müssen gültiges JSON mit "films" sein.');}
+ let data;try{data=parseResearchJson(raw);}catch(ex){throw Error('Film-Metadaten: '+ex.message);}
  if(!Array.isArray(data?.films)||data.films.length>120)throw Error('Erwartet "films" mit 1 bis 120 Einträgen.');
  const knownFilms=new Set(groupCinemaScreenings(existing).map(x=>x.key)),entries=[],seen=new Set();let unmatched=0,duplicates=0;
  for(const [i,f] of data.films.entries()){
   if(!f||typeof f!=='object'||Array.isArray(f))throw Error(`Film ${i+1}: ungültiges Objekt.`);
-  const title=n(f.title),description=meaningfulFilmDescription(f.description),sourceUrl=n(f.sourceUrl),imageUrl=f.imageUrl?n(f.imageUrl):'';
+  const title=n(f.title),description=meaningfulFilmDescription(f.description),sourceUrl=normalizeResearchLink(n(f.sourceUrl)),imageUrl=f.imageUrl?normalizeResearchLink(n(f.imageUrl)):'';
   if(title.length<2||title.length>160||(!description&&!imageUrl)||description.length>420||!validHTTPS(sourceUrl)||(imageUrl&&!validHTTPS(imageUrl)))throw Error(`Film ${i+1} (${title||'ohne Titel'}): echte Kurzbeschreibung ODER Poster, HTTPS-Beleg und optional gültige Bild-URL erforderlich.`);
   const key=cinemaFilmKey(title);if(seen.has(key)){duplicates++;continue;}seen.add(key);
   if(!knownFilms.has(key)){unmatched++;continue;}

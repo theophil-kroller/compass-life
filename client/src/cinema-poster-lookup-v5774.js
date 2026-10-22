@@ -54,8 +54,31 @@ export async function lookupPosterBatch(films,{fetcher=fetch,offset=0,batchSize=
   else{unmatched.push(film.title);if(result.reason.startsWith('Abruf nicht möglich')||result.reason.startsWith('HTTP'))errors.push(`${film.title}: ${result.reason}`);}
  }
  return {suggestions,unmatched,errors,checked:selected.length,totalMissing:missing.length,
-  nextOffset:start+selected.length>=missing.length?0:start+selected.length};
+  nextOffset:start+selected.length>=missing.length?0:start+selected.length,
+  hasMore:start+selected.length<missing.length};
 }
+/**
+ * A catalogue match is not a usable poster until the browser actually loads and
+ * decodes its URL. Verify before offering a checked box. Bounded concurrency
+ * keeps slow/broken image servers from serially blocking a whole batch.
+ * The verifier can be injected in tests; no image is stored by this function.
+ */
+export async function verifyPosterLookupResult(result,verify=verifyPosterImage,parallelism=4){
+ const candidates=Array.isArray(result?.suggestions)?result.suggestions:[];
+ const verdicts=[];
+ const width=Math.min(6,Math.max(1,Math.trunc(Number(parallelism)||4)));
+ for(let i=0;i<candidates.length;i+=width){
+  const batch=await Promise.all(candidates.slice(i,i+width).map(async suggestion=>{
+   if(!validPosterSuggestion(suggestion))return false;
+   try{return Boolean(await verify(suggestion.imageUrl));}catch{return false;}
+  }));
+  verdicts.push(...batch);
+ }
+ return {...result,matched:candidates.length,
+  suggestions:candidates.filter((_,i)=>verdicts[i]),
+  unavailable:candidates.filter((_,i)=>!verdicts[i])};
+}
+
 export function validPosterSuggestion(x){return Boolean(x&&typeof x.key==='string'&&x.key.length>0&&safeHTTPS(x.imageUrl)&&safeHTTPS(x.sourceUrl));}
 export function applyPosterToEvent(e,suggestion,at){
  if(cinemaFilmKey(e?.title)!==suggestion?.key||!['Kino','Filmfestival'].includes(e?.category)||!validPosterSuggestion(suggestion))return e;

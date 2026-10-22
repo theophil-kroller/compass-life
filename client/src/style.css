@@ -3159,3 +3159,8 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .sleep578-year-navigation button:hover:not(:disabled){background:#e7f3eb}
 .sleep578-year-navigation button:disabled{opacity:.35;cursor:default}
 @media(max-width:700px){.sleep578-year-toolbar{justify-content:flex-start}.sleep578-year-navigation{white-space:normal}.sleep578-year-navigation button{font-size:10px;padding:6px}}
+
+/* 0.5.77.6 – immediate, durable JSON import feedback. */
+.discovery-import-error{margin:12px 0;padding:14px 16px;border:1px solid #e6bdb7;border-left:4px solid #be6259;border-radius:10px;background:#fff7f5;color:#793f3b;display:grid;gap:7px;line-height:1.55;max-width:100%;overflow-wrap:anywhere}
+.discovery-import-error strong{font-size:13px}.discovery-import-error p{font-size:12px;margin:0}.discovery-import-error small{font-size:11px;color:#8e605b}
+.discovery-import-error[hidden]{display:none}
