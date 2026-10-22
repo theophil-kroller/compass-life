@@ -3,6 +3,7 @@
  */
 import {insightsRange} from './insights.js';
 import {rollingEnvelopeChart} from './health-rolling.js';
+import {buildStressContext,stressContextView} from './stress-context-v5778.js';
 const safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dayFmt=new Intl.DateTimeFormat('sv-SE',{year:'numeric',month:'2-digit',day:'2-digit'});
 const clockFmt=new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
@@ -161,9 +162,10 @@ function stressWindowControls(nav,period,offset){
  const all=period==='all';
  return `<nav class="health-day-switch" aria-label="Stress-Zeitraum blättern"><button type="button" data-action="insights-stress-prev" aria-label="Früheren Zeitraum anzeigen" ${all?'disabled':''}>←</button><strong>${all?'Gesamter erfasster Zeitraum':`${formatDay(nav.start)} – ${formatDay(nav.end)}`}</strong><button type="button" data-action="insights-stress-next" aria-label="Späteren Zeitraum anzeigen" ${all||offset>=0?'disabled':''}>→</button></nav>`;
 }
-export function insightsStressView(imported={},period='28',today=new Date().toISOString().slice(0,10),selected='',aggregation='auto',windowDays=14,offset=0){
+export function insightsStressView(imported={},period='28',today=new Date().toISOString().slice(0,10),selected='',aggregation='auto',windowDays=14,offset=0,context={}){
  const nav=stressNavigation(today,period,offset);
  const model=buildWellnessInsights(imported,period==='all'?today:nav.end,period),list=model.stressDays,day=list.find(x=>x.day===selected)||list.at(-1)||null;
+ const contextAnalysis=buildStressContext({model,garminSessions:imported?.garminSessions||[],...context});
  return `<div class="insight-wellness">
  <div class="insight-kpi-grid">${card('Ø Stress',num(model.avgStress),'Gültige Garmin-Stresswerte')}${card('Messtage',num(list.length),'Mit gültigen Stresswerten')}${card('Stress-Messpunkte',num(model.stressCount),'5-Minuten-Zeitfenster')}${card('Letzter Messtag',list.length?formatDay(list.at(-1).day):'–','Importierte Garmin-Wellness-Dateien')}</div>
  ${note(`Garmin Stress ist ein physiologischer Schätzwert, keine psychologische Stressdiagnose. Messungen während Aktivitäten oder ohne gültigen Sensorwert bleiben Lücken. Aktuelle Gerätezeitzone: ${model.timezone}.`)}
@@ -173,6 +175,7 @@ export function insightsStressView(imported={},period='28',today=new Date().toIS
  ${shell('Stress über den Zeitraum','02 · STRESS HISTORY',`<div class="health-mode-toggle" role="group" aria-label="Stress Zeitauflösung"><button data-action="insights-stress-granularity" data-id="day" class="${aggregation==='day'?'is-chosen':''}">Täglich</button><button data-action="insights-stress-granularity" data-id="week" class="${aggregation==='week'?'is-chosen':''}">Wöchentlich</button></div>`+wellnessDayBars(model.summaries,'stress',aggregation),'Farbcodierung aus Garmin-Stressstufen: Ruhe 0–25, niedrig 26–50, mittel 51–75, hoch 76–100. Keine psychologische Diagnose.')}
  ${shell('Rollender Stressverlauf','02B · ROLLING STRESS',rollingEnvelopeChart(model.stressDays,'avgStress',{title:'Täglicher Stressmittelwert',unit:'Garmin-Stress',windowDays,color:'#C28669',range:model.range,stressZones:true}),`Rollender Median und Streuung auf Tagesbasis (Fenster ${windowDays} Tage).`)}
  </div>
+ ${stressContextView(contextAnalysis)}
  ${shell('Mein Stress im Tagesverlauf','03 · DAILY STRESS',list.length?daySelector(list,day.day)+wellnessDayChart(day,'stress'):missing('Stress'),'Lücken werden nicht aufgefüllt; hohe Werte sind nicht automatisch negative emotionale Erlebnisse.')}
  <div class="insight-footnote">Wichtig: Zum Ergänzen der neuen Stresswerte bereits früher importierte Garmin-Tages-ZIPs unter „Datenquellen“ erneut auswählen. Compass erkennt gleiche Zeitpunkte und legt keine Duplikate an.</div>
  </div>`;

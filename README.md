@@ -1,3 +1,6 @@
+## 0.5.77.8 – Stress im Kontext
+Auf der Stress-Seite können Garmin-Stresswerte jetzt mit zeitgleichen Google-Kalendereinträgen und dokumentierten Aktivitäten verglichen werden; siehe `CHANGELOG_0.5.77.8.md`.
+
 > **Compass 0.5.77.7** – Intelligente Wiedervorlagen für die Event-Recherchen in Heute und Weekly Review; Poster-Sammelsuche mit einem Klick. Siehe [Changelog](CHANGELOG_0.5.77.7.md) und [Installation](INSTALLATION_0.5.77.7.txt).
 
 > **Compass 0.5.77.6** – Zuverlässiger Import für alle Rechercheprompts, museumsfähige URL-Escape-Reparatur, sichtbare Fehler und saubere Poster-Vorschau. Siehe [Changelog](CHANGELOG_0.5.77.6.md) und [Installation](INSTALLATION_0.5.77.6.txt).

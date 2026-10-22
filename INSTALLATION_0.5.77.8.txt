@@ -1,0 +1,11 @@
+Compass Life 0.5.77.8 – Stress-Kalender-/Aktivitätsanalyse
+
+PATCH: Compass_0.5.77.8_PATCH_FROM_0.5.77.7.zip auf bestehendem Repository 0.5.77.7 anwenden.
+VOLLSTAND: Compass_0.5.77.8_FULL_SOURCE.zip ersetzt den vollständigen Quellstand (keine Vault-Daten überschreiben).
+Dateien aus ZIP ohne zusätzliche äußere Ordnerstruktur in das GitHub-Stammverzeichnis hochladen und committen.
+Nach erfolgreichem GitHub-Actions-Deploy: Compass → Insights → Gesundheit → Stress.
+
+Die Auswertung liest bestehende Garmin- und Kalenderdaten; keine neuen Imports erforderlich, soweit die Daten schon lokal verfügbar sind.
+Für ältere Termine muss die Kalenderhistorie in Compass tatsächlich synchronisiert/vorhanden sein.
+Keine D1-Migration. Kein Worker-Update.
+Keine automatische Änderung an Tagesplanung oder Terminen.

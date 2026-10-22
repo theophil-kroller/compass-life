@@ -1,7 +1,7 @@
 {
   "name": "compass-personal-life-manager",
   "private": true,
-  "version": "0.5.77.7",
+  "version": "0.5.77.8",
   "type": "module",
   "workspaces": ["client", "worker"],
   "scripts": {"dev:web":"npm run dev -w client","dev:api":"npm run dev -w worker","build":"npm run build -w client","check":"npm run check -w worker && npm run test","test":"node --test tests/*.test.mjs","deploy:api":"npm run deploy -w worker","db:local":"npm run db:local -w worker","db:remote":"npm run db:remote -w worker"},
