@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {putTouch,touchEntries,touchKinds,touchHistoryView,touchPersonSummary,suggestedTouchKinds,touchQuickView,mergeTouchJournal,deleteTouch} from '../client/src/touch-journal-v577.js';
 const at='2026-10-22T15:00:00Z';
-const state=()=>({people:{p1:{id:'p1',name:'Alex'},p2:{id:'p2',name:'Sam'}},touchJournal:{entries:[]}});
+const state=()=>({people:{p1:{id:'p1',name:'Alex',relationKind:'friend'},p2:{id:'p2',name:'Sam',relationKind:'colleague'},p3:{id:'p3',name:'Pat',relationKind:'partner'},p4:{id:'p4',name:'Familie',relationKind:'family'},p5:{id:'p5',name:'Bekannte',relationKind:'acquaintance'}},touchJournal:{entries:[]}});
 test('several activities form one event, linked to one existing person',()=>{
  const s=state(),e=putTouch(s,{kinds:['dance','kiss','cuddle','dance'],at,personId:'p1',person:'Alex'});
  assert.deepEqual(touchKinds(e),['dance','kiss','cuddle']);assert.equal(touchEntries(s).length,1);
@@ -23,6 +23,8 @@ test('tombstone sync and multi-kind data survive merges',()=>{
 test('multiple checkboxes in direct form and explicit person choices',()=>{
  const html=touchQuickView(state(),{personId:'p1'});
  assert.match(html,/t577-capture-form/);assert.match(html,/type="checkbox" name="kinds"/);
- assert.match(html,/value="p1" selected/);assert.match(html,/Was ist passiert\? Mehrfachauswahl/);
+ assert.match(html,/value="p1" selected/);assert.match(html,/value="p3"/);assert.match(html,/value="p4"/);
+ assert.doesNotMatch(html,/value="p2"/);assert.doesNotMatch(html,/value="p5"/);
+ assert.match(html,/Was ist passiert\? Mehrfachauswahl/);
 });
 test('empty selection cannot be accidentally saved',()=>assert.throws(()=>putTouch(state(),{kinds:[],at}),/mindestens/));
