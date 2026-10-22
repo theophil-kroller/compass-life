@@ -3003,3 +3003,50 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .today-inspector-close{width:32px;height:32px;min-width:32px;display:grid;place-items:center;border:1px solid #d7e4da;border-radius:10px;background:#fff;color:#315947;cursor:pointer;padding:0}
 .today-inspector-close:hover,.today-inspector-close:focus-visible{background:#eef5ef;border-color:#9bb9a7}
 @media(max-width:800px){.today-focus-inspector{scroll-margin-top:18px}.today-context-rail{width:100%;display:flex;flex-direction:column}}
+
+
+/* Compass 0.5.70.8 – Task Inspector: date shortcuts always stay inside the rail.
+   The 0.5.59 desktop media rule used viewport width instead of the inspector's
+   actual width and forced a third grid column even in a 228–285px inspector. */
+.v559-inspector-form .v559-main-dates,
+.v559-inspector-form .v559-date-row {
+  min-width: 0;
+  max-width: 100%;
+}
+.v559-inspector-form .v559-date-row {
+  grid-template-columns: minmax(0, 58px) minmax(0, 1fr);
+  gap: 4px 7px;
+}
+.v559-inspector-form .v559-date-row input[type="date"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.v559-inspector-form .v559-date-tools {
+  grid-column: 2;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: flex-start;
+}
+.v559-inspector-form .v559-date-tools button {
+  padding: 2px 5px;
+  flex: 0 0 auto;
+}
+/* Other form controls cannot impose a width on the Today inspector. */
+.today-focus-inspector .v559-inspector-form,
+.today-focus-inspector .v559-inspector-form > *,
+.today-focus-inspector .v559-compact-field {
+  min-width: 0;
+  max-width: 100%;
+}
+.today-focus-inspector .v559-compact-field {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+}
+.today-focus-inspector .v559-compact-field input,
+.today-focus-inspector .v559-compact-field select {
+  width: 100%;
+  min-width: 0;
+}

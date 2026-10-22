@@ -1,0 +1,21 @@
+Compass 0.5.70.8 – Hotfix Inspector-Felder
+==========================================
+
+PATCH (von 0.5.70.7):
+1. Optional ein verschlüsseltes Backup erstellen.
+2. Inhalt der ZIP Compass_0.5.70.8_PATCH_FROM_0.5.70.7.zip im GitHub-Repository-Root hochladen und gleichnamige Dateien ersetzen.
+3. Commit auf main und grünen GitHub-Workflow „Deploy Compass Web“ abwarten.
+4. Browser/PWA neu laden und Versionsnummer 0.5.70.8 prüfen.
+
+FULL SOURCE:
+Compass_0.5.70.8_FULL_SOURCE.zip enthält den gesamten Quellstand.
+
+SMOKE TEST:
+- Heute > Aufgabe anklicken: Der Inspector ersetzt „Was passt jetzt?“ rechts.
+- Defer / Geplant / Due: Datumsfelder und +1d / +1w / +1m / × liegen vollständig innerhalb der rechten Karte.
+- Buttons ausprobieren, Datum auswählen, Speichern: Funktion unverändert.
+- Inspector schließen: „Was passt jetzt?“ erscheint wieder.
+- Bei schmalem Browserfenster sowie am Handy keine horizontal überstehenden Felder.
+
+Keine D1-Migration und kein Worker-Update.
+Node-Tests bestanden; keine Vite-/Browser-E2E-Abnahme.
