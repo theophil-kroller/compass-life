@@ -111,21 +111,23 @@ export function insightsLineChart(records,fields,title,{unit='',range,domain=nul
  return `${axisLine(title)}<div class="insight-svg-scroller"><svg class="insight-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(title)}, ${values.length} Messpunkte, ${escapeHtml(unit)}" xmlns="http://www.w3.org/2000/svg">${ticks}${bandMark}${baselineMark}${parts}${xTicks}</svg></div><div class="insight-legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${escapeHtml(s.label)} · ${s.rows.length} Werte</span>`).join('')}</div>`;
 }
 export function sleepConsistencyChart(nights,range){
- const rows=nights.filter(n=>Number.isFinite(n.bedMinutes)&&Number.isFinite(n.wakeMinutes));
- if(!rows.length)return noMeasurements('Keine vollständigen Einschlaf- und Aufwachzeiten vorhanden.');
+ const complete=(nights||[]).filter(n=>/^\d{4}-\d\d-\d\d$/.test(n.day||'')&&Number.isFinite(n.bedMinutes)&&Number.isFinite(n.wakeMinutes)).sort((a,b)=>a.day.localeCompare(b.day));
+ const start=range?.start||complete[0]?.day,end=range?.end||complete.at(-1)?.day;
+ const rows=complete.filter(n=>(!start||n.day>=start)&&(!end||n.day<=end));
+ if(!rows.length)return noMeasurements('Keine vollständigen Einschlaf- und Aufwachzeiten in diesem Zeitraum vorhanden.');
  const W=820,H=275,left=68,right=18,top=22,bottom=43,w=W-left-right,h=H-top-bottom;
- const start=range?.start||rows[0].day,end=range?.end||rows.at(-1).day,span=Math.max(86400000,dateUTC(end)-dateUTC(start));
+ const span=Math.max(86400000,dateUTC(end)-dateUTC(start));
  const X=d=>left+(dateUTC(d)-dateUTC(start))/span*w;
  const yMin=18*60,yMax=37*60;
  const Y=v=>top+h-(v-yMin)/(yMax-yMin)*h;
  const grid=[18,21,24,27,30,33,36].map(t=>`<line x1="${left}" x2="${W-right}" y1="${Y(t*60)}" y2="${Y(t*60)}" stroke="#EAF0EC"/><text x="${left-9}" y="${Y(t*60)+4}" text-anchor="end" fill="#83978A" font-size="11">${fmtClock(t*60)}</text>`).join('');
- const dots=rows.slice(-220).map(n=>{
+ const dots=rows.map(n=>{
   const b=Math.max(yMin,Math.min(yMax,n.bedMinutes)),e=Math.max(yMin,Math.min(yMax,n.wakeMinutes));
   return `<line x1="${X(n.day)}" x2="${X(n.day)}" y1="${Y(b)}" y2="${Y(e)}" stroke="#9FB4D5" stroke-width="3" stroke-opacity=".45"/><circle cx="${X(n.day)}" cy="${Y(b)}" r="3.4" fill="#657AAE"><title>${escapeHtml(dayString(n.day))} · Bett: ${fmtClock(n.bedMinutes)}</title></circle><circle cx="${X(n.day)}" cy="${Y(e)}" r="3.4" fill="#58A08B"><title>${escapeHtml(dayString(n.day))} · Aufstehen: ${fmtClock(n.wakeMinutes)}</title></circle>`;
  }).join('');
  return `${axisLine('Schlafkonsistenz','Uhrzeiten auf einer Nachtachse')}
  <div class="insight-svg-scroller"><svg class="insight-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Einschlaf- und Aufwachzeiten für ${rows.length} Nächte" xmlns="http://www.w3.org/2000/svg">${grid}${dots}<text x="${left}" y="${H-10}" fill="#81958A" font-size="11">${escapeHtml(dayString(start))}</text><text x="${W-right}" y="${H-10}" text-anchor="end" fill="#81958A" font-size="11">${escapeHtml(dayString(end))}</text></svg></div>
- <div class="insight-legend"><span><i style="background:#657AAE"></i>Einschlafen</span><span><i style="background:#58A08B"></i>Aufwachen</span><span>${rows.length} Nächte</span></div>`;
+ <div class="insight-legend"><span><i style="background:#657AAE"></i>Einschlafen</span><span><i style="background:#58A08B"></i>Aufwachen</span><span>${rows.length} tatsächlich gezeichnete Nächte</span></div>`;
 }
 export function weeklySleepGroups(nights){
  const groups=new Map();
@@ -136,16 +138,25 @@ export function weeklySleepGroups(nights){
  }
  return [...groups.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([week,values])=>({week,count:values.length,mean:values.reduce((a,b)=>a+b,0)/values.length}));
 }
-export function insightsSleepView(model,selectedNight='',ico=()=>'',today='',imported={},healthAi={},yearMode='month',weekAnchor=''){
+export function sleepDataProvenance(model,imported={}){
+ const all=model?.allNights||[],measured=all.filter(n=>Number.isFinite(n.sleepMinutes)&&n.sleepMinutes>0);
+ const span=rows=>rows.length?`${rows[0].day} – ${rows.at(-1).day}`:'keine';
+ const invalid=all.length-measured.length;
+ const stamp=typeof imported?.lastImportAt==='string'&&Number.isFinite(Date.parse(imported.lastImportAt))
+  ?new Date(imported.lastImportAt).toLocaleString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'bisher nicht protokolliert';
+ return `<div class="sleep578-provenance" aria-label="Importierte Schlafdaten und sichtbarer Zeitraum"><strong>Garmin-Daten im Tresor</strong><span>${all.length} gespeicherte Nächte · ${measured.length} mit auswertbarer Schlafdauer · Zeitraum: ${escapeHtml(span(all))}</span><span>Aktuelle Auswahl: ${model?.validSleepNights||0} auswertbare Nächte · Letzter bestätigter Garmin-/Fitdays-Import: ${escapeHtml(stamp)}</span>${invalid?`<small>${invalid} gespeicherte Einträge ohne auswertbare Schlafdauer. Prüfe bei Bedarf die Quelldateien.</small>`:''}<small>Das Jahresdiagramm zeigt jeweils zwölf Monate. Ältere, gespeicherte Daten bleiben erhalten und sind über „← Vorheriges Jahr“ erreichbar.</small></div>`;
+}
+export function insightsSleepView(model,selectedNight='',ico=()=>'',today='',imported={},healthAi={},yearMode='month',weekAnchor='',yearAnchor=''){
  const {nights,hrv,range}=model;
  const allNights=model.allNights||nights;
  const activeDay=today||range.end||new Date().toISOString().slice(0,10);
  const sleep=renderSleepIntelligence({nights:allNights,selectedNight:allNights.some(n=>n.day===selectedNight)?selectedNight:'',today:activeDay,
-  yearMode,weekAnchor,period:range.days===365?'365':range.days===90?'90':range.days===7?'7':range.days===null?'all':'28',
+  yearMode,weekAnchor,yearAnchor,period:range.days===365?'365':range.days===90?'90':range.days===7?'7':range.days===null?'all':'28',
   timeZone:model.timeZone,sleepTimeline});
  const findings=healthFindings({nights:allNights,imported,today:activeDay});
  return `<div class="insight-sleep-content">
  ${healthFindingsView(findings,healthAi.order||[],healthAi.status||'')}
+ ${sleepDataProvenance(model,imported)}
  ${sleep}
  <div class="insight-data-note">${ico('shield',16)} <span><strong>${model.validSleepNights} gemessene Nächte</strong> im ausgewählten Zeitraum · <strong>${model.totalHrvDays} HRV-Tage</strong>. Die Uhrzeiten werden in <strong>${escapeHtml(model.timeZone)}</strong> angezeigt, nicht nachträglich in Reise-Ortszeiten umgerechnet. Fehlende Messungen sind keine Nullwerte.</span></div>
  <details class="sleep550-extra sleep550-extended"><summary>Weitere Analysen: Schlafkonsistenz, Boxplots & HRV</summary>

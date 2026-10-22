@@ -1,0 +1,26 @@
+Compass 0.5.77.1 — Schlafverlauf & Importabdeckung
+=================================================
+
+PATCH-BASIS: Compass 0.5.77 (nicht direkt 0.5.76.1).
+
+PATCH:
+1. Verschlüsseltes Vault-Backup erstellen. Die lokale IndexedDB und den Vault keinesfalls löschen.
+2. Inhalt von Compass_0.5.77.1_PATCH_FROM_0.5.77.zip in das Root-Verzeichnis des bestehenden GitHub-Repositories entpacken.
+   Behalte die Originalpfade client/src/, tests/ und package.json. Neue Dateien übernehmen, bestehende überschreiben.
+3. Committen und GitHub-Actions-Workflow "Deploy Compass Web" auf erfolgreichen Abschluss prüfen.
+4. Browser/PWA neu starten und Versionsanzeige 0.5.77.1 kontrollieren.
+
+FULL SOURCE:
+Das Paket Compass_0.5.77.1_FULL_SOURCE.zip ist ein vollständiger Quellstand einschließlich der Erholungsrecherche 0.5.77 und aller bisherigen 0.5.76.1-Nachkorrekturen. Wenn 0.5.77 nicht als Ausgangsversion installiert ist, nutze den Full-Source-Stand.
+
+SMOKE TEST:
+A) Insights → Gesundheit → Schlaf → 1 Jahr.
+B) „Monat | Woche | Tag“ umschalten. Der Monatsspannen-Text darf sich nicht verändern.
+C) „← Vorheriges Jahr“ wählen: Falls eine auswertbare historische Garmin-Nacht vorhanden ist, erscheint das ältere Jahresfenster (z. B. November 2024–Oktober 2025 für ein aktuelles Fenster November 2025–Oktober 2026). Juli 2025 sollte sichtbar sein, sofern die Nächte tatsächlich im Vault vorliegen.
+D) „365-Tage-Kalender“ aufklappen. Die Monatskacheln müssen dem ausgewählten älteren Fenster folgen. „Nächstes Jahr →“ und „Aktuell“ überprüfen.
+E) „Weitere Analysen: Schlafkonsistenz“ öffnen und bei Zeitraum „Alles“ überprüfen, ob die Datumsachse vom tatsächlich ersten bis zum letzten Datum reicht, statt 220 Punkte in den falschen X-Bereich zu zeichnen.
+F) Karte „Garmin-Daten im Tresor“ lesen: erstes/letztes Datum, gespeicherte Nächte, auswertbare Nächte, ausgewählte Nächte und Zeitstempel des letzten Imports. Gibt sie keinen Juli 2025 an, sind diese Nächte nicht im aktiven Vault gespeichert; die neue Visualisierung kann sie nicht herstellen. Gegebenenfalls Import unter Datenquellen prüfen und erneut bestätigen.
+G) Auf einem Zweitgerät prüfen, ob der lokale verschlüsselte Datenabgleich abgeschlossen ist. Web-Deployment allein lädt keine Garmin-Importe auf ein anderes Gerät.
+
+DATENHALTUNG: keine Migration, keine Cloudflare-Worker-Aktualisierung, keine Datenänderung.
+TESTS: 807/807 erfolgreich; Worker-Syntax erfolgreich. Vite-Build/Browsersmoke lokal nicht ausführbar wegen nicht installierter Vite-Abhängigkeiten, deshalb GitHub-Actions-Resultat prüfen.

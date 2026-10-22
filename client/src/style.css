@@ -3148,3 +3148,14 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .fw576-erotic-shortcut button{border-radius:999px;border:1px solid #ad7290;background:#503544;color:#ffe6ef;padding:8px 11px;font-size:12px;font-weight:700;cursor:pointer;}
 .fw576-erotic-shortcut button:focus-visible{outline:2px solid #e1a8c7;outline-offset:2px;}
 .fw576-erotic-shortcut small{color:#adc2c5;font-size:10px;line-height:1.45;}
+
+/* Compass 0.5.77.1: scoped sleep history, calendar navigation, and import provenance. */
+.sleep578-provenance{display:flex;flex-direction:column;gap:5px;margin:12px 0 18px;padding:11px 14px;border:1px solid #dae8e1;background:#f8fbf9;border-radius:12px;color:#4d6b5b;font-size:11px;line-height:1.5}
+.sleep578-provenance>strong{font-size:12px;color:#294f3d}
+.sleep578-provenance>small{font-size:10px;color:#71897c}
+.sleep578-year-toolbar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
+.sleep578-year-navigation{display:flex;flex-wrap:wrap;align-items:center;gap:3px;border:1px solid #e0ebe3;border-radius:12px;padding:3px;white-space:nowrap}
+.sleep578-year-navigation button{border:0;border-radius:8px;background:transparent;color:#426854;font-size:11px;padding:6px 8px;cursor:pointer}
+.sleep578-year-navigation button:hover:not(:disabled){background:#e7f3eb}
+.sleep578-year-navigation button:disabled{opacity:.35;cursor:default}
+@media(max-width:700px){.sleep578-year-toolbar{justify-content:flex-start}.sleep578-year-navigation{white-space:normal}.sleep578-year-navigation button{font-size:10px;padding:6px}}

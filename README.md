@@ -1,3 +1,5 @@
+> **Compass 0.5.77.1** — Schlafarchiv mit Jahresnavigation, konsistente Datumsachsen und sichtbare Garmin-Importabdeckung. Siehe [Changelog](CHANGELOG_0.5.77.1.md) und [Installation](INSTALLATION_0.5.77.1.txt).
+
 > Aktueller Release: **Compass 0.5.68 – Secure Quick Capture & Relationship Intelligence**. Siehe `CHANGELOG_0.5.68.md` und `INSTALLATION_0.5.68.txt`.
 
 > Aktueller Release: **Compass 0.5.67.2 – Financial Health & erklärbarer Life Balance Radar**. Siehe `CHANGELOG_0.5.67.2.md` und `INSTALLATION_0.5.67.2.txt`.
