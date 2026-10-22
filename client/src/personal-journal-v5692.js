@@ -8,13 +8,20 @@ export const FOOD_PRESETS=[
  ['matcha','🍵','Matcha mit Honig','Getränke'],['oat-latte','☕','Hafermilch-Latte mit Karamellsirup','Getränke'],
  ['smoothie','🥤','Smoothie','Getränke'],['tea-unsweetened','🍵','Tee ungesüßt','Getränke'],['tea-honey','🫖','Tee mit Honig','Getränke'],
  ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke'],['coffee','☕','Kaffee','Getränke'],
- ['mensa','🍲','Mensaessen','Mahlzeiten'],['buffet','🍽️','Buffet / auswärts','Mahlzeiten'],
+ ['latella','🥛','Lattella (500 ml)','Getränke','500 ml',250,360],
+ ['mensa','🍲','Mensaessen','Mahlzeiten'],
+ ['mensa-study-veggie','🥗','Vegetarischer Study-Teller · Stremayrgasse','Mahlzeiten','1 Teller',450,900],
+ ['mensa-gulasch-20261022','🎃','Brainfood-Gulasch Kürbis & Käferbohnen · 22.10.','Mahlzeiten','1 Teller',450,800],['buffet','🍽️','Buffet / auswärts','Mahlzeiten'],
  ['bread-cheese','🥪','Käsebrot','Mahlzeiten'],['cheddar','🧀','Cheddar-Scheibe','Snacks'],
  ['peanuts','🥜','Gesalzene Erdnüsse','Snacks'],['mixed-nuts','🌰','Bio-Nussmischung','Snacks'],
  ['dried-mango','🥭','Getrocknete Mango','Snacks'],['rice-pudding','🍚','Milchreis','Snacks'],
  ['apple','🍎','Apfel','Snacks'],['chocolate','🍫','Schokoriegel','Snacks'],
- ['snickers','🍫','Snickers','Snacks'],['other-food','➕','Anderes','Sonstiges']
-].map(([id,emoji,title,group])=>({id,emoji,title,group}));
+ ['snickers','🍫','Snickers','Snacks'],
+ ['pistachio-butter-cups','🍬','Pistachio Butter Cups','Snacks','3 Stück',150,330],
+ ['pringles','🥔','Pringles','Snacks','1 Dose (165 g)',830,920],
+ ['chio-chips','🥔','Chio Chips','Snacks','1 Packung (150 g)',740,830],
+ ['other-food','➕','Anderes','Sonstiges']
+].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({id,emoji,title,group,defaultAmount,kcalLow,kcalHigh}));
 const isoTime=x=>typeof x==='string'&&Number.isFinite(new Date(x).getTime());
 export function timeLabel(k){return TIME_AREAS.find(c=>c[0]===k)?.[2]||'Unklassifiziert';}
 export function timeCategoryOptions(selected='work'){
@@ -72,10 +79,12 @@ export function overlapWarnings(state){
  const rows=timeEntries(state).sort((a,b)=>a.start.localeCompare(b.start));
  return rows.flatMap((r,i)=>i&&Date.parse(r.start)<Date.parse(rows[i-1].end)?[[rows[i-1].id,r.id]]:[]);
 }
-export function addNutrition(state,{foodId,at,amount='',note='',id,deleted=false}){
+export function addNutrition(state,{foodId,at,amount,note='',id,deleted=false}){
  ensureJournal(state);const foods=[...FOOD_PRESETS,...state.nutritionJournal.customFoods];
- if(!foods.some(f=>f.id===foodId))throw Error('Lebensmittel nicht gefunden.');
- const item={id:String(id||crypto.randomUUID()),foodId:String(foodId),at:isoTime(at)?at:new Date().toISOString(),amount:String(amount).slice(0,60),note:String(note).slice(0,500),updatedAt:new Date().toISOString(),deleted};
+ const food=foods.find(f=>f.id===foodId);
+ if(!food)throw Error('Lebensmittel nicht gefunden.');
+ const chosenAmount=amount===undefined?(food.defaultAmount||''):amount;
+ const item={id:String(id||crypto.randomUUID()),foodId:String(foodId),at:isoTime(at)?at:new Date().toISOString(),amount:String(chosenAmount).slice(0,60),note:String(note).slice(0,500),updatedAt:new Date().toISOString(),deleted};
  const idx=state.nutritionJournal.entries.findIndex(e=>e.id===item.id);
  if(idx<0)state.nutritionJournal.entries.push(item);else state.nutritionJournal.entries[idx]=item;
  return item;
@@ -88,6 +97,31 @@ export function addCustomFood(state,title,emoji='🍴'){
 }
 export function nutritionFoods(state){return [...FOOD_PRESETS,...(state?.nutritionJournal?.customFoods||[])];}
 export function nutritionEntries(state){return (state?.nutritionJournal?.entries||[]).filter(e=>!e.deleted&&isoTime(e.at)).slice().sort((a,b)=>b.at.localeCompare(a.at));}
+/** An indicative range only, not a nutritional measurement. Explicitly edited quantities
+ * override presets when a compatible count or g/ml amount can be parsed. */
+export function nutritionKcalEstimate(food,amount){
+ if(!food||!Number.isFinite(food.kcalLow)||!Number.isFinite(food.kcalHigh))return null;
+ const original=String(food.defaultAmount||'').toLowerCase(),given=String(amount??food.defaultAmount??'').toLowerCase().trim();
+ if(!given)return null;
+ const parseNumber=v=>Number(String(v).replace(',','.'));
+ const quantity=v=>{const m=v.match(/(\d+(?:[.,]\d+)?)\s*(stück|g|gramm|ml|liter|l\b|packung|dose|teller)/i);return m?{value:parseNumber(m[1]),unit:m[2].toLowerCase()}:null;};
+ const a=quantity(original),b=quantity(given);
+ if(!a||!b)return given===original?{low:food.kcalLow,high:food.kcalHigh,kind:'Schätzung'}:null;
+ const unit=u=>u==='gramm'?'g':u==='liter'||u==='l'?'ml':u;
+ let ratio;
+ if(unit(a.unit)===unit(b.unit))ratio=b.value/a.value;
+ else if(b.unit==='l'&&a.unit==='ml')ratio=b.value*1000/a.value;
+ else return null;
+ if(!Number.isFinite(ratio)||ratio<=0||ratio>20)return null;
+ return {low:Math.round(food.kcalLow*ratio),high:Math.round(food.kcalHigh*ratio),kind:'Schätzung'};
+}
+export function nutritionKcalSummary(state,days=30,now=new Date()){
+ const foods=nutritionFoods(state),since=now.getTime()-days*86400000;
+ const entries=nutritionEntries(state).filter(e=>Date.parse(e.at)>=since&&Date.parse(e.at)<=now.getTime());
+ let low=0,high=0,known=0;
+ for(const entry of entries){const food=foods.find(f=>f.id===entry.foodId);const estimate=nutritionKcalEstimate(food,entry.amount);if(!estimate)continue;known++;low+=estimate.low;high+=estimate.high;}
+ return {low,high,known,unknown:entries.length-known,total:entries.length,complete:known===entries.length&&entries.length>0};
+}
 export function nutritionStats(state,days=30,now=new Date()){
  const since=now.getTime()-days*86400000,entries=nutritionEntries(state).filter(e=>Date.parse(e.at)>=since&&Date.parse(e.at)<=now.getTime());
  const counts=new Map();for(const e of entries)counts.set(e.foodId,(counts.get(e.foodId)||0)+1);
@@ -104,11 +138,11 @@ export function timeJournalView(state,{period=7,editingId='',showForm=false}={})
 }
 export function nutritionQuickView(state,{selectedFoodId='',dateToday}={}){
  const foods=nutritionFoods(state),groups=[...new Set(foods.map(f=>f.group))];
- return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3><div>${foods.filter(f=>f.group===group).map(f=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}</small></button>`).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. Kein Kalorienzählen. Details können später ergänzt werden. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
+ return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3><div>${foods.filter(f=>f.group===group).map(f=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}${f.defaultAmount?` · ${esc(f.defaultAmount)}`:''}</small></button>`).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. Kein Kalorienzählen. Details können später ergänzt werden. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
 }
 export function nutritionInsightsView(state,{period=30,editingId=''}={}){
  const stats=nutritionStats(state,period),foods=nutritionFoods(state),editing=nutritionEntries(state).find(e=>e.id===editingId);
- return `<div class="pj92-shell"><section class="work-card"><div class="work-heading"><span>🥗 Ernährungstagebuch</span><span class="quiet-tag">${period} Tage</span></div><p class="muted-line">Was esse und trinke ich – und wann? Ohne Bewertung oder automatische Ernährungsnoten.</p><div class="pj92-period">${[7,30,90].map(n=>`<button type="button" class="${n===period?'active':''}" data-action="pj92-nutrition-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${stats.entries.length}</strong><small>erfasste Lebensmittel und Getränke</small></div><div class="pj92-category-bars">${stats.ranked.slice(0,12).map(([id,count])=>{const food=foods.find(f=>f.id===id);return `<div class="pj92-bar-row"><span>${food?.emoji||'🍴'} ${esc(food?.title||'Eigenes Lebensmittel')}</span><div><i style="width:${Math.round(count/(stats.ranked[0]?.[1]||1)*100)}%"></i></div><strong>${count}×</strong></div>`;}).join('')||'<p class="muted-line">Noch keine Einträge in diesem Zeitraum.</p>'}</div></section><section class="work-card"><div class="work-heading"><span>Letzte Einträge</span><button type="button" class="secondary-btn" data-action="pj92-nutrition-add">Neues Lebensmittel erfassen</button></div><div class="pj92-entry-list">${stats.entries.slice(0,60).map(e=>{const food=foods.find(f=>f.id===e.foodId);return `<button class="pj92-time-row" type="button" data-action="pj92-food-edit" data-id="${esc(e.id)}"><span><strong>${food?.emoji||'🍴'} ${esc(food?.title||'Eintrag')}</strong><small>${esc([e.amount,e.note].filter(Boolean).join(' · ')||'Zum Bearbeiten öffnen')}</small></span><span><strong>${dayFormat(e.at)}</strong><small>${hourFormat(e.at)}</small></span></button>`;}).join('')||'<p class="muted-line">Einfach über das Ernährungssymbol in der Titelzeile beginnen.</p>'}</div></section>${editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>Ernährungseintrag</span><button type="button" data-action="pj92-food-edit-cancel">Schließen</button></div><form id="pj92-food-detail-form"><input type="hidden" name="id" value="${esc(editing.id)}"><label>Zeitpunkt<input type="datetime-local" name="at" value="${esc(toInputDate(editing.at))}" required></label><label>Menge (optional)<input name="amount" maxlength="60" value="${esc(editing.amount||'')}" placeholder="z. B. eine Handvoll"></label><label>Notiz (optional)<textarea name="note" rows="2" maxlength="500">${esc(editing.note||'')}</textarea></label><div class="pj92-form-actions"><button type="submit" class="primary-btn">Speichern</button><button type="button" class="secondary-btn" data-action="pj92-food-delete" data-id="${esc(editing.id)}">Löschen</button></div></form></section>`:''}<section class="work-card"><h3>Eigene Lebensmittel hinzufügen</h3><form id="pj92-add-food-form" class="pj92-inline-form"><label>Bezeichnung<input name="title" maxlength="80" placeholder="z. B. Haferbrei" required></label><button type="submit" class="secondary-btn">Hinzufügen</button></form></section></div>`;
+ return `<div class="pj92-shell"><section class="work-card"><div class="work-heading"><span>🥗 Ernährungstagebuch</span><span class="quiet-tag">${period} Tage</span></div><p class="muted-line">Was esse und trinke ich – und wann? Ohne Bewertung oder automatische Ernährungsnoten.</p><div class="pj92-period">${[7,30,90].map(n=>`<button type="button" class="${n===period?'active':''}" data-action="pj92-nutrition-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${stats.entries.length}</strong><small>erfasste Lebensmittel und Getränke</small></div><details class="pj92-kcal-details"><summary>Geschätzte Energie (optional, unvollständig)</summary>${(()=>{const k=nutritionKcalSummary(state,period);return `<p class="muted-line">${k.known?`Erfasste Einträge mit Referenzwert: ca. ${k.low}–${k.high} kcal für ${period} Tage.`:'Noch keine abschätzbaren Einträge.'} ${k.unknown} Einträge ohne Schätzung. <strong>Keine vollständige Kalorienbilanz.</strong> Werte variieren nach Marke, Sorte und Portionsgröße.</p>`;})()}</details><div class="pj92-category-bars">${stats.ranked.slice(0,12).map(([id,count])=>{const food=foods.find(f=>f.id===id);return `<div class="pj92-bar-row"><span>${food?.emoji||'🍴'} ${esc(food?.title||'Eigenes Lebensmittel')}</span><div><i style="width:${Math.round(count/(stats.ranked[0]?.[1]||1)*100)}%"></i></div><strong>${count}×</strong></div>`;}).join('')||'<p class="muted-line">Noch keine Einträge in diesem Zeitraum.</p>'}</div></section><section class="work-card"><div class="work-heading"><span>Letzte Einträge</span><button type="button" class="secondary-btn" data-action="pj92-nutrition-add">Neues Lebensmittel erfassen</button></div><div class="pj92-entry-list">${stats.entries.slice(0,60).map(e=>{const food=foods.find(f=>f.id===e.foodId);return `<button class="pj92-time-row" type="button" data-action="pj92-food-edit" data-id="${esc(e.id)}"><span><strong>${food?.emoji||'🍴'} ${esc(food?.title||'Eintrag')}</strong><small>${esc([e.amount,e.note].filter(Boolean).join(' · ')||'Zum Bearbeiten öffnen')}</small></span><span><strong>${dayFormat(e.at)}</strong><small>${hourFormat(e.at)}</small></span></button>`;}).join('')||'<p class="muted-line">Einfach über das Ernährungssymbol in der Titelzeile beginnen.</p>'}</div></section>${editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>Ernährungseintrag</span><button type="button" data-action="pj92-food-edit-cancel">Schließen</button></div><form id="pj92-food-detail-form"><input type="hidden" name="id" value="${esc(editing.id)}"><label>Zeitpunkt<input type="datetime-local" name="at" value="${esc(toInputDate(editing.at))}" required></label><label>Menge (optional)<input name="amount" maxlength="60" value="${esc(editing.amount||'')}" placeholder="z. B. eine Handvoll"></label><label>Notiz (optional)<textarea name="note" rows="2" maxlength="500">${esc(editing.note||'')}</textarea></label><div class="pj92-form-actions"><button type="submit" class="primary-btn">Speichern</button><button type="button" class="secondary-btn" data-action="pj92-food-delete" data-id="${esc(editing.id)}">Löschen</button></div></form></section>`:''}<section class="work-card"><h3>Eigene Lebensmittel hinzufügen</h3><form id="pj92-add-food-form" class="pj92-inline-form"><label>Bezeichnung<input name="title" maxlength="80" placeholder="z. B. Haferbrei" required></label><button type="submit" class="secondary-btn">Hinzufügen</button></form></section></div>`;
 }
 // Merge encrypted emotion check-ins by immutable ID. Preserve all historical entries
 // from both devices; an explicit later edit wins, with deterministic ties.
@@ -141,6 +175,7 @@ export function mergeJournalData(local,remote){
  };
 }
 
+
 /**
  * 0.5.70.4: merge punch-clock state by evidence of an actual start/stop.
  * The previous last-updated-wins merge discarded a phone's active clock whenever
@@ -172,4 +207,3 @@ export function mergeQuickWorktime(local,remote){
   .sort((a,b)=>Date.parse(b)-Date.parse(a))[0]||'';
  return {sessions,activeStart:active?.activeStart||'',activeCategory:active?.activeCategory||'work',updatedAt};
 }
-
