@@ -18,7 +18,8 @@ export function normalizeMorningConfig(cfg){
  const standard=defaultMorningConfig();
  return {
   durations:Object.fromEntries(MORNING_STEPS.map(step=>{const n=Number(raw.durations?.[step.id]);return [step.id,Number.isInteger(n)&&n>=1&&n<=90?n:standard.durations[step.id]];})),
-  affirmations:(Array.isArray(raw.affirmations)?raw.affirmations:[]).map(s=>String(s||'').trim().slice(0,260)).filter(Boolean).slice(0,12),
+  affirmations:(Array.isArray(raw.affirmations)?raw.affirmations:[]).map(s=>String(s||'').trim().slice(0,260)).filter(Boolean).slice(0,30),
+  visions:(Array.isArray(raw.visions)?raw.visions:[]).filter(v=>v&&typeof v==='object'&&String(v.text||'').trim()).slice(0,30).map(v=>({id:String(v.id||''),title:String(v.title||'Mein Ziel').slice(0,100),text:String(v.text||'').slice(0,1000),emoji:String(v.emoji||'🌄').slice(0,6),imageData:typeof v.imageData==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(v.imageData)&&v.imageData.length<150000?v.imageData:'',goalId:String(v.goalId||'').slice(0,120),updatedAt:String(v.updatedAt||'')})),
   visualization:String(raw.visualization||'').trim().slice(0,1200),goalId:String(raw.goalId||'').slice(0,120),
   exercises:(Array.isArray(raw.exercises)?raw.exercises:MORNING_EXERCISES).map(x=>String(x||'').trim().slice(0,120)).filter(Boolean).slice(0,12),
   readingBook:String(raw.readingBook||'').trim().slice(0,140),
@@ -29,6 +30,13 @@ export function normalizeMorningConfig(cfg){
 export function ensureMorning(state){
  if(!state.miracleMorning||typeof state.miracleMorning!=='object')state.miracleMorning={config:defaultMorningConfig(),sessions:[]};
  if(!Array.isArray(state.miracleMorning.sessions))state.miracleMorning.sessions=[];
+ if(!Array.isArray(state.miracleMorning.notes))state.miracleMorning.notes=[];
+ // Existing v0.5.70 Scribing text remains discoverable in the new journal.
+ for(const session of state.miracleMorning.sessions){
+  if(!session?.id||!session?.finishedAt||!String(session.note||'').trim())continue;
+  const id='session-'+session.id;
+  if(!state.miracleMorning.notes.some(note=>note.id===id))state.miracleMorning.notes.push({id,sessionId:session.id,text:String(session.note).slice(0,12000),day:session.day||session.finishedAt.slice(0,10),prompt:'',createdAt:session.finishedAt,updatedAt:session.updatedAt||session.finishedAt,deleted:false});
+ }
  state.miracleMorning.config=normalizeMorningConfig(state.miracleMorning.config);
  return state.miracleMorning;
 }
@@ -82,7 +90,11 @@ export function mergeMorningData(a,b){
   if(!prior||String(session.updatedAt||'')>String(prior.updatedAt||''))rows.set(session.id,session);
  }
  const aConfig=left.config||{},bConfig=right.config||{};
- return {config:normalizeMorningConfig(String(aConfig.updatedAt||'')>=String(bConfig.updatedAt||'')?aConfig:bConfig),sessions:[...rows.values()].sort((x,y)=>String(y.startedAt).localeCompare(String(x.startedAt)))};
+ const notes=new Map();for(const note of [...(left.notes||[]),...(right.notes||[])]){
+  if(!note?.id)continue;const previous=notes.get(note.id);
+  if(!previous||String(note.updatedAt||'')>String(previous.updatedAt||''))notes.set(note.id,note);
+ }
+ return {config:normalizeMorningConfig(String(aConfig.updatedAt||'')>=String(bConfig.updatedAt||'')?aConfig:bConfig),sessions:[...rows.values()].sort((x,y)=>String(y.startedAt).localeCompare(String(x.startedAt))),notes:[...notes.values()].sort((x,y)=>String(y.createdAt).localeCompare(String(x.createdAt)))};
 }
 export function morningStats(state,days=30,now=new Date()){
  const from=now.getTime()-days*86400000;
@@ -99,12 +111,12 @@ export function morningHubView(state,{settings=false,goals=[]}={}){
  ${settings?`<form id="mm570-settings-form" class="mm570-settings"><h3>Mein Morning konfigurieren</h3><p class="muted-line">Persönliche Texte bleiben im verschlüsselten Tresor und werden im Sperrmodus nicht angezeigt.</p><div class="mm570-settings-grid">${MORNING_STEPS.map(step=>`<label>${step.emoji} ${esc(step.title)}<input name="duration-${step.id}" type="number" min="1" max="90" value="${config.durations[step.id]}" required aria-label="Minuten für ${esc(step.title)}"/></label>`).join('')}</div><label>Affirmationen (eine pro Zeile)<textarea rows="5" name="affirmations" maxlength="3200" placeholder="Ich gestalte meinen Tag bewusst.&#10;Ich übe, auch unter Druck freundlich zu bleiben.">${esc(config.affirmations.join('\n'))}</textarea></label><label>Visualisierung / persönlicher Zielimpuls<textarea rows="3" name="visualization" maxlength="1200" placeholder="Worauf möchte ich heute hinarbeiten?">${esc(config.visualization)}</textarea></label><label>Mit vorhandenem Lebensziel verknüpfen<select name="goalId"><option value="">Kein Ziel verknüpft</option>${goals.map(g=>`<option value="${esc(g.id)}" ${g.id===config.goalId?'selected':''}>${esc(g.title)}</option>`).join('')}</select></label><label>Exercise · Übungen zu Hause (eine pro Zeile)<textarea rows="5" name="exercises" maxlength="1600">${esc(config.exercises.join('\n'))}</textarea></label><label>Reading · aktuelles Buch<input name="readingBook" maxlength="140" value="${esc(config.readingBook)}" placeholder="Was lese ich gerade?"/></label><label>Scribing · Journaling-Frage<input name="journalPrompt" maxlength="200" value="${esc(config.journalPrompt)}"/></label><button class="primary-btn" type="submit">Konfiguration verschlüsselt speichern</button></form>`:''}
  <div class="mm570-history"><h3>Deine letzten Morgen</h3>${recent.length?recent.map(session=>`<div><strong>${new Date(session.finishedAt).toLocaleDateString('de-AT',{day:'numeric',month:'short'})}</strong><span>${(session.steps||[]).filter(s=>!s.skipped).length} von 6 Abschnitten · ${Math.round((session.steps||[]).reduce((a,s)=>a+(s.skipped?0:s.seconds||0),0)/60)} Min.</span></div>`).join(''):'<p class="muted-line">Noch keine abgeschlossenen Routinen. Starte mit sechs Minuten, wenn der Morgen knapp ist.</p>'}</div></section>`;
 }
-export function morningOverlayView(session,config,{locked=false,goalTitle=''}={}){
+export function morningOverlayView(session,config,{locked=false,goalTitle='',goalTitles={}}={}){
  const active=MORNING_STEPS[session.stepIndex]||MORNING_STEPS[0],duration=Number(session.durations?.[active.id]||config?.durations?.[active.id]||active.minutes),elapsed=elapsedStepSeconds(session),remaining=Math.max(0,duration*60-elapsed);
  const running=session.status==='running',final=session.stepIndex===MORNING_STEPS.length-1;
  let details=`<p>${esc(active.detail)}</p>`;
  if(active.id==='affirmations')details=locked?'<p>Deine persönlichen Affirmationen bleiben bei gesperrtem Tresor verborgen. Du kannst sie auswendig sprechen oder später entsperren.</p>':(config.affirmations||[]).length?`<div class="mm570-lines">${config.affirmations.map(line=>`<p>${esc(line)}</p>`).join('')}</div>`:'<p>Hinterlege deine eigenen Affirmationen über „Konfigurieren“ unter Insights → Habits.</p>';
- if(active.id==='visualization')details=locked?'<p>Richte deine Aufmerksamkeit auf einen persönlichen Wunsch oder eine konkrete Handlung heute. Zieltexte bleiben geschützt.</p>':`<div class="mm570-lines">${goalTitle?`<p><strong>Mein Ziel:</strong> ${esc(goalTitle)}</p>`:''}${config.visualization?`<p>${esc(config.visualization)}</p>`:'<p>Wie möchte ich heute handeln? Welche kleine Handlung bringt mich meinem Ziel näher?</p>'}</div>`;
+ if(active.id==='visualization')details=locked?'<p>Richte deine Aufmerksamkeit auf einen persönlichen Wunsch oder eine konkrete Handlung heute. Zieltexte bleiben geschützt.</p>':`<div class="mm570-lines">${(config.visions||[]).length?config.visions.map(v=>`<div class="mm571-player-vision">${v.imageData?`<img src="${esc(v.imageData)}" alt="Mein Zielbild"/>`:''}<p><strong>${esc(v.emoji)} ${esc(v.title)}</strong>${v.goalId&&goalTitles[v.goalId]?`<small>Verknüpft: ${esc(goalTitles[v.goalId])}</small>`:''} · ${esc(v.text)}</p></div>`).join(''):`${goalTitle?`<p><strong>Mein Ziel:</strong> ${esc(goalTitle)}</p>`:''}${config.visualization?`<p>${esc(config.visualization)}</p>`:'<p>Wie möchte ich heute handeln? Welche kleine Handlung bringt mich meinem Ziel näher?</p>'}`}</div>`;
  if(active.id==='exercise')details=`<p>Bewege dich kontrolliert und ohne Überforderung.</p><ul>${(locked?MORNING_EXERCISES:config.exercises||MORNING_EXERCISES).map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`;
  if(active.id==='reading')details=`<p>${!locked&&config.readingBook?`<strong>${esc(config.readingBook)}</strong> · `:''}Du kannst jetzt zu Kindle wechseln. Beim Zurückkommen wird die verstrichene Zeit neu berechnet.</p>`;
  if(active.id==='scribing')details=`<label class="mm570-journal-label">${locked?'Was möchte ich mir merken?':esc(config.journalPrompt||'Was möchte ich heute festhalten?')}<textarea id="mm570-journal" rows="5" maxlength="4000" placeholder="Schreiben oder die Diktierfunktion des Geräts verwenden …">${esc(session.note||'')}</textarea></label><small>${locked?'Der Text wird beim Abschließen dieses Schritts verschlüsselt gesichert.':'Journaling bleibt im lokalen verschlüsselten Vault.'}</small>`;

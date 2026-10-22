@@ -1,0 +1,32 @@
+Compass 0.5.71 — Installation
+=============================
+
+VORAUSSETZUNG: Laufende Compass-Version 0.5.70.8.
+
+PATCH
+1. Vor dem Update den verschlüsselten lokalen Tresor sichern. Keine Browser-/PWA-Daten löschen.
+2. Das Archiv `Compass_0.5.71_PATCH_FROM_0.5.70.8.zip` im Stammverzeichnis des vorhandenen GitHub-Repositories entpacken.
+3. Dateistruktur beibehalten; nur die vorhandenen Pfade überschreiben. Neue Quelldateien ebenfalls hochladen.
+4. Commit auf dem gewöhnlichen Deployment-Branch erstellen und `Deploy Compass Web` in GitHub Actions überprüfen.
+5. Compass am Computer und Smartphone neu laden und jeweils Version 0.5.71 kontrollieren.
+
+FULL SOURCE
+`Compass_0.5.71_FULL_SOURCE.zip` enthält den gesamten aktualisierten Quellstand.
+Nicht zusätzlich zur Patch-Datei hochladen, wenn der Patch bereits angewendet wurde.
+
+TESTPLAN
+- Insights → Habits → Miracle Morning: Routine, Gestalten und Insights öffnen.
+- Gestalten: Affirmation ergänzen; Seite wechseln; erhaltene Eingabe prüfen.
+- Zielkarte mit optionalem Foto anlegen; Routine starten; Visualisierung anzeigen; gesperrten Tresor überprüfen (keine privaten Bilder/Texte sichtbar).
+- Scribing-Journaleintrag diktieren; während des Tippens auf lokale Speicherung achten; danach Seite wechseln und Eintrag erneut öffnen.
+- Eine Routine beenden; Scribing-Text in der Journal-Chronik überprüfen.
+- Insights 7 / 30 / 90 Tage umschalten; korrekte eigene Messungen/keine fiktiven Daten prüfen.
+- Auf zweitem Gerät nach Entsperren Journal synchronisieren; Texte und Zielkarten überprüfen.
+
+DATENBANK / WORKER
+Keine neue D1-Migration und kein neuer Cloudflare-Worker erforderlich, sofern die Journal-Synchronisierung von 0.5.69.2 bereits eingerichtet ist.
+
+EINSCHRÄNKUNGEN
+Keine verifizierte Vite-Produktionskompilierung oder echte mobile Browserabnahme in dieser Umgebung.
+Das Lesen in Kindle berechnet die verstrichene Zeit bei Rückkehr; ein zuverlässiger Alarm während eine andere App im Vordergrund ist, ist nicht garantiert.
+Ein laufender Entwurf wird auf dem gesperrten Bildschirm nicht als privater Klartext angezeigt. Zur Bearbeitung der Bibliothek und der Chronik muss der Tresor entsperrt sein.

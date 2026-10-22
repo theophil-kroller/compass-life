@@ -22,5 +22,5 @@ test('task date editing stays functional',()=>{
  assert.match(main,/function compactInspectorDate/);
  assert.match(main,/data-action="date-adjust"/);
  assert.match(main,/data-action="date-clear"/);
- assert.match(main,/const COMPASS_CLIENT_VERSION='0\.5\.70\.8'/);
+ assert.match(main,/const COMPASS_CLIENT_VERSION='0\.5\.\d+(?:\.\d+)?'/);
 });
