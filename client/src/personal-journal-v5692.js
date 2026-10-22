@@ -11,9 +11,12 @@ export const FOOD_PRESETS=[
  ['matcha','🍵','Matcha mit Honig','Getränke'],['oat-latte','☕','Hafermilch-Latte mit Karamellsirup','Getränke'],
  ['smoothie','🥤','Smoothie','Getränke'],['tea-unsweetened','🍵','Tee ungesüßt','Getränke'],['tea-honey','🫖','Tee mit Honig','Getränke'],
  ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke'],['coffee','☕','Kaffee','Getränke'],
- ['latella','🥛','Lattella (500 ml)','Getränke','500 ml',250,360],
+ ['latella','🥛','Lattella','Getränke','500 ml',250,360],
  ['mensa','🍲','Mensaessen','Mahlzeiten'],
- ['mensa-study-veggie','🥗','Vegetarischer Study-Teller · Stremayrgasse','Mahlzeiten','1 Teller',450,900],
+ ['wholegrain-toast-butter-jam','🍞','Vollkorn-Toast mit Butter & Marmelade','Frühstück','1 Stück',140,260],
+ ['fried-egg','🍳','Spiegelei','Frühstück','1 Stück',95,160],
+ ['dark-bread-butter','🍞','Schwarzbrot mit Butter','Frühstück','1 Scheibe',140,260],
+ ['mensa-study-veggie','🥗','Vegetarischer Study-Teller','Mahlzeiten','1 Teller',450,900],
 ['buffet','🍽️','Buffet / auswärts','Mahlzeiten'],
  ['bread-cheese','🥪','Käsebrot','Mahlzeiten'],['cheddar','🧀','Cheddar-Scheibe','Snacks'],
  ['peanuts','🥜','Gesalzene Erdnüsse','Snacks'],['mixed-nuts','🌰','Bio-Nussmischung','Snacks'],
@@ -107,10 +110,10 @@ export function nutritionKcalEstimate(food,amount){
  const original=String(food.defaultAmount||'').toLowerCase(),given=String(amount??food.defaultAmount??'').toLowerCase().trim();
  if(!given)return null;
  const parseNumber=v=>Number(String(v).replace(',','.'));
- const quantity=v=>{const m=v.match(/(\d+(?:[.,]\d+)?)\s*(stück|g|gramm|ml|liter|l\b|packung|dose|teller)/i);return m?{value:parseNumber(m[1]),unit:m[2].toLowerCase()}:null;};
+ const quantity=v=>{const m=v.match(/(\d+(?:[.,]\d+)?)\s*(stücke|stück|scheiben|scheibe|g|gramm|ml|liter|l\b|packung|dose|teller)/i);return m?{value:parseNumber(m[1]),unit:m[2].toLowerCase()}:null;};
  const a=quantity(original),b=quantity(given);
  if(!a||!b)return given===original?{low:food.kcalLow,high:food.kcalHigh,kind:'Schätzung'}:null;
- const unit=u=>u==='gramm'?'g':u==='liter'||u==='l'?'ml':u;
+ const unit=u=>u==='gramm'?'g':u==='scheiben'?'scheibe':u==='stücke'?'stück':u==='liter'||u==='l'?'ml':u;
  let ratio;
  if(unit(a.unit)===unit(b.unit))ratio=b.value/a.value;
  else if(b.unit==='l'&&a.unit==='ml')ratio=b.value*1000/a.value;

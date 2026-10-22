@@ -73,6 +73,7 @@ import {MORNING_STEPS,MORNING_PRESETS,defaultMorningConfig,normalizeMorningConfi
 import {morningIntelligenceHeader,morningCreateView,morningInsightsView,addMorningAffirmation,removeMorningAffirmation,saveMorningVision,removeMorningVision,putMorningNote,removeMorningNote,sessionToMorningNote} from './morning-intelligence-v571.js';
 import {TIME_AREAS,FOOD_PRESETS,timeCategoryOptions,timeLabel,ensureJournal,validTimeEntry,timeEntries,putTimeEntry,deleteTimeEntry,addNutrition,addCustomFood,nutritionFoods,nutritionKcalEstimate,nutritionEntries,timeJournalView,nutritionQuickView,nutritionInsightsView,mergeJournalData} from './personal-journal-v5692.js';
 import {energyGoalSettings,dayEnergyStatus} from './energy-goal-v575.js';
+import {quickEnergyMeter} from './nutrition-quick-meter-v576.js';
 import {mergeHabitQuick} from './habit-device-sync-v5731.js';
 import {markSuccessfulImport} from './import-status-v558.js';
 import {worktimeYearComparisonView} from './worktime-multiyear-v555.js';
@@ -97,7 +98,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.75';
+const COMPASS_CLIENT_VERSION='0.5.76';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -781,7 +782,7 @@ function habitQuickOverlay(){
  return `<div class="quick-panel-backdrop" data-action="habit-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="habit-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">HABITS · HEUTE ERLEDIGT</p><h2 id="habit-quick-title">Gewohnheiten abhaken</h2></div><button type="button" class="capture-modal-close" data-action="habit-quick-close" aria-label="Habits schließen">${ico('x',18)}</button></div><div class="habit569-summary"><strong>${doneSet.size}/${items.length}</strong><span>heute erledigt</span></div><div class="habit569-list">${items.map(item=>{const done=doneSet.has(item.id);const lockedDone=!state&&done;return '<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle" data-id="'+h(item.id)+'" '+(lockedDone?'disabled':'')+'><span><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</span><span class="habit569-check">'+(done?'✓':'')+'</span></button>';}).join('')}</div><div class="quick-panel-row"><button type="button" class="primary-btn" data-action="mm570-open">🌅 Miracle Morning</button><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div>${state?'':'<p class="quick-panel-hint">Verschlüsselt vorgemerkt</p>'}</section></div>`;
 }
 function nutritionQuickOverlay(){
- return `<div class="quick-panel-backdrop" data-action="pj92-food-close-backdrop"><section class="quick-panel pj92-food-panel" role="dialog" aria-modal="true" aria-labelledby="pj92-food-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ERNÄHRUNG · EIN TIPP GENÜGT</p><h2 id="pj92-food-title">Was gab es gerade?</h2></div><button type="button" class="capture-modal-close" data-action="pj92-food-close" aria-label="Ernährung schließen">${ico('x',18)}</button></div>${nutritionQuickView(state)}<button type="button" data-action="pj92-food-insights" class="secondary-btn">Ernährungstagebuch ansehen →</button>${!state?'<small>Ohne Entsperren: Einträge bleiben bis zum nächsten Entsperren nur auf diesem Gerät gespeichert.</small>':''}</section></div>`;
+ return `<div class="quick-panel-backdrop" data-action="pj92-food-close-backdrop"><section class="quick-panel pj92-food-panel" role="dialog" aria-modal="true" aria-labelledby="pj92-food-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ERNÄHRUNG · EIN TIPP GENÜGT</p><h2 id="pj92-food-title">Was gab es gerade?</h2></div><button type="button" class="capture-modal-close" data-action="pj92-food-close" aria-label="Ernährung schließen">${ico('x',18)}</button></div>${quickEnergyMeter(state)}${nutritionQuickView(state)}<button type="button" data-action="pj92-food-insights" class="secondary-btn">Ernährungstagebuch ansehen →</button>${!state?'<small>Ohne Entsperren: Einträge bleiben bis zum nächsten Entsperren nur auf diesem Gerät gespeichert.</small>':''}</section></div>`;
 }
 function journalSyncPanel(){const ready=Boolean(state?.privateDeviceMirror?.key&&authToken);return `<section class="work-card pj92-sync-status"><span>${ico('sync',16)} Habits, Zeitjournal, Ernährung & Kalender: ${ready?journalSyncStatus==='ok'?'verschlüsselt abgeglichen ✓':journalSyncStatus==='abgleich'?'Abgleich läuft …':journalSyncStatus==='fehler'?'Abgleich fehlgeschlagen – erneut versuchen':'lokal gespeichert · Abgleich ausstehend':'nur lokal – Geräteabgleich einrichten'}</span>${ready?'<button type="button" class="secondary-btn" data-action="pj92-sync-now">Jetzt abgleichen</button>':'<button type="button" class="secondary-btn" data-tab="system">Geräteabgleich einrichten</button>'}</section>`;}
 function quickWorktimeInsights(){

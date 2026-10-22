@@ -3118,3 +3118,33 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 
 /* Compass 0.5.75 — readable, compact nutrition energy goal. */
 .pj575-energy{margin-top:12px}.pj575-headline{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:12px 0;padding:12px;border:1px solid var(--line,#e4e9e7);border-radius:12px}.pj575-headline>div{display:grid;gap:4px}.pj575-headline small{font-size:11px;color:var(--muted,#63756b)}.pj575-headline strong{font-size:20px;font-weight:730;font-variant-numeric:tabular-nums}.pj575-headline.pj575-over{border-color:#ce8a79}.pj575-headline.pj575-possible{border-color:#dfc18c}.pj575-totals{display:flex;flex-wrap:wrap;gap:8px}.pj575-totals span{font-size:12px;background:var(--canvas,#f6f7f6);padding:6px 9px;border-radius:8px}.pj575-source{font-size:12px;color:var(--muted,#687a6f)}.pj575-warning{padding:9px 12px;border-radius:9px;font-size:13px;font-weight:600;border:1px solid #dfc18c}.pj575-warning.pj575-over{border-color:#c9867c}.pj575-meter{height:9px;border-radius:12px;background:#e7eeea;overflow:hidden}.pj575-meter span{display:block;height:100%;background:linear-gradient(90deg,#83bca3,#e5c58b,#d89a81)}.pj575-settings{margin-top:14px}.pj575-settings summary{cursor:pointer;font-weight:600}.pj575-form{padding-top:14px;display:grid;gap:13px}.pj575-opt{display:flex!important;align-items:center;gap:9px}.pj575-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:9px}.pj575-fields label{min-width:0;display:grid;gap:5px;font-size:12px}.pj575-fields input,.pj575-fields select{max-width:100%;width:100%;min-width:0}.pj575-energy .muted-line{font-size:12px}.pj575-form .primary-btn{justify-self:start}
+
+/* Compass 0.5.76 — one natural dialog scrollbar; compact energy progress. */
+.pj92-food-panel{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;}
+.pj92-food-panel .pj92-food-grid{max-height:none;overflow:visible;overscroll-behavior:auto;}
+.pj576-energy,.pj576-energy-pending{display:grid;gap:8px;padding:12px 13px;border:1px solid #d9e5df;border-radius:13px;background:#f7faf8;min-width:0;flex-shrink:0;}
+.pj576-energy-head{display:flex;justify-content:space-between;gap:10px;align-items:center;min-width:0;}
+.pj576-energy-head>span{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.pj576-energy-head>span strong,.pj576-energy-pending strong{font-size:12px;color:#285c4e;}
+.pj576-energy-head small,.pj576-energy-pending small{font-size:11px;color:#667b70;}
+.pj576-energy-head .pj576-kcal{font-size:16px;font-weight:780;color:#234a42;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.pj576-energy-track{position:relative;display:flex;overflow:visible;height:15px;border-radius:9px;background:#e3ebe7;isolation:isolate;box-shadow:inset 0 0 0 1px #ffffff70;}
+.pj576-zone{height:100%;flex-shrink:0;min-width:0;}
+.pj576-zone:first-child{border-radius:9px 0 0 9px;}
+.pj576-zone:last-of-type{border-radius:0 9px 9px 0;}
+.pj576-zone.loss{background:linear-gradient(90deg,#2d8d6f,#6aae82);}
+.pj576-zone.maintain{background:linear-gradient(90deg,#cbd68a,#eac168);}
+.pj576-zone.gain{background:#dc9b80;}
+.pj576-zone.more-gain{background:#c76357;}
+.pj576-range{position:absolute;top:-4px;height:23px;z-index:2;box-sizing:border-box;border-radius:5px;border:2px solid #1b3e37;background:#ffffff6c;min-width:4px;}
+.pj576-point{position:absolute;top:2px;transform:translateX(-50%);height:11px;width:3px;border-radius:3px;background:#133e31;z-index:3;}
+.pj576-energy-scale{display:flex;justify-content:space-between;gap:7px;color:#46685d;font-size:10px;font-weight:650;}
+.pj576-energy-note{font-size:10px;color:#728176;line-height:1.45;margin:0;}
+.pj576-energy-alert{font-size:11px;font-weight:650;color:#8e5f39;background:#fbf0e4;padding:6px 8px;border-radius:7px;margin:0;}
+@media(max-width:570px){.pj576-energy-head .pj576-kcal{font-size:14px}.pj576-energy-scale{font-size:9px}}
+
+/* 0.5.76 – direct, non-judgmental erotic nuance entry under Zuneigung. */
+.fw576-erotic-shortcut{display:flex;gap:5px;align-items:flex-start;flex-direction:column;margin-top:8px;}
+.fw576-erotic-shortcut button{border-radius:999px;border:1px solid #ad7290;background:#503544;color:#ffe6ef;padding:8px 11px;font-size:12px;font-weight:700;cursor:pointer;}
+.fw576-erotic-shortcut button:focus-visible{outline:2px solid #e1a8c7;outline-offset:2px;}
+.fw576-erotic-shortcut small{color:#adc2c5;font-size:10px;line-height:1.45;}

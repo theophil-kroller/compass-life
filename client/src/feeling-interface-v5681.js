@@ -10,6 +10,7 @@ function emotionCard(e,value,draft,word){
  <label class="sr-only" for="fw65-${e.id}">Intensität von ${clean(e.label)}</label>
  <input class="fw65-range" type="range" id="fw65-${e.id}" min="1" max="10" step="1" value="${value}" data-feeling-intensity="${e.id}"/>
  <div class="fw65-words">${e.words.map((w,i)=>`<span class="${Math.floor((value-1)/2)===i?'active':''}">${clean(w)}</span>`).join('')}</div>
+ ${e.id==='affection'?`<div class="fw576-erotic-shortcut"><button type="button" data-action="feeling-family" data-id="affection" data-step="Erotik &amp; Begehren">♡ Erotik &amp; Begehren · Lust</button><small>Erotische Anziehung, Zuneigung und körperliche Erregung sind nicht dasselbe.</small></div>`:''}
  <div class="fw681-presence-heading">Wie intensiv fühlt es sich an?</div>${intensityBand(e.id,value)}
  <details class="fw681-refine" ${detail.family?'open':''} data-refine="${e.id}"><summary>Was trifft es noch genauer? ${detail.nuance?`<span>· ${clean(detail.nuance)}</span>`:''}<small>optional</small></summary>
  <div class="fw681-group-label">Gefühlsfamilie</div><div class="fw681-chips">${families.map(g=>`<button type="button" data-action="feeling-family" data-id="${e.id}" data-step="${clean(g[0])}" class="${detail.family===g[0]?'active':''}">${clean(g[0])}</button>`).join('')}</div>

@@ -45,6 +45,8 @@ const base=[
  ['Gelassen','gefühl','calm','Gelassenheit','ruhig,entspannt,gelassen,ausgeglichen'],
  ['Verbunden','gefühl','affection','Verbundenheit','nahe,verbunden,zugehörig'],
  ['Zärtlich','gefühl','affection','Zärtlichkeit','zuneigung,zärtlich,liebevoll'],
+ ['Erotisches Verlangen','impuls','','','lust,sexuelle lust,begehren,sexuelles verlangen,erotik'],
+ ['Sexuell erregt','körper','','','sexuelle erregung,körperlich erregt,lust,erotisch'],
  ['Sexuelle Lust','impuls','', '', 'lust,sexuelle lust,begehren,sex'],
  ['Rückzug','bedürfnis','', '', 'meine ruhe,rückzug,abstand,allein sein'],
  ['Ruhe','bedürfnis','', '', 'pause,ruhe,stille,auftanken'],
@@ -77,7 +79,10 @@ const seeds=[
  {aliases:['traurig','traurigkeit','niedergeschlagen'],words:['Traurig','Niedergeschlagen','Sehnsüchtig','Einsam','Enttäuscht']},
  {aliases:['froh','freude','glucklich','glücklich','gut drauf'],words:['Begeistert','Dankbar','Erleichtert','Neugierig','Geborgen','Vorfreudig']},
  {aliases:['verwirrt','verwirrung','ratlos'],words:['Verwirrt','Zerrissen','Unsicher','Orientierung']},
- {aliases:['mude','müde','erschopft','erschöpft'],words:['Erschöpft','Angespannt','Ruhe','Rückzug','Gelassen']}
+ {aliases:['mude','müde','erschopft','erschöpft'],words:['Erschöpft','Angespannt','Ruhe','Rückzug','Gelassen']},
+ {aliases:['lust','erotisch','erotik','begehren','sexuelle anziehung','sinnlichkeit','sexuelle lust','sexuell erregt'],words:['Lustvoll','Sinnlich','Erotisch angezogen','Begehrend','Verlangend','Sexuelle Lust','Sexuell erregt','Nähe','Zärtlich']},
+ {aliases:['zuneigung','liebe','verbundenheit','zaertlichkeit','zärtlichkeit','intimität'],words:['Zärtlich','Liebevoll','Verbunden','Sinnlich','Begehrend','Lustvoll','Erotisch angezogen']}
+
  ];
 export function findEmotionNetwork(raw,{limit=10}={}){
  const q=fold(raw);const max=Math.max(2,Math.min(12,Number(limit)||10));

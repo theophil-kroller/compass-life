@@ -1,0 +1,9 @@
+Compass Life 0.5.76
+Basis für PATCH: 0.5.75.
+
+PATCH: ZIP entpacken und die enthaltenen Dateien in denselben GitHub-Ordnern ersetzen / ergänzen; kein Apply-Skript.
+FULL SOURCE: vollständiges Repository (ohne lokale node_modules) als ZIP.
+GitHub Pages Deployment abwarten, dann die PWA auf Mobilgerät und Desktop neu laden; gegebenenfalls installierte PWA schließen und neu öffnen.
+Keine Worker-Änderung und keine D1-Migration.
+Die kcal-Leiste erscheint in der Schnellerfassung, nachdem du Insights > Ernährung > Persönliches Energieziel freiwillig aktiviert und eingerichtet hast.
+Neue Frühstückseinträge werden über die Kachel angetippt; ein Frühstück von vor dem Update wird nicht automatisch nachgetragen.

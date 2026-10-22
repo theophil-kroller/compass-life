@@ -8,12 +8,12 @@ export const FEELING_DEPTH=Object.freeze({
  sadness:[['Abschied',['Wehmütig','Trauernd','Sehnsüchtig','Verlustbewusst']],['Enttäuschung',['Bedrückt','Enttäuscht','Mutlos','Niedergeschlagen']],['Berührung',['Gerührt','Melancholisch','Nachdenklich','Verletzlich']]],
  fear:[['Unsicherheit',['Unsicher','Zögerlich','Nervös','Besorgt']],['Wachsamkeit',['Vorsichtig','Alarmiert','Wachsam','Verunsichert']],['Bedrohung',['Furchtsam','Erschrocken','Ängstlich','Überfordert']]],
  anger:[['Reizung',['Genervt','Gereizt','Ungeduldig','Überdrüssig']],['Grenzen',['Verletzt','Empört','Aufgebracht','Abgegrenzt']],['Frustration',['Frustriert','Enttäuscht','Verärgert','Ungerecht behandelt']]],
- affection:[['Verbundenheit',['Verbunden','Nah','Zugehörig','Geborgen']],['Zärtlichkeit',['Zärtlich','Liebevoll','Wärmend','Innig']],['Anziehung',['Angezogen','Verliebt','Begehrend','Voller Zuneigung']]]
+ affection:[['Verbundenheit',['Verbunden','Nah','Zugehörig','Geborgen']],['Zärtlichkeit',['Zärtlich','Liebevoll','Wärmend','Innig']],['Anziehung',['Angezogen','Verliebt','Begehrend','Voller Zuneigung']],['Erotik & Begehren',['Lustvoll','Sinnlich','Erotisch angezogen','Begehrend','Verlangend']]]
 });
 export const FEELING_OBSERVATIONS=Object.freeze({
- body:['Erschöpft','Müde','Angespannt','Entspannt','Energiegeladen','Warm','Unruhig','Körperlich erregt'],
- needs:['Ruhe','Rückzug','Nähe','Verbindung','Bewegung','Raum für mich','Spiel','Intimität'],
- impulses:['Süßes essen','Rausgehen','Reden','Ablenken','Bewegen','Kuscheln','Sexualität','Pause machen']
+ body:['Erschöpft','Müde','Angespannt','Entspannt','Energiegeladen','Warm','Unruhig','Körperlich erregt','Sexuell erregt'],
+ needs:['Ruhe','Rückzug','Nähe','Verbindung','Bewegung','Raum für mich','Spiel','Intimität','Erotische Nähe'],
+ impulses:['Süßes essen','Rausgehen','Reden','Ablenken','Bewegen','Kuscheln','Sexualität','Sexuelle Lust','Pause machen']
 });
 export function feelingFamilies(id){return FEELING_DEPTH[id]||[];}
 export function validFeelingDetail(id,detail={}){
@@ -46,6 +46,6 @@ export function feelingMeaning(id){const texts={
  sadness:'Trauer kann mit einem Verlust oder etwas Bedeutsamem verbunden sein. Was braucht Raum oder Anerkennung?',
  fear:'Angst kann deine Aufmerksamkeit auf Unsicherheit oder Schutzbedürfnisse lenken. Was würde dir Orientierung geben?',
  anger:'Wut kann darauf hinweisen, dass eine Grenze oder ein Bedürfnis berührt wurde. Was war gerade zu viel?',
- affection:'Zuneigung kann von Verbundenheit und Nähe erzählen. Was möchtest du davon pflegen oder ausdrücken?'
+ affection:'Zuneigung kann von Nähe, Anziehung oder erotischem Begehren erzählen – diese Erfahrungen müssen nicht zusammen auftreten. Was möchtest du ausdrücken?'
  };return texts[id]||'';}
 export function intensityPresence(n){return n<=2?'Sehr leise wahrnehmbar':n<=4?'Leicht spürbar':n<=6?'Deutlich präsent':n<=8?'Nimmt viel Raum ein':'Sehr intensiv und vereinnahmend';}
