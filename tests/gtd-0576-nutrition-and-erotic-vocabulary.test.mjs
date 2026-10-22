@@ -38,7 +38,8 @@ test('0.5.76 stress context: only one scrollbar, quick goal near top and version
  const css=readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(css,/\.pj92-food-panel \.pj92-food-grid\{max-height:none;overflow:visible/);
  assert.match(main,/\$\{quickEnergyMeter\(state\)\}\$\{nutritionQuickView\(state\)\}/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0.5.76'/);
+ const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
+ assert.ok(main.includes("const COMPASS_CLIENT_VERSION='"+pkg.version+"'"));
 });
 test('0.5.76 erotic vocabulary is available in affection family and captures chosen nuance',()=>{
  const family=feelingFamilies('affection').find(([key])=>key==='Erotik & Begehren');assert.ok(family);

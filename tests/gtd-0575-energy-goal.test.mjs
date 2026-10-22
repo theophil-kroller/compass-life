@@ -62,7 +62,9 @@ test('profile sync is last-updated-wins; no device can erase a newer setting',()
 });
 test('integration includes profile form and respects existing mirror and version',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.(?:75|76)'/);
+ const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
+ assert.ok(/^0\.5\.\d+(?:\.\d+)?$/.test(pkg.version));
+ assert.ok(main.includes("const COMPASS_CLIENT_VERSION='"+pkg.version+"'"));
  assert.match(main,/pj575-energy-form/);assert.match(main,/dayEnergyStatus\(state/);
  assert.match(main,/nutritionKcalEstimate/);assert.match(main,/nutritionJournal:copy\.nutritionJournal/);
  assert.doesNotMatch(main,/localStorage\.setItem\(['"]energyGoal/);
