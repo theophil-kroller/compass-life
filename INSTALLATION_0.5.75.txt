@@ -1,0 +1,8 @@
+Compass 0.5.75
+Basis: Compass 0.5.74.
+PATCH: Enthaltene Dateien mit gleicher Ordnerstruktur direkt in GitHub hochladen.
+FULL SOURCE: enthält gesamten Quellstand für 0.5.75; ZIP zunächst entpacken, dann Ordnerinhalt hochladen.
+Nach GitHub Pages Deployment Browser/PWA aktualisieren.
+Insights > Ernährung > Persönliches Energieziel: Profil einmalig vervollständigen und freiwillig aktivieren.
+Auf allen Geräten gleiche Version und Geräteabgleich verwenden.
+Keine Worker-Migration, keine neuen Datenbanktabellen.

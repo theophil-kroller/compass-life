@@ -71,7 +71,8 @@ import {healthFindings,rankHealthFindingsLocally} from './health-intelligence-v5
 import {inspectWorktimeFile,mergeWorktime,worktimeView,worktimeImportPanel} from './worktime-v553.js';
 import {MORNING_STEPS,MORNING_PRESETS,defaultMorningConfig,normalizeMorningConfig,ensureMorning,newMorningSession,morningSafeMeta,morningFromSafeMeta,transitionMorning,elapsedStepSeconds,storeMorningSession,morningHubView,morningOverlayView} from './miracle-morning-v570.js';
 import {morningIntelligenceHeader,morningCreateView,morningInsightsView,addMorningAffirmation,removeMorningAffirmation,saveMorningVision,removeMorningVision,putMorningNote,removeMorningNote,sessionToMorningNote} from './morning-intelligence-v571.js';
-import {TIME_AREAS,FOOD_PRESETS,timeCategoryOptions,timeLabel,ensureJournal,validTimeEntry,timeEntries,putTimeEntry,deleteTimeEntry,addNutrition,addCustomFood,nutritionFoods,nutritionEntries,timeJournalView,nutritionQuickView,nutritionInsightsView,mergeJournalData} from './personal-journal-v5692.js';
+import {TIME_AREAS,FOOD_PRESETS,timeCategoryOptions,timeLabel,ensureJournal,validTimeEntry,timeEntries,putTimeEntry,deleteTimeEntry,addNutrition,addCustomFood,nutritionFoods,nutritionKcalEstimate,nutritionEntries,timeJournalView,nutritionQuickView,nutritionInsightsView,mergeJournalData} from './personal-journal-v5692.js';
+import {energyGoalSettings,dayEnergyStatus} from './energy-goal-v575.js';
 import {mergeHabitQuick} from './habit-device-sync-v5731.js';
 import {markSuccessfulImport} from './import-status-v558.js';
 import {worktimeYearComparisonView} from './worktime-multiyear-v555.js';
@@ -96,7 +97,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.74';
+const COMPASS_CLIENT_VERSION='0.5.75';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -1890,6 +1891,12 @@ function render(){
 function bind() {
  const quickCategory=app.querySelector('#pj92-current-category');if(quickCategory)quickCategory.onchange=()=>{worktimeSelectedCategory=quickCategory.value;};
  const timeForm=app.querySelector('#pj92-time-form');if(timeForm)timeForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(timeForm);const conv=v=>new Date(String(v)).toISOString();const entry=validTimeEntry({id:fd.get('id')||undefined,start:conv(fd.get('start')),end:conv(fd.get('end')),category:String(fd.get('category')),title:fd.get('title'),project:fd.get('project'),updatedAt:stamp()});journalSyncStatus='lokal';await mutate(s=>putTimeEntry(s,entry));timeJournalShowForm=false;timeJournalEditId='';toast('Zeitintervall gespeichert.');}catch(ex){toast(ex.message,true);}};
+ const energyGoalForm=app.querySelector('#pj575-energy-form');if(energyGoalForm)energyGoalForm.onsubmit=async ev=>{
+  ev.preventDefault();try{const fd=new FormData(energyGoalForm);const old=energyGoalSettings(state?.nutritionJournal?.energyGoal);
+   const settings=energyGoalSettings({...old,enabled:fd.has('enabled'),birthYear:fd.get('birthYear')||null,birthMonth:fd.get('birthMonth')||null,heightCm:fd.get('heightCm')||null,formulaSex:String(fd.get('formulaSex')||''),method:String(fd.get('method')||'auto'),activity:String(fd.get('activity')||'auto'),deficit:Number(fd.get('deficit'))||300,updatedAt:stamp()});
+   journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s).nutritionJournal.energyGoal=settings;});toast('Energieziel lokal verschlüsselt gespeichert.');
+  }catch(ex){toast('Energieziel: '+ex.message,true);}
+ };
  const foodDetail=app.querySelector('#pj92-food-detail-form');if(foodDetail)foodDetail.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodDetail);journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===fd.get('id'));if(!item)throw Error('Eintrag fehlt.');item.at=new Date(String(fd.get('at'))).toISOString();item.amount=String(fd.get('amount')||'').slice(0,60);item.note=String(fd.get('note')||'').slice(0,500);item.updatedAt=stamp();});nutritionEditId='';toast('Ernährungseintrag gespeichert.');}catch(ex){toast(ex.message,true);}};
  const foodCustom=app.querySelector('#pj92-add-food-form');if(foodCustom)foodCustom.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodCustom);journalSyncStatus='lokal';await mutate(s=>addCustomFood(s,fd.get('title')));toast('Lebensmittel hinzugefügt.');}catch(ex){toast(ex.message,true);}};
 
@@ -2803,7 +2810,10 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='pj92-food-tap'){
   try{const item={id:crypto.randomUUID(),foodId:id,at:stamp()};
    if(!state){await vault.appendSealedNutrition(item);foodQueuedCount++;nutritionQuickOpen=false;toast('Ernährung verschlüsselt vorgemerkt.');}
-   else{journalSyncStatus='lokal';await mutate(s=>addNutrition(s,item));nutritionQuickOpen=false;toast('Ernährung erfasst.');}
+   else{journalSyncStatus='lokal';await mutate(s=>addNutrition(s,item));nutritionQuickOpen=false;
+     const goal=dayEnergyStatus(state,{foods:nutritionFoods(state),estimate:nutritionKcalEstimate});
+     toast(goal.message||'Ernährung erfasst.',Boolean(goal.message&&goal.status==='over'));
+    }
   }catch(ex){toast(ex.message,true);}return;
  }
  if(action==='pj92-open-timejournal'){tab='insights';insightTab='timejournal';calmNavGroup='insights';render();if(state?.privateDeviceMirror?.key&&authToken)syncPersonalJournal().catch(ex=>toast('Journal-Abgleich: '+ex.message,true));return;}
