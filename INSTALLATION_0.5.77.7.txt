@@ -1,0 +1,25 @@
+Compass 0.5.77.7 — Recherche-Wiedervorlagen / Poster-Sammelsuche
+================================================================
+
+PATCH nur auf Compass 0.5.77.6 anwenden.
+1. Optional (empfohlen): verschlüsselten Vault-Export als Backup erstellen.
+2. Compass_0.5.77.7_PATCH_FROM_0.5.77.6.zip ins Repository-ROOT entpacken.
+   Die Verzeichnisse client/ und tests/ und die package.json-Dateien in ihrer Struktur belassen. Dateien überschreiben.
+3. Änderungen auf GitHub committen, GitHub Actions „Deploy Compass Web“ auf grün prüfen.
+4. Compass nach dem Deployment neu laden; Versionsanzeige 0.5.77.7 kontrollieren.
+
+FULL SOURCE
+Compass_0.5.77.7_FULL_SOURCE.zip enthält den vollständigen Quellcode als Alternative zum Patch.
+NICHT den lokalen Tresor oder die IndexedDB löschen.
+
+TEST
+A. Erholung öffnen: Auf bereits importierten Recherche-Buttons erscheinen Importdatum und bei Bedarf „Recherche fällig“.
+B. Heute: Fällige Erholungs-Recherchen erscheinen mit „Prompt öffnen“, ohne automatisch angelegte To-dos.
+C. Weekly Review: Alle fälligen Recherchebereiche stehen gemeinsam in einem kompakten Block.
+D. Auf „Prompt öffnen“ tippen: Compass wechselt nach Erholung und zeigt den spezifischen Rechercheprompt; Clipboard funktioniert browserabhängig.
+E. Ein passendes Event-JSON importieren und bestätigen: Wiedervorlage dieses Bereichs wird neu berechnet. Andere Bereiche bleiben unverändert.
+F. Kino -> „Alle fehlenden Poster suchen“: Ein Klick startet mehrere 12er-Durchgänge, Fortschritt wird angezeigt; Treffer müssen weiterhin geprüft und bestätigt werden.
+
+Keine D1-Migration und kein Worker-Update. 849 automatisierte Tests grün; Worker-Syntaxcheck grün.
+Produktionsbuild lokal nicht ausführbar (Vite nicht installiert); GitHub Actions als abschließenden Buildcheck nutzen.
+In-App-Hinweise erscheinen bei der Nutzung von Compass; keine Push-Benachrichtigungen außerhalb der App.

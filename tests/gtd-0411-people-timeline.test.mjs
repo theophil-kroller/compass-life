@@ -25,6 +25,7 @@ import * as life from '../client/src/life-intelligence-v22.js';
 import * as gtd23 from '../client/src/gtd-intelligence-v23.js';
 import * as personLinks from '../client/src/person-links.js';
 import * as discoveryFilter from '../client/src/discovery-category-filter.js';
+import * as discoveryFreshness5777 from '../client/src/discovery-freshness-v5777.js';
 import * as review from '../client/src/guided-review.js';
 import * as tags from '../client/src/smart-tags.js';
 import * as personMatching from '../client/src/people-matching.js';
@@ -42,7 +43,7 @@ function setup(){
  const app={innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null};
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const ctx={document,window:{addEventListener:()=>{}},location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(Error('offline')),setTimeout,clearTimeout};
- Object.assign(ctx,lifeBalance63,radar555,dailyPlanning,capacity,deadline,projectExchange,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,relationships,relationshipRadar,feelingWheel65,contactCare568,calendarSuggestions568);
+ Object.assign(ctx,lifeBalance63,radar555,dailyPlanning,capacity,deadline,projectExchange,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,discoveryFreshness5777,relationships,relationshipRadar,feelingWheel65,contactCare568,calendarSuggestions568);
  Object.assign(ctx,habitSync5731,calendarCache574);
  ctx.touchPersonSummary=touchPersonSummary;
  ctx.technicalSettings=technicalSettings;

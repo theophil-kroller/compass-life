@@ -1,0 +1,12 @@
+/* Compact, in-app review hints; never turn external research into a hard task. */
+.research-refresh-panel{margin:12px 0}
+.research-refresh-panel .work-heading{margin-bottom:8px}
+.research-refresh-list{display:flex;flex-direction:column;gap:6px}
+.research-refresh-item{display:flex;gap:9px;align-items:center;background:var(--surface-subtle,#f7faf8);border:1px solid #e2ebe5;border-radius:11px;padding:9px 11px;min-width:0}
+.research-refresh-emoji{font-size:18px;flex:0 0 auto}
+.research-refresh-item>div{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.research-refresh-item strong{font-size:12px;color:#315a42}
+.research-refresh-item small{font-size:11px;line-height:1.45;color:#77877b}
+.research-refresh-item .secondary-btn{white-space:nowrap;font-size:11px}
+.research-is-due{border-color:#dca988!important;background:#fffaf5!important}
+@media(max-width:610px){.research-refresh-item{flex-wrap:wrap}.research-refresh-item>div{min-width:180px}.research-refresh-item .secondary-btn{margin-left:auto}}

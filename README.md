@@ -1,3 +1,5 @@
+> **Compass 0.5.77.7** – Intelligente Wiedervorlagen für die Event-Recherchen in Heute und Weekly Review; Poster-Sammelsuche mit einem Klick. Siehe [Changelog](CHANGELOG_0.5.77.7.md) und [Installation](INSTALLATION_0.5.77.7.txt).
+
 > **Compass 0.5.77.6** – Zuverlässiger Import für alle Rechercheprompts, museumsfähige URL-Escape-Reparatur, sichtbare Fehler und saubere Poster-Vorschau. Siehe [Changelog](CHANGELOG_0.5.77.6.md) und [Installation](INSTALLATION_0.5.77.6.txt).
 
 > **Compass 0.5.77.5** – Kinoposter-Reparatur mit externer Vorschau, Bildprüfung und manueller URL-Ergänzung. Siehe `CHANGELOG_0.5.77.5.md` und `INSTALLATION_0.5.77.5.txt`.
