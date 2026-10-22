@@ -1,0 +1,5 @@
+Compass 0.5.73 – Direkt-Upload-Patch
+
+Basis: Compass 0.5.72 wie im vorherigen Patch. Dateien entpacken und die enthaltenen Ordner und Dateien in GitHub am gleichen Pfad überschreiben bzw. ergänzen. Kein Skript erforderlich. Nach dem Commit GitHub Actions (Deploy Compass Web) prüfen. Kein D1-/Worker-Update. Vor der Installation Vault sichern.
+
+Prüfen: Insights → Gesundheit → Stress → Zeitraumpfeile, rollenden Chart, Raincloud samt Schwellen, sowie 7/28/90/365 Tage und vorwärts bis zum heutigen Fenster.

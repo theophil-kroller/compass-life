@@ -19,7 +19,7 @@ export function rollingObservations(rows=[],key='nightAverageMs',windowDays=14,m
  });
 }
 const formatDay=day=>new Date(`${day}T12:00:00Z`).toLocaleDateString('de-AT',{day:'2-digit',month:'short',year:'numeric'});
-export function rollingEnvelopeChart(rows,key='nightAverageMs',{title='Verlauf',unit='',windowDays=14,color='#8065A9',minPoints=5,range=null}={}){
+export function rollingEnvelopeChart(rows,key='nightAverageMs',{title='Verlauf',unit='',windowDays=14,color='#8065A9',minPoints=5,range=null,stressZones=false}={}){
  const all=(rows||[]).filter(r=>finite(r[key])&&r[key]>=0&&/^\d{4}-\d{2}-\d{2}$/.test(r.day||'')).sort((a,b)=>a.day.localeCompare(b.day));
  if(!all.length)return `<p class="insight-no-data">Keine ${esc(title)}-Messwerte vorhanden.</p>`;
  // Historical observations before the selected interval are allowed ONLY as rolling reference.
@@ -27,7 +27,7 @@ export function rollingEnvelopeChart(rows,key='nightAverageMs',{title='Verlauf',
  if(!relevant.length)return `<p class="insight-no-data">Keine ${esc(title)}-Messwerte im ausgewählten Zeitraum.</p>`;
  const derived=rollingObservations(all,key,windowDays,minPoints).filter(x=>(!range?.start||x.day>=range.start)&&(!range?.end||x.day<=range.end));
  const band=derived.filter(x=>finite(x.low)&&finite(x.high));
- const values=derived.flatMap(x=>[x.value,x.low,x.high].filter(finite));const rawLo=Math.min(...values),rawHi=Math.max(...values),pad=Math.max(1,(rawHi-rawLo)*.15),lo=Math.max(0,rawLo-pad),hi=rawHi+pad;
+ const values=derived.flatMap(x=>[x.value,x.low,x.high].filter(finite));const rawLo=Math.min(...values),rawHi=Math.max(...values),pad=Math.max(1,(rawHi-rawLo)*.15),lo=stressZones?0:Math.max(0,rawLo-pad),hi=stressZones?100:rawHi+pad;
  const W=820,H=269,L=54,R=18,T=20,B=43,w=W-L-R,h=H-T-B;
  const begin=range?.start||derived[0].day,end=range?.end||derived.at(-1).day;
  const t0=stamp(begin),t1=Math.max(stamp(end),t0+86400000);
@@ -44,7 +44,8 @@ export function rollingEnvelopeChart(rows,key='nightAverageMs',{title='Verlauf',
  const circles=derived.slice(-420).map(v=>`<circle cx="${X(v.day)}" cy="${Y(v.value)}" r="3" fill="${color}" opacity=".8"><title>${esc(v.day)}: ${v.value.toFixed(1)} ${esc(unit)} · ${v.count} Messungen im ${windowDays}-Tage-Fenster</title></circle>`).join('');
  const ticks=[0,.25,.5,.75,1].map(t=>{const v=lo+(hi-lo)*t;return `<line x1="${L}" y1="${Y(v)}" x2="${W-R}" y2="${Y(v)}" stroke="#E8EEE9"/><text x="${L-7}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="#75897C">${v.toFixed(1)}</text>`;}).join('');
  const dateLabels=[0,.25,.5,.75,1].map(t=>{const d=new Date(t0+(t1-t0)*t).toISOString().slice(0,10);return `<text x="${L+w*t}" y="${H-13}" text-anchor="middle" font-size="10" fill="#7D9386">${esc(formatDay(d))}</text>`;}).join('');
- return `<div class="insight-svg-scroller"><svg class="insight-svg health-rolling-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)} mit rollendem beobachtetem Streubereich über ${windowDays} Tage">${ticks}${shapes.join('')}${lines.join('')}${circles}${dateLabels}</svg></div><div class="insight-legend"><span><i style="background:${color}"></i>Messpunkte & rollender Median</span><span><i style="background:${color};opacity:.3"></i>Rollendes 20.–80. Perzentil (${windowDays} Tage)</span></div><p class="insight-figure-note">${derived.length} gemessene Tage; Band an ${band.length} Tagen mit mindestens ${minPoints} Messwerten im zurückliegenden ${windowDays}-Tage-Fenster. Kein 95%-Konfidenzintervall und keine klinische Referenz; Lücken bleiben Lücken.</p>`;
+ const reference=stressZones?[25,50,75].map((v,i)=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#D6A36F" stroke-dasharray="5 5" opacity=".75"/><text x="${W-R-5}" y="${Y(v)-5}" text-anchor="end" font-size="10" fill="#8B775E">${['Ruhe / niedrig','Niedrig / mittel','Mittel / hoch'][i]}</text>`).join(''):'';
+ return `<div class="insight-svg-scroller"><svg class="insight-svg health-rolling-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)} mit rollendem beobachtetem Streubereich über ${windowDays} Tage">${ticks}${reference}${shapes.join('')}${lines.join('')}${circles}${dateLabels}</svg></div><div class="insight-legend"><span><i style="background:${color}"></i>Messpunkte & rollender Median</span><span><i style="background:${color};opacity:.3"></i>Rollendes 20.–80. Perzentil (${windowDays} Tage)</span></div><p class="insight-figure-note">${derived.length} gemessene Tage; Band an ${band.length} Tagen mit mindestens ${minPoints} Messwerten im zurückliegenden ${windowDays}-Tage-Fenster. Kein 95%-Konfidenzintervall und keine klinische Referenz; Lücken bleiben Lücken.</p>`;
 }
 /** Plot recorded components on ONE kg axis; fat, muscle and water are overlapping compartments, not additive. */
 export function fitdaysCompositionChart(rows=[],selected='composition',windowDays=14){

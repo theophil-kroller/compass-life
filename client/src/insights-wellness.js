@@ -117,22 +117,61 @@ export function wellnessDayBars(summaries,type,aggregation='auto'){
   const lows=g.rows.map(x=>x.minBattery),low=Math.min(...lows),high=Math.max(...vals),x=X(i);
   return `<line x1="${x}" x2="${x}" y1="${Y(high)}" y2="${Y(low)}" stroke="#93C5B6" stroke-width="${bar}" stroke-linecap="round" opacity=".75"><title>${safe(formatDay(g.key))}: Minimum ${num(low)}, Maximum ${num(high)} · ${g.rows.length} Tag(e)</title></line><circle cx="${x}" cy="${Y(high)}" r="4.3" fill="#23785F" stroke="#fff" stroke-width="1.3"/><circle cx="${x}" cy="${Y(low)}" r="4.3" fill="#BB754C" stroke="#fff" stroke-width="1.3"/>`;
  }).join('');
- const grid=[0,25,50,75,100].map(v=>`<line x1="${left}" x2="${W-25}" y1="${Y(v)}" y2="${Y(v)}" stroke="#E7EFEB"/><text x="${left-10}" y="${Y(v)+4}" text-anchor="end" fill="#879D91" font-size="11">${v}</text>`).join('');
+ const grid=[0,25,50,75,100].map(v=>`<line x1="${left}" x2="${W-25}" y1="${Y(v)}" y2="${Y(v)}" stroke="${type==='stress'&&v>0&&v<100?'#E1BA78':'#E7EFEB'}" stroke-dasharray="${type==='stress'&&v>0&&v<100?'4 3':'none'}"/><text x="${left-10}" y="${Y(v)+4}" text-anchor="end" fill="#879D91" font-size="11">${v}</text>`).join('');
  const every=Math.max(1,Math.ceil(groups.length/8));const labels=groups.map((g,i)=>i%every===0||i===groups.length-1?`<text x="${X(i)}" y="206" font-size="10" text-anchor="middle" fill="#8BA092">${safe(formatDay(g.key))}</text>`:'').join('');
  return `<div class="insight-svg-scroller"><svg class="insight-svg" viewBox="0 0 840 221" role="img" aria-label="${type==='stress'?'Stressmittel':'Body Battery Tageshoch und Tief'} der ausgewählten Periode" xmlns="http://www.w3.org/2000/svg">${grid}${marks}${labels}</svg></div><p class="insight-figure-note">${byWeek?'Wochenblöcke (nach gültigen Messpunkten gewichtet);':'Tageswerte;'} ${type==='stress'?'Mittelwert nur aus tatsächlich erfassten Stresspunkten.':'Beobachtete Höchst- und Tiefstwerte, keine interpolierten Tagesextrema.'} Fehlende Tage werden nicht als Null interpretiert.</p>${type==='energy'?'<div class="insight-legend"><span><i style="background:#23785F"></i>Beobachtetes Hoch</span><span><i style="background:#BB754C"></i>Beobachtetes Tief</span></div>':''}`;
+}
+/** Empirical Gaussian raincloud: bandwidth rule; raw samples only, no imputation. */
+export function stressRaincloud(model){
+ const sample=model.stressDays.flatMap(d=>d.points.map(p=>p.stress).filter(Number.isFinite));
+ if(!sample.length)return missing('Stress');
+ const counts=model.zoneCounts,total=sample.length,sorted=sample.slice().sort((a,b)=>a-b);
+ const q=t=>{const x=(sorted.length-1)*t,i=Math.floor(x);return sorted[i]+(sorted[Math.min(i+1,sorted.length-1)]-sorted[i])*(x-i);};
+ const median=q(.5),low=q(.25),high=q(.75);
+ const W=860,L=48,R=24,T=14,H=234,axis=192,plot=W-L-R;
+ const X=v=>L+v/100*plot;
+ // Bounded support [0,100], Gaussian smooth only to illustrate measured density.
+ const sd=Math.sqrt(sample.reduce((n,x)=>n+(x-median)**2,0)/sample.length);
+ const bw=Math.max(2.2,Math.min(12,1.06*Math.max(sd,1)*Math.pow(sample.length,-.2)));
+ const hist=Array.from({length:101},(_,i)=>sample.reduce((a,v)=>a+Math.exp(-.5*((i-v)/bw)**2),0)/(sample.length*bw));
+ const max=Math.max(...hist)||1;
+ const density='M'+X(0).toFixed(1)+','+axis+' '+hist.map((v,i)=>'L'+X(i).toFixed(1)+','+(axis-v/max*103).toFixed(1)).join(' ')+' L'+X(100).toFixed(1)+','+axis+'Z';
+ const regions=[['Ruhe',0,25,'#4C9C89'],['Niedrig',25,50,'#A0C6A0'],['Mittel',50,75,'#E1BA78'],['Hoch',75,100,'#D98976']];
+ const backgrounds=regions.map(([label,a,b,color])=>`<rect x="${X(a)}" y="${T}" width="${X(b)-X(a)}" height="${axis-T+24}" fill="${color}" opacity=".10"/><text x="${(X(a)+X(b))/2}" y="${T+13}" text-anchor="middle" fill="#687a73" font-size="10">${label}</text>`).join('');
+ const boundaries=[25,50,75].map(x=>`<line x1="${X(x)}" x2="${X(x)}" y1="${T+19}" y2="${axis+26}" stroke="#738579" stroke-dasharray="4 4" opacity=".6"/>`).join('');
+ // Deterministic thinning; every sample contributes to density and quantiles.
+ const step=Math.max(1,Math.ceil(sample.length/330));
+ const dots=sample.filter((_,i)=>i%step===0).map((v,i)=>{const yy=axis+5+(i*37%17);return `<circle cx="${X(v).toFixed(2)}" cy="${yy}" r="1.9" fill="${zones.find(z=>z.label===stressZone(v)).color}" opacity=".65"><title>Stress ${num(v)}</title></circle>`;}).join('');
+ const distribution=`<path d="${density}" fill="#4C9C89" fill-opacity=".28" stroke="#387e70" stroke-width="2"/>`;
+ const box=`<line x1="${X(q(.05))}" x2="${X(q(.95))}" y1="${axis-10}" y2="${axis-10}" stroke="#2a5950" stroke-width="2"/><rect x="${X(low)}" y="${axis-18}" width="${Math.max(1,X(high)-X(low))}" height="16" rx="4" fill="#fff" stroke="#2a5950" stroke-width="1.7"/><line x1="${X(median)}" x2="${X(median)}" y1="${axis-18}" y2="${axis-2}" stroke="#2a5950" stroke-width="2.3"/>`;
+ const ticks=[0,25,50,75,100].map(n=>`<text x="${X(n)}" y="${H-3}" text-anchor="middle" font-size="11" fill="#647e74">${n}</text>`).join('');
+ const summary=zones.map(z=>`<span><i style="background:${z.color}"></i>${z.label}: ${num(100*counts[z.label]/total)} %</span>`).join('');
+ return `<div class="insight-svg-scroller"><svg class="insight-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Raincloud Plot der Garmin Stresswerte: Dichtekurve, Boxplot und Einzelpunkte mit Ruhe, Niedrig, Mittel und Hoch">${backgrounds}${boundaries}${distribution}${box}${dots}${ticks}</svg></div><div class="insight-legend">${summary}</div><p class="insight-figure-note">${total.toLocaleString('de-AT')} gültige 5-Minuten-Stresspunkte. Dichtekurve geglättet, Boxplot zeigt Median und 25.–75. Perzentil (Linie: 5.–95.), Einzelpunkte: ${Math.ceil(total/step)} von ${total} zur besseren Lesbarkeit. Farbgrenzen bei 25, 50 und 75. Keine Hochrechnung auf fehlende Tageszeit.</p>`;
 }
 function zoneStack(model,day=null){const counts=day?day.categories:model.zoneCounts,total=Object.values(counts).reduce((a,b)=>a+b,0);if(!total)return missing('Stress');
  return `<div class="insight-zone-stack" role="img" aria-label="Stressstufen nach Anteil der gültigen Messpunkte">${zones.map(z=>`<div style="width:${(counts[z.label]/total*100).toFixed(2)}%;background:${z.color}" title="${z.label}: ${num(counts[z.label]/total*100)} %"></div>`).join('')}</div><div class="insight-zone-grid">${zones.map(z=>`<div><i style="background:${z.color}"></i><span>${z.label}</span><strong>${num(counts[z.label]/total*100)} %</strong><small>${num(counts[z.label])} Messpunkte</small></div>`).join('')}</div>`;
 }
-export function insightsStressView(imported={},period='28',today=new Date().toISOString().slice(0,10),selected='',aggregation='auto',windowDays=14){
- const model=buildWellnessInsights(imported,today,period),list=model.stressDays,day=list.find(x=>x.day===selected)||list.at(-1)||null;
+const dayShift=(day,n)=>new Date(Date.parse(day+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
+export function stressNavigation(today,period='28',offset=0){
+ const size=period==='7'?7:period==='90'?90:period==='365'?365:28;
+ const effective=Math.min(0,Math.max(-10000,Number(offset)||0));
+ const end=dayShift(today,effective*size);return {size,end,start:dayShift(end,1-size),offset:effective};
+}
+function stressWindowControls(nav,period,offset){
+ const all=period==='all';
+ return `<nav class="health-day-switch" aria-label="Stress-Zeitraum blättern"><button type="button" data-action="insights-stress-prev" aria-label="Früheren Zeitraum anzeigen" ${all?'disabled':''}>←</button><strong>${all?'Gesamter erfasster Zeitraum':`${formatDay(nav.start)} – ${formatDay(nav.end)}`}</strong><button type="button" data-action="insights-stress-next" aria-label="Späteren Zeitraum anzeigen" ${all||offset>=0?'disabled':''}>→</button></nav>`;
+}
+export function insightsStressView(imported={},period='28',today=new Date().toISOString().slice(0,10),selected='',aggregation='auto',windowDays=14,offset=0){
+ const nav=stressNavigation(today,period,offset);
+ const model=buildWellnessInsights(imported,period==='all'?today:nav.end,period),list=model.stressDays,day=list.find(x=>x.day===selected)||list.at(-1)||null;
  return `<div class="insight-wellness">
  <div class="insight-kpi-grid">${card('Ø Stress',num(model.avgStress),'Gültige Garmin-Stresswerte')}${card('Messtage',num(list.length),'Mit gültigen Stresswerten')}${card('Stress-Messpunkte',num(model.stressCount),'5-Minuten-Zeitfenster')}${card('Letzter Messtag',list.length?formatDay(list.at(-1).day):'–','Importierte Garmin-Wellness-Dateien')}</div>
  ${note(`Garmin Stress ist ein physiologischer Schätzwert, keine psychologische Stressdiagnose. Messungen während Aktivitäten oder ohne gültigen Sensorwert bleiben Lücken. Aktuelle Gerätezeitzone: ${model.timezone}.`)}
+ ${stressWindowControls(nav,period,offset)}
  <div class="insight-chart-grid">
- ${shell('Belastungsstufen','01 · STRESS DISTRIBUTION',zoneStack(model),'Prozentanteile gültiger 5-Minuten-Messpunkte, nicht der gesamten Tageszeit.')}
+ ${shell('Belastungsstufen · Raincloud','01 · STRESS DISTRIBUTION',stressRaincloud(model),'Verteilung gültiger Garmin-Stresspunkte, nicht der gesamten Tageszeit.')}
  ${shell('Stress über den Zeitraum','02 · STRESS HISTORY',`<div class="health-mode-toggle" role="group" aria-label="Stress Zeitauflösung"><button data-action="insights-stress-granularity" data-id="day" class="${aggregation==='day'?'is-chosen':''}">Täglich</button><button data-action="insights-stress-granularity" data-id="week" class="${aggregation==='week'?'is-chosen':''}">Wöchentlich</button></div>`+wellnessDayBars(model.summaries,'stress',aggregation),'Farbcodierung aus Garmin-Stressstufen: Ruhe 0–25, niedrig 26–50, mittel 51–75, hoch 76–100. Keine psychologische Diagnose.')}
- ${shell('Rollender Stressverlauf','02B · ROLLING STRESS',rollingEnvelopeChart(model.stressDays,'avgStress',{title:'Täglicher Stressmittelwert',unit:'Garmin-Stress',windowDays,color:'#C28669',range:model.range}),`Rollender Median und Streuung auf Tagesbasis (Fenster ${windowDays} Tage).`)}
+ ${shell('Rollender Stressverlauf','02B · ROLLING STRESS',rollingEnvelopeChart(model.stressDays,'avgStress',{title:'Täglicher Stressmittelwert',unit:'Garmin-Stress',windowDays,color:'#C28669',range:model.range,stressZones:true}),`Rollender Median und Streuung auf Tagesbasis (Fenster ${windowDays} Tage).`)}
  </div>
  ${shell('Mein Stress im Tagesverlauf','03 · DAILY STRESS',list.length?daySelector(list,day.day)+wellnessDayChart(day,'stress'):missing('Stress'),'Lücken werden nicht aufgefüllt; hohe Werte sind nicht automatisch negative emotionale Erlebnisse.')}
  <div class="insight-footnote">Wichtig: Zum Ergänzen der neuen Stresswerte bereits früher importierte Garmin-Tages-ZIPs unter „Datenquellen“ erneut auswählen. Compass erkennt gleiche Zeitpunkte und legt keine Duplikate an.</div>
