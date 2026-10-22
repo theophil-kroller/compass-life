@@ -1,0 +1,14 @@
+Compass 0.5.72 — Direkt-Upload-PATCH für GitHub
+================================================
+Basis: GitHub main ist aktuell 0.5.71.
+
+1. Vorab den verschlüsselten lokalen Compass-Vault sichern. Keine App-Daten/Browserdaten löschen.
+2. ZIP öffnen und alle Dateien mit exakt gleicher Ordnerstruktur in das GitHub-Repository hochladen. Dateien überschreiben, wenn GitHub dazu auffordert.
+3. GitHub Actions > Deploy Compass Web auf Erfolg prüfen, Web/App auf 0.5.72 aktualisieren.
+4. Insights > Habits > Insights öffnen; Morning Connections erscheint unter den SAVERS-Auswertungen.
+5. Zeitraum 7/30/90 Tage prüfen. Ohne Daten muss eine Lückenanzeige statt erfundener Muster erscheinen.
+6. Ernährung: vier Snack-/Getränkeeinträge prüfen; der datierte Gulascheintrag darf nicht mehr zur Schnellwahl gehören.
+7. Falls der Ernährungspatch bereits hochgeladen wurde: die hier gelieferte personal-journal-Datei erneut hochladen (sie enthält die konsolidierte Version ohne Tagesgericht).
+
+Keine D1-Migration. Kein Worker-Update. Eine bestehende PWA eventuell neu laden.
+Dieses ZIP enthält richtige Dateiinhalte (kein Skript).

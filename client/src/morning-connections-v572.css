@@ -1,0 +1,10 @@
+
+/* Compass 0.5.72 — compact local Morning Connections */
+.mc572-root{margin-top:12px;padding:17px 18px;border:1px solid var(--border,#dbe3e7);border-radius:16px;background:var(--surface,#fff);font-size:13px}
+.mc572-header h3{margin:4px 0 3px;font-size:17px}.mc572-header small{font-size:10px;letter-spacing:.1em;opacity:.7}.mc572-header p{margin:0 0 12px;opacity:.8}
+.mc572-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.mc572-metrics>div{padding:11px;border-radius:12px;background:var(--surface-secondary,#f2f5f7);min-width:0;display:flex;flex-direction:column;gap:4px}
+.mc572-metrics strong{font-size:19px;font-variant-numeric:tabular-nums}.mc572-metrics span{font-size:11px;opacity:.8}
+.mc572-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mc572-card{border:1px solid var(--border,#e0e4e8);border-radius:12px;padding:13px;min-width:0}.mc572-card h4{margin:0 0 8px;font-size:13px}.mc572-card p{margin:5px 0;color:inherit;opacity:.8;line-height:1.5}.mc572-comparison{display:grid;gap:6px}.mc572-comparison span{font-size:12px}
+.mc572-evidence{margin-top:12px;font-size:12px}.mc572-evidence summary{cursor:pointer}.mc572-timeline{display:flex;flex-wrap:wrap;gap:3px;margin:9px 0}.mc572-timeline span{height:12px;flex:1 1 7px;min-width:5px;max-width:16px;background:#cbd5db;border-radius:3px}.mc572-timeline .has-routine{background:#4ba78a}.mc572-evidence small{opacity:.7}.mc572-method{font-size:11px;line-height:1.55;opacity:.74;margin:14px 0 0}
+@media(max-width:640px){.mc572-cards{grid-template-columns:1fr}.mc572-root{padding:13px}.mc572-metrics>div{padding:8px}}

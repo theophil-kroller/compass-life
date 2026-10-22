@@ -11,7 +11,7 @@ export const FOOD_PRESETS=[
  ['latella','🥛','Lattella (500 ml)','Getränke','500 ml',250,360],
  ['mensa','🍲','Mensaessen','Mahlzeiten'],
  ['mensa-study-veggie','🥗','Vegetarischer Study-Teller · Stremayrgasse','Mahlzeiten','1 Teller',450,900],
- ['mensa-gulasch-20261022','🎃','Brainfood-Gulasch Kürbis & Käferbohnen · 22.10.','Mahlzeiten','1 Teller',450,800],['buffet','🍽️','Buffet / auswärts','Mahlzeiten'],
+['buffet','🍽️','Buffet / auswärts','Mahlzeiten'],
  ['bread-cheese','🥪','Käsebrot','Mahlzeiten'],['cheddar','🧀','Cheddar-Scheibe','Snacks'],
  ['peanuts','🥜','Gesalzene Erdnüsse','Snacks'],['mixed-nuts','🌰','Bio-Nussmischung','Snacks'],
  ['dried-mango','🥭','Getrocknete Mango','Snacks'],['rice-pudding','🍚','Milchreis','Snacks'],

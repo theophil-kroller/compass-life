@@ -18,6 +18,8 @@ import {CONTACT_TYPES,CONTACT_REVIEW_DAYS,CONTACT_INITIATORS,contactInitiatorLab
 import {FEELINGS,feelingWord,newFeelingDraft,chooseFeeling,intensityFor,validatedCheckin,appendCheckin,replaceCheckin,draftFromCheckin,setFeelingDetail,toggleFeelingObservation,feelingOverlay,feelingInsights,feelingReview} from './feeling-wheel-v565.js';
 import {renderFeelingNetwork,toggleNetworkTerm} from './feeling-network-v5705.js';
 import {personalConnections,personalConnectionsView} from './personal-connections-v566.js';
+import {morningConnections,morningConnectionsView} from './morning-connections-v572.js';
+import './morning-connections-v572.css';
 import {relationshipMapView,MAP567,closenessAt} from './relationship-map-v567.js';
 import {CONTACT_MODES,careMode,relationshipReview,activeCare} from './relationship-intelligence-v568.js';
 import {deadlineSuggestions,contactSuggestions} from './calendar-intelligence-v568.js';
@@ -90,8 +92,9 @@ import {occasionsWithPeople,validPersonBirthday} from './people-occasions.js';
 import {contextChoices,filterContextTasks} from './context-perspectives.js';
 import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sameTask,localDate,tasksForDay,dueTasks,mergeTaskSnapshot,parseTags,dateIsValid,advanceTaskCounter,nextActions,isActionAvailable,isTemplateTask,flaggedTasks,heldTasks,projectTasks,validProject,projectPlain,sameProject,mergeProjectSnapshot,agendaForEvent,projectNeedsReview,contextsFor,blockedByProject,dreamRecords,inboxRecords,childProjects,projectDescendantIds,validProjectParent,validTaskParent,hierarchicalProjectTasks,taskChildren,ordered} from './tasks.js';
 
+
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.71';
+const COMPASS_CLIENT_VERSION='0.5.72';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -155,6 +158,7 @@ async function resumeSession(){
   }
 }
 
+
 // The feeling vocabulary is public app code; only saving private check-ins
 // requires the one-time setup of the vault's write-only capture key.
 const FEELING_MODE_KEY='compass.feeling.inputMode.v5706';
@@ -176,6 +180,7 @@ function scheduleJournalSync(delay=0){
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
  journalSyncTimer=setTimeout(()=>{journalSyncTimer=null;syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);render();});},delay);
 }
+
 
 let worktimeSelectedCategory='work';
 const MORNING_PUBLIC_KEY='compass.morning.public.v570';
@@ -221,6 +226,7 @@ async function morningBeforeLock(){await morningFlushDraft();morningSaveNoteFrom
 function morningRenderOverlay(){if(!morningPlayerOpen||!morningSession)return '';const goals=state?lifeGoals(state):[];const goal=goals.find(g=>g.id===morningConfig.goalId);return morningOverlayView(morningSession,morningConfig,{locked:!state,goalTitle:goal?.title||'',goalTitles:Object.fromEntries(goals.map(g=>[g.id,g.title]))});}
 function morningTimerRefresh(){if(!morningPlayerOpen||!morningSession)return;const active=MORNING_STEPS[morningSession.stepIndex],limit=Number(morningSession.durations?.[active.id]||active.minutes)*60;const remaining=Math.max(0,limit-elapsedStepSeconds(morningSession));const node=app.querySelector('[data-mm570-remaining]');if(node)node.textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(Math.ceil(remaining%60)).padStart(2,'0');}
 if(typeof setInterval==='function')setInterval(morningTimerRefresh,1000);
+
 
 const QUICK_PUBLIC_KEY='compass.quick.public.v569';
 const DEFAULT_HABITS=[
@@ -293,6 +299,7 @@ if(['today','inbox','review','forecast','overview','someday','activity','people'
 if(bootView==='health'||bootView==='places')tab='insights';
 if(bootCapture){captureAfterUnlock=true;tab='inbox';}
 
+
 let watchPairCode='', watchPairExpires='', watchSessions=[], watchDevices=[], watchError='';
 let healthDays=[],healthDevices=[],healthPairCode='',healthError='',healthLastUpdated='';
 let widgetPairCode='',widgetDevices=[],widgetConnectError='';
@@ -345,6 +352,7 @@ async function scanSmartFolder(id){
  }catch(ex){smartHubNotice='Ordnerprüfung: '+String(ex.message||ex);}
  finally{smartHubBusy=false;render();}
 }
+
 
 let placesPreview=null,placesImportBusy=false,selectedPlaceKey='',placesMapRegion='world',placesMapZoom=1,placesListLimit=25;
 let discoveryRange='week',discoveryCity='all',discoveryArea='all',discoveryCategory='all',discoveryCategories=null,discoveryCategoriesOpen=false,discoveryImportOpen=false,discoveryWeekOffset=0,discoveryImportPreview=null;
@@ -449,6 +457,7 @@ function watchOverview(){
  return `<div class="compass-tracking-grid">${rows.map(([label,items])=>`<div class="tracking-period"><span>${label}</span><strong>${(items.reduce((a,x)=>a+x.durationMinutes,0)/60).toLocaleString('de-AT',{maximumFractionDigits:1})} h</strong><small>${items.reduce((a,x)=>a+(x.pomodoros||0),0)} Pomodoros · ${items.length} Sessions</small></div>`).join('')}</div><p class="stats-caption">Garmin: letzte maximal 50 Sessions plus manuelle Einträge; Änderungen am Rohdatensatz bleiben getrennt. Schlafdaten sind nicht angebunden.</p>`;
 }
 
+
 let weather={status:'idle',city:'Graz',temperature:null,label:''};
 function persist() {
   const snapshot=structuredClone(state);
@@ -493,6 +502,7 @@ async function addCapture(title,note=''){
     s.records[r.id]=r;s.pending.push(makeMutation(r));s.history.push({type:'captured',at:stamp(),id:r.id});
   });
 }
+
 
 const stamp=()=>new Date().toISOString();
 function makeMutation(record) {
@@ -623,12 +633,14 @@ function chrome(content){
  ${content}<footer>Compass · Private Beta · Lokal verschlüsselt ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
 }
 
+
 function moduleCard({name,iconName,sub='',action='',body='',cls='',active=false}){
  return `<section class="module-card ${cls} ${active?'module-active':'module-inactive'}" aria-label="${h(name)}">
  <div class="module-head"><div class="module-title">${ico(iconName,21)}<h2>${h(name)}</h2></div>${action?disabledButton(action):''}</div>
  ${sub?`<p class="module-subtitle">${h(sub)}</p>`:''}${body}</section>`;
 }
 const placeholder=(text='Noch keine Einträge')=>`<div class="empty-minimal"><span class="empty-circle">${ico('plus',17)}</span><span>${h(text)}</span></div>`;
+
 
 function defaultHabitItems(){return DEFAULT_HABITS.map(item=>({...item}));}
 function normalizeQuickPublic(raw){
@@ -745,7 +757,7 @@ function quickWorktimeInsights(){
 }
 function habitInsightsView(){
  const items=habitItems(state);const done=todayHabitIds(state).length;const avg14=items.length?Math.round(items.reduce((sum,item)=>sum+habitDoneLastDays(state,item.id,14).filter(dot=>dot.done).length,0)/(items.length*14)*100):0;
- return `<div class="habit569-page"><div class="mm571-root">${morningIntelligenceHeader(morningTab)}${morningTab==='create'?morningCreateView(state,{goals:lifeGoals(state),journalEditingId:morningJournalEditingId,journalDraft:morningJournalDraft}):morningTab==='insights'?morningInsightsView(state,{days:morningPeriod}):morningHubView(state,{settings:morningSettingsOpen,goals:lifeGoals(state)})}</div><section class="work-card"><div class="work-heading"><span>${ico('checkSquare',18)} Habit Tracker</span><button type="button" class="secondary-btn" data-action="habit-quick-open">Heute abhaken</button></div><p class="muted-line">Einfach, schnell und motivierend. Ein Häkchen pro Habit genügt.</p><div class="habit569-kpis"><div><small>Heute</small><strong>${done}/${items.length}</strong></div><div><small>14-Tage-Konsistenz</small><strong>${avg14}%</strong></div><div><small>Aktive Habits</small><strong>${items.length}</strong></div></div></section><section class="work-card"><div class="work-heading"><span>Deine Habits</span><span class="quiet-tag">${items.length}</span></div><div class="habit569-cards">${items.map(item=>{const streak=habitStreak(state,item.id);const dots=habitDoneLastDays(state,item.id,14);const doneToday=habitIsDone(state,item.id);return '<article class="habit569-card"><div class="habit569-card-head"><div><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</div><button type="button" class="secondary-btn" data-action="habit-toggle" data-id="'+h(item.id)+'">'+(doneToday?'Heute erledigt ✓':'Heute abhaken')+'</button></div><div class="habit569-stats"><span>Streak <strong>'+(streak||0)+'</strong></span><span>14 Tage <strong>'+dots.filter(dot=>dot.done).length+'/14</strong></span></div><div class="habit569-dots">'+dots.map(dot=>'<span class="'+(dot.done?'is-done':'')+'" title="'+h(dot.day)+'"></span>').join('')+'</div></article>';}).join('')}</div></section><section class="work-card"><div class="work-heading"><span>Neues Habit hinzufügen</span></div><form id="habit69-new-form" class="habit569-form"><label>Titel<input type="text" name="title" maxlength="80" placeholder="z. B. Journaling" value="${h(habitDraftTitle)}" required/></label><label>Zeitfenster<select name="slot"><option value="Morgen">Morgen</option><option value="Mittag">Mittag</option><option value="Abend">Abend</option><option value="Flexibel">Flexibel</option></select></label><button type="submit" class="primary-btn">Habit hinzufügen</button></form></section></div>`;
+ return `<div class="habit569-page"><div class="mm571-root">${morningIntelligenceHeader(morningTab)}${morningTab==='create'?morningCreateView(state,{goals:lifeGoals(state),journalEditingId:morningJournalEditingId,journalDraft:morningJournalDraft}):morningTab==='insights'?morningInsightsView(state,{days:morningPeriod}):morningHubView(state,{settings:morningSettingsOpen,goals:lifeGoals(state)})}${morningTab==='insights'?morningConnectionsView(morningConnections(state,{today:localDate(),days:morningPeriod})):''}</div><section class="work-card"><div class="work-heading"><span>${ico('checkSquare',18)} Habit Tracker</span><button type="button" class="secondary-btn" data-action="habit-quick-open">Heute abhaken</button></div><p class="muted-line">Einfach, schnell und motivierend. Ein Häkchen pro Habit genügt.</p><div class="habit569-kpis"><div><small>Heute</small><strong>${done}/${items.length}</strong></div><div><small>14-Tage-Konsistenz</small><strong>${avg14}%</strong></div><div><small>Aktive Habits</small><strong>${items.length}</strong></div></div></section><section class="work-card"><div class="work-heading"><span>Deine Habits</span><span class="quiet-tag">${items.length}</span></div><div class="habit569-cards">${items.map(item=>{const streak=habitStreak(state,item.id);const dots=habitDoneLastDays(state,item.id,14);const doneToday=habitIsDone(state,item.id);return '<article class="habit569-card"><div class="habit569-card-head"><div><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</div><button type="button" class="secondary-btn" data-action="habit-toggle" data-id="'+h(item.id)+'">'+(doneToday?'Heute erledigt ✓':'Heute abhaken')+'</button></div><div class="habit569-stats"><span>Streak <strong>'+(streak||0)+'</strong></span><span>14 Tage <strong>'+dots.filter(dot=>dot.done).length+'/14</strong></span></div><div class="habit569-dots">'+dots.map(dot=>'<span class="'+(dot.done?'is-done':'')+'" title="'+h(dot.day)+'"></span>').join('')+'</div></article>';}).join('')}</div></section><section class="work-card"><div class="work-heading"><span>Neues Habit hinzufügen</span></div><form id="habit69-new-form" class="habit569-form"><label>Titel<input type="text" name="title" maxlength="80" placeholder="z. B. Journaling" value="${h(habitDraftTitle)}" required/></label><label>Zeitfenster<select name="slot"><option value="Morgen">Morgen</option><option value="Mittag">Mittag</option><option value="Abend">Abend</option><option value="Flexibel">Flexibel</option></select></label><button type="submit" class="primary-btn">Habit hinzufügen</button></form></section></div>`;
 }
 function inboxPreview(){
  const list=rows().slice(0,3);
@@ -769,6 +781,7 @@ function dashboardCards(locked=false){
  ${moduleCard({name:'Wochenreview',iconName:'sync',cls:'grid-review',active:true,sub:'Klarheit gewinnen. Regelmäßig.',body:`<div class="review-steps review-steps-icon"><div>${ico('inbox',16)} Eingang klären</div><div>${ico('checkSquare',16)} Nächste Schritte</div><div>${ico('calendar',16)} Fristen prüfen</div></div><button class="text-link" type="button" data-tab="review">Wochenreview öffnen ${ico('arrow',14)}</button>`})}
  ${moduleCard({name:'Projekte',iconName:'folder',cls:'grid-projects',active:true,sub:'Aktive Ergebnisse und nächste Schritte',body:`<div class="project-summary"><strong>${Object.values(state?.projects||{}).filter(p=>p.status==='active').length}</strong><span>aktive Projekte</span><small>${Object.values(state?.projects||{}).filter(p=>p.status==='active'&&!nextActions(state).some(t=>t.projectId===p.id)).length} ohne nächste Aktion</small></div><button type="button" class="text-link" data-tab="projects">Projekte öffnen ${ico('arrow',14)}</button>`})}
  ${moduleCard({name:'Kalender & Fokus',iconName:'calendar',cls:'grid-calendar',active:true,sub:'Deine Termine (Google, nur lesend)',body:calendarToken?calendarCardRows(localDateString(new Date())):calendarConnectUI()})}
+
 
  ${moduleCard({name:'Menschen',iconName:'people',cls:'grid-people',active:true,sub:'Gespräche & Agenden',body:`<div class="project-summary"><strong>${Object.keys(state?.people||{}).length}</strong><span>Kontakte im Tresor</span></div><button type="button" class="text-link" data-tab="people">Menschen öffnen ${ico('arrow',14)}</button>`})}
  ${moduleCard({name:'Activity Tracking',iconName:'activity',cls:'grid-activity',active:true,sub:'Garmin · Fokuszeit · Pomodoro',body:watchOverview()}).replace('</section>',`<button class="text-link" type="button" data-tab="activity">Aktivitäten ansehen ${ico('arrow',14)}</button></section>`)}
@@ -968,7 +981,7 @@ function forecastScreen(){
 function projectOptions(selected=''){
  const options=['<option value="">Kein Projekt</option>'];
  const visit=(parent,depth)=>{for(const proj of childProjects(state,parent)){
-  if(proj.kind==='project'&&!proj.isTemplate&&(proj.status!=='completed'||proj.id===selected))options.push(`<option value="${h(proj.id)}" ${selected===proj.id?'selected':''}>${'  '.repeat(depth)}${h(proj.title)}</option>`);
+  if(proj.kind==='project'&&!proj.isTemplate&&(proj.status!=='completed'||proj.id===selected))options.push(`<option value="${h(proj.id)}" ${selected===proj.id?'selected':''}>${'  '.repeat(depth)}${h(proj.title)}</option>`);
   if(depth<15)visit(proj.id,depth+1);
  }};visit(null,0);return options.join('');
 }
@@ -977,7 +990,7 @@ function projectParentOptions(selected='',excludeId=''){
  const roots=['<option value="">Oberste Ebene</option>'];
  const walk=(parent,depth)=>{for(const proj of childProjects(state,parent)){
   if(blocked.has(proj.id))continue;
-  roots.push(`<option value="${h(proj.id)}" ${proj.id===selected?'selected':''}>${'  '.repeat(depth)}${proj.kind==='folder'?'▸ ':''}${h(proj.title)}</option>`);
+  roots.push(`<option value="${h(proj.id)}" ${proj.id===selected?'selected':''}>${'  '.repeat(depth)}${proj.kind==='folder'?'▸ ':''}${h(proj.title)}</option>`);
   if(depth<15)walk(proj.id,depth+1);
  }};
  walk(null,0);return roots.join('');
@@ -985,7 +998,7 @@ function projectParentOptions(selected='',excludeId=''){
 function taskParentOptions(projectId,selected='',self=''){
  const blocked=new Set([self]);const visit=(id)=>{for(const t of Object.values(state?.tasks||{}).filter(t=>t.parentTaskId===id)){if(blocked.has(t.id))continue;blocked.add(t.id);visit(t.id);}};
  if(self)visit(self);
- return '<option value="">Hauptebene</option>'+hierarchicalProjectTasks(state,projectId).filter(t=>!blocked.has(t.id)&&!t.completed).map(t=>`<option value="${h(t.id)}" ${selected===t.id?'selected':''}>${'  '.repeat(Math.min(t.depth,8))}${h(t.title)}</option>`).join('');
+ return '<option value="">Hauptebene</option>'+hierarchicalProjectTasks(state,projectId).filter(t=>!blocked.has(t.id)&&!t.completed).map(t=>`<option value="${h(t.id)}" ${selected===t.id?'selected':''}>${'  '.repeat(Math.min(t.depth,8))}${h(t.title)}</option>`).join('');
 }
 function dateButtons(field){return `<div class="date-shortcuts" data-date-target="${field}"><button type="button" data-action="date-adjust" data-field="${field}" data-offset="day">+1d</button><button type="button" data-action="date-adjust" data-field="${field}" data-offset="week">+1w</button><button type="button" data-action="date-adjust" data-field="${field}" data-offset="month">+1m</button><button type="button" data-action="date-clear" data-field="${field}">Löschen</button></div>`;}
 function dateControl(field,label,value='',hint=''){return `<label class="date-control">${label}<input name="${field}" type="date" lang="de-AT" aria-label="${h(label)} (Tag, Monat, Jahr)" value="${h(value||'')}">${dateButtons(field)}${hint?`<small>${h(hint)}</small>`:''}</label>`;}
@@ -1052,6 +1065,7 @@ function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)r
  <details class="inspector-extra v559-metadata"><summary>${ico('settings',14)} Titel, Projekt & GTD-Status</summary><div class="v559-meta-fields"><label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label><label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Bereich<select name="category">${categoryOptions(t.category)}</select></label>${t.projectId?`<label>Unteraufgabe von<select name="parentTaskId">${taskParentOptions(t.projectId,t.parentTaskId,t.id)}</select></label>`:''}<label>Agenda-Tags<input name="tags" data-smart-tags maxlength="300" value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label><label class="flag-check"><input type="checkbox" name="flagged" ${t.flagged?'checked':''}/> Flagged</label></div></details>
  <div class="task-edit-actions v559-sticky-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">Archivieren</button>${t.completed?`<button type="button" class="secondary-btn" data-action="gtd-repeat-task" data-id="${h(t.id)}">${ico('sync',15)} Erneut anlegen</button>`:''}</div></form>${state.taskConflicts?.[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Die Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
 }
+
 
 function gtdTodaySummary(){
  const hlt=projectHealth(state),waiting=waitingReview(state);
@@ -1217,6 +1231,7 @@ function homeScreen(){
  return chrome(`<div class="dashboard-timeline">${timelinePanel()}</div>${occasionPanel()}<details class="calm-overview-extra"><summary>${ico('layers',16)} Weitere Übersichten anzeigen</summary>${dashboardCards()}${kraken}</details>`);
 }
 
+
 function captureOverlay(){
  return `<div class="capture-modal-layer" data-action="capture-close-backdrop">
  <section class="capture-modal" role="dialog" aria-modal="true" aria-labelledby="capture-modal-title" tabindex="-1">
@@ -1267,6 +1282,7 @@ function inboxScreen(){
  `<div class="inbox-mvp-empty detail-empty">${ico('pencil',32)}<strong>Ein Gedanke genügt.</strong><span>Öffne die Schnellerfassung und halte fest, was dich beschäftigt.</span></div>`}</aside></div>`);
 }
 
+
 function clarifyControls(currentId=null){
  const saved=(currentId&&state?.reviewMeta?.[currentId])||{};
  const energy=[['low','Wenig',1],['medium','Mittel',2],['high','Viel',3]];
@@ -1316,6 +1332,7 @@ function reviewStepBody(step,queue){
  const health=state?.healthImports||{},healthDates=[...(health.garminNights||[]),...(health.garminHrv||[])];
  const missing=missingGarminDays(healthDates,localDate());
  const healthText=!healthDates.length?'Noch keine Garmin-Daten importiert.':missing.length?`${missing.length} Tage nach dem letzten Garmin-Import vorgeschlagen (${missing[0]} bis ${missing.at(-1)}).`:'Keine offenen Tage nach dem letzten Garmin-Import erkannt.';
+
 
  const healthReview=reviewImportHub({state,healthFilePreview,placesPreview,financePreview,healthText});
  const emotionalReview=feelingReview(state.feelingCheckins||[],localDate());
@@ -1549,6 +1566,7 @@ function peopleMapMarkup(people,selected){
  return relationshipMapView(people,selected,{focus:relationshipMapFocus,filter:relationshipMapFilter,today:localDate(),projects:state?.projects||{},inspector});
 }
 
+
 function relationshipInspectorMarkup(person,projects,today){
  const p=preference(person),impulse=contactImpulse(person,today);
  const linked=relatedProjectIds(person,projects);
@@ -1585,6 +1603,7 @@ function peopleScreen(){
  <p class="muted-line">Kontaktimpulse werden über den Rhythmus im Relationship Radar gesteuert, ausschließlich anhand selbst bestätigter Kontakte.</p></section>
  <div class="people-calendar"><div class="work-heading"><span>${ico('calendar',16)} Gemeinsame Google-Termine</span><span class="quiet-tag">${personEvents.upcoming.length} kommende</span></div>${personEvents.upcoming.slice(0,5).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · geplant</small></div>`).join('')||'<p class="muted-line">Keine zugeordneten künftigen Kalendertermine.</p>'}${personEvents.past.length?`<details><summary>${personEvents.past.length} vergangene Termine</summary>${personEvents.past.slice(0,6).map(e=>`<div class="person-calendar-event"><strong>${h(e.summary||'Termin')}</strong><small>${h(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' · '))} · Durchführung nicht bestätigt</small></div>`).join('')}</details>`:''}<small class="muted-line">Google Kalender wird nur im angemeldeten Browser gelesen. Vergangene Termine sind kein bestätigter Kontakt.</small></div>
 
+
  ${calendarContactPanel(selected)}
  <details class="people-admin-details"><summary>Weitere Kontaktangaben und Einstellungen</summary> <form id="person-tag-form" class="compact-stack" data-id="${h(selected.id)}"><label>Personen-Tag<input name="tag" data-smart-tags maxlength="50" value="${h(selected.tag)}" required/></label><label>Namensvarianten für Kalender (optional)<input name="aliases" maxlength="200" value="${h(selected.aliases||'')}" placeholder="Spitzname, Kurzform …"/></label><button class="secondary-btn" type="submit">Zuordnung speichern</button><small>Das Tag verbindet offene Aufgaben und ungeklärte Inbox-Einträge mit dieser Person. Die Inbox-Einträge werden nicht automatisch zu Aufgaben. Kalendertermine werden anhand des Namens oder der angegebenen Varianten erkannt.</small></form>
  <form id="person-birthday-form" data-id="${h(selected.id)}" class="compact-stack person-birthday-form"><div class="work-heading"><span>${ico('calendar',16)} Geburtstag</span><span class="quiet-tag">${selected.birthdayMonthDay?`${h(selected.birthdayMonthDay.slice(3))}.${h(selected.birthdayMonthDay.slice(0,2))}.${selected.birthdayYear||''}`:'Nicht eingetragen'}</span></div>
@@ -1594,6 +1613,7 @@ function peopleScreen(){
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form></details>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
 function financeScreen(){return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,financeWhatIf,financeWhatIfDraft,financeAiSuggestions,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote,portfolioTab:financePortfolioTab,portfolioMarket:financePortfolioMarket,flatexSort:{key:flatexPositionSort,descending:flatexPositionDescending},flatexChart:{isin:flatexChartIsin,ticker:flatexChartTicker,period:flatexChartPeriod,busy:flatexChartBusy,error:flatexChartError,data:flatexChartData,settings:flatexChartSettings}}));}
+
 
 const KRAKEN_BRIDGE_URL='http://127.0.0.1:18757';
 const krakenBridgeRequest=async(path,method='GET',body=null)=>{
@@ -1683,6 +1703,7 @@ function insightsScreen(){
  <div class="insight-view-header ${insightTab==='sources'?'insight-source-heading':''}"><div class="insight-heading-main"><div><div class="insight-kicker">${h(tabDef.label.toUpperCase())} / ${insightTab==='sources'?'VERWALTUNG':'ANALYSE'}</div><h2>${h(tabDef.subtitle)}</h2></div>${healthChoices}</div>${['sleep','body','stress','energy','focus','places','explore'].includes(insightTab)?`<div class="insight-periods" aria-label="Zeitraum auswählen">${periods}</div>`:''}</div>
  ${insightTab==='feelings'?`<div class="fw65-periods" role="group" aria-label="Gefühlsverlauf Zeitraum"><button data-action="feeling-period" data-id="7" class="${feelingDays===7?'selected':''}">7 Tage</button><button data-action="feeling-period" data-id="30" class="${feelingDays===30?'selected':''}">30 Tage</button><button data-action="feeling-period" data-id="90" class="${feelingDays===90?'selected':''}">90 Tage</button></div>`:''}${content}
 
+
  </div>`);
 }
 function progressScreen(){
@@ -1744,6 +1765,7 @@ function discoveryPanel(){
  </section>`;
 }
 
+
 function recoveryScreen(){
  const today=localDate(),endDate=new Date(today+'T12:00:00');endDate.setDate(endDate.getDate()+30);const end=localDate(endDate);
  const cal=calendarEvents.filter(e=>e.status!=='cancelled'&&calendarDate(e)>=today&&calendarDate(e)<=end&&eventAppearance(e).category==='Erholung'&&!eventAppearance(e).hidden);
@@ -1768,6 +1790,7 @@ function recoveryScreen(){
  <div class="recovery-view"><section class="work-card"><div class="work-heading"><span>${ico('calendar',19)} Geplante Erholung · 30 Tage</span><span class="quiet-tag">${cal.length} Termine</span></div>${cal.length?cal.map(e=>`<button type="button" class="recovery-row" data-action="agenda-open" data-id="${h(e.id)}"><span>${h(eventAppearance(e).emoji)}</span><strong>${h(eventAppearance(e).displayTitle)}</strong><small>${h(calendarDate(e))}</small></button>`).join(''):`<p class="muted-line">${calendarToken?'Keine erkannten Erholungstermine in den nächsten 30 Tagen.':'Verbinde Google Calendar, um Erholungstermine anzuzeigen.'}</p>`}${calendarToken?calendarFilterToggle():calendarConnectUI()}</section>
  <section class="work-card"><div class="work-heading"><span>${ico('activity',19)} Erlebte Erholung</span><span class="quiet-tag">${acts.length} Aktivitäten</span></div>${acts.map(a=>`<button type="button" class="recovery-row" data-action="activity-open" data-id="${h(a.id)}"><span>🌿</span><strong>${h(a.title)}</strong><small>${h(a.startedAt.slice(0,10))} · ${a.durationMinutes} min</small></button>`).join('')||'<p class="muted-line">Du kannst in Aktivitäten eine Garmin-Session oder eine manuelle Aktivität als Erholung kennzeichnen.</p>'}<button type="button" class="text-link" data-tab="activity">Aktivitäten bearbeiten ${ico('arrow',14)}</button></section></div>`);
 }
+
 
 function activityScreen(){
  const all=projectActivities(watchSessions,state),rows=all.filter(a=>a.deleted===activityTrash);
@@ -1831,6 +1854,7 @@ function bind() {
  const timeForm=app.querySelector('#pj92-time-form');if(timeForm)timeForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(timeForm);const conv=v=>new Date(String(v)).toISOString();const entry=validTimeEntry({id:fd.get('id')||undefined,start:conv(fd.get('start')),end:conv(fd.get('end')),category:String(fd.get('category')),title:fd.get('title'),project:fd.get('project'),updatedAt:stamp()});journalSyncStatus='lokal';await mutate(s=>putTimeEntry(s,entry));timeJournalShowForm=false;timeJournalEditId='';toast('Zeitintervall gespeichert.');}catch(ex){toast(ex.message,true);}};
  const foodDetail=app.querySelector('#pj92-food-detail-form');if(foodDetail)foodDetail.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodDetail);journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===fd.get('id'));if(!item)throw Error('Eintrag fehlt.');item.at=new Date(String(fd.get('at'))).toISOString();item.amount=String(fd.get('amount')||'').slice(0,60);item.note=String(fd.get('note')||'').slice(0,500);item.updatedAt=stamp();});nutritionEditId='';toast('Ernährungseintrag gespeichert.');}catch(ex){toast(ex.message,true);}};
  const foodCustom=app.querySelector('#pj92-add-food-form');if(foodCustom)foodCustom.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodCustom);journalSyncStatus='lokal';await mutate(s=>addCustomFood(s,fd.get('title')));toast('Lebensmittel hinzugefügt.');}catch(ex){toast(ex.message,true);}};
+
 
  const recPanel=app.querySelector('#rec554-panel');if(recPanel)recPanel.addEventListener('toggle',()=>{if(recPanel.isConnected)timeoffOpen=recPanel.open;});
  const plannerElement=app.querySelector('#v47-plan');if(plannerElement)plannerElement.addEventListener('toggle',()=>{plannerExpanded=plannerElement.open;});
@@ -1915,6 +1939,7 @@ function bind() {
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
   };
+
 
   const privateSetup=app.querySelector('#private-device-sync-setup');if(privateSetup)privateSetup.onsubmit=async ev=>{
     ev.preventDefault();const values=new FormData(privateSetup),phrase=String(values.get('phrase')||'');
@@ -2028,6 +2053,7 @@ function bind() {
     }
    });}
 
+
   const careForm=app.querySelector('#contact-care-form');if(careForm){careForm.closest('details')?.addEventListener('toggle',ev=>{contactSettingsOpen=ev.currentTarget.open;});careForm.onsubmit=async ev=>{ev.preventDefault();const id=careForm.dataset.id;const fd=new FormData(careForm);if(!state?.people?.[id])return;const mode=String(fd.get('mode')||'occasional');if(!CONTACT_MODES.some(([k])=>k===mode))return;await mutate(s=>{s.people[id].contactMode=fd.has('sharesHousehold')?'regular':mode;s.people[id].sharesHousehold=fd.has('sharesHousehold');s.people[id].contactPaused=mode==='paused';});contactSettingsOpen=true;contactSaveStatus='Kontaktmodus gespeichert ✓';render();};}
   const contactForm=app.querySelector('#person-contact-form');
   if(contactForm){
@@ -2046,6 +2072,7 @@ function bind() {
     const scroll=rememberPeopleScroll();
     try {clearTimeout(contactDraftSaveTimer);await mutate(s=>{s.people[id]=addContactEntry(s.people[id],entry,localDate()).person;if(s.contactDrafts)delete s.contactDrafts[id];});quickContactType='';contactSaveStatus='✓ Kontakt gespeichert – im Verlauf sichtbar';contactSaving=false;render();restorePeopleScroll(scroll);}
     catch(ex){contactSaving=false;contactSaveStatus='Speichern fehlgeschlagen · bitte erneut versuchen';render();restorePeopleScroll(scroll);const f=app.querySelector('#person-contact-form');if(f){f.elements.day.value=entry.day;f.elements.type.value=entry.type;f.elements.note.value=entry.note;f.elements.initiator.value=entry.initiator;}error=ex.message;}
+
 
   };
   const reviewDaysForm=app.querySelector('#person-review-days-form');if(reviewDaysForm)reviewDaysForm.onsubmit=async ev=>{
@@ -2448,6 +2475,7 @@ function bind() {
     }catch(ex){toast(ex.message,true);}
   };
 
+
   const finSearch=app.querySelector('#finance-ledger-query');if(finSearch)finSearch.onchange=()=>{financeLedgerQuery=finSearch.value.slice(0,100);financeLedgerPage=0;render();};
   const finFilter=app.querySelector('#finance-ledger-filter');if(finFilter)finFilter.onchange=()=>{financeLedgerFilter=finFilter.value;financeLedgerPage=0;render();};
   app.querySelectorAll('form[data-finance-edit]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeEdit;const data=new FormData(form),category=String(data.get('category')||''),flow=String(data.get('flow')||'');if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')return toast('Bitte eine konkrete Kategorie auswählen.',true);try{let affected=0;const remember=data.get('remember')==='yes';
@@ -2728,6 +2756,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
    morningSession=next;morningPublicWrite();render();return;
  }
 
+
  if(action==='pj92-food-open'){if(!state&&!sealedCaptureAvailable)return toast('Bitte zuerst einmal den Tresor entsperren.',true);nutritionQuickOpen=true;habitQuickOpen=false;worktimeQuickOpen=false;feelingOverlayOpen=false;captureOverlayOpen=false;render();return;}
  if(action==='pj92-food-close'||action==='pj92-food-close-backdrop'){nutritionQuickOpen=false;render();return;}
  if(action==='pj92-food-insights'){nutritionQuickOpen=false;if(!state)return toast('Zum Ansehen der Ernährungshistorie bitte Tresor entsperren.',true);tab='insights';insightTab='nutrition';calmNavGroup='insights';render();return;}
@@ -2749,6 +2778,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='pj92-food-edit-cancel'){nutritionEditId='';render();return;}
  if(action==='pj92-food-delete'){if(!state||!confirm('Ernährungseintrag entfernen?'))return;try{journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===id);if(item){item.deleted=true;item.updatedAt=stamp();}});nutritionEditId='';toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
  if(action==='pj92-sync-now'){try{const ok=await syncPersonalJournal();if(ok)toast('Zeitjournal und Ernährung verschlüsselt abgeglichen.');else toast('Kein Cloud-Abgleich möglich: bitte anmelden und Geräteabgleich einrichten.',true);}catch(ex){toast(ex.message,true);}return;}
+
 
  if(action==='feeling-open'){nutritionQuickOpen=false;feelingEditingId='';captureOverlayOpen=false;worktimeQuickOpen=false;habitQuickOpen=false;feelingOverlayOpen=true;render();app.querySelector(feelingInputMode==='words'?'#fw705-search-input':'#fw65-dialog .fw65-emotion')?.focus({preventScroll:true});return;}
  if(action==='worktime-quick-open'){nutritionQuickOpen=false;if(!state&&!sealedCaptureAvailable){toast('Bitte einmal entsperren und die verschlüsselte Schnellerfassung aktivieren.',true);return;}captureOverlayOpen=false;feelingOverlayOpen=false;habitQuickOpen=false;worktimeQuickOpen=true;render();if(state?.privateDeviceMirror?.key&&authToken)syncPersonalJournal().catch(ex=>toast('Arbeitszeit-Abgleich: '+ex.message,true));return;}
@@ -3206,6 +3236,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       await mutate(s=>{const rules=effectiveCalendarRules(s).map(r=>({...r}));const i=rules.findIndex(r=>r.id===id),j=i+(action==='calendar-rule-up'?-1:1);if(i>=0&&j>=0&&j<rules.length){[rules[i],rules[j]]=[rules[j],rules[i]];s.calendarRules=rules;}});return;
     }
 
+
     if(action==='agenda-open'){const e=calendarEvents.find(x=>x.id===id);if(e){selectedDay=calendarDate(e);tab='today';}selectedAgendaEventId=id;render();requestAnimationFrame(()=>{const panel=app.querySelector('#agenda-details');if(panel){panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest',behavior:'smooth'});}});return;}
     if(action==='agenda-close'){selectedAgendaEventId=null;render();return;}
     if(action==='folder-icon-open'){if(state?.projects?.[id]?.kind!=='folder')return;selectedTaskId=null;selectedProjectId=id;render();const e=app.querySelector('.project-properties');if(e){e.open=true;e.scrollIntoView?.({block:'nearest'});}return;}
@@ -3390,6 +3421,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
         s.financeTripAssignments=clean.links;s.financeTripExcluded=clean.exclusions;});
       financeTripSelected='';financeTripPage=0;toast('Reise gelöscht. Bankbuchungen bleiben unverändert.');return;
     }
+
+
 
 
     if(action==='finance-recurring-fixed'||action==='finance-recurring-clear'||action==='finance-recurring-exclude'){
