@@ -1,0 +1,39 @@
+Compass 0.5.77.3 — Filmplakate, Tageskino und Inhaltsangaben
+==========================================================
+
+BASIS: Für PATCH ist Compass 0.5.77.2 erforderlich.
+
+1. Vor Upload ein verschlüsseltes Backup deines bestehenden lokalen Vaults
+   erstellen. Weder IndexedDB noch die Cloud-D1-Datenbank löschen.
+2. Das PATCH_FROM_0.5.77.2.zip in das Stammverzeichnis des GitHub-Repositories
+   entpacken. Die Struktur client/src, tests/ und package.json beibehalten,
+   ohne zusätzliche ZIP-Ordner-Ebene. Vorhandene Dateien ersetzen.
+3. Änderungen nach GitHub hochladen und den Workflow Deploy Compass Web
+   kontrollieren. Mit neu geladenem Browser/PWA Version 0.5.77.3 prüfen.
+4. Bei abweichendem Versionsstand stattdessen FULL_SOURCE.zip verwenden.
+
+MANUELLER ERSTTEST
+- Compass entsperren > Insights > Erholung > Kinoprogramm.
+- Posteransicht standardmäßig; Pfeile blättern durch einzelne Tage.
+- "Alle Tage" und "Liste" ausprobieren, anschließend "Heute".
+- Filmkarte zeigt nur wirkliche Inhaltskurzbeschreibung; generische
+  "Kinovorführung" oder "Dokumentarfilm" erscheinen NICHT als Synopsis.
+- "Filmtexte & Poster recherchieren" anklicken; Rechercheprompt in ChatGPT
+  eingeben. Als Ergebnis JSON mit Wurzel "films" liefern lassen.
+- Film-JSON in das bestehende Importfeld kopieren > Import prüfen > Übernehmen.
+- Nach erfolgreichem Import erscheinen Synopsis und optional Filmplakat; die
+  konkreten Spielzeiten sind noch vorhanden, bestehende Favoriten bleiben.
+- Falls ein offiziell erlaubtes direktes Posterbild nicht ermittelt werden kann,
+  bleibt der Platzhalter 🎬. Keine erdachten Bildquellen verwenden.
+
+MUSTER FÜR FILM-METADATEN (nur Schema, keine realen Angaben):
+{"films":[{"title":"Exakter vorhandener Filmtitel",
+           "description":"Zwei kurze belegte Sätze zu Handlung oder Thema.",
+           "sourceUrl":"https://echte-offizielle-filmseite/...",
+           "imageUrl":"https://direkte-erlaubte-posterdatei/...jpg"}]}
+
+Quellen und optionale Bildlinks müssen gültige reale HTTPS-Adressen sein.
+FILM-METADATEN ersetzen keine Vorführungsliste: Es werden nur vorhandene
+Filmtitel aktualisiert, nie neue Vorstellungen angelegt.
+
+Keine D1-Migration. Kein Worker-API-Update erforderlich.

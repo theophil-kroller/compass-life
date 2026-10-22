@@ -1,3 +1,5 @@
+> **Compass 0.5.77.3:** Kinoprogramm mit Tagesnavigation, großem Poster-Grid, verifizierten Kurzbeschreibungen und separatem JSON-Nachimport für fehlende Filmtexte/Poster. Siehe [Changelog](CHANGELOG_0.5.77.3.md) und [Installation](INSTALLATION_0.5.77.3.txt).
+
 > **Neu in Compass 0.5.77.2:** Kinoprogramm jetzt nach Filmtiteln gruppiert, Vorführungen je Film aufklappbar, separater Überblick `Filmtitel / Vorführungen / Kinos` sowie Import-Qualitätswarnung. Siehe [Changelog](CHANGELOG_0.5.77.2.md) und [Installation](INSTALLATION_0.5.77.2.txt).
 
 > **Compass 0.5.77.1** — Schlafarchiv mit Jahresnavigation, konsistente Datumsachsen und sichtbare Garmin-Importabdeckung. Siehe [Changelog](CHANGELOG_0.5.77.1.md) und [Installation](INSTALLATION_0.5.77.1.txt).

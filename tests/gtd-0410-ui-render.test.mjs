@@ -25,6 +25,8 @@ import * as personLinks from '../client/src/person-links.js';
 import * as discoveryFilter from '../client/src/discovery-category-filter.js';
 import * as discoveryResearch577 from '../client/src/discovery-research-v577.js';
 import * as cinemaModule5772 from '../client/src/cinema-program-v5772.js';
+import * as cinemaDetails5773 from '../client/src/cinema-details-v5773.js';
+import * as eventSync from '../client/src/event-sync.js';
 import * as review from '../client/src/guided-review.js';
 import * as tags from '../client/src/smart-tags.js';
 import * as personMatching from '../client/src/people-matching.js';
@@ -48,6 +50,7 @@ const compiled=source.replace(/^import .*;\r?\n/gm,'').replace('registerSW({imme
  globalThis.testUI=(current,mode,events=[])=>{state=current;tab=mode;calendarEvents=events;render();return app.innerHTML;};
  globalThis.testAction=(action,id,stepId)=>runAction(action,id,stepId);
  globalThis.readState=()=>state;
+ globalThis.testCinemaPreview=(p)=>{discoveryImportPreview=p;};
 `;
 function context(){
  const app={innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null};
@@ -56,7 +59,7 @@ function context(){
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
  Object.assign(ctx,dailyPlanning,capacity,deadline,projectExchange,treeWorkspace,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,contactCare568,calendarSuggestions568);
- Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,cinemaModule5772,relationships);
+ Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,cinemaModule5772,cinemaDetails5773,eventSync,relationships);
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
@@ -184,4 +187,24 @@ test('0.5.77.2 cinema view renders each film once, with distinct showtime links 
  assert.match(html,/18:00/);
  assert.match(html,/20:00/);
  assert.match(html,/data-action="discovery-save"/);
+});
+
+test('0.5.77.3 cinema: poster cards, date arrows and enrichment keep existing screenings',async()=>{
+ const ui=context(),today=tasks.localDate(),tomorrow=cinemaDetails5773.cinemaDayShift(today,1);
+ const base={city:'Graz',country:'Österreich',category:'Kino',sourceUrl:'https://kino.example.org/film',description:'Kinovorführung.'};
+ const events=[{...base,title:'Atmosphere',venue:'KIZ',date:today,startTime:'18:00'},{...base,title:'Atmosphere',venue:'Schubertkino',date:tomorrow,startTime:'20:00'}];
+ const st=tasks.prepareTasks({format:1,records:{},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[],discoveredEvents:events});
+ ui.testUI(st,'recovery');await ui.testAction('discovery-view-cinema');
+ let html=ui.testUI(st,'recovery');
+ assert.match(html,/discovery-film-card cinema-poster/);
+ assert.match(html,/Noch keine verifizierte Inhaltsbeschreibung/);
+ assert.match(html,/data-action="discovery-cinema-next"/);
+ assert.match(html,/KIZ/);assert.doesNotMatch(html,/>Schubertkino · Graz</);
+ await ui.testAction('discovery-cinema-next');html=ui.testUI(st,'recovery');assert.match(html,/Schubertkino/);assert.doesNotMatch(html,/>KIZ · Graz</);
+ const details={films:[{title:'Atmosphere',description:'Ein Dokumentarfilm untersucht die Verflechtung von globaler Wirtschaft, Wohlstand und ungleichen Lebenschancen anhand konkreter Menschen.',sourceUrl:'https://kino.example.org/synopsis',imageUrl:'https://kino.example.org/poster.jpg'}]};
+ ui.testCinemaPreview(cinemaDetails5773.parseCinemaDetailsImport(JSON.stringify(details),st.discoveredEvents));
+ await ui.testAction('discovery-import-confirm');html=ui.testUI(st,'recovery');
+ assert.match(html,/Verflechtung von globaler Wirtschaft/);assert.match(html,/https:\/\/kino.example.org\/poster.jpg/);
+ assert.equal(ui.readState().discoveredEvents.length,2);
+ assert.equal(ui.readState().discoveredEvents.filter(e=>e.synopsisSourceUrl).length,2);
 });
