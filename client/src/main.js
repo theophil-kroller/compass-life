@@ -119,7 +119,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.13';
+const COMPASS_CLIENT_VERSION='0.5.77.14';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();

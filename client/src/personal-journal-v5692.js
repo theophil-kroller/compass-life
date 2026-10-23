@@ -40,6 +40,7 @@ export const FOOD_PRESETS=[
  ['pistachio-butter-cups','🍬','Better Pistachio Butter Cups','Snacks','3 Stück (39 g)',238,242],
  ['pringles','🥔','Pringles','Snacks','1 Dose (165 g)',830,920],
  ['chio-chips','🥔','Chio Chips','Snacks','1 Packung (150 g)',740,830],
+ ['supplement-bluebonnet-one-men','💊','Bluebonnet ONE for Men · Multivitamin','Nahrungsergänzung','1 Kapsel',null,null],
  ['supplement-fuerstenmed','💊','FürstenMED Kombinationspräparat','Nahrungsergänzung','1 Kapsel',null,null],
  ['other-food','➕','Anderes','Sonstiges']
 ].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({
