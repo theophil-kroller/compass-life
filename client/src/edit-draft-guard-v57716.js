@@ -39,7 +39,7 @@ export function restoreFormDraft(form,draft){
  if(Array.isArray(draft.expanded))for(const [i,el] of [...form.querySelectorAll('details')].entries())el.open=draft.expanded.includes(i);
  return true;
 }
-export function createEditDraftGuard({root,getState,getContext,persist,delay=2800}){
+export function createEditDraftGuard({root,getState,getContext,persist,traceInputStart=null,traceInputEnd=null,delay=2800}){
  const cache=new Map();let timer=null,loadedState=null,rendering=false;
  const doc=root?.ownerDocument || (typeof document!=='undefined'?document:null);
  const forms=()=>[...root.querySelectorAll('form[id]')].filter(form=>editorKey(form,getContext()));
@@ -105,7 +105,9 @@ export function createEditDraftGuard({root,getState,getContext,persist,delay=280
    status.textContent=draft?'Ungespeicherter Entwurf wiederhergestellt':'Entwurf wird im verschlüsselten Tresor gesichert';
    form.appendChild(status);
    const track=()=>{
+    const started=traceInputStart?.();
     keep(form);status.hidden=false;status.textContent='Entwurf wird gesichert …';
+    if(started!=null)traceInputEnd?.(form.id,started);
    };
    form.addEventListener('input',track);
    form.addEventListener('change',track);

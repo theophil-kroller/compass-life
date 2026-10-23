@@ -1,3 +1,5 @@
+> **Aktueller Build: 0.5.77.21** – schnellere Vorlagen-/Projekt-Erfassung (UI vor Tresorverschlüsselung, verlässliche Rücknahme), Eingabelatenz-Messpunkte sowie Mikro-Symbole und bioaktive Tagesstoffe (EGC/EGCG ohne erfundene Mengen). [Changelog](CHANGELOG_0.5.77.21.md) · [Installation](INSTALLATION_0.5.77.21.txt). Keine D1-Migration.
+
 > **Aktueller Build: 0.5.77.20** – Menschen nach Alle / Arbeitskollegen / Privat filtern (Liste + Beziehungslandkarte), sichere Vermeidung unnötiger Tresorspeicherungen bei unveränderten Cloud-Snapshots. Gemessene Engpässe dokumentiert. [Changelog](CHANGELOG_0.5.77.20.md) · [Installation](INSTALLATION_0.5.77.20.txt). E2EE-Kontakte aus .19 bleiben opt-in.
 
 > **Aktueller Build: 0.5.77.19** – kontaktfreundlicher, explizit aktivierbarer E2EE-Geräteabgleich, klarer Hinweis bei leeren mobilen Kontaktprofilen, mobile Projektzeilen und echte lokale Aktions-/Render-/Sync-Messwerte. [Changelog](CHANGELOG_0.5.77.19.md) · [Installation](INSTALLATION_0.5.77.19.txt). Bestehende Tresordaten nicht löschen.

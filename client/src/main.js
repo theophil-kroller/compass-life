@@ -38,6 +38,7 @@ import {buildPersonAgendaIndex,sortPeopleByOpenItems} from './people-agenda-inde
 import {PEOPLE_SCOPES,peopleInScope,peopleScopeCounts} from './people-scope-v57720.js';
 import {mergePeopleDirectory,markChangedPeople} from './people-sync-v57719.js';
 import {createPerformanceTrace} from './performance-trace-v57719.js';
+import {planningCheckpoint,restorePlanningCheckpoint,afterPlanningPaint} from './fast-planning-v57721.js';
 import './mobile-planning-v57719.css';
 import './performance-trace-v57719.css';
 import {buildPlanTreeIndex} from './plan-tree-index-v57717.js';
@@ -132,7 +133,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.20';
+const COMPASS_CLIENT_VERSION='0.5.77.21';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -564,10 +565,22 @@ const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
 const date=s=>s?new Date(s).toLocaleString('de-AT',{dateStyle:'medium',timeStyle:'short'}):'–';
 const configured=()=>config.apiUrl.startsWith('https://')&&!config.apiUrl.includes('YOUR_')&&
   config.googleClientId.endsWith('.apps.googleusercontent.com')&&!config.googleClientId.includes('REPLACE');
+// Sample 1 in 4 input events when profiling is enabled, avoiding observer overhead while typing.
+let sampledEditorInput=0;
 // Draft protection is deliberately local to the encrypted Vault; nothing is sent to the Worker.
 const editDraftGuard=createEditDraftGuard({root:app,getState:()=>state,
  getContext:()=>({tab,treeCreateParent,treeTaskParent,selectedProjectId,selectedDay}),
- persist:drafts=>vault.saveEditDrafts(drafts)});
+ persist:drafts=>vault.saveEditDrafts(drafts),
+ traceInputStart:()=>++sampledEditorInput%4===0?performanceTrace.start():null,
+ traceInputEnd:(formId,started)=>{
+  if(started==null)return;
+  const name=formId==='task-create-form'&&tab==='templates'?'Eingabe: Vorlagenitem':
+    formId==='task-create-form'?'Eingabe: Neue Aufgabe':
+    formId==='project-create-form'?'Eingabe: Neues Projekt':
+    formId==='project-edit-form'?'Eingabe: Projekt bearbeiten':'Eingabe: Aufgaben-Inspector';
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(()=>performanceTrace.end(name,tab,started)));
+  else performanceTrace.end(name,tab,started);
+ }});
 function editRenderSignature(){return [tab,selectedProjectId||'',selectedTaskId||'',treeCreateKind||'',treeCreateParent||'',treeTaskParent||'',selectedDay||'',todayInspectorOpen?'1':'0'].join('|');}
 let lastEditRenderSignature='';
 function toast(s,isError=false) {if(isError){error=s;notice='';}else{notice=s;error='';}render();}
@@ -576,14 +589,17 @@ function download(filename,obj) {
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();
   setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
-async function mutate(fn,committedEditForm=null,skipFinalRender=false) {
+async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=null) {
   let draftBackup=null;
   if(!state)throw new Error('Der Tresor muss entsperrt sein.');
   prepareTasks(state);
-  const previous=structuredClone(state);
+  // Fast path only for audited create handlers which replace planning entries.
+  // A finance mirror can change other state, so it always uses full rollback.
+  const fastPlanning=options?.fastPlanning===true&&!['source','receiver'].includes(state.privateDeviceMirror?.mode)&&tab!=='people';
+  const previous=fastPlanning?planningCheckpoint(state):structuredClone(state);
   // Journal fingerprinting serializes years of personal data. Without journal mirror
   // credentials there is no remote journal change to detect during task editing.
-  const trackJournal=!!(state.privateDeviceMirror?.key&&authToken);
+  const trackJournal=!!(state.privateDeviceMirror?.key&&authToken)&&!fastPlanning;
   const journalBefore=trackJournal?journalFingerprint(state):null;
   try {
     fn(state);invalidateDerivedInsights();
@@ -596,12 +612,19 @@ async function mutate(fn,committedEditForm=null,skipFinalRender=false) {
       if(state.privateDeviceMirror?.mode==='source')state.privateDeviceMirror.dirty=true;
     }
     if(committedEditForm)draftBackup=editDraftGuard.commit(committedEditForm);
+    // New project/template items appear immediately, rather than after >1 s
+    // re-encryption. No success notification or remote sync before durability.
+    if(fastPlanning){
+      options?.onApplied?.();
+      render();
+      await afterPlanningPaint();
+    }
     await persist();
     syncQuickPublicFromState();
     if(trackJournal){
       if(journalFingerprint(state)!==journalBefore){journalRevision++;journalSyncStatus='lokal';if(state.privateDeviceMirror?.key&&authToken&&navigator.onLine)syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);render();});}
     }
-  }catch(ex){state=previous;if(draftBackup)editDraftGuard.rollback(draftBackup);render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
+  }catch(ex){if(fastPlanning){restorePlanningCheckpoint(state,previous);options?.onFailed?.();}else state=previous;if(draftBackup)editDraftGuard.rollback(draftBackup);render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
   if(!skipFinalRender)render();
   if(busy)syncResyncRequested=true;
   else scheduleSync();
@@ -2474,7 +2497,13 @@ function bind() {
     if(treeCreateKind==='task'&&treeCreateParent&&state.projects?.[treeCreateParent]?.isTemplate)t.projectId=treeCreateParent;
     if(!validLocalTask(t)||!validTaskParent(state,t.id,t.projectId,t.parentTaskId)||t.projectId&&!state.projects?.[t.projectId]){toast('Aufgabenfelder bzw. Hierarchie prüfen. Bitte Projektzuordnung kontrollieren.',true);return;}
     t.sortOrder=Math.min(1000000,100+Math.max(0,...taskChildren(state,t.projectId,t.parentTaskId).map(x=>x.sortOrder||0)));
-    await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);},taskForm,true);selectedTaskId=t.id;selectedProjectId=t.projectId;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;toast('Aufgabe lokal gespeichert.');
+    const beforeUi={selectedTaskId,selectedProjectId,treeCreateKind,treeCreateParent,treeTaskParent};
+    try{
+      await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);},taskForm,true,{
+       fastPlanning:true,onApplied:()=>{selectedTaskId=t.id;selectedProjectId=t.projectId;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;},
+       onFailed:()=>{({selectedTaskId,selectedProjectId,treeCreateKind,treeCreateParent,treeTaskParent}=beforeUi);}
+      });toast('Aufgabe lokal gespeichert.');
+    }catch(ex){toast(ex.message,true);}
   };
   const taskEditForm=app.querySelector('#task-edit-form');if(taskEditForm)taskEditForm.onsubmit=async ev=>{
     ev.preventDefault();const id=taskEditForm.dataset.id,fd=new FormData(taskEditForm);const existing=state.tasks[id];if(!existing)return;
@@ -2540,7 +2569,13 @@ function bind() {
     ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),reviewedAt:null,kind:d.get('kind')||'project',folderIcon:d.get('kind')==='folder'?'folder':null,isTemplate:false,projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null,sortOrder:0};
     if(!validProject(project)||!validProjectParent(state,project.id,project.parentId)){toast('Projektangaben bzw. Ordnerhierarchie prüfen.',true);return;}
     project.sortOrder=Math.min(1000000,100+Math.max(0,...childProjects(state,project.parentId).map(x=>x.sortOrder||0)));
-    await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;},projectCreate,true);selectedProjectId=project.id;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;render();
+    const beforeUi={selectedProjectId,treeCreateKind,treeCreateParent,treeTaskParent};
+    try{
+      await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;},projectCreate,true,{
+       fastPlanning:true,onApplied:()=>{selectedProjectId=project.id;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;},
+       onFailed:()=>{({selectedProjectId,treeCreateKind,treeCreateParent,treeTaskParent}=beforeUi);}
+      });
+    }catch(ex){toast(ex.message,true);}
   };
   const projectEdit=app.querySelector('#project-edit-form');if(projectEdit)projectEdit.onsubmit=async ev=>{
     ev.preventDefault();const id=projectEdit.dataset.id;const d=new FormData(projectEdit);const project={...state.projects[id],title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:d.get('status')||'active',dueDate:d.get('dueDate')||null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),kind:d.get('kind')||'project',folderIcon:d.get('kind')==='folder'?(d.get('folderIcon')||'folder'):null,isTemplate:d.has('isTemplate'),projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null};
@@ -3080,7 +3115,7 @@ async function placeInDailyPlan(taskId,start,moveId=null){
 async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='perf719-toggle'){performanceTrace.setEnabled(!performanceTrace.enabled);try{localStorage.setItem('compass.perf.v57719',performanceTrace.enabled?'on':'off');}catch{}render();return;}
  if(action==='perf719-clear'){performanceTrace.clear();render();return;}
- if(action==='perf719-export'){download('compass-performance-0.5.77.20.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
+ if(action==='perf719-export'){download('compass-performance-0.5.77.21.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
  if(action==='people-sync719-toggle'){
   if(!state?.privateDeviceMirror?.key){toast('Zuerst den verschlüsselten Geräteabgleich einrichten.',true);return;}
   if(!state.peopleSyncEnabled&&!confirm('Kontaktprofile einschließlich persönlicher Notizen werden Ende-zu-Ende verschlüsselt mit deinem verbundenen Gerät abgeglichen. Wirklich aktivieren?'))return;
@@ -4423,6 +4458,13 @@ async function syncReview(){
 }
 async function syncNow() {
   if(!state||!authToken||busy||!navigator.onLine)return;
+  // An automatic sync must never compete with typing a project/template item.
+  // Explicit Sync clicks focus their own button and proceed normally.
+  const activeEditor=document.activeElement?.closest?.('form');
+  if(activeEditor&&['task-create-form','project-create-form','task-edit-form','project-edit-form'].includes(activeEditor.id)&&
+      ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){
+    scheduleSync(12000);return;
+  }
   const syncMeasurement=performanceTrace.start();
   clearTimeout(syncTimer);syncTimer=null;
   busy=true;render();

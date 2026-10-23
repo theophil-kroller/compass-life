@@ -1,0 +1,13 @@
+Compass 0.5.77.21 — GitHub-Patch von 0.5.77.20
+
+1) Auf dem Laptop zunächst verschlüsseltes Tresor-Backup erstellen, insbesondere bevor du den geräteübergreifenden Kontakt-Abgleich aktivierst.
+2) Nur wenn derzeit 0.5.77.20 im GitHub-Repository steht: Dateien aus Compass_0.5.77.21_PATCH_FROM_0.5.77.20.zip direkt mit gleicher Ordnerstruktur ins Repository übernehmen. Keine Dateien im GitHub-Root zu einer einzigen Datei zusammenführen.
+3) Commit durchführen und Deploy/Build-Workflow prüfen.
+4) Auf dem Computer Compass neu laden, Version 0.5.77.21 prüfen. Nach PWA-Update auf dem Handy ggf. neu starten.
+5) Unter Vorlagen ein Item hinzufügen, unter Projekte ein neues Projekt erstellen, im jeweiligen Formular tippen.
+6) System & Synchronisation → Laufzeitmessung aktivieren; mindestens 2 Minuten normale Erfassung (Vorlagen und Projekte) testen. Die Dateien enthalten keine Texte oder Kontaktnamen.
+
+Keine Worker-Dateien und keine D1-Migration erforderlich.
+Bestehende Vault-Daten, Kontakte, Projekte, Ernährungsprotokolle und Sync-Einstellungen nicht löschen oder neu initialisieren.
+
+Sicherheit: Die sofortige UI-Anzeige bedeutet noch nicht, dass der Eintrag verschlüsselt gespeichert ist. Die Erfolgsmeldung kommt erst bei erfolgreichem Speichern; bei Fehler wird zurückgerollt.

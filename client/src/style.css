@@ -3239,3 +3239,10 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 
 /* 0.5.77.16: subtle encrypted local draft indicator, without shifting forms while typing. */
 .v57716-draft-status:not([hidden]){margin-top:5px;font-size:11px;line-height:1.35;color:var(--muted,#716c66)}
+
+/* 0.5.77.21: compact, readable micro/bioactive nutrients without stretching values on phones. */
+.ni721-bioactive{margin-top:14px}.ni721-bioactive-intro{font-size:.8rem;line-height:1.5;color:var(--muted,#68776e);max-width:70ch}
+.ni721-bioactive .ni712-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}
+.ni721-bioactive-row strong{white-space:normal;overflow-wrap:anywhere}
+.ni721-bioactive .ni712-details summary{padding:12px 0}
+@media(max-width:720px){.ni721-bioactive .ni712-rows{grid-template-columns:1fr}.ni712-row{grid-template-columns:minmax(0,1fr) auto}.ni712-row strong{font-size:.84rem}}
