@@ -1,0 +1,19 @@
+Compass Life 0.5.77.23
+
+Ausgangsbasis für PATCH: 0.5.77.22.
+Die ZIP-Datei enthält relative Repository-Pfade.
+1. Bestehenden Tresor zunächst verschlüsselt sichern.
+2. Patch ins GitHub-Repository über die bestehenden Dateien hochladen und committen.
+   Alternativ FULL_SOURCE als vollständigen Quellstand verwenden.
+3. GitHub Actions / Cloudflare Pages Build abwarten und auf Fehler prüfen.
+4. Compass 0.5.77.23 neu laden. Keinen Tresor zurücksetzen; keine D1-Migration.
+5. Ernährungsschnellerfassung öffnen: neue „Gericht beschreiben“-Box steht über den bisherigen Kacheln.
+   Einen Satz tippen → Zutaten erkennen → Gramm ggf. korrigieren → Mahlzeit übernehmen.
+   Danach Rezept unter „Eigene“ 🍽️ mit einem Tap wiederverwenden.
+6. GPT-Handoff ist optional (Prompt kopieren / JSON manuell einfügen), kein automatischer ChatGPT-Aufruf.
+7. „Makro & Mikro“ öffnet Tageswerte, Salz-Orientierung und das optionale persönliche Makroprofil.
+8. Performance Trace bei Bedarf unter System aktivieren; sampled "Ernährung: Tippen bis Paint".
+
+WICHTIG: Erfasste Zahlen sind keine Herstellerwerte für Kantinenessen. Öl/Dressing/Salz müssen ausdrücklich bestätigt werden. Bereits bestehende Lebensmittelkacheln bleiben unverändert.
+
+Keine Worker-Änderung / keine D1-Migration / keine neue Schlüsselableitung / keine Tresordatenkonvertierung.

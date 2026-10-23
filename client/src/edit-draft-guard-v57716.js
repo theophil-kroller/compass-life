@@ -6,7 +6,8 @@
 const PROTECTED_FORMS=new Set([
  'task-create-form','task-edit-form','project-create-form','project-edit-form',
  'inbox-edit-form','dream-create-form','dream-edit-form',
- 'person-project-create-form','person-contact-form','wf715-create'
+ 'person-project-create-form','person-contact-form','wf715-create',
+ 'meal723-compose-form','meal723-json-form'
 ]);
 export const EDIT_DRAFT_VAULT_KEY='localEditDraftsV57716';
 export function editorKey(form,context={}){

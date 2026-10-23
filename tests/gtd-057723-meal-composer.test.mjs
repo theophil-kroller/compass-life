@@ -1,0 +1,90 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {recognizeMeal,validateMealIngredients,mealNutrients,saveMeal,gptMealPrompt,importMealJSON,mealComposerMarkup,mealPreviewMarkup} from '../client/src/meal-compose-v57723.js';
+import {macroSuggestions,normalizedMacroPreferences} from '../client/src/macro-goals-v57723.js';
+import {nutritionDay,nutritionIntelligenceView,nutritionParts} from '../client/src/nutrition-intelligence-v57712.js';
+import {nutritionFoods,addNutrition,mergeJournalData} from '../client/src/personal-journal-v5692.js';
+const desc='Chinakohlsalat, Tempeh, gebratenes Gemüse und Buchweizen';
+test('Mensa free-text recognises four components without claiming cooking oil or salt',()=>{
+ const x=recognizeMeal(desc);
+ assert.deepEqual(x.ingredients.map(i=>i.id),['napa','tempeh','buckwheat','vegetables']);
+ assert.equal(x.ingredients.every(x=>x.assumed),true);
+ assert.ok(x.warnings.some(w=>/Bratöl/.test(w)));
+ assert.ok(x.warnings.some(w=>/Dressing/.test(w)));
+ assert.equal(x.ingredients.some(i=>i.id==='oil'),false);
+ const n=mealNutrients(x.ingredients).nutrients;
+ assert.ok(n.kcal>350&&n.kcal<600);
+ assert.ok(n.protein>30);
+ assert.ok(n.vitaminC>0);
+ assert.ok(n.salt<.3,'no invented salt addition');
+});
+test('explicit gram quantities override guesses without doing work on each keypress',()=>{
+ const x=recognizeMeal('80 g Chinakohlsalat mit 150 g Tempeh und 200 g Buchweizen');
+ assert.deepEqual(x.ingredients.map(i=>i.grams),[80,150,200]);
+ assert.ok(x.ingredients.every(x=>!x.assumed));
+ const a=mealComposerMarkup(desc,x);
+ assert.match(a,/🍽️/);
+ assert.match(a,/Zutaten erkennen/);
+ assert.match(a,/GPT-Auftrag kopieren/);
+ assert.match(a,/meal723-grams-tempeh/);
+ assert.match(a,/meal723-gpt/);
+});
+test('encrypted journal-compatible meal is one entry; custom recipe tile keeps the icon and all nutrients',()=>{
+ const s={nutritionJournal:{entries:[],customFoods:[]}};
+ const created=saveMeal(s,{description:desc,ingredients:recognizeMeal(desc).ingredients,unknown:['Sauce'],at:'2026-10-24T12:00:00+02:00'});
+ assert.equal(s.nutritionJournal.entries.length,1);
+ assert.equal(created.food.emoji,'🍽️');
+ assert.equal(created.food.nutrientBasis,'perPortion');
+ assert.deepEqual(created.food.unmatchedIngredients,['Sauce']);
+ assert.ok(nutritionFoods(s).some(f=>f.id===created.food.id&&f.group==='Eigene'));
+ const m=nutritionDay(s,'2026-10-24');
+ assert.equal(m.totals.kcal,created.food.nutrients.kcal);
+ assert.equal(m.totals.protein,created.food.nutrients.protein);
+ assert.equal(m.totals.salt,created.food.nutrients.salt);
+ assert.equal(m.coverage.protein.estimated,1);
+ assert.ok(created.entry.note.includes('Nicht berücksichtigt'));
+ assert.equal(nutritionParts(created.food.id,'2 Portionen',created.food)[0].values.kcal,Math.round(created.food.nutrients.kcal*200)/100);
+ const html=nutritionIntelligenceView(s,{day:'2026-10-24'});
+ assert.match(html,/🍊/);assert.match(html,/🧂/);assert.match(html,/WHO-Orientierung/);
+ const s2={};const j=mergeJournalData(s,s2);assert.ok(j.nutritionJournal.customFoods.some(x=>x.id===created.food.id));
+});
+test('generated GPT handoff is a deliberate copy, no automatic network code',()=>{
+ const prompt=gptMealPrompt(desc);
+ assert.ok(prompt.includes('gebratenes Gemüse'));
+ assert.match(prompt,/AUSSCHLIESSLICH/);
+ assert.match(prompt,/nicht erfinden/);
+ const moduleCode=readFileSync(new URL('../client/src/meal-compose-v57723.js',import.meta.url),'utf8');
+ assert.doesNotMatch(moduleCode,/\bfetch\s*\(/);
+ assert.doesNotMatch(moduleCode,/\blocalStorage\b/);
+});
+test('GPT JSON import is allowlisted, bounded and marks gram amounts as suggestions',()=>{
+ const result=importMealJSON('```json\n{"ingredients":[{"id":"tempeh","grams":120},{"id":"buckwheat","grams":150}],"unknown":["Sauce"]}\n```');
+ assert.deepEqual(result.ingredients.map(x=>x.id),['tempeh','buckwheat']);
+ assert.deepEqual(result.unknown,['Sauce']);
+ assert.ok(result.ingredients.every(x=>x.assumed));
+ assert.throws(()=>importMealJSON('{"ingredients":[{"id":"not-present","grams":200}]}'),/Unbekannte/);
+ assert.throws(()=>importMealJSON('{"ingredients":[{"id":"tempeh","grams":-1}]}'),/Menge/);
+ assert.throws(()=>importMealJSON('{"ingredients":[{"id":"tempeh","grams":50000}]}'),/Menge/);
+ assert.throws(()=>importMealJSON('{invalid'),/gültiges JSON/);
+});
+test('no injection through an unknown ingredient description in the preview',()=>{
+ const model={ingredients:[{id:'tempeh',grams:120}],warnings:['<script>alert(1)</script>']};
+ const html=mealPreviewMarkup(model);
+ assert.doesNotMatch(html,/<script>/);
+ assert.match(html,/&lt;script&gt;/);
+});
+test('macro orientation is opt in, mode is validated; no unconfirmed nutritional target',()=>{
+ const s={nutritionJournal:{entries:[],customFoods:[]}};
+ assert.equal(normalizedMacroPreferences({mode:'unknown',enabled:true}).mode,'standard');
+ assert.equal(macroSuggestions(s).ready,false);
+ assert.match(nutritionIntelligenceView(s,{day:'2026-10-24'}),/Makroorientierung/);
+});
+test('all old food tiles and emoji are still rendered alongside the new composer',()=>{
+ const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
+ assert.ok(main.includes("mealComposerMarkup(mealComposeText,mealComposeModel)"));
+ assert.ok(main.includes('${nutritionQuickView(state)}'));
+ assert.ok(main.includes('pj92-food-tap'));
+ assert.ok(main.includes('meal723-gpt-prompt'));
+ assert.ok(main.includes("mealSave"));
+});

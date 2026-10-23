@@ -38,7 +38,7 @@ test('0.5.76 calorie indicator cannot infer target from locked or opt-out vault'
 test('0.5.76 stress context: only one scrollbar, quick goal near top and version',()=>{
  const css=readFileSync(new URL('../client/src/style.css',import.meta.url),'utf8');const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(css,/\.pj92-food-panel \.pj92-food-grid\{max-height:none;overflow:visible/);
- assert.match(main,/\$\{quickEnergyMeter\(state\)\}\$\{nutritionQuickView\(state\)\}/);
+ assert.match(main,/\$\{quickEnergyMeter\(state\)\}.*\$\{nutritionQuickView\(state\)\}/);
  const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
  assert.ok(main.includes("const COMPASS_CLIENT_VERSION='"+pkg.version+"'"));
 });

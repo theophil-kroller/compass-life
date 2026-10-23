@@ -101,6 +101,9 @@ import {MORNING_STEPS,MORNING_PRESETS,defaultMorningConfig,normalizeMorningConfi
 import {morningIntelligenceHeader,morningCreateView,morningInsightsView,addMorningAffirmation,removeMorningAffirmation,saveMorningVision,removeMorningVision,putMorningNote,removeMorningNote,sessionToMorningNote} from './morning-intelligence-v571.js';
 import {nutritionHistoryView} from './nutrition-history-v577.js';
 import {nutritionIntelligenceView} from './nutrition-intelligence-v57712.js';
+import {recognizeMeal,saveMeal,gptMealPrompt,importMealJSON,mealPreviewMarkup,mealMacroMarkup,mealComposerMarkup} from './meal-compose-v57723.js';
+import {normalizedMacroPreferences} from './macro-goals-v57723.js';
+import './meal-compose-v57723.css';
 import {taskSupportPrompt} from './task-gpt-handoff-v57712.js';
 import {TOUCH_KINDS,touchHistoryView,putTouch,deleteTouch,touchQuickView,touchPersonSummary} from './touch-journal-v577.js';
 import './nutrition-touch-v577.css';
@@ -133,7 +136,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.22';
+const COMPASS_CLIENT_VERSION='0.5.77.23';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -225,6 +228,7 @@ let feelingInputMode=rememberedFeelingInputMode();
 let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),feelingDays=30,feelingView='overview',feelingSelectedId='',feelingHistoryLimit=30,feelingEditingId='',connectionEmotion='anger',connectionDays=30;
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let touchPeriod=30,touchEditingId='',touchQuickOpen=false,touchDefaultPersonId='';
+let mealComposeText='',mealComposeModel=null;
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',nutritionView712='journal',nutritionDay712=localDateString(new Date()),nutritionProduct712='matcha-powder',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
 let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLastConfirmedAt=0;
 function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
@@ -894,7 +898,7 @@ function habitQuickOverlay(){
  return `<div class="quick-panel-backdrop" data-action="habit-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="habit-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">HABITS · HEUTE ERLEDIGT</p><h2 id="habit-quick-title">Gewohnheiten abhaken</h2></div><button type="button" class="capture-modal-close" data-action="habit-quick-close" aria-label="Habits schließen">${ico('x',18)}</button></div><div class="habit569-summary"><strong>${doneSet.size}/${items.length}</strong><span>heute erledigt</span></div><div class="habit569-list">${items.map(item=>{const done=doneSet.has(item.id);const lockedDone=!state&&done;return '<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle" data-id="'+h(item.id)+'" '+(lockedDone?'disabled':'')+'><span><strong>'+h(item.title)+'</strong>'+(item.slot?'<small>'+h(item.slot)+'</small>':'')+'</span><span class="habit569-check">'+(done?'✓':'')+'</span></button>';}).join('')}</div><div class="quick-panel-row"><button type="button" class="primary-btn" data-action="mm570-open">🌅 Miracle Morning</button><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div>${state?'':'<p class="quick-panel-hint">Verschlüsselt vorgemerkt</p>'}</section></div>`;
 }
 function nutritionQuickOverlay(){
- return `<div class="quick-panel-backdrop" data-action="pj92-food-close-backdrop"><section class="quick-panel pj92-food-panel" role="dialog" aria-modal="true" aria-labelledby="pj92-food-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ERNÄHRUNG · EIN TIPP GENÜGT</p><h2 id="pj92-food-title">Was gab es gerade?</h2></div><button type="button" class="capture-modal-close" data-action="pj92-food-close" aria-label="Ernährung schließen">${ico('x',18)}</button></div>${quickEnergyMeter(state)}${nutritionQuickView(state)}<button type="button" data-action="pj92-food-insights" class="secondary-btn">Ernährungstagebuch ansehen →</button>${!state?'<small>Ohne Entsperren: Einträge bleiben bis zum nächsten Entsperren nur auf diesem Gerät gespeichert.</small>':''}</section></div>`;
+ return `<div class="quick-panel-backdrop" data-action="pj92-food-close-backdrop"><section class="quick-panel pj92-food-panel" role="dialog" aria-modal="true" aria-labelledby="pj92-food-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ERNÄHRUNG · EIN TIPP GENÜGT</p><h2 id="pj92-food-title">Was gab es gerade?</h2></div><button type="button" class="capture-modal-close" data-action="pj92-food-close" aria-label="Ernährung schließen">${ico('x',18)}</button></div>${quickEnergyMeter(state)}${state?mealComposerMarkup(mealComposeText,mealComposeModel):''}${nutritionQuickView(state)}<button type="button" data-action="pj92-food-insights" class="secondary-btn">Ernährungstagebuch ansehen →</button>${!state?'<small>Ohne Entsperren: Einträge bleiben bis zum nächsten Entsperren nur auf diesem Gerät gespeichert.</small>':''}</section></div>`;
 }
 function touchQuickOverlay(){
  if(!state)return '';
@@ -2168,6 +2172,52 @@ function bind() {
    journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s).nutritionJournal.energyGoal=settings;});toast('Energieziel lokal verschlüsselt gespeichert.');
   }catch(ex){toast('Energieziel: '+ex.message,true);}
  };
+ const mealCompose=app.querySelector('#meal723-compose-form');
+ if(mealCompose){
+   const field=mealCompose.querySelector('textarea[name="description"]');
+   let mealInputSample=0;
+   field?.addEventListener('input',()=>{
+     mealComposeText=field.value.slice(0,1200);
+     // Opt-in, sampled and text-free: measure two-frame visual response.
+     if(performanceTrace.enabled&&++mealInputSample%8===0){
+       const started=performanceTrace.start();
+       if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(()=>performanceTrace.end('Ernährung: Tippen bis Paint',tab,started)));
+     }
+   });
+   mealCompose.addEventListener('input',ev=>{
+     const input=ev.target;if(!mealComposeModel||!input?.name?.startsWith('meal723-grams-'))return;
+     const id=input.name.slice('meal723-grams-'.length),grams=Number(String(input.value).replace(',','.'));
+     if(!Number.isFinite(grams)||grams<=0||grams>2000)return;
+     const row=mealComposeModel.ingredients.find(x=>x.id===id);if(!row)return;
+     row.grams=grams;row.assumed=false;
+     const stats=mealCompose.querySelector('.meal723-macros');if(stats)stats.innerHTML=mealMacroMarkup(mealComposeModel.ingredients);
+   });
+
+   mealCompose.onsubmit=async ev=>{ev.preventDefault();if(!state)return;
+     const op=ev.submitter?.dataset?.mealSave==='1'?'save':'analyze';
+     mealComposeText=String(new FormData(mealCompose).get('description')||'').trim().slice(0,1200);
+     if(op==='analyze'){
+       const start=performanceTrace.start();mealComposeModel=recognizeMeal(mealComposeText);performanceTrace.end('Ernährung: Zutaten erkennen',tab,start);
+       const host=mealCompose.querySelector('#meal723-preview');if(host)host.innerHTML=mealPreviewMarkup(mealComposeModel);
+       return;
+     }
+     if(!mealComposeModel?.ingredients?.length)return toast('Zuerst Zutaten erkennen oder GPT-Vorschlag übernehmen.',true);
+     const fd=new FormData(mealCompose);
+     const rows=mealComposeModel.ingredients.map(row=>({...row,grams:String(fd.get('meal723-grams-'+row.id)||'')}));
+     try{const start=performanceTrace.start();const send=ev.submitter;if(send)send.disabled=true;journalSyncStatus='lokal';await mutate(st=>saveMeal(st,{description:mealComposeText,title:mealComposeText.slice(0,80),ingredients:rows,unknown:mealComposeModel.unknown}),mealCompose);
+       performanceTrace.end('Ernährung: Mahlzeit speichern',tab,start);mealComposeText='';mealComposeModel=null;nutritionQuickOpen=false;toast('🍽️ Mahlzeit verschlüsselt erfasst und als Kachel gemerkt.');
+     }catch(ex){const button=mealCompose.querySelector('[data-meal-save]');if(button)button.disabled=false;toast('Mahlzeit nicht gespeichert: '+ex.message,true);}
+   };
+ }
+ const mealJson=app.querySelector('#meal723-json-form');
+ if(mealJson)mealJson.onsubmit=ev=>{ev.preventDefault();try{
+   const parsed=importMealJSON(new FormData(mealJson).get('json'));
+   mealComposeModel={description:mealComposeText,ingredients:parsed.ingredients,unknown:parsed.unknown,warnings:[parsed.notes||'GPT-Mengen sind Schätzungen. Bitte prüfen.']};
+   const host=app.querySelector('#meal723-preview');if(host)host.innerHTML=mealPreviewMarkup(mealComposeModel);
+   toast('GPT-Vorschlag übernommen. Bitte Mengen prüfen.');
+  }catch(ex){toast(ex.message,true);}};
+ const macroForm=app.querySelector('#meal723-macro-form');
+ if(macroForm)macroForm.onsubmit=async ev=>{ev.preventDefault();if(!state)return;const fd=new FormData(macroForm);try{await mutate(st=>{ensureJournal(st).nutritionJournal.macroPrefs=normalizedMacroPreferences({mode:fd.get('mode'),enabled:fd.get('enabled')==='on',updatedAt:stamp()});});toast('Makroorientierung gespeichert.');}catch(ex){toast(ex.message,true);}};
  const foodDetail=app.querySelector('#pj92-food-detail-form');if(foodDetail)foodDetail.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodDetail);journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===fd.get('id'));if(!item)throw Error('Eintrag fehlt.');item.at=new Date(String(fd.get('at'))).toISOString();item.amount=String(fd.get('amount')||'').slice(0,60);item.note=String(fd.get('note')||'').slice(0,500);item.updatedAt=stamp();});nutritionEditId='';toast('Ernährungseintrag gespeichert.');}catch(ex){toast(ex.message,true);}};
  const touchEditForm=app.querySelector('#t577-edit-form');if(touchEditForm)touchEditForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(touchEditForm);const dateValue=new Date(String(fd.get('at')));if(!Number.isFinite(dateValue.getTime()))throw Error('Ungültiges Datum.');const personId=String(fd.get('personId')||'');if(personId&&!state?.people?.[personId])throw Error('Person nicht vorhanden.');await mutate(s=>putTouch(s,{id:String(fd.get('id')),kinds:fd.getAll('kinds'),at:dateValue.toISOString(),personId,person:state?.people?.[personId]?.name||'',note:String(fd.get('note')||'')}));touchEditingId='';toast('Nähe-Eintrag verschlüsselt gespeichert.');}catch(ex){toast(ex.message,true);}};
  const touchCaptureForm=app.querySelector('#t577-capture-form');if(touchCaptureForm)touchCaptureForm.onsubmit=async ev=>{ev.preventDefault();try{
@@ -3115,7 +3165,7 @@ async function placeInDailyPlan(taskId,start,moveId=null){
 async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='perf719-toggle'){performanceTrace.setEnabled(!performanceTrace.enabled);try{localStorage.setItem('compass.perf.v57719',performanceTrace.enabled?'on':'off');}catch{}render();return;}
  if(action==='perf719-clear'){performanceTrace.clear();render();return;}
- if(action==='perf719-export'){download('compass-performance-0.5.77.22.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
+ if(action==='perf719-export'){download('compass-performance-0.5.77.23.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
  if(action==='people-sync719-toggle'){
   if(!state?.privateDeviceMirror?.key){toast('Zuerst den verschlüsselten Geräteabgleich einrichten.',true);return;}
   if(!state.peopleSyncEnabled&&!confirm('Kontaktprofile einschließlich persönlicher Notizen werden Ende-zu-Ende verschlüsselt mit deinem verbundenen Gerät abgeglichen. Wirklich aktivieren?'))return;
@@ -3184,6 +3234,21 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='pj92-food-open'){if(!state&&!sealedCaptureAvailable)return toast('Bitte zuerst einmal den Tresor entsperren.',true);nutritionQuickOpen=true;habitQuickOpen=false;worktimeQuickOpen=false;feelingOverlayOpen=false;captureOverlayOpen=false;render();return;}
  if(action==='pj92-food-close'||action==='pj92-food-close-backdrop'){nutritionQuickOpen=false;render();return;}
  if(action==='pj92-food-insights'){nutritionQuickOpen=false;if(!state)return toast('Zum Ansehen der Ernährungshistorie bitte Tresor entsperren.',true);tab='insights';insightTab='nutrition';calmNavGroup='insights';render();return;}
+ if(action==='meal723-add-ingredient'){
+  if(!mealComposeModel||!['oil','dressing'].includes(id)||mealComposeModel.ingredients.some(x=>x.id===id))return;
+  mealComposeModel.ingredients.push({id,grams:id==='oil'?10:20,assumed:true});
+  mealComposeModel.warnings=(mealComposeModel.warnings||[]).filter(x=>id==='oil'?!/Bratöl/.test(x):!/Dressing/.test(x));
+  const host=app.querySelector('#meal723-preview');if(host)host.innerHTML=mealPreviewMarkup(mealComposeModel);
+  return;
+ }
+ if(action==='meal723-gpt-prompt'){
+  const content=app.querySelector('#meal723-compose-form textarea[name="description"]')?.value||mealComposeText;
+  mealComposeText=content.slice(0,1200);
+  if(!mealComposeText.trim())return toast('Bitte zuerst das Gericht beschreiben.',true);
+  try{await navigator.clipboard.writeText(gptMealPrompt(mealComposeText));toast('GPT-Auftrag kopiert · bei ChatGPT einfügen.');}
+  catch(ex){toast('Kopieren nicht möglich. Browser-Zwischenablage bitte erlauben.',true);}
+  return;
+ }
  if(action==='pj92-food-tap'){
   try{const item={id:crypto.randomUUID(),foodId:id,at:stamp()};
    if(!state){await vault.appendSealedNutrition(item);foodQueuedCount++;nutritionQuickOpen=false;toast('Ernährung verschlüsselt vorgemerkt.');}
@@ -4461,7 +4526,7 @@ async function syncNow() {
   // An automatic sync must never compete with typing a project/template item.
   // Explicit Sync clicks focus their own button and proceed normally.
   const activeEditor=document.activeElement?.closest?.('form');
-  if(activeEditor&&['task-create-form','project-create-form','task-edit-form','project-edit-form'].includes(activeEditor.id)&&
+  if(activeEditor&&['task-create-form','project-create-form','task-edit-form','project-edit-form','meal723-compose-form','meal723-json-form'].includes(activeEditor.id)&&
       ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){
     scheduleSync(12000);return;
   }
