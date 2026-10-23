@@ -1,7 +1,7 @@
 {
   "name": "@compass/worker",
   "private": true,
-  "version": "0.5.77.15",
+  "version": "0.5.77.16",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",

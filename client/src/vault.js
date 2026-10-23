@@ -68,6 +68,30 @@ export async function save(state) {
   const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(state)));
   await kvPut('payload',{iv:to64(iv),data:to64(new Uint8Array(ciphertext))});
 }
+// Small, separately encrypted editor drafts. Avoids re-encrypting years of
+// financial and health records merely because the user is typing a title.
+const EDIT_DRAFTS_RECORD='edit_drafts_v57716';
+let editDraftWriteQueue=Promise.resolve();
+export async function loadEditDrafts(){
+ if(!key)throw Error('Tresor gesperrt.');
+ const record=await kvGet(EDIT_DRAFTS_RECORD);if(!record)return {};
+ const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(record.iv)},key,from64(record.data));
+ const result=JSON.parse(dec.decode(plain));
+ return result&&typeof result==='object'&&!Array.isArray(result)?result:{};
+}
+export function saveEditDrafts(drafts){
+ if(!key)return Promise.reject(Error('Tresor gesperrt.'));
+ const payload=JSON.stringify(drafts||{});
+ if(payload.length>250000)return Promise.reject(Error('Entwurfspeicher voll (250 KB).'));
+ // Serialize successive writes so an older snapshot can never overwrite a newer one.
+ editDraftWriteQueue=editDraftWriteQueue.catch(()=>{}).then(async()=>{
+  if(!key)throw Error('Tresor gesperrt.');
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(payload));
+  await kvPut(EDIT_DRAFTS_RECORD,{iv:to64(iv),data:to64(new Uint8Array(ciphertext))});
+ });
+ return editDraftWriteQueue;
+}
 export function lock(){key=null;}
 export async function exportEncrypted() {
   return {application:'Compass',vaultVersion:1,meta:await kvGet('meta'),payload:await kvGet('payload'),sealedCapture:{publicKey:await kvGet(publicCaptureKey),privateKey:await kvGet(privateCaptureKey),queue:await kvGet(lockedQueueKey)}};

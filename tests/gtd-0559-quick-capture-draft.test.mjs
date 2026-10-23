@@ -63,7 +63,7 @@ test('Quick Capture clears drafts after successful capture without reading the s
 test('Quick Capture preserves draft across close/reopen; hotkeys and unrelated render do not force closure',()=>{
  assert.match(main,/captureDraft=\{title:form\.elements\.title\?\.value/);
  assert.match(main,/const captureFocus=snapshotCaptureDraft\(\)/);
- assert.match(main,/app\.innerHTML=html;bind\(\);restoreCaptureDraft\(captureFocus\)/);
+ assert.match(main,/app\.innerHTML=html;bind\(\);editDraftGuard\.afterRender\(editDraftFocus\);lastEditRenderSignature=editRenderSignature\(\);restoreCaptureDraft\(captureFocus\)/);
  assert.match(main,/captureNeedsInitialFocus=!captureOverlayOpen/);
  assert.match(main,/captureSkipNextSnapshot=true/);
  assert.doesNotMatch(main,/sessionStorage\.setItem\([^\n]*captureDraft/);

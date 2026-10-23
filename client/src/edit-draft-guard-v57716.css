@@ -1,0 +1,2 @@
+/* Small, unobtrusive saving feedback without shifting existing form controls. */
+.v57716-draft-status:not([hidden]){display:block;font-size:.72rem;color:var(--muted,#69747d);margin:.25rem 0 0;line-height:1.3}

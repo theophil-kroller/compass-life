@@ -1,3 +1,4 @@
+import {createEditDraftGuard} from '../client/src/edit-draft-guard-v57716.js';
 import * as waiting715 from '../client/src/waiting-followup-v57715.js';
 import * as friction715 from '../client/src/task-friction-v57715.js';
 import * as habitSync5731 from '../client/src/habit-device-sync-v5731.js';
@@ -67,6 +68,7 @@ function context(){
  Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,discoveryFreshness5777,cinemaModule5772,cinemaDetails5773,eventSync,relationships);
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
+ ctx.createEditDraftGuard=createEditDraftGuard;
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
  Object.assign(ctx,habitSync5731,calendarCache574);
  Object.assign(ctx,smartImportHubModule,healthCoverage494,timeoff554,radar555,lifeBalance63,feelingWheel65);

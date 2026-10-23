@@ -3236,3 +3236,6 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .ni712-nutrient-icon{display:inline-grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:9px;background:#edf5ef;font-size:16px;line-height:1;}
 .ni712-row strong{font-variant-numeric:tabular-nums;}
 @media(max-width:420px){.ni712-nutrient-icon{width:24px;height:24px;flex-basis:24px;font-size:14px}.ni712-nutrient-label{gap:6px}}
+
+/* 0.5.77.16: subtle encrypted local draft indicator, without shifting forms while typing. */
+.v57716-draft-status:not([hidden]){margin-top:5px;font-size:11px;line-height:1.35;color:var(--muted,#716c66)}

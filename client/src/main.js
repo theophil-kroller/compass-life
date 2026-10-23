@@ -18,6 +18,8 @@ import {inboxTaskDraft} from './inbox-promotion-v27.js';
 import {inboxTodayTaskDraft} from './inbox-today-v557.js';
 import {buildLifeBalanceRadar,buildLifeBalanceHistory,lifeBalanceRadarView,validateBalanceGoals} from './life-balance-radar-v563.js';
 import {inspectorDateShift,inspectorTitle} from './inspector-v559.js';
+import {createEditDraftGuard,EDIT_DRAFT_VAULT_KEY} from './edit-draft-guard-v57716.js';
+import './edit-draft-guard-v57716.css';
 import {inboxFlagged,visibleInboxTags,setInboxFlag} from './inbox-flags-v27.js';
 import {inboxOrdered,inboxMove,inboxNudge} from './inbox-order-v34.js';
 import {FOLDER_ICONS,folderIcon} from './folder-icons-v35.js';
@@ -122,7 +124,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.15';
+const COMPASS_CLIENT_VERSION='0.5.77.16';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -543,28 +545,42 @@ const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
 const date=s=>s?new Date(s).toLocaleString('de-AT',{dateStyle:'medium',timeStyle:'short'}):'–';
 const configured=()=>config.apiUrl.startsWith('https://')&&!config.apiUrl.includes('YOUR_')&&
   config.googleClientId.endsWith('.apps.googleusercontent.com')&&!config.googleClientId.includes('REPLACE');
+// Draft protection is deliberately local to the encrypted Vault; nothing is sent to the Worker.
+const editDraftGuard=createEditDraftGuard({root:app,getState:()=>state,
+ getContext:()=>({tab,treeCreateParent,treeTaskParent,selectedProjectId,selectedDay}),
+ persist:drafts=>vault.saveEditDrafts(drafts)});
+function editRenderSignature(){return [tab,selectedProjectId||'',selectedTaskId||'',treeCreateKind||'',treeCreateParent||'',treeTaskParent||'',selectedDay||'',todayInspectorOpen?'1':'0'].join('|');}
+let lastEditRenderSignature='';
 function toast(s,isError=false) {if(isError){error=s;notice='';}else{notice=s;error='';}render();}
 function download(filename,obj) {
   const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();
   setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
-async function mutate(fn) {
+async function mutate(fn,committedEditForm=null,skipFinalRender=false) {
+  let draftBackup=null;
   if(!state)throw new Error('Der Tresor muss entsperrt sein.');
   prepareTasks(state);
   const previous=structuredClone(state);
-  const journalBefore=journalFingerprint(state);
+  // Journal fingerprinting serializes years of personal data. Without journal mirror
+  // credentials there is no remote journal change to detect during task editing.
+  const trackJournal=!!(state.privateDeviceMirror?.key&&authToken);
+  const journalBefore=trackJournal?journalFingerprint(state):null;
   try {
     fn(state);invalidateDerivedInsights();
-    if(privateChanged(previous,state)){
+    // Expensive finance / health JSON comparisons are only needed when encrypted mirroring is active.
+    if(['source','receiver'].includes(state.privateDeviceMirror?.mode)&&privateChanged(previous,state)){
       if(state.privateDeviceMirror?.mode==='receiver')throw Error('Finanz- und importierte Sportdaten sind auf diesem Gerät im Lesemodus. Bitte Änderungen am Hauptgerät durchführen.');
       if(state.privateDeviceMirror?.mode==='source')state.privateDeviceMirror.dirty=true;
     }
+    if(committedEditForm)draftBackup=editDraftGuard.commit(committedEditForm);
     await persist();
     syncQuickPublicFromState();
-    if(journalFingerprint(state)!==journalBefore){journalRevision++;journalSyncStatus='lokal';if(state.privateDeviceMirror?.key&&authToken&&navigator.onLine)syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);render();});}
-  }catch(ex){state=previous;render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
-  render();
+    if(trackJournal){
+      if(journalFingerprint(state)!==journalBefore){journalRevision++;journalSyncStatus='lokal';if(state.privateDeviceMirror?.key&&authToken&&navigator.onLine)syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);render();});}
+    }
+  }catch(ex){state=previous;if(draftBackup)editDraftGuard.rollback(draftBackup);render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
+  if(!skipFinalRender)render();
   if(busy)syncResyncRequested=true;
   else scheduleSync();
 }
@@ -2037,33 +2053,35 @@ function activityScreen(){
 }
 async function reloadWidgetDevices(){
  if(!authToken)return;
- try{const data=await request(config.apiUrl,authToken,'/api/widget/devices');widgetDevices=data.devices||[];widgetConnectError='';render();}
+ try{const data=await request(config.apiUrl,authToken,'/api/widget/devices');widgetDevices=data.devices||[];widgetConnectError='';if(tab==='insights'&&insightTab==='sources')render();}
  catch(ex){widgetConnectError='Widget-Geräte konnten nicht geladen werden: '+ex.message;}
 }
 async function reloadHealth(){
  if(!authToken||!config.apiUrl)return;
- try{const [values,devices]=await Promise.all([request(config.apiUrl,authToken,'/api/health/days?days=90'),request(config.apiUrl,authToken,'/api/health/devices')]);healthDays=values.days||[];healthDevices=devices.devices||[];healthError='';healthLastUpdated=Date.now();render();}
+ try{const [values,devices]=await Promise.all([request(config.apiUrl,authToken,'/api/health/days?days=90'),request(config.apiUrl,authToken,'/api/health/devices')]);healthDays=values.days||[];healthDevices=devices.devices||[];healthError='';healthLastUpdated=Date.now();if(['insights','progress','recovery'].includes(tab))render();}
  catch(ex){healthError=ex.status===404?'Health-Worker 0.5.1 noch nicht veröffentlicht.':ex.message;render();}
 }
 async function reloadWatchSessions(){
  if(!authToken)return;
- try{const [data,dev]=await Promise.all([request(config.apiUrl,authToken,'/api/watch/sessions'),request(config.apiUrl,authToken,'/api/watch/devices')]);watchSessions=data.sessions||[];watchDevices=dev.devices||[];watchError='';render();}
+ try{const [data,dev]=await Promise.all([request(config.apiUrl,authToken,'/api/watch/sessions'),request(config.apiUrl,authToken,'/api/watch/devices')]);watchSessions=data.sessions||[];watchDevices=dev.devices||[];watchError='';if(['activity','overview','insights','recovery','progress'].includes(tab))render();}
  catch(ex){watchError='Uhr-Daten derzeit nicht erreichbar ('+ex.message+').';render();}
 }
 function rememberPeopleScroll(){if(tab!=='people'||!state)return null;const selectors=['.content','.people-grid','.people-list','.rel567-overlay','.rel567-map-wrap','.people-contact-log'];return {windowY:window.scrollY||0,items:selectors.map(sel=>[sel,app.querySelector(sel)?.scrollTop||0]),selected:selectedPersonId};}
 function restorePeopleScroll(position){if(!position||tab!=='people'||position.selected!==selectedPersonId||typeof requestAnimationFrame!=='function')return;requestAnimationFrame(()=>{for(const [sel,value] of position.items){const el=app.querySelector(sel);if(el)el.scrollTop=value;}window.scrollTo?.({top:position.windowY,behavior:'instant'});});}
 function render(){
+ if(editDraftGuard.shouldDefer(editRenderSignature()===lastEditRenderSignature))return;
  const editingContact=document.activeElement?.closest?.('#person-contact-form');
  if(tab==='people'&&!contactSaving&&editingContact&&['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))return;
  // Background health/sync updates must not recreate the mobile textarea mid-dictation.
  if((tab==='insights'&&insightTab==='habits'&&document.activeElement?.id==='mm571-journal-text')||(morningPlayerOpen&&document.activeElement?.id==='mm570-journal'))return;
+ const editDraftFocus=editDraftGuard.beforeRender();
  const scrollBeforeRender=rememberPeopleScroll();
  const feelingFocused=feelingOverlayOpen&&typeof document!=='undefined'&&document.activeElement?.closest?.('#fw65-dialog')?{id:document.activeElement.id||'',name:document.activeElement.dataset?.id||'',intensity:document.activeElement.dataset?.feelingIntensity||'',start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;
  const insightScrollBefore=tab==='insights'&&insightTab==='feelings'?{page:window.scrollY||0,log:app.querySelector('.fw681-full-log')?.scrollTop||0,content:app.querySelector('.content')?.scrollTop||0}:null;
  const feelingScrollBefore=feelingOverlayOpen?app.querySelector('#fw65-dialog')?.scrollTop||0:0;
  const captureFocus=snapshotCaptureDraft();
  morningSaveNoteFromScreen();
- if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[],{inputMode:feelingInputMode,captureReady:sealedCaptureAvailable}):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);return;}
+ if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[],{inputMode:feelingInputMode,captureReady:sealedCaptureAvailable}):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);editDraftGuard.afterRender(editDraftFocus);lastEditRenderSignature=editRenderSignature();return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  let html;
  try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='shopping'?shoppingScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
@@ -2074,7 +2092,7 @@ function render(){
    const rows=Object.values(state?.projects||{}).filter(p=>p&&!p.isTemplate).slice(0,200);
    html=chrome(`<section class="work-card" role="alert"><h2>Projektansicht eingeschränkt</h2><p>Beim Darstellen der Projekte ist ein Fehler aufgetreten. Deine Projektdaten wurden nicht verändert.</p><p>${rows.length} Projekte/Ordner gefunden.</p><button type="button" class="secondary-btn" data-tab="next">Next Actions öffnen</button></section>`);
  }
- app.innerHTML=html;bind();restoreCaptureDraft(captureFocus);restorePeopleScroll(scrollBeforeRender);if(insightScrollBefore){const target=app.querySelector('.fw681-full-log');if(target)target.scrollTop=insightScrollBefore.log;const content=app.querySelector('.content');if(content)content.scrollTop=insightScrollBefore.content;requestAnimationFrame(()=>window.scrollTo?.({top:insightScrollBefore.page,behavior:'instant'}));}if(feelingOverlayOpen){const modal=app.querySelector('#fw65-dialog');if(modal)modal.scrollTop=feelingScrollBefore;}
+ app.innerHTML=html;bind();editDraftGuard.afterRender(editDraftFocus);lastEditRenderSignature=editRenderSignature();restoreCaptureDraft(captureFocus);restorePeopleScroll(scrollBeforeRender);if(insightScrollBefore){const target=app.querySelector('.fw681-full-log');if(target)target.scrollTop=insightScrollBefore.log;const content=app.querySelector('.content');if(content)content.scrollTop=insightScrollBefore.content;requestAnimationFrame(()=>window.scrollTo?.({top:insightScrollBefore.page,behavior:'instant'}));}if(feelingOverlayOpen){const modal=app.querySelector('#fw65-dialog');if(modal)modal.scrollTop=feelingScrollBefore;}
  if(feelingFocused){let field=feelingFocused.id?app.querySelector('#'+feelingFocused.id):null;if(!field&&feelingFocused.name)field=app.querySelector('.fw65-emotion[data-id="'+feelingFocused.name+'"]');if(field?.focus){field.focus({preventScroll:true});if(Number.isInteger(feelingFocused.start)&&Number.isInteger(feelingFocused.end)&&typeof field.setSelectionRange==='function')try{field.setSelectionRange(feelingFocused.start,feelingFocused.end);}catch{}}}
  if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto!==false&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
    requestAnimationFrame(()=>refreshPublicKrakenPrices(false));
@@ -2157,6 +2175,8 @@ function bind() {
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
+      // Draft bytes are separate from the full Vault payload, but use the same key.
+      state[EDIT_DRAFT_VAULT_KEY]={...(state[EDIT_DRAFT_VAULT_KEY]||{}),...(await vault.loadEditDrafts().catch(()=>({})))};
       prepareTasks(state);eventState(state);prunePastEvents(state,localDate());await persist();
       let recoveryMessage='';
       try {
@@ -2275,7 +2295,7 @@ function bind() {
   const projectLink=app.querySelector('#person-project-link-form');if(projectLink)projectLink.onsubmit=async ev=>{ev.preventDefault();const id=projectLink.dataset.id,projectId=String(new FormData(projectLink).get('projectId')||'');if(!state?.people?.[id]||!state.projects?.[projectId])return;await mutate(s=>{const p=s.people[id];p.relatedProjectIds=[...new Set([...(p.relatedProjectIds||[]),projectId])];});toast('Projekt verknüpft.');};
   const personProjectCreate=app.querySelector('#person-project-create-form');if(personProjectCreate)personProjectCreate.onsubmit=async ev=>{ev.preventDefault();const id=personProjectCreate.dataset.id,title=String(new FormData(personProjectCreate).get('title')||'').trim();if(!state?.people?.[id]||!title||title.length>140)return toast('Projektname prüfen.',true);
     const project={id:crypto.randomUUID(),title,outcome:'',category:'Allgemein',status:'active',dueDate:null,reviewIntervalDays:7,reviewedAt:null,kind:'project',folderIcon:null,isTemplate:false,projectType:'parallel',parentId:null,sortOrder:0};if(!validProject(project))return toast('Ungültiges Projekt.',true);
-    await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;s.people[id].relatedProjectIds=[...new Set([...(s.people[id].relatedProjectIds||[]),project.id])];});toast('Projekt angelegt und mit Person verbunden.');};
+    await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;s.people[id].relatedProjectIds=[...new Set([...(s.people[id].relatedProjectIds||[]),project.id])];},personProjectCreate);toast('Projekt angelegt und mit Person verbunden.');};
   const relationshipMap=app.querySelector('#relationship-map');if(relationshipMap&&typeof relationshipMap.addEventListener==='function'){
     let dragging=null,moved=false;
     const point=e=>{const rect=relationshipMap.getBoundingClientRect(),scale=Math.min(rect.width/MAP567.width,rect.height/MAP567.height)||1;
@@ -2403,7 +2423,7 @@ function bind() {
       const date=nextAustrianWorkday(requested);
       if(date<localDate())throw Error('Bitte einen Prüftermin ab heute wählen.');
       const item=makeWaitingFollowup(original,{id:crypto.randomUUID(),day:date,title,now:stamp()});
-      await mutate(s=>{prepareTasks(s);s.tasks[item.id]=item;s.taskPending[item.id]=true;});
+      await mutate(s=>{prepareTasks(s);s.tasks[item.id]=item;s.taskPending[item.id]=true;},waitingForm);
       selectedTaskId=item.id;todayInspectorOpen=true;
       toast(date!==requested?`Wiedervorlage angelegt. Das Datum wurde wegen Wochenende/Feiertag auf ${date} verschoben.`:'Waiting-For-Wiedervorlage gespeichert. Sie erscheint ab dem Prüftag unter Heute.');
     }catch(ex){toast(ex.message,true);}
@@ -2414,7 +2434,7 @@ function bind() {
     if(treeCreateKind==='task'&&treeCreateParent&&state.projects?.[treeCreateParent]?.isTemplate)t.projectId=treeCreateParent;
     if(!validLocalTask(t)||!validTaskParent(state,t.id,t.projectId,t.parentTaskId)||t.projectId&&!state.projects?.[t.projectId]){toast('Aufgabenfelder bzw. Hierarchie prüfen. Bitte Projektzuordnung kontrollieren.',true);return;}
     t.sortOrder=Math.min(1000000,100+Math.max(0,...taskChildren(state,t.projectId,t.parentTaskId).map(x=>x.sortOrder||0)));
-    await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);});selectedTaskId=t.id;selectedProjectId=t.projectId;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;toast('Aufgabe lokal gespeichert.');
+    await mutate(s=>{prepareTasks(s);s.tasks[t.id]=t;s.taskPending[t.id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);},taskForm,true);selectedTaskId=t.id;selectedProjectId=t.projectId;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;toast('Aufgabe lokal gespeichert.');
   };
   const taskEditForm=app.querySelector('#task-edit-form');if(taskEditForm)taskEditForm.onsubmit=async ev=>{
     ev.preventDefault();const id=taskEditForm.dataset.id,fd=new FormData(taskEditForm);const existing=state.tasks[id];if(!existing)return;
@@ -2422,7 +2442,7 @@ function bind() {
     if(state.projects?.[existing.projectId]?.isTemplate)t.projectId=existing.projectId;
     if(!validLocalTask(t)||!validTaskParent(state,id,t.projectId,t.parentTaskId)){toast('Aufgabenfelder bzw. Hierarchie prüfen.',true);return;}
     if(t.projectId!==existing.projectId&&Object.values(state.tasks).some(child=>!child.archived&&child.parentTaskId===id)){toast('Unteraufgaben zuerst einzeln verschieben, bevor du das Projekt dieser Aufgabe wechselst.',true);return;}
-    await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);});toast('Aufgabe aktualisiert.');
+    await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);},taskEditForm);toast('Aufgabe aktualisiert.');
   };
   const lifeGoalForm=app.querySelector('#life-goal-form');if(lifeGoalForm)lifeGoalForm.onsubmit=async ev=>{
     ev.preventDefault();const fd=new FormData(lifeGoalForm),projectId=String(fd.get('projectId')||'');
@@ -2480,13 +2500,13 @@ function bind() {
     ev.preventDefault();const d=new FormData(projectCreate);const project={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:'active',dueDate:null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),reviewedAt:null,kind:d.get('kind')||'project',folderIcon:d.get('kind')==='folder'?'folder':null,isTemplate:false,projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null,sortOrder:0};
     if(!validProject(project)||!validProjectParent(state,project.id,project.parentId)){toast('Projektangaben bzw. Ordnerhierarchie prüfen.',true);return;}
     project.sortOrder=Math.min(1000000,100+Math.max(0,...childProjects(state,project.parentId).map(x=>x.sortOrder||0)));
-    await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;});selectedProjectId=project.id;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;render();
+    await mutate(s=>{s.projects[project.id]=project;s.projectPending[project.id]=true;},projectCreate,true);selectedProjectId=project.id;treeCreateKind='';treeCreateParent=null;treeTaskParent=null;render();
   };
   const projectEdit=app.querySelector('#project-edit-form');if(projectEdit)projectEdit.onsubmit=async ev=>{
     ev.preventDefault();const id=projectEdit.dataset.id;const d=new FormData(projectEdit);const project={...state.projects[id],title:String(d.get('title')||'').trim(),outcome:String(d.get('outcome')||'').trim(),category:d.get('category')||'Allgemein',status:d.get('status')||'active',dueDate:d.get('dueDate')||null,reviewIntervalDays:Number(d.get('reviewIntervalDays')||7),kind:d.get('kind')||'project',folderIcon:d.get('kind')==='folder'?(d.get('folderIcon')||'folder'):null,isTemplate:d.has('isTemplate'),projectType:d.get('projectType')||'parallel',parentId:d.get('parentId')||null};
     if(!validProject(project)||!validProjectParent(state,id,project.parentId)){toast('Projektangaben bzw. Ordnerhierarchie prüfen.',true);return;}
     if(project.kind==='folder'&&state.projects[id].kind!=='folder'&&projectTasks(state,id).length){toast('Ein Projekt mit Aufgaben kann nicht in einen Ordner umgewandelt werden.',true);return;}
-    await mutate(s=>{s.projects[id]=project;s.projectPending[id]=true;});toast('Projekt gespeichert.');
+    await mutate(s=>{s.projects[id]=project;s.projectPending[id]=true;},projectEdit);toast('Projekt gespeichert.');
   };
   const agendaForm=app.querySelector('#agenda-note-form');if(agendaForm)agendaForm.onsubmit=async ev=>{
     ev.preventDefault();const d=new FormData(agendaForm);const t={id:crypto.randomUUID(),title:String(d.get('title')||'').trim(),note:'',category:'Meeting',plannedDate:null,dueDate:null,workflow:'next',flagged:false,projectId:null,tags:parseTags([d.get('tag')]),completed:false,archived:false};
@@ -2496,12 +2516,12 @@ function bind() {
   const dreamCreate=app.querySelector('#dream-create-form');if(dreamCreate)dreamCreate.onsubmit=async ev=>{
     ev.preventDefault();const data=new FormData(dreamCreate),title=String(data.get('title')||'').trim(),category=String(data.get('category')||'ideen');
     if(!title||title.length>1000||!DREAM_CATEGORIES.some(([key])=>key===category)){toast('Dreams-Eingabe prüfen.',true);return;}
-    const id=crypto.randomUUID();await mutate(s=>{const r={id,title,note:'',tags:['dreams','dream-'+category],deleted:false,updatedAt:stamp()};s.records[id]=r;s.pending.push(makeMutation(r));s.history.push({type:'dream-captured',at:stamp(),id});});selectedDreamId=id;toast('Idee in Dreams gespeichert.');
+    const id=crypto.randomUUID();await mutate(s=>{const r={id,title,note:'',tags:['dreams','dream-'+category],deleted:false,updatedAt:stamp()};s.records[id]=r;s.pending.push(makeMutation(r));s.history.push({type:'dream-captured',at:stamp(),id});},dreamCreate);selectedDreamId=id;toast('Idee in Dreams gespeichert.');
   };
   const dreamEdit=app.querySelector('#dream-edit-form');if(dreamEdit)dreamEdit.onsubmit=async ev=>{
     ev.preventDefault();const id=dreamEdit.dataset.id,fd=new FormData(dreamEdit);const title=String(fd.get('title')||'').trim(),note=String(fd.get('note')||'').trim(),category=String(fd.get('category')||'ideen');
     if(!title||title.length>1000||note.length>10000||!DREAM_CATEGORIES.some(([key])=>key===category)){toast('Dreams-Felder prüfen.',true);return;}
-    await mutate(s=>{const r=s.records[id];if(!r||r.deleted)return;r.title=title;r.note=note;r.tags=parseTags(['dreams','dream-'+category,...(r.tags||[]).filter(t=>t!=='dreams'&&!t.startsWith('dream-'))]);r.updatedAt=stamp();s.pending.push(makeMutation(r));});toast('Dream aktualisiert.');
+    await mutate(s=>{const r=s.records[id];if(!r||r.deleted)return;r.title=title;r.note=note;r.tags=parseTags(['dreams','dream-'+category,...(r.tags||[]).filter(t=>t!=='dreams'&&!t.startsWith('dream-'))]);r.updatedAt=stamp();s.pending.push(makeMutation(r));},dreamEdit);toast('Dream aktualisiert.');
   };
   const editForm=app.querySelector('#inbox-edit-form');if(editForm)editForm.onsubmit=async ev=>{
     ev.preventDefault();const id=editForm.dataset.id;const form=new FormData(editForm);
@@ -2516,14 +2536,14 @@ function bind() {
           s.tasks[task.id]=task;s.taskPending[task.id]=true;
           s.records[id].deleted=true;s.records[id].updatedAt=stamp();s.pending.push(makeMutation(s.records[id]));
           for(const tag of task.tags)rememberTag(s,tag);
-        });
+        },editForm);
         selectedInboxId=null;selectedTaskId=task.id;toast('Eintrag als Aufgabe übernommen und aus der Inbox entfernt.');
       }catch(ex){toast(ex.message,true);}
       return;
     }
     let savedTags;try{savedTags=setInboxFlag(tags,inboxFlagged(existing));}catch(ex){toast(ex.message,true);return;}
     if(existing.title===title&&(existing.note||'')===note&&JSON.stringify(existing.tags||[])===JSON.stringify(savedTags)){notice='Keine Änderungen.';render();return;}
-    try{await mutate(s=>{const r=s.records[id];r.title=title;r.note=note;r.tags=savedTags;r.updatedAt=stamp();s.pending.push(makeMutation(r));});notice='Änderungen lokal gespeichert.';render();}
+    try{await mutate(s=>{const r=s.records[id];r.title=title;r.note=note;r.tags=savedTags;r.updatedAt=stamp();s.pending.push(makeMutation(r));},editForm);notice='Änderungen lokal gespeichert.';render();}
     catch(ex){toast(ex.message,true);}
   };
   const cfilter=app.querySelector('#context-filter');if(cfilter)cfilter.onchange=ev=>{contextFilter=ev.target.value;render();};
@@ -4088,7 +4108,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
       await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
     }
-    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];await editDraftGuard.flush().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){
@@ -4425,7 +4445,7 @@ setInterval(()=>{
 },60000);
 window.addEventListener('offline',render);
 for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();},{passive:true});
-setInterval(async()=>{if(state&&Date.now()-lastActivity>15*60*1000){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
+setInterval(async()=>{if(state&&Date.now()-lastActivity>15*60*1000){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);await editDraftGuard.flush().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
 (async()=>{
   try{config=await fetch(`${import.meta.env.BASE_URL}runtime-config.json`,{cache:'no-store'}).then(r=>r.json());}
   catch{config={};}
