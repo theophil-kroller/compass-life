@@ -1,3 +1,5 @@
+import * as map567 from '../client/src/relationship-map-v567.js';
+import * as peopleScope720 from '../client/src/people-scope-v57720.js';
 import {createPerformanceTrace} from '../client/src/performance-trace-v57719.js';
 import * as peopleSync719 from '../client/src/people-sync-v57719.js';
 import * as agendaIndex717 from '../client/src/people-agenda-index-v57717.js';
@@ -51,7 +53,7 @@ function setup(){
  const app={innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null};
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const ctx={document,window:{addEventListener:()=>{}},location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(Error('offline')),setTimeout,clearTimeout};
- Object.assign(ctx,agendaIndex717,planIndex717);
+ Object.assign(ctx,agendaIndex717,planIndex717,peopleScope720,map567);
  Object.assign(ctx,waiting715,friction715,yesterday710,lifeBalance63,radar555,dailyPlanning,capacity,deadline,projectExchange,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,discoveryFreshness5777,relationships,relationshipRadar,feelingWheel65,contactCare568,calendarSuggestions568);
  Object.assign(ctx,habitSync5731,calendarCache574);
  ctx.touchPersonSummary=touchPersonSummary;
@@ -119,4 +121,24 @@ test('People page displays birthday editor; contact birthday is included in sugg
  await ui.testAction('occasion-accept',occasion.id,'gift');
  assert.equal(Object.keys(ui.getState().tasks).length,1);
  assert.match(Object.values(ui.getState().tasks)[0].title,/Geschenk besorgen/);
+});test('Work/private switch filters both contact list and map, without claiming missing vault contacts',async()=>{
+ const ui=setup(),st=base();st.people={
+  work:{id:'work',name:'WORK Example',tag:'work-example',relationKind:'colleague'},
+  friend:{id:'friend',name:'PRIVATE Example',tag:'private-example',relationKind:'friend'}
+ };
+ let html=ui.testUI(st,'people');
+ assert.match(html,/WORK Example/);assert.match(html,/PRIVATE Example/);
+ await ui.testAction('people-scope720','work');
+ html=ui.testUI(st,'people');assert.match(html,/WORK Example/);assert.doesNotMatch(html,/PRIVATE Example/);
+ await ui.testAction('people-tab','map');
+ html=ui.testUI(st,'people');assert.match(html,/WORK Example/);assert.doesNotMatch(html,/PRIVATE Example/);
+ await ui.testAction('people-scope720','private');
+ html=ui.testUI(st,'people');assert.doesNotMatch(html,/WORK Example/);assert.match(html,/PRIVATE Example/);
+ assert.equal(Object.keys(st.people).length,2);
+ await ui.testAction('people-scope720','work');
+ st.people.work.relationKind='friend';
+ html=ui.testUI(st,'people');
+ assert.match(html,/In diesem Bereich sind noch keine Kontakte/);
+ assert.match(html,/keine Kontakte für die Beziehungslandkarte/);
+ assert.doesNotMatch(html,/keine Kontaktprofile im lokalen Tresor/);
 });

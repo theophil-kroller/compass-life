@@ -1,0 +1,26 @@
+Compass 0.5.77.20 – GitHub-Upload
+================================
+
+PATCH
+  Ausgangsversion: 0.5.77.19
+  Zielversion:     0.5.77.20
+
+1. Den Inhalt von Compass_0.5.77.20_PATCH_FROM_0.5.77.19.zip
+   unter Beibehaltung der Ordnerstruktur ins Repository
+   theophil-kroller/compass-life hochladen.
+2. Commit und den bestehenden GitHub/Cloudflare-Deploy prüfen.
+3. Auf Laptop und Handy den angezeigten Versionsstand .20 kontrollieren.
+4. Menschen -> Alle/Arbeitskollegen/Privat testen; Liste und Karte
+   müssen gleich gefiltert sein. Zur Umklassifizierung Kontakt in
+   'Alle' öffnen und unter 'Beziehung & Nähe' Beziehungsart ändern.
+5. System -> Laufzeitmessung -> erneut Cloud-Sync, Vault-Saves sowie
+   Heute/Inbox/Planen/Menschen messen, danach JSON exportieren.
+
+Kontaktwiederherstellung auf Handy:
+  Laptop: verschlüsseltes Vault-Backup anlegen.
+  Falls Kontakte am Laptop sichtbar: E2EE-Kontaktsynchronisierung
+  wie in CHANGELOG_0.5.77.19.md beschrieben bewusst auf beiden
+  Geräten aktivieren. Keine Browserdaten oder Tresor zurücksetzen.
+
+Kein D1-Migrations-/Worker-Schritt nötig.
+Tests: 923/923; die echte Deploy- und Geräteprüfung steht noch aus.

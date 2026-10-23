@@ -1,0 +1,8 @@
+/* Contact lens, not an additional relationship score. */
+.people-scope720{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:8px 0 16px}
+.people-scope720 button{border:1px solid #d6e5dc;border-radius:999px;background:#fff;color:#45655b;padding:9px 13px;font-size:12px;font-weight:650;display:inline-flex;gap:8px;align-items:center;justify-content:center;min-height:37px}
+.people-scope720 button span{font-size:11px;color:#82978d}
+.people-scope720 button.is-active{background:#315f50;color:#fff;border-color:#315f50}
+.people-scope720 button.is-active span{color:#d4e8dc}
+.people-scope720-empty{font-size:12px;color:#536f60;background:#f5faf6;border:1px solid #e1ebe3;border-radius:10px;padding:10px 12px;margin:0 0 12px}
+@media(max-width:600px){.people-scope720{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.people-scope720 button{min-width:0;padding:8px 5px;font-size:11px;gap:4px}}

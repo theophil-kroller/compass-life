@@ -1,7 +1,7 @@
 {
   "name": "@compass/client",
   "private": true,
-  "version": "0.5.77.19",
+  "version": "0.5.77.20",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",

@@ -1,3 +1,4 @@
+import * as peopleScope720 from '../client/src/people-scope-v57720.js';
 import {createPerformanceTrace} from '../client/src/performance-trace-v57719.js';
 import * as peopleSync719 from '../client/src/people-sync-v57719.js';
 import * as agendaIndex717 from '../client/src/people-agenda-index-v57717.js';
@@ -67,7 +68,7 @@ function context(){
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const window={addEventListener:()=>{},scrollY:0,scrollTo:()=>{}};
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout,requestAnimationFrame:(fn)=>fn()};
- Object.assign(ctx,agendaIndex717,planIndex717);
+ Object.assign(ctx,agendaIndex717,planIndex717,peopleScope720);
  Object.assign(ctx,waiting715,friction715,yesterday710,dailyPlanning,capacity,deadline,projectExchange,treeWorkspace,shopping713,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,contactCare568,calendarSuggestions568);
  Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,discoveryFreshness5777,cinemaModule5772,cinemaDetails5773,eventSync,relationships);

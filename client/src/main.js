@@ -35,6 +35,7 @@ import {deadlineSuggestions,contactSuggestions} from './calendar-intelligence-v5
 import {RELATION_KINDS,GENDER_MARKERS,CADENCE_DAYS,preference,contactImpulse,impulseQueue,pauseContact,mapPosition,mapDrop,safePersonDetails,relatedProjectIds,contactWeight} from './relationship-radar-v564.js';
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {buildPersonAgendaIndex,sortPeopleByOpenItems} from './people-agenda-index-v57717.js';
+import {PEOPLE_SCOPES,peopleInScope,peopleScopeCounts} from './people-scope-v57720.js';
 import {mergePeopleDirectory,markChangedPeople} from './people-sync-v57719.js';
 import {createPerformanceTrace} from './performance-trace-v57719.js';
 import './mobile-planning-v57719.css';
@@ -58,6 +59,7 @@ import './cinema-program-v5772.css';
 import {wireSmartTags,rememberTag} from './smart-tags.js';
 import {personCalendarEvents} from './people-matching.js';
 import './people-agenda-v57717.css';
+import './people-scope-v57720.css';
 import './style.css';
 import {allRecoveryIdeas,scoreRecoveryIdeas,recoveryWeather,validRecoveryIdea} from './recovery-ideas.js';
 import {assertCompatibleWorker} from './health-check.js';
@@ -130,7 +132,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.19';
+const COMPASS_CLIENT_VERSION='0.5.77.20';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -169,7 +171,7 @@ let selectedAgendaEventId=null;
 let calendarRulesOpen=false,showHiddenCalendarEvents=false;
 let reviewWorkflow='next';
 let reviewEditingTaskId=null,reviewProjectId=null;
-let activitySelectedId=null,activityTrash=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,personOpenPointId='',peopleTab='list',peopleRadarExpanded=false,peopleShowAll=false,relationshipMapFocus=false,relationshipMapFilter='all',quickContactType='',occasionOpen=true;
+let activitySelectedId=null,activityTrash=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,personOpenPointId='',peopleTab='list',peopleScope='all',peopleRadarExpanded=false,peopleShowAll=false,relationshipMapFocus=false,relationshipMapFilter='all',quickContactType='',occasionOpen=true;
 const reviewDrafts=new Map();
 function captureReviewDraft(){const form=app?.querySelector('#review-commit-form');if(form?.dataset.id)reviewDrafts.set(form.dataset.id,Object.fromEntries(new FormData(form).entries()));}
 let showCalendarBlocks=false;
@@ -1799,8 +1801,10 @@ function relationshipInspectorMarkup(person,projects,today){
 function peopleScreen(){
  // One pass over tasks/Inbox for all contacts, instead of O(people × tasks × inbox).
  const index=buildPersonAgendaIndex(Object.values(state?.people||{}),state?.tasks,rows(),state?.projects);
- const people=sortPeopleByOpenItems(Object.values(state?.people||{}),index);
- if(!people.length&&peopleTab==='map')peopleTab='list';
+ const allPeople=Object.values(state?.people||{});
+ const counts=peopleScopeCounts(allPeople);
+ const people=sortPeopleByOpenItems(peopleInScope(allPeople,peopleScope),index);
+ if(!counts.all&&peopleTab==='map')peopleTab='list';
  const selected=people.find(p=>p.id===selectedPersonId)||people[0];
  const taskListFor=p=>index.get(p.id)?.tasks||[];
  const inboxFor=p=>index.get(p.id)?.inbox||[];
@@ -1813,7 +1817,7 @@ function peopleScreen(){
  const contact=selected?contactSummaries.get(selected.id):null;
  const contactLabel=contact?.last?new Date(contact.last.day+'T12:00:00').toLocaleDateString('de-AT'):'Noch kein bestätigter Kontakt';
  const touchSummary=selected&&peopleRadarExpanded?touchPersonSummary(state,selected.id):{count:0,latest:null,suggestions:[]};
- return chrome(`${!people.length?`<section class="work-card people-sync719-alert" role="status"><strong>Auf diesem Gerät sind keine Kontaktprofile im lokalen Tresor gespeichert.</strong><p>Die grüne Meldung „Synchronisiert“ gilt bisher für Projekte, Aufgaben und Inbox – nicht automatisch für Menschen. Deine Kontakte können im Tresor eines anderen Geräts liegen. Bitte nicht neu anlegen, bevor du das dort überprüft hast.</p><p>${state?.peopleSyncEnabled?'Kontakt-Sync aktiviert: Auf dem Gerät mit vorhandenen Kontakten ebenfalls aktivieren und beide Geräte abgleichen.':'Für eine sichere Übernahme den verschlüsselten Kontakt-Sync auf beiden Geräten bewusst einschalten.'}</p><button type="button" class="secondary-btn" data-tab="system">Geräteabgleich & Kontakt-Sync öffnen</button></section>`:''}${selected?`<section class="p717-task-strip" aria-label="Offene Punkte zu ${h(selected.name)}"><div><strong>📋 ${h(selected.name)}</strong><small>${related.length} offene Aufgaben · ${relatedInbox.length} offene Inbox-Punkte · ${waiting} Waiting For</small></div><span class="p717-task-strip-count">${related.length+relatedInbox.length} offen</span></section>`:''}<nav class="relationship-tabs" aria-label="Menschen-Ansichten"><button type="button" data-action="people-tab" data-id="list" class="${peopleTab==='list'?'is-active':''}">☷ Kontakte</button><button type="button" data-action="people-tab" data-id="map" class="${peopleTab==='map'?'is-active':''}">◎ Beziehungslandkarte</button></nav><div class="people-grid ${peopleTab==='map'?'map-active':''}">${peopleTab==='map'?peopleMapMarkup(people,selected):`<section class="work-card"><div class="work-heading"><span>${ico('people',18)} Menschen · offene To-dos zuerst</span><span class="quiet-tag">${people.length}</span></div><details class="people-add-person"><summary>${ico('plus',14)} Person hinzufügen</summary><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Hinzufügen</button></form></details><div class="people-list">${visiblePeople.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} Aufgaben · ${inboxFor(p).length} Inbox${contactSummaries.get(p.id)?.last?' · zuletzt '+h(contactSummaries.get(p.id).last.day):''}${p.birthdayMonthDay?` · 🎂 ${h(p.birthdayMonthDay.slice(3))}.${h(p.birthdayMonthDay.slice(0,2))}.`:""}</small></button><div class="people-quick-actions"><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="call" title="Telefonat dokumentieren" aria-label="Telefonat mit ${h(p.name)} dokumentieren">☎</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="meeting" title="Persönliches Treffen dokumentieren" aria-label="Treffen mit ${h(p.name)} dokumentieren">☕</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="email" title="E-Mail dokumentieren" aria-label="E-Mail mit ${h(p.name)} dokumentieren">✉</button></div>`).join('')||'<p class="muted-line">Noch keine Kontakte. Personen und Notizen bleiben in deinem verschlüsselten lokalen Tresor.</p>'}</div>${people.length>visiblePeople.length?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-all">Alle ${people.length} Kontakte anzeigen</button>`:peopleShowAll&&people.length>80?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-less">Nur erste 80 anzeigen</button>`:''}</section>`}
+ return chrome(`${!counts.all?`<section class="work-card people-sync719-alert" role="status"><strong>Auf diesem Gerät sind keine Kontaktprofile im lokalen Tresor gespeichert.</strong><p>Die grüne Meldung „Synchronisiert“ gilt bisher für Projekte, Aufgaben und Inbox – nicht automatisch für Menschen. Deine Kontakte können im Tresor eines anderen Geräts liegen. Bitte nicht neu anlegen, bevor du das dort überprüft hast.</p><p>${state?.peopleSyncEnabled?'Kontakt-Sync aktiviert: Auf dem Gerät mit vorhandenen Kontakten ebenfalls aktivieren und beide Geräte abgleichen.':'Für eine sichere Übernahme den verschlüsselten Kontakt-Sync auf beiden Geräten bewusst einschalten.'}</p><button type="button" class="secondary-btn" data-tab="system">Geräteabgleich & Kontakt-Sync öffnen</button></section>`:''}${selected?`<section class="p717-task-strip" aria-label="Offene Punkte zu ${h(selected.name)}"><div><strong>📋 ${h(selected.name)}</strong><small>${related.length} offene Aufgaben · ${relatedInbox.length} offene Inbox-Punkte · ${waiting} Waiting For</small></div><span class="p717-task-strip-count">${related.length+relatedInbox.length} offen</span></section>`:''}<nav class="people-scope720" aria-label="Kontaktbereich auswählen">${PEOPLE_SCOPES.map(([value,label])=>`<button type="button" data-action="people-scope720" data-id="${value}" aria-pressed="${peopleScope===value}" class="${peopleScope===value?'is-active':''}">${h(label)} <span>${counts[value]}</span></button>`).join('')}</nav>${counts.all&&!people.length?'<p class="people-scope720-empty">In diesem Bereich sind noch keine Kontakte. Du kannst die Beziehungsart einer Person unter „Beziehung & Nähe“ ändern.</p>':''}<nav class="relationship-tabs" aria-label="Menschen-Ansichten"><button type="button" data-action="people-tab" data-id="list" class="${peopleTab==='list'?'is-active':''}">☷ Kontakte</button><button type="button" data-action="people-tab" data-id="map" class="${peopleTab==='map'?'is-active':''}">◎ Beziehungslandkarte</button></nav><div class="people-grid ${peopleTab==='map'?'map-active':''}">${peopleTab==='map'?(people.length?peopleMapMarkup(people,selected):'<section class="work-card people-scope720-empty">Hier gibt es keine Kontakte für die Beziehungslandkarte. Wähle „Alle“ oder einen anderen Bereich.</section>'):`<section class="work-card"><div class="work-heading"><span>${ico('people',18)} Menschen · offene To-dos zuerst</span><span class="quiet-tag">${people.length}</span></div><details class="people-add-person"><summary>${ico('plus',14)} Person hinzufügen</summary><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Hinzufügen</button></form></details><div class="people-list">${visiblePeople.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} Aufgaben · ${inboxFor(p).length} Inbox${contactSummaries.get(p.id)?.last?' · zuletzt '+h(contactSummaries.get(p.id).last.day):''}${p.birthdayMonthDay?` · 🎂 ${h(p.birthdayMonthDay.slice(3))}.${h(p.birthdayMonthDay.slice(0,2))}.`:""}</small></button><div class="people-quick-actions"><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="call" title="Telefonat dokumentieren" aria-label="Telefonat mit ${h(p.name)} dokumentieren">☎</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="meeting" title="Persönliches Treffen dokumentieren" aria-label="Treffen mit ${h(p.name)} dokumentieren">☕</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="email" title="E-Mail dokumentieren" aria-label="E-Mail mit ${h(p.name)} dokumentieren">✉</button></div>`).join('')||'<p class="muted-line">In dieser Auswahl gibt es keine Kontakte. Wechsle zwischen Arbeitskollegen und Privat.</p>'}</div>${people.length>visiblePeople.length?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-all">Alle ${people.length} Kontakte anzeigen</button>`:peopleShowAll&&people.length>80?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-less">Nur erste 80 anzeigen</button>`:''}</section>`}
  <section class="work-card"><div class="work-heading"><span>${ico('list',18)} ${selected?h(selected.name):'Gesprächsvorbereitung'}</span>${selected?`<button class="secondary-btn" type="button" data-action="person-remove" data-id="${h(selected.id)}">Entfernen</button>`:''}</div>${selected?`<p class="muted-line">${related.length} offene Aufgaben · ${relatedInbox.length} noch in der Inbox · ${waiting} Waiting For</p>
  <section class="people-agenda-first"><div class="work-heading"><span>${ico('list',17)} Offene To-dos & Gesprächspunkte</span><span class="quiet-tag">${related.length} Aufgaben · ${relatedInbox.length} Inbox</span></div><div class="people-agendas">${related.map(t=>`<div class="person-point-row"><button type="button" class="person-quick-check" data-action="person-task-done" data-id="${h(t.id)}" aria-label="${h(t.title)} als erledigt markieren" title="Aufgabe erledigen" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)}</button><details class="person-point" data-point="task" data-id="${h(t.id)}" ${personOpenPointId===t.id?'open':''}><summary><span class="person-point-symbol">${ico('checkSquare',16)}</span><span class="person-point-title"><strong>${h(t.title)}</strong><small>${h(t.workflow==='waiting'?'Waiting For':'Aufgabe / Agenda')}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="task" data-id="${h(t.id)}"><label>Notiz zu diesem Punkt<textarea name="note" maxlength="3000" rows="3" placeholder="Was haben wir besprochen?">${h(t.note||'')}</textarea></label>${state?.taskConflicts?.[t.id]?'<p class="person-point-warning">Bearbeitungskonflikt: Bitte zuerst in der Aufgabenansicht auflösen.</p>':''}<div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>Notiz speichern</button><button type="submit" name="intent" value="done" class="primary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)} Erledigt</button></div></form></details></div>`).join('')||'<p class="muted-line">Keine offenen Aufgaben mit diesem Personentag.</p>'}</div>${relatedInbox.length?`<section class="people-linked-inbox"><h3>${ico('inbox',16)} Noch in der Inbox · ${relatedInbox.length}</h3>${relatedInbox.map(r=>`<details class="person-point" data-point="inbox" data-id="${h(r.id)}" ${personOpenPointId===r.id?'open':''}><summary><span class="person-point-symbol">${ico('inbox',16)}</span><span class="person-point-title"><strong>${h(r.title)}</strong><small>Noch zu klären · kein erledigbarer Task</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="inbox" data-id="${h(r.id)}"><label>Gesprächsnotiz<textarea name="note" maxlength="10000" rows="3" placeholder="Was ist dazu besprochen worden?">${h(r.note||'')}</textarea></label><div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn">Notiz speichern</button><button type="submit" name="intent" value="discussed" class="primary-btn">${ico('check',15)} Besprochen &amp; archivieren</button></div><small>Archivieren ist keine Erledigung einer Aufgabe. Später kannst du aus der Inbox bei Bedarf eine Next Action erstellen.</small></form></details>`).join('')}</section>`:''}<form id="person-agenda-form" data-id="${h(selected.id)}" class="people-agenda-capture"><label>Gesprächsthema ergänzen<input name="title" required maxlength="180" placeholder="Was möchte ich mit dieser Person besprechen?"/></label><button type="submit" class="secondary-btn">${ico('plus',15)} Hinzufügen</button></form></section>
  <section class="p717-optional-relationship"><button type="button" class="secondary-btn p717-radar-toggle" data-action="people-radar-toggle" aria-expanded="${peopleRadarExpanded}">${ico('people',16)} Beziehung & Nähe ${peopleRadarExpanded?'ausblenden':'anzeigen'} ${ico('chevronDown',15)}</button>${peopleRadarExpanded?`<div class="p717-relationship-panel">${relationshipInspectorMarkup(selected,state?.projects||{},localDate())}<section class="t577-person-strip"><span>${touchSummary.count} Begegnungen erfasst${touchSummary.latest?' · zuletzt '+h(new Date(touchSummary.latest).toLocaleDateString('de-AT')):''}</span><button type="button" class="secondary-btn" data-action="t577-for-person" data-id="${h(selected.id)}">+ Nähe erfassen</button></section></div>`:''}</section>
@@ -2298,7 +2302,7 @@ function bind() {
     if(!validActivityEdit(data)||data.projectId&&!state?.projects?.[data.projectId]){toast('Prüfe Titel, Zeitpunkt, Dauer und Projekt.',true);return;}
     await mutate(s=>{if(id.startsWith('manual-')){s.manualActivities[id]={...s.manualActivities[id],...data};}else{s.activityEdits??={};s.activityEdits[id]={...(s.activityEdits[id]||{}),...data};}});toast('Änderungen im verschlüsselten Tresor gespeichert.');
   };
-  const personForm=app.querySelector('#person-create-form');if(personForm)personForm.onsubmit=async ev=>{ev.preventDefault();const name=String(new FormData(personForm).get('name')||'').trim(),tag=personTag(name);if(!name||!tag){toast('Bitte einen gültigen Namen eingeben.',true);return;}if(Object.values(state.people||{}).some(p=>p.tag===tag)){toast('Kontakt bereits vorhanden.',true);return;}const id=crypto.randomUUID();await mutate(s=>{s.people??={};s.people[id]={id,name,tag,note:''};});selectedPersonId=id;render();};
+  const personForm=app.querySelector('#person-create-form');if(personForm)personForm.onsubmit=async ev=>{ev.preventDefault();const name=String(new FormData(personForm).get('name')||'').trim(),tag=personTag(name);if(!name||!tag){toast('Bitte einen gültigen Namen eingeben.',true);return;}if(Object.values(state.people||{}).some(p=>p.tag===tag)){toast('Kontakt bereits vorhanden.',true);return;}const id=crypto.randomUUID();await mutate(s=>{s.people??={};s.people[id]={id,name,tag,note:'',...(peopleScope==='work'?{relationKind:'colleague'}:{})};});selectedPersonId=id;render();};
   const personTagForm=app.querySelector('#person-tag-form');if(personTagForm)personTagForm.onsubmit=async ev=>{
     ev.preventDefault();const id=personTagForm.dataset.id,p=state?.people?.[id];if(!p)return;
     const data=new FormData(personTagForm),tag=parseTags([String(data.get('tag')||'').replace(/^#/, '')])[0],aliases=String(data.get('aliases')||'').trim();
@@ -3076,7 +3080,7 @@ async function placeInDailyPlan(taskId,start,moveId=null){
 async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='perf719-toggle'){performanceTrace.setEnabled(!performanceTrace.enabled);try{localStorage.setItem('compass.perf.v57719',performanceTrace.enabled?'on':'off');}catch{}render();return;}
  if(action==='perf719-clear'){performanceTrace.clear();render();return;}
- if(action==='perf719-export'){download('compass-performance-0.5.77.19.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
+ if(action==='perf719-export'){download('compass-performance-0.5.77.20.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
  if(action==='people-sync719-toggle'){
   if(!state?.privateDeviceMirror?.key){toast('Zuerst den verschlüsselten Geräteabgleich einrichten.',true);return;}
   if(!state.peopleSyncEnabled&&!confirm('Kontaktprofile einschließlich persönlicher Notizen werden Ende-zu-Ende verschlüsselt mit deinem verbundenen Gerät abgeglichen. Wirklich aktivieren?'))return;
@@ -3625,6 +3629,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       await mutate(s=>{s.tasks[id].note=note;s.tasks[id].completed=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
       toast('Aufgabe erledigt.');return;
     }
+    if(action==='people-scope720'){if(PEOPLE_SCOPES.some(([value])=>value===id)){peopleScope=id;relationshipMapFilter='all';relationshipMapFocus=false;peopleShowAll=false;selectedPersonId=null;render();}return;}
     if(action==='people-tab'){if(['list','map'].includes(id)){peopleTab=id;relationshipMapFocus=false;render();}return;}
     if(action==='people-radar-toggle'){peopleRadarExpanded=!peopleRadarExpanded;render();return;}
     if(action==='people-show-all'){peopleShowAll=true;render();return;}
@@ -4350,7 +4355,7 @@ async function syncProjects(){
   await persist();
  }
  const data=await request(config.apiUrl,authToken,'/api/projects');
- mergeProjectSnapshot(state,data.projects||[]);await persist();
+ if(mergeProjectSnapshot(state,data.projects||[]))await persist();
 }
 async function syncTasks(){
   prepareTasks(state);
@@ -4371,7 +4376,7 @@ async function syncTasks(){
     await persist();
   }
   const snapshot=await request(config.apiUrl,authToken,'/api/tasks');
-  mergeTaskSnapshot(state,snapshot.tasks||[]);await persist();
+  if(mergeTaskSnapshot(state,snapshot.tasks||[]))await persist();
 }
 async function syncEvents(){
  eventState(state);
@@ -4443,8 +4448,9 @@ async function syncNow() {
     let fetches=0;
     while(fetches++<100) {
       const data=await request(config.apiUrl,authToken,`/api/sync/pull?cursor=${state.cursor}`);
+      const previousCursor=state.cursor;
       mergePulled(state,data.changes||[]);state.cursor=data.cursor;
-      await persist();
+      if((data.changes||[]).length||previousCursor!==data.cursor)await persist();
       if(!data.hasMore)break;
     }
     const fixed=pruneIdenticalConflicts(state);if(fixed)await persist();
