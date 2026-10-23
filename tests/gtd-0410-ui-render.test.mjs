@@ -13,6 +13,7 @@ import {technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair} from '../cli
 import * as inboxFlags from '../client/src/inbox-flags-v27.js';
 import * as inboxOrder from '../client/src/inbox-order-v34.js';
 import * as treeWorkspace from '../client/src/project-workspace-v27.js';
+import * as shopping713 from '../client/src/shopping-lists-v57713.js';
 import * as relationships from '../client/src/people-relationships-v24.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -57,9 +58,9 @@ const compiled=source.replace(/^import .*;\r?\n/gm,'').replace('registerSW({imme
 function context(){
  const app={innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null};
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
- const window={addEventListener:()=>{}};
- const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
- Object.assign(ctx,yesterday710,dailyPlanning,capacity,deadline,projectExchange,treeWorkspace,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
+ const window={addEventListener:()=>{},scrollY:0,scrollTo:()=>{}};
+ const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout,requestAnimationFrame:(fn)=>fn()};
+ Object.assign(ctx,yesterday710,dailyPlanning,capacity,deadline,projectExchange,treeWorkspace,shopping713,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,contactCare568,calendarSuggestions568);
  Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,discoveryFreshness5777,cinemaModule5772,cinemaDetails5773,eventSync,relationships);
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
@@ -73,7 +74,7 @@ function context(){
 }
 test('Every navigation screen renders without missing functions, including previously disabled people/progress/recovery',()=>{
  const ui=context();const state=tasks.prepareTasks({format:1,records:{},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
- for(const [mode,expected] of [['today','Heute'],['overview','Timeline'],['people','Kontakte'],['progress','Projektfortschritt'],['recovery','Erholung'],['activity','Aktivitätsverwaltung'],['review','Inbox klären'],['projects','Projekte'],['templates','Vorlagen'],['next','Next Actions'],['flagged','Flagged'],['hold','Waiting'],['someday','Dreams'],['system','System'],['inbox','Inbox'],['forecast','Forecast']]){
+ for(const [mode,expected] of [['today','Heute'],['overview','Timeline'],['people','Kontakte'],['progress','Projektfortschritt'],['recovery','Erholung'],['activity','Aktivitätsverwaltung'],['review','Inbox klären'],['projects','Projekte'],['templates','Vorlagen'],['shopping','Einkaufslisten'],['next','Next Actions'],['flagged','Flagged'],['hold','Waiting'],['someday','Dreams'],['system','System'],['inbox','Inbox'],['forecast','Forecast']]){
   const html=ui.testUI(state,mode);
   assert.ok(html.includes(expected),`${mode} missing ${expected}`);
   assert.ok(!html.includes('is-disabled'),`${mode}: navigation unexpectedly disabled`);
@@ -209,4 +210,16 @@ test('0.5.77.3 cinema: poster cards, date arrows and enrichment keep existing sc
  assert.match(html,/Verflechtung von globaler Wirtschaft/);assert.match(html,/https:\/\/kino.example.org\/poster.jpg/);
  assert.equal(ui.readState().discoveredEvents.length,2);
  assert.equal(ui.readState().discoveredEvents.filter(e=>e.synopsisSourceUrl).length,2);
+});
+
+test('0.5.77.13 existing master template is directly editable and addition keeps template ID',async()=>{
+ const ui=context(),p='10000000-0000-4000-8000-000000001213';
+ const s=tasks.prepareTasks({format:1,records:{},pending:[],serverVersions:{},cursor:0,conflicts:[],history:[]});
+ s.projects[p]={id:p,title:'Einkaufsliste',outcome:'',category:'Allgemein',status:'active',kind:'project',isTemplate:true,projectType:'parallel',parentId:null,reviewIntervalDays:7,sortOrder:100};
+ assert.match(ui.testUI(s,'templates'),/tree-template-add-task/);
+ await ui.testAction('tree-template-add-task',p);
+ const html=ui.testUI(ui.readState(),'templates');
+ assert.match(html,/name="projectId" value="10000000-0000-4000-8000-000000001213"/);
+ assert.match(html,/Vorlage: <strong>Einkaufsliste<\/strong>/);
+ assert.match(html,/name="title" aria-label="Aufgabentitel"/);
 });

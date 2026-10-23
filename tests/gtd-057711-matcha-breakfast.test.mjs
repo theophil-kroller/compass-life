@@ -51,7 +51,7 @@ test('updated bread recipe remains scalable and build versions are aligned',()=>
  assert.deepEqual(nutritionKcalEstimate(bread,'2 Scheiben'),{low:404,high:428,kind:'Schätzung'});
  const root=JSON.parse(readFileSync(new URL('../package.json',import.meta.url)));
  const client=JSON.parse(readFileSync(new URL('../client/package.json',import.meta.url)));
- assert.equal(root.version,'0.5.77.12');assert.equal(client.version,root.version);
+ assert.match(root.version,/^0\.5\.77\./);assert.equal(client.version,root.version);
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.12'/);
+ assert.ok(main.includes("COMPASS_CLIENT_VERSION='"+root.version+"'"));
 });

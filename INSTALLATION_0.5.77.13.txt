@@ -1,0 +1,25 @@
+COMPASS 0.5.77.13 — GitHub Upload
+=================================
+
+A) PATCH (wenn aktuell Version 0.5.77.12):
+   Compass_0.5.77.13_PATCH_FROM_0.5.77.12.zip entpacken.
+   Die enthaltenen Dateien mit denselben relativen Pfaden im
+   Stammverzeichnis von theophil-kroller/compass-life auf GitHub ersetzen/hinzufügen.
+   Commit erstellen, GitHub Actions auf erfolgreichen Build prüfen.
+
+B) FULL SOURCE:
+   Compass_0.5.77.13_FULL_SOURCE.zip ist der vollständige, konsolidierte Quellstand.
+   Bei einem vollständigen Austausch bestehende private Konfigurationsdateien
+   und Geheimnisse nicht versehentlich überschreiben; vorab Backup erstellen.
+
+NEU:
+ - Planen → Vorlagen: Stammliste anklicken, Einträge bearbeiten oder + Eintrag.
+ - Planen → Einkaufslisten: Neue Einkaufsliste aus Einkaufs-Vorlage anlegen.
+ - Konkrete Einkaufsliste abhaken und danach „Einkauf archivieren“.
+ - Archivierte Liste bei Bedarf über die aufklappbare Archivsektion zurückholen.
+
+WICHTIG:
+ - Eine Stammliste bleibt unabhängig von ihren Kopien.
+ - Archivieren löscht keine Daten: die Einkaufsliste ist ein abgeschlossenes Projekt.
+ - Keine Datenbankmigration, kein Worker-Update notwendig.
+ - Node-Tests und Worker-Check erfolgreich; Vite-Build in GitHub Actions prüfen.

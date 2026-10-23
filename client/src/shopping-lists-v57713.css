@@ -1,0 +1,36 @@
+/* Compass 0.5.77.13: light-weight shopping checklist, optimized for phone use. */
+.shopping713-shell{max-width:1100px;margin:0 auto}.shopping713-overview{padding:22px;display:flex;flex-direction:column;gap:18px}
+.shopping713-header{display:flex;justify-content:space-between;align-items:start;gap:15px;flex-wrap:wrap}
+.shopping713-header h2{margin:0 0 5px;font:normal 24px Georgia,serif;color:#254b3e}
+.shopping713-header p{margin:0;max-width:550px}
+.shopping713-header .primary-btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.shopping713-chooser{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;scrollbar-width:thin}
+.shopping713-choice{min-width:180px;max-width:290px;text-align:left;display:flex;flex-direction:column;gap:5px;background:#f9fbf9;border:1px solid #dce6dc;border-radius:11px;padding:12px;color:#2b5043;cursor:pointer}
+.shopping713-choice.active{background:#e8f3eb;border-color:#82b59a;box-shadow:inset 0 0 0 1px #82b59a}
+.shopping713-choice strong{font-size:13px;white-space:normal}.shopping713-choice small{color:#71897c;font-size:11px}
+.shopping713-list{border:1px solid #dce8e0;border-radius:14px;padding:16px;min-width:0;background:#fff}
+.shopping713-list-header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.shopping713-list-header h3{margin:0;font:normal 21px Georgia,serif;color:#315744}
+.shopping713-list-header span{display:block;font-size:12px;color:#799286;margin-top:4px}
+.shopping713-progress{height:7px;border-radius:9px;background:#edf3ee;overflow:hidden;margin:13px 0}
+.shopping713-progress>span{display:block;height:100%;background:#2d8068;transition:width .18s ease}
+.shopping713-items{display:grid;gap:7px}
+.shopping713-item{min-height:52px;width:100%;display:flex;align-items:center;text-align:left;gap:13px;padding:11px 14px;background:#fafcfb;border:1px solid #e3ebe5;border-radius:11px;cursor:pointer;color:#294e3e;font-size:15px;line-height:1.35}
+.shopping713-item:hover,.shopping713-item:focus-visible{background:#f0f7f2;border-color:#9ac3a9}
+.shopping713-item .shopping713-check{width:25px;height:25px;display:grid;place-items:center;flex:none;border:2px solid #9abdae;border-radius:7px;background:#fff;font-size:18px;font-weight:700}
+.shopping713-item.done{color:#738d7f;background:#f3f7f4}.shopping713-item.done .shopping713-check{color:#fff;background:#328069;border-color:#328069}
+.shopping713-item.done>span:last-child{text-decoration:line-through;text-decoration-color:#93ada1}
+.shopping713-item small{display:block;font-size:11px;color:#839b8c;margin-top:3px;text-decoration:none}
+.shopping713-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;flex-wrap:wrap}
+.shopping713-bottom .primary-btn{display:flex;align-items:center;gap:7px}
+.shopping713-empty{padding:22px 16px;color:#789085;font-size:13px;background:#f9fbf9;border-radius:12px;border:1px dashed #cfe0d3}
+.shopping713-archive{border:1px solid #e0e9e2;border-radius:12px;padding:12px 16px}.shopping713-archive summary{cursor:pointer;font-weight:600;font-size:13px;color:#406953}
+.shopping713-archive-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #e9eeea;padding:12px 0}
+.shopping713-archive-row:first-of-type{margin-top:11px}.shopping713-archive-row span{display:flex;flex-direction:column;gap:4px}.shopping713-archive-row small{color:#748c7c}
+.shopping-master-help{margin:8px 0 16px;font-size:12px;color:#66816d;line-height:1.6}
+.shopping-master-icon{width:30px;min-width:30px;text-align:center;color:#719585;font-size:20px}
+.template-line{flex-wrap:wrap;row-gap:7px}.template-line>.tree-label{min-width:130px;flex:1}
+.shopping-template-context{color:#416954;font-size:12px;grid-column:1/-1}
+@media(max-width:640px){.shopping713-overview{padding:12px;gap:13px}.shopping713-header h2{font-size:21px}.shopping713-header .primary-btn{width:100%;justify-content:center}.shopping713-list{padding:12px}.shopping713-item{min-height:57px}.shopping713-bottom .primary-btn{width:100%;justify-content:center}.template-line>.secondary-btn{padding:8px}}
+.shopping713-master-title{display:flex;flex-direction:column;gap:7px;color:#315944;font-size:12px;font-weight:600;margin:8px 0 14px}
+.shopping713-master-title input{width:100%;padding:11px 13px;min-width:0;border-radius:9px;border:1px solid #b7d2be;font-size:15px;font-weight:500;background:#fff;color:#294a3e}

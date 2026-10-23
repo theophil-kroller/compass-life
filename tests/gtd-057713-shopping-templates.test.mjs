@@ -1,0 +1,61 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {prepareTasks,validLocalTask,validTaskParent,nextActions,projectTasks,validProject} from '../client/src/tasks.js';
+import {isShoppingTemplate,shoppingFolder,isShoppingList,shoppingLists,shoppingProgress,instantiateShoppingList,archiveShoppingList,restoreShoppingList} from '../client/src/shopping-lists-v57713.js';
+const uuid=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+const tpl=(id=uuid(1))=>({id,title:'Einkaufsliste',outcome:'',category:'Allgemein',status:'active',kind:'project',isTemplate:true,parentId:null,projectType:'parallel',sortOrder:100,dueDate:null,reviewIntervalDays:7,reviewedAt:null});
+const task=(id,pid,title,parentTaskId=null)=>({id,title,note:'',category:'Allgemein',workflow:'next',completed:false,archived:false,flagged:false,plannedDate:null,dueDate:null,projectId:pid,parentTaskId,sortOrder:100,tags:[],contextTags:[],deferUntil:null,estimateMinutes:null});
+const setup=()=>{const s=prepareTasks({});const p=tpl();s.projects[p.id]=p;s.tasks[uuid(2)]=task(uuid(2),p.id,'Hofer einkaufen');s.tasks[uuid(3)]=task(uuid(3),p.id,'Hafermilch',uuid(2));return s;};
+test('Template receives tasks and subtasks with the original template projectId',()=>{
+ const s=setup(),newTask=task(uuid(4),uuid(1),'Salz',uuid(2));
+ assert.ok(validLocalTask(newTask));assert.ok(validTaskParent(s,newTask.id,newTask.projectId,newTask.parentTaskId));
+ s.tasks[newTask.id]=newTask;
+ assert.equal(projectTasks(s,uuid(1)).length,3);
+ assert.equal(nextActions(s).length,0,'template items do not enter normal Next Actions');
+ const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
+ assert.match(main,/name="projectId" value="\$\{h\(defaultProject\)\}"/);
+ assert.match(main,/tree-template-add-task/);
+ assert.match(main,/if\(state\.projects\?\.\[existing\.projectId\]\?\.isTemplate\)t\.projectId=existing\.projectId/);
+});
+test('Copying shopping template creates a separate active checklist with reset completion and nested tasks',()=>{
+ const s=setup();s.tasks[uuid(2)].completed=true;
+ let next=10;const copy=instantiateShoppingList(s,uuid(1),()=>uuid(next++),'Hofer Einkauf – 23.10.');
+ assert.equal(copy.project.isTemplate,false);assert.ok(validProject(copy.project));
+ assert.equal(shoppingFolder(s).title,'Einkaufslisten');assert.equal(copy.project.parentId,shoppingFolder(s).id);
+ assert.equal(shoppingLists(s).length,1);assert.equal(shoppingLists(s,{archived:true}).length,0);
+ assert.equal(shoppingProgress(s,copy.project.id).done,0);assert.equal(shoppingProgress(s,copy.project.id).total,2);
+ assert.equal(copy.tasks[1].parentTaskId,copy.tasks[0].id);
+ assert.equal(projectTasks(s,uuid(1))[0].completed,true);
+ assert.ok(copy.tasks.every(validLocalTask));
+ assert.equal(s.projectPending[copy.project.id],true);assert.equal(s.projectPending[shoppingFolder(s).id],true);
+});
+test('Shopping checklist can be checked, archived with uncompleted entries, then restored without touching template',()=>{
+ const s=setup();let next=10;const copy=instantiateShoppingList(s,uuid(1),()=>uuid(next++),'Wocheneinkauf');
+ assert.equal(isShoppingTemplate(s.projects[uuid(1)]),true);assert.equal(isShoppingList(s,s.projects[uuid(1)]),false);
+ const checked=copy.tasks[0];s.tasks[checked.id].completed=true;
+ assert.deepEqual(shoppingProgress(s,copy.project.id),{done:1,total:2,remaining:1});
+ assert.deepEqual(archiveShoppingList(s,copy.project.id,{now:'2026-10-23T06:00:00Z'}),{done:1,total:2,remaining:1});
+ assert.equal(shoppingLists(s).length,0);assert.equal(shoppingLists(s,{archived:true}).length,1);
+ assert.equal(nextActions(s,'2026-10-23').length,0,'archived project tasks no longer offered as actions');
+ assert.equal(projectTasks(s,uuid(1)).length,2);
+ assert.equal(s.projects[uuid(1)].status,'active');
+ assert.throws(()=>archiveShoppingList(s,copy.project.id),/Nur eine aktive/);
+ restoreShoppingList(s,copy.project.id,{now:'2026-10-23T07:00:00Z'});
+ assert.equal(shoppingLists(s).length,1);assert.equal(s.tasks[checked.id].completed,true);
+ assert.equal(s.projectPending[copy.project.id],true);
+});
+test('Old shopping clones remain discoverable without migration; other template categories unaffected',()=>{
+ const s=setup();s.projects[uuid(20)]={...tpl(uuid(20)),title:'Reisevorbereitung'};
+ assert.equal(isShoppingTemplate(s.projects[uuid(20)]),false);
+ assert.throws(()=>instantiateShoppingList(s,uuid(20),()=>uuid(21),'Liste'),/Einkaufsvorlage/);
+ s.projects[uuid(22)]={...tpl(uuid(22)),title:'Einkauf vom letzten Montag',isTemplate:false};
+ assert.equal(shoppingLists(s).length,1);
+ assert.ok(projectTasks(s,uuid(1)).length===2);
+});
+test('Shopping screen offers independent checkboxes, archives, editing, and prominent navigation',()=>{
+ const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8'),css=readFileSync(new URL('../client/src/shopping-lists-v57713.css',import.meta.url),'utf8');
+ for(const key of ['shopping713-check','shopping713-archive','shopping713-restore','shopping713-edit-list','shopping713-open-master','shopping713-create'])assert.match(main,new RegExp(key));
+ assert.match(main,/navItem\('shopping','Einkaufslisten','list'\)/);
+ assert.match(main,/shopping713-list/);assert.match(css,/@media\(max-width:640px\)/);
+});

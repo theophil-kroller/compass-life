@@ -162,3 +162,7 @@ In **Ernährung → Frühstück** stehen Matcha mit Hafermilch **ohne Honig** (c
 ## Version 0.5.77.12
 
 Nutrition Intelligence: Markenprodukt- und Rezeptprofile, quellenbewusste Tagesübersicht für Makro-/Mikronährstoffe mit Abdeckungswarnungen. Task-Inspector: opt-in GPT-Klärungsprompt per Klick kopieren. Details in `CHANGELOG_0.5.77.12.md`.
+
+## Compass 0.5.77.13 – Einkaufslisten und bearbeitbare Vorlagen
+
+**Vorlagen** bleiben dauerhaft bearbeitbare Stammlisten: mit „+ Eintrag“ hinzufügen, einzelne Einträge im Inspector aktualisieren und unabhängige Kopien erzeugen. **Planen → Einkaufslisten** zeigt die tatsächlichen Einkaufslisten als große abhakbare Checklisten. Nach dem Einkauf per Knopf archivieren; die Vorlage bleibt erhalten, und die Kopie ist aus dem Archiv wiederherstellbar. Die reparierte Aufgabenmaske erhält die Template-Projektzuordnung und akzeptiert auch verschachtelte Aufgaben. [Changelog](CHANGELOG_0.5.77.13.md) · [Installation](INSTALLATION_0.5.77.13.txt).
