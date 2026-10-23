@@ -16,12 +16,12 @@ test('supplier profiles preserve source units and product-specific amounts, incl
  assert.equal(d.entries.find(x=>x.entry.foodId==='pistachio-butter-cups').values.kcal,240);
  assert.equal(d.entries.find(x=>x.entry.foodId==='pistachio-butter-cups').values.sugar,11.7);
 });
-test('Matcha ingredients correctly count oat milk, honey and never invent EGC/EGCG content',()=>{
+test('Matcha ingredients use confirmed minimum EGCG and EGC content for 30+, preserve milk and honey',()=>{
  const p=nutritionParts('matcha-oat-plain','1 Becher (500 ml; 75 ml Hafermilch)');
  assert.deepEqual(p.map(x=>x.part),['Haferdrink','Matchapulver']);
  assert.equal(p[0].values.calcium,90);assert.equal(p[0].values.vitaminB12,.29);
- assert.equal(p[1].extra.find(x=>x.key==='EGC').value,null);
- assert.equal(p[1].extra.find(x=>x.key==='EGCG').value,null);
+ assert.equal(p[1].extra.find(x=>x.key==='EGC').value,30);
+ assert.equal(p[1].extra.find(x=>x.key==='EGCG').value,60);
  const honey=nutritionParts('matcha','1 Becher (500 ml; 75 ml Hafermilch)');assert.equal(honey[2].values.kcal,21);
  const milk=FOOD_PRESETS.find(x=>x.id==='matcha-oat-plain');assert.deepEqual(nutritionKcalEstimate(milk,milk.defaultAmount),{low:41,high:45,kind:'Etikett + Schätzung'});
 });

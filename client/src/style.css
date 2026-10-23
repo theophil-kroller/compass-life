@@ -3246,3 +3246,6 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .ni721-bioactive-row strong{white-space:normal;overflow-wrap:anywhere}
 .ni721-bioactive .ni712-details summary{padding:12px 0}
 @media(max-width:720px){.ni721-bioactive .ni712-rows{grid-template-columns:1fr}.ni712-row{grid-template-columns:minmax(0,1fr) auto}.ni712-row strong{font-size:.84rem}}
+
+/* 0.5.77.22 · subtle adult EU-NRV progress (100%+ is clearly labelled, not a warning) */
+.ni722-reference{grid-column:1/-1;display:flex;align-items:center;gap:9px;margin-top:5px;min-width:0}.ni722-track{flex:1;min-width:0;max-width:100%;height:7px;background:#ecf0eb;border-radius:999px;overflow:hidden}.ni722-track>span{display:block;height:100%;border-radius:999px;background:#478d79}.ni722-reference>span{font-size:.71rem;color:#63766a;min-width:98px;text-align:right;white-space:nowrap}.ni722-caffeine{display:grid;gap:7px;background:#f6f8f5;padding:12px;border:1px solid #e3eae5;border-radius:12px;margin-top:10px}.ni722-caffeine>strong{font-size:.88rem}.ni722-caffeine small{font-size:.74rem;line-height:1.5;color:#65746b}@media(max-width:420px){.ni722-reference{gap:5px}.ni722-reference>span{font-size:.62rem;min-width:81px}}

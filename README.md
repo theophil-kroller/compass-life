@@ -1,4 +1,4 @@
-> **Aktueller Build: 0.5.77.21** – schnellere Vorlagen-/Projekt-Erfassung (UI vor Tresorverschlüsselung, verlässliche Rücknahme), Eingabelatenz-Messpunkte sowie Mikro-Symbole und bioaktive Tagesstoffe (EGC/EGCG ohne erfundene Mengen). [Changelog](CHANGELOG_0.5.77.21.md) · [Installation](INSTALLATION_0.5.77.21.txt). Keine D1-Migration.
+> **Aktueller Build: 0.5.77.22** – schnellere Vorlagen-/Projekt-Erfassung (UI vor Tresorverschlüsselung, verlässliche Rücknahme), Eingabelatenz-Messpunkte sowie Mikro-Symbole und bioaktive Tagesstoffe (Hersteller-Mindestwerte von MatchaTherapy 30+, EU-NRV-Balken und Referenz-Mikronährstoffe für Äpfel, Nüsse und Cheddar). [Changelog](CHANGELOG_0.5.77.22.md) · [Installation](INSTALLATION_0.5.77.22.txt). Keine D1-Migration.
 
 > **Aktueller Build: 0.5.77.20** – Menschen nach Alle / Arbeitskollegen / Privat filtern (Liste + Beziehungslandkarte), sichere Vermeidung unnötiger Tresorspeicherungen bei unveränderten Cloud-Snapshots. Gemessene Engpässe dokumentiert. [Changelog](CHANGELOG_0.5.77.20.md) · [Installation](INSTALLATION_0.5.77.20.txt). E2EE-Kontakte aus .19 bleiben opt-in.
 

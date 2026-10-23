@@ -1,0 +1,22 @@
+Compass Life · 0.5.77.22 · Nutrition Reference & MatchaTherapy 30+
+
+PATCH:
+1. Prüfen, dass auf GitHub zuerst der vollständige Stand 0.5.77.21 installiert ist.
+2. Alle Dateien des PATCH-Archivs mit erhaltenen Pfaden in den Repository-Root übernehmen und committen.
+3. GitHub Actions/Cloudflare Pages Build kontrollieren und die App aktualisieren.
+4. Bereits gespeicherte Ernährungseinträge behalten ihre IDs und Mengen, die Nachberechnung nutzt ab sofort die erweiterten Referenzwerte.
+
+FULL SOURCE:
+Das FULL-Archiv enthält den gesamten konsolidierten Quellstand (ohne persönliche Tresordaten).
+
+DATEN:
+- Keine D1-Migration, keine Vault-/Worker-Protokolländerung.
+- Vitamin-/Mineralbalken: EU-NRV allgemeine Erwachsene, nicht persönlicher Bedarf und keine Obergrenze.
+- MatchaTherapy 30+ und Koffein: Hersteller-Mindestwerte; koffeinhaltige Kaffees als EFSA-Schätzung.
+- Keine empfohlene Tagesmenge für EGCG/EGC; bei Koffein lediglich EFSA-Sicherheitsorientierung.
+- Ergänzende Mikronährstoffe für Apfel, Cheddar, Nüsse, Erdnüsse aus Vergleichsdaten markiert; die tatsächlichen Werte können abweichen. Selen in Paranüssen nicht geschätzt.
+- Bitte vor größeren Updates die verschlüsselten Tresordaten sichern.
+
+TESTS:
+node --test tests/*.test.mjs
+(935/935 erfolgreich)

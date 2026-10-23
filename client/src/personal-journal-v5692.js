@@ -16,7 +16,7 @@ export const FOOD_PRESETS=[
  ['oat-latte','☕','Hafermilch-Latte mit Monin Salted Caramel','Getränke','200 ml Hafermilch; 10 ml Sirup',125,140],
  ['milk-my-vay','🥛','My Vay Barista Haferdrink','Zutaten','100 ml',48,48],
  ['monin-caramel','🍮','Monin Salted Caramel Sirup','Zutaten','10 ml',32,33],
- ['matcha-powder','🍃','MatchaTherapy Matchapulver','Zutaten','1 TL (2 g)',5,9],
+ ['matcha-powder','🍃','MatchaTherapy 30+ Matchapulver','Zutaten','1 TL (2 g)',5,9],
  ['bio-kornbrot','🍞','Zurück zum Ursprung Bio Nur-Kornbrot','Zutaten','1 Scheibe (50 g)',134,134],
  ['butter-hofer','🧈','Hofer Bio-Butter','Zutaten','10 g',72,76],
  ['smoothie','🥤','Smoothie','Getränke','1 Glas (300 ml)',120,280],['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['tea-honey','🫖','Tee mit Honig','Getränke','1 Tasse (250 ml)',20,75],

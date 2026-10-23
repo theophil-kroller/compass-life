@@ -3,20 +3,21 @@
  * value is interpreted as zero and no compound content is fabricated.
  * User food log remains within the encrypted nutritionJournal vault. */
 import {nutritionEntries,nutritionFoods,nutritionKcalEstimate} from './personal-journal-v5692.js';
+import {DAILY_NRV,CAFFEINE_EFSA_ADULT_ORIENTATION_MG,GENERIC_MICRONUTRIENTS,APPLE_GENERIC_100G} from './nutrition-reference-v57722.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const N={
  kcal:['Energie','kcal'],protein:['Eiweiß','g'],carbs:['Kohlenhydrate','g'],sugar:['davon Zucker','g'],fat:['Fett','g'],saturated:['gesättigte Fettsäuren','g'],fiber:['Ballaststoffe','g'],salt:['Salz','g'],
- vitaminA:['Vitamin A','µg RAE'],vitaminC:['Vitamin C','mg'],vitaminD:['Vitamin D','µg'],vitaminE:['Vitamin E','mg'],vitaminK:['Vitamin K2','µg'],
+ vitaminA:['Vitamin A','µg RAE'],vitaminC:['Vitamin C','mg'],vitaminD:['Vitamin D','µg'],vitaminE:['Vitamin E','mg'],vitaminK:['Vitamin K (K1/K2)','µg'],
  vitaminB1:['Vitamin B1','mg'],vitaminB2:['Vitamin B2','mg'],niacin:['Vitamin B3 / Niacin','mg'],vitaminB6:['Vitamin B6','mg'],folate:['Folat','µg DFE'],vitaminB12:['Vitamin B12','µg'],biotin:['Biotin / B7','µg'],pantothenicAcid:['Pantothensäure / B5','mg'],
- calcium:['Calcium','mg'],iodine:['Jod','µg'],magnesium:['Magnesium','mg'],zinc:['Zink','mg'],selenium:['Selen','µg'],copper:['Kupfer','mg'],manganese:['Mangan','mg'],chromium:['Chrom','µg'],molybdenum:['Molybdän','µg'],potassium:['Kalium','mg'],choline:['Cholin','mg'],boron:['Bor','mg']
+ calcium:['Calcium','mg'],phosphorus:['Phosphor','mg'],iron:['Eisen','mg'],iodine:['Jod','µg'],magnesium:['Magnesium','mg'],zinc:['Zink','mg'],selenium:['Selen','µg'],copper:['Kupfer','mg'],manganese:['Mangan','mg'],chromium:['Chrom','µg'],molybdenum:['Molybdän','µg'],potassium:['Kalium','mg'],choline:['Cholin','mg'],boron:['Bor','mg']
 };
 const MACRO_ICONS=Object.freeze({kcal:'⚡',protein:'🥚',carbs:'🌾',sugar:'🍬',fat:'🥑',saturated:'🧈',fiber:'🌿',salt:'🧂'});
-const MICRO_ICONS=Object.freeze({vitaminA:'👁️',vitaminC:'🍊',vitaminD:'☀️',vitaminE:'🌻',vitaminK:'🥬',vitaminB1:'🌾',vitaminB2:'🥛',niacin:'✨',vitaminB6:'🌰',folate:'🥦',vitaminB12:'🧬',biotin:'🌱',pantothenicAcid:'⚙️',calcium:'🦴',iodine:'🌊',magnesium:'💪',zinc:'🛡️',selenium:'🔬',copper:'🪙',manganese:'🪨',chromium:'⚖️',molybdenum:'🔹',potassium:'🍌',choline:'🥚',boron:'🌿'});
+const MICRO_ICONS=Object.freeze({vitaminA:'👁️',vitaminC:'🍊',vitaminD:'☀️',vitaminE:'🌻',vitaminK:'🥬',vitaminB1:'🌾',vitaminB2:'🥛',niacin:'✨',vitaminB6:'🌰',folate:'🥦',vitaminB12:'🧬',biotin:'🌱',pantothenicAcid:'⚙️',calcium:'🦴',phosphorus:'🧬',iron:'🩸',iodine:'🌊',magnesium:'💪',zinc:'🛡️',selenium:'🔬',copper:'🪙',manganese:'🪨',chromium:'⚖️',molybdenum:'🔹',potassium:'🍌',choline:'🥚',boron:'🌿'});
 const BIOACTIVE_ICONS=Object.freeze({EGC:'🍵',EGCG:'🍃',caffeine:'☕',lTheanine:'🌿',tribulus:'🌱',saponins:'🍃',arginineHcl:'🧪',arginine:'🧬',maca:'🌱',pomegranate:'🍎',ellagic:'🫐',eleuthero:'🌿',eleutherosides:'🍃',maleBlend:'🌱',organicBlend:'🥬',enzymeBlend:'⚗️'});
 
 export const NUTRIENT_LABELS=N;
-const profile=(name,amount,unit,values,source='Etikett',extra={},note='')=>({name,reference:{amount,unit},nutrients:values,source,extra,note});
+const profile=(name,amount,unit,values,source='Etikett',extra={},note='')=>({name,reference:{amount,unit},nutrients:values,source,extra,note,estimatedNutrients:[]});
 const LABELLED={
  'milk-my-vay':profile('My Vay Barista Haferdrink · Hofer',100,'ml',{kcal:48,fat:2.3,saturated:.2,carbs:6.1,sugar:2.5,fiber:.2,protein:.6,salt:.11,calcium:120,vitaminB2:.21,vitaminD:1.1,vitaminB12:.38},'Etikett',{},'Angereichert mit Calcium, B2, B12 und D; Zucker aus Haferfermentation.'),
  'monin-caramel':profile('Monin Salted Caramel Sirup',100,'ml',{kcal:326,fat:0,saturated:0,carbs:80.3,sugar:80.3,protein:0,salt:1.01},'Etikett',{},'Kleiner Schuss: 10 ml geschätzt, nicht abgemessen.'),
@@ -29,14 +30,17 @@ const LABELLED={
  'bio-kornbrot':profile('Zurück zum Ursprung Bio Nur-Kornbrot',100,'g',{kcal:268,fat:12.2,saturated:1.6,carbs:26.2,sugar:2.5,fiber:8.1,protein:9.3,salt:1},'Etikett',{},'Eine Brotscheibe mit 50 g nur als vorläufige Menge; individuell abwiegbar.'),
  'butter-hofer':profile('Hofer Bio-Butter',100,'g',{kcal:740,fat:82,saturated:52,carbs:.6,sugar:.6,protein:.7,salt:.02},'Schätzung',{},'Marke bekannt, genaue Etikettwerte nicht vorliegend; 10 g pro bestrichener Scheibe geschätzt.'),
  'peanuts':profile('Hofer gesalzene Erdnüsse',100,'g',{kcal:610,protein:25,fat:50,saturated:7,carbs:10,sugar:5,fiber:8,salt:1},'Schätzung',{},'30 g pro Handvoll vorläufig; konkrete Packung und Portionsgewicht noch nicht bestätigt.'),
- 'matcha-powder':profile('MatchaTherapy Matchapulver',2,'g',{kcal:7},'Schätzung',{
-   EGC:{label:'Epigallocatechin (EGC)',value:null,unit:'mg',note:'Teecatechin, keine verifizierte Produktmenge'},
-   EGCG:{label:'Epigallocatechingallat (EGCG)',value:null,unit:'mg',note:'Teecatechin, keine verifizierte Produktmenge'},
-   caffeine:{label:'Koffein',value:null,unit:'mg',note:'Ohne validierte Etikettmenge keine Schätzung'},
-   lTheanine:{label:'L-Theanin',value:null,unit:'mg',note:'Ohne validierte Etikettmenge keine Schätzung'}
- },'1 TL ≈ 2 g geschätzt. Kein überprüfbares MatchaTherapy-Nährwertetikett vorhanden; EGC und EGCG sind unterschiedliche Stoffe.'),
+ 'matcha-powder':profile('MatchaTherapy 30+ BIO Matchapulver',1,'g',{kcal:3.5},'MatchaTherapy Hersteller (Mindestgehalte)',{
+   EGC:{label:'Epigallocatechin (EGC)',value:15,unit:'mg',mode:'minimum'},
+   EGCG:{label:'Epigallocatechingallat (EGCG)',value:30,unit:'mg',mode:'minimum'},
+   EC:{label:'Epicatechin (EC)',value:6,unit:'mg',mode:'minimum'},
+   catechin:{label:'Catechin',value:2,unit:'mg',mode:'minimum'},
+   caffeine:{label:'Koffein',value:28,unit:'mg',mode:'minimum'},
+   lTheanine:{label:'L-Theanin',value:null,unit:'mg',note:'Keine quantifizierte Herstellerangabe'}
+ },'Bestätigte Sorte 30+. 1 TL ≈ 2 g Pulver geschätzt; Gehalte sind Mindestwerte (mg/g), keine exakten Analysedurchschnitte. Quelle: https://matchatherapy.com/de-at'),
  'honey':profile('Honig, 1 TL',7,'g',{kcal:21,carbs:5.7,sugar:5.7},'Schätzung',{},'Teelöffel ≈ 7 g; kein Markenetikett.'),
- 'espresso':profile('Espresso',1,'Portion',{kcal:2},'Schätzung',{},'Nur Energie grob geschätzt, Wasser/Filterkaffee praktisch ohne Makros.'),
+ 'espresso':profile('Espresso · Richtwert 60 ml',1,'Portion',{kcal:2},'Schätzung / EFSA',{caffeine:{label:'Koffein',value:80,unit:'mg',mode:'estimate'}},'EFSA-Richtwert 80 mg je 60 ml Espresso; tatsächliche Shotgröße, Bohne und Zubereitung schwanken.'),
+ 'coffee':profile('Filterkaffee · Richtwert 200 ml',200,'ml',{kcal:2},'Schätzung / EFSA',{caffeine:{label:'Koffein',value:90,unit:'mg',mode:'estimate'}},'EFSA-Richtwert 90 mg je 200 ml Filterkaffee; tatsächlicher Kaffee variiert.'),
  // The source is the non-40+ ONE for Men formula (NIH DSLD 332616, UPC 743715001398).
  // 40+ is a different supplement with different strengths: do not silently mix formulations.
  'supplement-bluebonnet-one-men':profile('Bluebonnet ONE for Men · Whole Food-Based Multiple',1,'Kapseln',{
@@ -91,11 +95,26 @@ const LABELLED={
    lecithin:{label:'Lecithin',value:76,unit:'mg'}
  },'Alle Mengen gelten für 4 Kapseln. Niacin und Vitamin D3 auf Foto nicht sicher lesbar und deshalb NICHT quantifiziert. Supplement-Einnahme wird nur beim ausdrücklich erfassten Eintrag gezählt.')
 };
+// Append generic food-composition estimates WITHOUT overwriting user-photographed labels.
+for(const [id,micros] of Object.entries(GENERIC_MICRONUTRIENTS)){
+ const original=LABELLED[id];if(!original)continue;
+ const keys=Object.keys(micros).filter(k=>!Object.hasOwn(original.nutrients,k));
+ original.nutrients={...original.nutrients,...Object.fromEntries(keys.map(k=>[k,micros[k]]))};
+ original.estimatedNutrients=keys;
+ original.note+=' Ergänzende Mikronährstoffe: Referenzdaten ähnlicher Lebensmittel, nicht Herstelleretikett.'+(id==='mixed-nuts'?' Die Anteile außerhalb der 30 % Cashews und 10 % Paranüsse sind geschätzt; Selen wird wegen extremer Schwankungen von Paranüssen nicht beziffert.':'');
+}
+LABELLED.apple=profile('Apfel mit Schale · Referenzportion 100 g',100,'g',APPLE_GENERIC_100G,'USDA FDC 171688 (Durchschnitt)',{},'1 mittelgroßer Apfel ≈ 182 g essbarer Anteil; Vitamin C ≈ 8,4 mg. Sorten, Lagerung und Größe variieren.');
+LABELLED.apple.estimatedNutrients=Object.keys(APPLE_GENERIC_100G);
+LABELLED['matcha-powder'].estimatedNutrients=['kcal'];
+LABELLED.espresso.estimatedNutrients=['kcal'];
+LABELLED.coffee.estimatedNutrients=['kcal'];
 export const PRODUCT_PROFILES=Object.freeze(LABELLED);
 const round=x=>Math.round((x+Number.EPSILON)*100)/100;
 const amountNumber=x=>Number(String(x).replace(',','.'));
 function quantityFor(entry,food){
  const a=String(entry?.amount||food?.defaultAmount||'').toLowerCase();
+ if(entry.foodId==='apple'&&!/(?:\d+(?:[.,]\d+)?\s*(?:g|gramm)\b)/i.test(a)){const m=a.match(/(\d+(?:[.,]\d+)?)\s*(?:stücke?|äpfel)/i);return {value:(m?amountNumber(m[1]):1)*182,unit:'g'};}
+ if(entry.foodId==='coffee'&&!/\d+(?:[.,]\d+)?\s*ml/i.test(a))return {value:200,unit:'ml'};
  const match=a.match(/(\d+(?:[.,]\d+)?)\s*(g|gramm|ml|kapseln?|scheiben?|stücke?|cups?)(?!\w)/i);
  if(match){const val=amountNumber(match[1]),unit=match[2];if(unit.startsWith('kapsel'))return {value:val,unit:'Kapseln'};
  if(unit.startsWith('scheib'))return {value:val*(entry.foodId==='cheddar-hofer'?33:entry.foodId==='cheddar'?25:50),unit:'g'};
@@ -112,7 +131,7 @@ function rescale(profile,amount,unit,part='product'){
  if(!profile||!Number.isFinite(amount)||amount<0||profile.reference.unit!==unit)return null;
  const factor=amount/profile.reference.amount;
  const values=Object.fromEntries(Object.entries(profile.nutrients).map(([k,v])=>[k,round(v*factor)]));
- return {values,amount,unit,source:profile.source,name:profile.name,part,extra:Object.entries(profile.extra).map(([key,v])=>({key,...v,value:v.value===null?null:round(v.value*factor)})),note:profile.note};
+ return {values,amount,unit,source:profile.source,name:profile.name,part,estimatedKeys:profile.estimatedNutrients||[],extra:Object.entries(profile.extra).map(([key,v])=>({key,...v,value:v.value===null?null:round(v.value*factor)})),note:profile.note};
 }
 export function nutritionParts(foodId,amount='',food=null){
  const source=food||{id:foodId,defaultAmount:''};
@@ -122,7 +141,10 @@ export function nutritionParts(foodId,amount='',food=null){
  if(foodId==='matcha'||foodId==='matcha-oat-plain'){
    const milk=String(amount||'').match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:hafermilch|haferdrink)/i);
    const ml=milk?amountNumber(milk[1]):75;
-   return [piece('milk-my-vay',ml,'ml','Haferdrink'),piece('matcha-powder',2,'g','Matchapulver'),...(foodId==='matcha'?[piece('honey',7,'g','Honig')]:[])].filter(Boolean);
+   const gMatch=String(amount||'').match(/(?:matcha(?:pulver)?|pulver)\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*g\b|(?:\d+(?:[.,]\d+)?)\s*g\s*(?:matcha|pulver)/i);
+   const powdered=String(amount||'').match(/(\d+(?:[.,]\d+)?)\s*g\s*(?:matcha|pulver)/i);
+   const matchaG=gMatch?(gMatch[1]?amountNumber(gMatch[1]):powdered?amountNumber(powdered[1]):2):2;
+   return [piece('milk-my-vay',ml,'ml','Haferdrink'),piece('matcha-powder',matchaG,'g','Matchapulver'),...(foodId==='matcha'?[piece('honey',7,'g','Honig')]:[])].filter(Boolean);
  }
  if(foodId==='oat-latte'){
   const a=String(amount||''),milk=a.match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:hafermilch|haferdrink)/i),syrup=a.match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:sirup|monin)/i);
@@ -139,24 +161,25 @@ export function nutritionParts(foodId,amount='',food=null){
   return [piece('bio-kornbrot',breadG,'g','Brot'),piece('butter-hofer',butterG,'g','Butter'),...(foodId==='bread-cheese'?[piece('cheddar',25*slices,'g','Cheddar')]:[])].filter(Boolean);
  }
  if(foodId==='espresso')return [piece('espresso',1,'Portion','Espresso')];
+ if(foodId==='coffee')return [piece('coffee',value?.unit==='ml'?value.value:200,'ml','Filterkaffee')];
  if(foodId==='milk-my-vay'||foodId==='monin-caramel')return value?[piece(foodId,value.value,value.unit,'Produkt')].filter(Boolean):[];
  return value?[piece(foodId,value.value,value.unit,'Produkt')].filter(Boolean):[];
 }
 export function nutrientEntry(food,entry){
  const parts=nutritionParts(entry.foodId,entry.amount,food),totals={},knownKeys=new Set();
- const sources=new Set(),partialKeys=new Set();
- for(const p of parts){sources.add(p.source);for(const [k,v] of Object.entries(p.values)){totals[k]=round((totals[k]||0)+v);knownKeys.add(k);}}
+ const sources=new Set(),partialKeys=new Set(),estimatedKeys=new Set();
+ for(const p of parts){sources.add(p.source);for(const [k,v] of Object.entries(p.values)){totals[k]=round((totals[k]||0)+v);knownKeys.add(k);if(p.estimatedKeys?.includes(k))estimatedKeys.add(k);}}
  if(parts.length>1)for(const key of knownKeys)if(parts.some(p=>!Object.hasOwn(p.values,key)))partialKeys.add(key);
  if(!parts.length){const k=nutritionKcalEstimate(food,entry.amount);if(k){totals.kcal=round((k.low+k.high)/2);knownKeys.add('kcal');sources.add('Grobe Schätzung');}}
- return {entry,food,parts,values:totals,knownKeys,partialKeys,sources:[...sources]};
+ return {entry,food,parts,values:totals,knownKeys,partialKeys,estimatedKeys,sources:[...sources]};
 }
 const dateLocal=at=>{const d=new Date(at);return Number.isFinite(d.getTime())?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'';};
 export function nutritionDay(state,day){
  const foods=new Map(nutritionFoods(state).map(f=>[f.id,f]));
  const rows=nutritionEntries(state).filter(e=>dateLocal(e.at)===day).map(e=>nutrientEntry(foods.get(e.foodId),e));
- const totals={},coverage={};for(const key of Object.keys(N))coverage[key]={known:0,unknown:0,partial:0};
+ const totals={},coverage={};for(const key of Object.keys(N))coverage[key]={known:0,unknown:0,partial:0,estimated:0};
  for(const r of rows)for(const key of Object.keys(N)){
-   if(r.knownKeys.has(key)){coverage[key].known++;if(r.partialKeys.has(key))coverage[key].partial++;totals[key]=round((totals[key]||0)+(r.values[key]||0));}
+   if(r.knownKeys.has(key)){coverage[key].known++;if(r.partialKeys.has(key))coverage[key].partial++;if(r.estimatedKeys.has(key))coverage[key].estimated++;totals[key]=round((totals[key]||0)+(r.values[key]||0));}
    else coverage[key].unknown++;
  }
  return {day,entries:rows,totals,coverage,complete:rows.length>0&&Object.values(coverage).every(x=>x.unknown===0)};
@@ -166,8 +189,8 @@ export function bioactiveFromEntries(entries=[]){
  const groups=new Map();
  for(const entry of entries)for(const part of entry.parts||[])for(const extra of part.extra||[]){
   const key=String(extra.key||'');if(!key)continue;
-  const current=groups.get(key)||{key,label:extra.label||key,unit:extra.unit||'mg',known:0,unknown:0,value:0,partOf:extra.partOf||null,sources:new Set()};
-  if(typeof extra.value==='number'&&Number.isFinite(extra.value)){current.value+=extra.value;current.known++;}
+  const current=groups.get(key)||{key,label:extra.label||key,unit:extra.unit||'mg',known:0,unknown:0,value:0,partOf:extra.partOf||null,minimum:0,estimated:0,sources:new Set()};
+  if(typeof extra.value==='number'&&Number.isFinite(extra.value)){current.value+=extra.value;current.known++;if(extra.mode==='minimum')current.minimum++;if(extra.mode==='estimate')current.estimated++;}
   else current.unknown++;
   current.sources.add(part.name);
   groups.set(key,current);
@@ -177,27 +200,37 @@ export function bioactiveFromEntries(entries=[]){
 export function bioactiveDay(state,day){return bioactiveFromEntries(nutritionDay(state,day).entries);}
 function bioactiveSection(entries){
  const all=bioactiveFromEntries(entries);
- const teaKeys=['EGC','EGCG','caffeine','lTheanine'];
+ const teaKeys=['EGC','EGCG','EC','catechin','caffeine','lTheanine'];
  const tea=all.filter(x=>teaKeys.includes(x.key));
  const others=all.filter(x=>!teaKeys.includes(x.key));
- const line=x=>`<div class="ni712-row ni721-bioactive-row"><span class="ni712-nutrient-label"><span class="ni712-nutrient-icon" aria-hidden="true">${BIOACTIVE_ICONS[x.key]||'🧪'}</span>${esc(x.label)}</span><strong>${x.known?esc(pretty(x.value,x.unit)):'Nicht bestimmt'}</strong><small>${x.known?`${x.known} deklarierte Mengenangabe(n)${x.unknown?' · weitere Mengen unbekannt':''}`:'Im Produkt enthalten; keine verifizierte Mengenangabe'}${x.partOf?' · Bestandteil einer Mischung':''}</small></div>`;
+ const line=x=>`<div class="ni712-row ni721-bioactive-row"><span class="ni712-nutrient-label"><span class="ni712-nutrient-icon" aria-hidden="true">${BIOACTIVE_ICONS[x.key]||'🧪'}</span>${esc(x.label)}</span><strong>${x.known?esc(`${x.estimated?'≈ ':x.minimum&&x.minimum===x.known?'≥ ':''}${pretty(x.value,x.unit)}`):'Nicht bestimmt'}</strong><small>${x.known?`${x.known} Mengenangabe(n)${x.minimum?' · Hersteller-Mindestwert':''}${x.estimated?' · Schätzung':''}${x.unknown?' · weitere Mengen unbekannt':''}`:'Im Produkt enthalten; keine verifizierte Mengenangabe'}${x.partOf?' · Bestandteil einer Mischung':''}</small></div>`;
  const available=all.length>0;
- return `<section class="ni712-panel ni721-bioactive"><h3>🍵 Bioaktive Stoffe & Supplement-Inhaltsstoffe</h3><p class="ni721-bioactive-intro">Catechine wie <strong>EGC</strong> und <strong>EGCG</strong> sind keine Vitamine oder Mineralstoffe. Sie werden separat erfasst. Eine unbekannte Menge wird nie als 0 mg dargestellt.</p>${tea.length?`<div class="ni712-rows">${tea.map(line).join('')}</div>`:''}${others.length?`<details class="ni712-details"><summary>Weitere deklarierte Stoffe (${others.length})</summary><div class="ni712-rows">${others.map(line).join('')}</div></details>`:''}${!available?'<p class="muted-line">Heute keine Produkte mit hinterlegten bioaktiven Zusatzstoffen erfasst.</p>':''}</section>`;
+ return `<section class="ni712-panel ni721-bioactive"><h3>🍵 Bioaktive Stoffe & Supplement-Inhaltsstoffe</h3><p class="ni721-bioactive-intro">Koffein wird separat an einer EFSA-Sicherheitsorientierung gemessen (kein Ziel). Für Catechine gibt es keine offizielle empfohlene Tageszufuhr. Catechine wie <strong>EGC</strong> und <strong>EGCG</strong> sind keine Vitamine oder Mineralstoffe. Sie werden separat erfasst. Eine unbekannte Menge wird nie als 0 mg dargestellt.</p>${tea.length?`<div class="ni712-rows">${tea.map(line).join('')}</div>`:''}${(()=>{const caf=all.find(x=>x.key==='caffeine'&&x.known);if(!caf)return '';const pct=Math.round(caf.value/CAFFEINE_EFSA_ADULT_ORIENTATION_MG*100);return `<div class="ni722-caffeine"><strong>☕ Koffein: ${caf.estimated?'geschätzt / ':''}${caf.minimum?'mindestens ':''}${pretty(caf.value,'mg')}</strong><div class="ni722-track"><span style="width:${Math.min(100,pct)}%"></span></div><small>${pct} % von 400 mg · EFSA-Sicherheitsorientierung für gesunde Erwachsene, kein Tagesziel. Tatsächliche Menge kann abweichen.</small></div>`;})()}${others.length?`<details class="ni712-details"><summary>Weitere deklarierte Stoffe (${others.length})</summary><div class="ni712-rows">${others.map(line).join('')}</div></details>`:''}${!available?'<p class="muted-line">Heute keine Produkte mit hinterlegten bioaktiven Zusatzstoffen erfasst.</p>':''}</section>`;
 }
 const pretty=(n,unit)=>Number.isFinite(n)?`${n.toLocaleString('de-AT',{maximumFractionDigits:2})} ${unit}`:'–';
+export function nutrientReferenceProgress(key,value){
+ const n=DAILY_NRV[key];if(!Number.isFinite(n)||n<=0||!Number.isFinite(value))return null;
+ const pct=Math.round(value/n*100);return {key,value,reference:n,pct};
+}
+function nutrientGauge(key,value,known){
+ const p=known?nutrientReferenceProgress(key,value):null;if(!p)return '';
+ const width=Math.max(0,Math.min(100,p.pct));
+ return `<div class="ni722-reference" title="EU-Nährstoffreferenzwert für Erwachsene; kein individueller Tagesbedarf"><div class="ni722-track"><span style="width:${width}%"></span></div><span>${p.pct} % EU-NRV${p.pct>100?' · über Referenzwert':''}</span></div>`;
+}
+
 function section(title,keys,m,{icons=false}={}){return `<section class="ni712-panel"><h3>${esc(title)}</h3><div class="ni712-rows">${keys.map(key=>{
  const [label,unit]=N[key],cov=m.coverage[key],known=cov.known;
- const value=known?pretty(m.totals[key],unit):'–';
- return `<div class="ni712-row"><span class="ni712-nutrient-label">${icons?`<span class="ni712-nutrient-icon" aria-hidden="true">${MACRO_ICONS[key]||MICRO_ICONS[key]||'◦'}</span>`:''}${esc(label)}</span><strong>${esc(value)}</strong><small>${known?`${known}/${m.entries.length} Einträge mit Wert${cov.unknown||cov.partial?' · teilweise unbekannt':''}`:'Nicht bestimmt'}</small></div>`;
+ const value=known?`${cov.estimated?'≈ ':''}${pretty(m.totals[key],unit)}`:'–';
+ return `<div class="ni712-row"><span class="ni712-nutrient-label">${icons?`<span class="ni712-nutrient-icon" aria-hidden="true">${MACRO_ICONS[key]||MICRO_ICONS[key]||'◦'}</span>`:''}${esc(label)}</span><strong>${esc(value)}</strong><small>${known?`${known}/${m.entries.length} Einträge mit Wert${cov.unknown||cov.partial?' · teilweise unbekannt':''}${cov.estimated?' · teilweise geschätzt':''}`:'Nicht bestimmt'}</small>${nutrientGauge(key,m.totals[key],known)}</div>`;
  }).join('')}</div></section>`;}
 export function nutritionIntelligenceView(state,{day=dateLocal(new Date()),detail=''}={}){
  const m=nutritionDay(state,day),entries=m.entries,labels=N,detailProfile=LABELLED[detail];
- const productList=['matcha-powder','milk-my-vay','monin-caramel','mixed-nuts','peanuts','dried-mango','rice-pudding','pistachio-butter-cups','cheddar','cheddar-hofer','bio-kornbrot','butter-hofer','supplement-bluebonnet-one-men','supplement-fuerstenmed'];
+ const productList=['apple','coffee','espresso','matcha-powder','milk-my-vay','monin-caramel','mixed-nuts','peanuts','dried-mango','rice-pudding','pistachio-butter-cups','cheddar','cheddar-hofer','bio-kornbrot','butter-hofer','supplement-bluebonnet-one-men','supplement-fuerstenmed'];
  const head=`<section class="work-card ni712-root"><div class="ni712-header"><div><small>COMPASS · NUTRITION INTELLIGENCE</small><h2>Makro & Mikro · Tagesanalyse</h2><p>Nur tatsächlich protokollierte Produkte und Rezepte. Fehlende Werte sind unbekannt, nicht null.</p></div><div class="ni712-day"><button type="button" data-action="ni712-day" data-id="prev" aria-label="Vortag">←</button><strong>${esc(new Date(day+'T12:00:00').toLocaleDateString('de-AT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))}</strong><button type="button" data-action="ni712-day" data-id="next" aria-label="Folgetag">→</button><button type="button" data-action="ni712-day" data-id="today">Heute</button></div></div>
  <div class="ni712-kpis"><div><strong>${entries.length}</strong><small>Ernährungseinträge</small></div><div><strong>${m.coverage.kcal.known?pretty(m.totals.kcal,'kcal'):'–'}</strong><small>Erfasste Energie · Teilbilanz</small></div><div><strong>${m.coverage.protein.known?pretty(m.totals.protein,'g'):'–'}</strong><small>Bekanntes Eiweiß</small></div><div><strong>${m.coverage.fiber.known?pretty(m.totals.fiber,'g'):'–'}</strong><small>Bekannte Ballaststoffe</small></div></div>
- <p class="ni712-caveat">${entries.length?`${entries.length} Einträge · ${m.coverage.kcal.known} mit Energiewert · ${m.coverage.protein.unknown} ohne Proteindaten. Ein niedriger Wert zeigt keine Unterversorgung an.`:'Für diesen Tag sind noch keine Lebensmittel oder Nahrungsergänzungen protokolliert.'} Schätzwerte, Produktetiketten und unbekannte Nährstoffe werden getrennt gekennzeichnet. Kein Nachweis eines Nährstoffmangels.</p>
- <div class="ni712-grid">${section('Makronährstoffe',['kcal','protein','carbs','sugar','fat','saturated','fiber','salt'],m,{icons:true})}${section('Vitamine & Mineralstoffe',['vitaminA','vitaminC','vitaminD','vitaminE','vitaminK','vitaminB1','vitaminB2','niacin','vitaminB6','folate','vitaminB12','biotin','pantothenicAcid','calcium','iodine','magnesium','zinc','selenium','copper','manganese','chromium','molybdenum','potassium','choline','boron'],m,{icons:true})}</div>${bioactiveSection(entries)}
+ <p class="ni712-caveat">${entries.length?`${entries.length} Einträge · ${m.coverage.kcal.known} mit Energiewert · ${m.coverage.protein.unknown} ohne Proteindaten. Ein niedriger Wert zeigt keine Unterversorgung an.`:'Für diesen Tag sind noch keine Lebensmittel oder Nahrungsergänzungen protokolliert.'} Die Prozentbalken nutzen EU-NRV für allgemeine Erwachsene: weder persönlicher Bedarf noch sichere Obergrenze. Fehlende Lebensmittel und unvollständige Nährwerte können die Bilanz unterschätzen. Kein Nachweis eines Nährstoffmangels.</p>
+ <div class="ni712-grid">${section('Makronährstoffe',['kcal','protein','carbs','sugar','fat','saturated','fiber','salt'],m,{icons:true})}${section('Vitamine & Mineralstoffe',['vitaminA','vitaminC','vitaminD','vitaminE','vitaminK','vitaminB1','vitaminB2','niacin','vitaminB6','folate','vitaminB12','biotin','pantothenicAcid','calcium','phosphorus','iron','iodine','magnesium','zinc','selenium','copper','manganese','chromium','molybdenum','potassium','choline','boron'],m,{icons:true})}</div>${bioactiveSection(entries)}
  <details class="ni712-details"><summary>Welche Lebensmittel fließen ein? (${entries.length})</summary>${entries.length?`<div class="ni712-entry-list">${entries.map(x=>`<div><span><strong>${esc(x.food?.title||'Eigenes Lebensmittel')}</strong><small>${esc(x.entry.amount||'Menge unbekannt')}</small></span><span>${x.knownKeys.has('kcal')?esc(pretty(x.values.kcal,'kcal')):'kcal unbekannt'}<small>${esc(x.sources.join(' / ')||'Ohne Nährstoffprofil')}</small></span></div>`).join('')}</div>`:'<p>Keine Einträge vorhanden.</p>'}</details></section>`;
- const profiles=`<section class="work-card ni712-root"><h2>Produktwissen & Inhaltsstoffe</h2><p class="muted-line">Herstelleretiketten, Hersteller-Produktangaben und Schätzungen bleiben nachvollziehbar. Pflanzenstoffe und „davon“-Untergruppen werden nicht zu Vitamin- oder Makro-Summen addiert.</p><div class="ni712-product-list">${productList.map(id=>`<button type="button" data-action="ni712-profile" data-id="${esc(id)}" class="${id===detail?'active':''}">${esc(LABELLED[id].name)}</button>`).join('')}</div>${detailProfile?`<div class="ni712-profile"><h3>${esc(detailProfile.name)}</h3><p><strong>Daten:</strong> ${esc(detailProfile.source)} · je ${detailProfile.reference.amount} ${esc(detailProfile.reference.unit)}. ${esc(detailProfile.note)}</p><div class="ni712-profile-values">${Object.entries(detailProfile.nutrients).map(([k,v])=>`<div><span>${esc(labels[k]?.[0]||k)}</span><strong>${esc(pretty(v,labels[k]?.[1]||''))}</strong></div>`).join('')}</div>${Object.keys(detailProfile.extra).length?`<h4>Zusätzliche Inhaltsstoffe (nicht zu summieren)</h4><div class="ni712-profile-values">${Object.values(detailProfile.extra).map(x=>`<div><span>${esc(x.label)}</span><strong>${x.value===null?'Menge unbekannt':esc(pretty(x.value,x.unit))}</strong></div>`).join('')}</div>`:''}</div>`:'<p class="muted-line">Produkt antippen, um Nährwerte und zusätzliche Inhaltsstoffe zu sehen.</p>'}</section>`;
+ const profiles=`<section class="work-card ni712-root"><h2>Produktwissen & Inhaltsstoffe</h2><p class="muted-line">Herstelleretiketten, Hersteller-Produktangaben und Schätzungen bleiben nachvollziehbar. Pflanzenstoffe und „davon“-Untergruppen werden nicht zu Vitamin- oder Makro-Summen addiert.</p><div class="ni712-product-list">${productList.map(id=>`<button type="button" data-action="ni712-profile" data-id="${esc(id)}" class="${id===detail?'active':''}">${esc(LABELLED[id].name)}</button>`).join('')}</div>${detailProfile?`<div class="ni712-profile"><h3>${esc(detailProfile.name)}</h3><p><strong>Daten:</strong> ${esc(detailProfile.source)} · je ${detailProfile.reference.amount} ${esc(detailProfile.reference.unit)}. ${esc(detailProfile.note)}</p><div class="ni712-profile-values">${Object.entries(detailProfile.nutrients).map(([k,v])=>`<div><span>${esc(labels[k]?.[0]||k)}${detailProfile.estimatedNutrients.includes(k)?' ≈':''}</span><strong>${esc(pretty(v,labels[k]?.[1]||''))}</strong></div>`).join('')}</div>${Object.keys(detailProfile.extra).length?`<h4>Zusätzliche Inhaltsstoffe (nicht zu summieren)</h4><div class="ni712-profile-values">${Object.values(detailProfile.extra).map(x=>`<div><span>${esc(x.label)}</span><strong>${x.value===null?'Menge unbekannt':esc(`${x.mode==='minimum'?'≥ ':x.mode==='estimate'?'≈ ':''}${pretty(x.value,x.unit)}`)}</strong></div>`).join('')}</div>`:''}</div>`:'<p class="muted-line">Produkt antippen, um Nährwerte und zusätzliche Inhaltsstoffe zu sehen.</p>'}</section>`;
  return head+profiles;
 }

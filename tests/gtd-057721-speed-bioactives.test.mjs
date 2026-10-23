@@ -29,14 +29,16 @@ test('0.5.77.21: create forms render before encrypted save and preserve commit c
  assert.match(main,/scheduleSync\(12000\);return/);
  assert.match(main,/Eingabe: Vorlagenitem/);
 });
-test('0.5.77.21: Matcha EGC and EGCG have separate daily records with unknown, not fabricated milligrams',()=>{
+test('0.5.77.22: confirmed MatchaTherapy 30+ minimum EGC and EGCG are quantified separately',()=>{
  const state={nutritionJournal:{entries:[],customFoods:[]}};
  addNutrition(state,{foodId:'matcha-oat-plain',at});
  const c=bioactiveDay(state,d);
- assert.equal(c.find(x=>x.key==='EGC').known,0);
- assert.equal(c.find(x=>x.key==='EGC').unknown,1);
- assert.equal(c.find(x=>x.key==='EGCG').known,0);
- assert.equal(c.find(x=>x.key==='EGCG').unknown,1);
+ assert.equal(c.find(x=>x.key==='EGC').known,1);
+ assert.equal(c.find(x=>x.key==='EGC').value,30);
+ assert.equal(c.find(x=>x.key==='EGC').minimum,1);
+ assert.equal(c.find(x=>x.key==='EGCG').known,1);
+ assert.equal(c.find(x=>x.key==='EGCG').value,60);
+ assert.equal(c.find(x=>x.key==='EGCG').minimum,1);
  const html=nutritionIntelligenceView(state,{day:d});
  assert.match(html,/Epigallocatechin \(EGC\)/);
  assert.match(html,/Epigallocatechingallat \(EGCG\)/);

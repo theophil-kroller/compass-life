@@ -133,7 +133,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.21';
+const COMPASS_CLIENT_VERSION='0.5.77.22';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -3115,7 +3115,7 @@ async function placeInDailyPlan(taskId,start,moveId=null){
 async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='perf719-toggle'){performanceTrace.setEnabled(!performanceTrace.enabled);try{localStorage.setItem('compass.perf.v57719',performanceTrace.enabled?'on':'off');}catch{}render();return;}
  if(action==='perf719-clear'){performanceTrace.clear();render();return;}
- if(action==='perf719-export'){download('compass-performance-0.5.77.21.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
+ if(action==='perf719-export'){download('compass-performance-0.5.77.22.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
  if(action==='people-sync719-toggle'){
   if(!state?.privateDeviceMirror?.key){toast('Zuerst den verschlüsselten Geräteabgleich einrichten.',true);return;}
   if(!state.peopleSyncEnabled&&!confirm('Kontaktprofile einschließlich persönlicher Notizen werden Ende-zu-Ende verschlüsselt mit deinem verbundenen Gerät abgeglichen. Wirklich aktivieren?'))return;
