@@ -1,3 +1,5 @@
+import {createPerformanceTrace} from '../client/src/performance-trace-v57719.js';
+import * as peopleSync719 from '../client/src/people-sync-v57719.js';
 import * as agendaIndex717 from '../client/src/people-agenda-index-v57717.js';
 import * as planIndex717 from '../client/src/plan-tree-index-v57717.js';
 import {createEditDraftGuard} from '../client/src/edit-draft-guard-v57716.js';
@@ -71,7 +73,7 @@ function context(){
  Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,discoveryFreshness5777,cinemaModule5772,cinemaDetails5773,eventSync,relationships);
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
- ctx.createEditDraftGuard=createEditDraftGuard;
+ ctx.createEditDraftGuard=createEditDraftGuard;ctx.createPerformanceTrace=createPerformanceTrace;Object.assign(ctx,peopleSync719);
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
  Object.assign(ctx,habitSync5731,calendarCache574);
  Object.assign(ctx,smartImportHubModule,healthCoverage494,timeoff554,radar555,lifeBalance63,feelingWheel65);

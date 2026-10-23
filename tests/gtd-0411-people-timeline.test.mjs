@@ -1,3 +1,5 @@
+import {createPerformanceTrace} from '../client/src/performance-trace-v57719.js';
+import * as peopleSync719 from '../client/src/people-sync-v57719.js';
 import * as agendaIndex717 from '../client/src/people-agenda-index-v57717.js';
 import * as planIndex717 from '../client/src/plan-tree-index-v57717.js';
 import {createEditDraftGuard} from '../client/src/edit-draft-guard-v57716.js';
@@ -54,7 +56,7 @@ function setup(){
  Object.assign(ctx,habitSync5731,calendarCache574);
  ctx.touchPersonSummary=touchPersonSummary;
  ctx.technicalSettings=technicalSettings;
- ctx.createEditDraftGuard=createEditDraftGuard;
+ ctx.createEditDraftGuard=createEditDraftGuard;ctx.createPerformanceTrace=createPerformanceTrace;Object.assign(ctx,peopleSync719);
  ctx.vault={save:async()=>{},lock:()=>{}};ctx.privateChanged=()=>false;
  runInNewContext(compiled,ctx,{filename:'browser-ui-smoke.js',timeout:2000});
  return ctx;

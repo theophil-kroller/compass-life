@@ -35,6 +35,10 @@ import {deadlineSuggestions,contactSuggestions} from './calendar-intelligence-v5
 import {RELATION_KINDS,GENDER_MARKERS,CADENCE_DAYS,preference,contactImpulse,impulseQueue,pauseContact,mapPosition,mapDrop,safePersonDetails,relatedProjectIds,contactWeight} from './relationship-radar-v564.js';
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {buildPersonAgendaIndex,sortPeopleByOpenItems} from './people-agenda-index-v57717.js';
+import {mergePeopleDirectory,markChangedPeople} from './people-sync-v57719.js';
+import {createPerformanceTrace} from './performance-trace-v57719.js';
+import './mobile-planning-v57719.css';
+import './performance-trace-v57719.css';
 import {buildPlanTreeIndex} from './plan-tree-index-v57717.js';
 import {projectHealth,waitingReview,repeatedTask} from './gtd-intelligence-v23.js';
 import {validateLifeGoal,lifeGoals,lifeGoalProgress,smartDailyChoices,energyModes,timeModes,LIFE_AREAS,lifeAreaLabel} from './life-intelligence-v22.js';
@@ -126,13 +130,23 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.18';
+const COMPASS_CLIENT_VERSION='0.5.77.19';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
 let saveQueue=Promise.resolve();
 let calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let selectedDay=localDateString(new Date());
+const performanceTrace=createPerformanceTrace();
+try{performanceTrace.setEnabled(localStorage.getItem('compass.perf.v57719')==='on');}catch{}
+function performancePanel(){
+ const rows=performanceTrace.summary().slice(0,18);
+ return `<section class="work-card perf719" aria-label="Laufzeitmessung"><div class="work-heading"><span>${ico('clock',18)} Laufzeitmessung · Gerät</span><span class="quiet-tag">Nur lokal · kein Aufgabeninhalt</span></div>
+ <p class="muted-line">Misst Browseraktionen, Bildschirmaufbau, Tresorspeicherung und Abgleiche auf diesem Gerät. Standardmäßig deaktiviert. Keine Inhalte, Namen oder Aufgabentitel werden erfasst.</p>
+ <div class="system-actions"><button type="button" class="secondary-btn" data-action="perf719-toggle">${performanceTrace.enabled?'Messung beenden':'Messung starten'}</button><button type="button" class="secondary-btn" data-action="perf719-export" ${!performanceTrace.entries().length?'disabled':''}>Messwerte exportieren</button><button type="button" class="secondary-btn" data-action="perf719-clear" ${!performanceTrace.entries().length?'disabled':''}>Messwerte löschen</button></div>
+ <small>${performanceTrace.enabled?'Messung aktiv':'Messung aus'} · ${performanceTrace.entries().length} Messungen im Arbeitsspeicher · bei Neuladen verworfen</small>
+ ${rows.length?`<div class="perf719-table"><div><strong>Vorgang / Ansicht</strong><strong>Anzahl</strong><strong>Ø ms</strong><strong>Max. ms</strong></div>${rows.map(r=>`<div><span>${h(r.label)}</span><span>${r.count}</span><span>${r.avg}</span><span>${r.max}</span></div>`).join('')}</div>`:'<p class="muted-line">Noch keine Messungen. Messung starten und Heute, Inbox, Planen oder Menschen benutzen.</p>'}</section>`;
+}
 let selectedInboxId=null;
 let selectedDreamId=null;
 let selectedTaskId=null;
@@ -210,7 +224,7 @@ let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let touchPeriod=30,touchEditingId='',touchQuickOpen=false,touchDefaultPersonId='';
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',nutritionView712='journal',nutritionDay712=localDateString(new Date()),nutritionProduct712='matcha-powder',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
 let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLastConfirmedAt=0;
-function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null]);}
+function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
 function scheduleJournalSync(delay=0){
  clearTimeout(journalSyncTimer);journalSyncTimer=null;
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
@@ -539,8 +553,9 @@ function watchOverview(){
 
 let weather={status:'idle',city:'Graz',temperature:null,label:''};
 function persist() {
+  const measurement=performanceTrace.start();
   const snapshot=structuredClone(state);
-  saveQueue=saveQueue.catch(()=>{}).then(()=>vault.save(snapshot));
+  saveQueue=saveQueue.catch(()=>{}).then(()=>vault.save(snapshot)).finally(()=>performanceTrace.end('Tresor speichern',tab,measurement));
   return saveQueue;
 }
 const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -570,6 +585,9 @@ async function mutate(fn,committedEditForm=null,skipFinalRender=false) {
   const journalBefore=trackJournal?journalFingerprint(state):null;
   try {
     fn(state);invalidateDerivedInsights();
+    if(tab==='people'&&state.peopleSyncEnabled===true){
+      state.peopleDeleted=markChangedPeople(previous.people||{},state.people||{},state.peopleDeleted||{},stamp());
+    }
     // Expensive finance / health JSON comparisons are only needed when encrypted mirroring is active.
     if(['source','receiver'].includes(state.privateDeviceMirror?.mode)&&privateChanged(previous,state)){
       if(state.privateDeviceMirror?.mode==='receiver')throw Error('Finanz- und importierte Sportdaten sind auf diesem Gerät im Lesemodus. Bitte Änderungen am Hauptgerät durchführen.');
@@ -1184,7 +1202,7 @@ function taskProgressInline(t){
 function taskList(items,scope,hideEmpty=false){
  const nextScope=scope==='next';
  const yesterdayIds=nextScope?new Set(yesterdayIntentions(state,localDate()).map(x=>x.task.id)):new Set();
- return items.length?`<div class="task-list ${nextScope?'next38-list':''}" data-scope="${h(scope)}">${items.map((t,i)=>`<div class="task-row ${nextScope?'next38-row':''} ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}" ${nextScope?`data-next-row="${h(t.id)}"`:''}>${nextScope?`<span class="next38-drag" draggable="true" data-next-drag="${h(t.id)}" role="img" aria-label="${h(t.title)} zum Sortieren ziehen" title="Ziehen zum Sortieren, alternativ Pfeiltasten">⠿</span>`:''}<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button>${inlineTaskTitle(t,`<span ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`:''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}${nextScope&&t.plannedDate===localDate()?' · Für heute vorgemerkt':''}</small>${nextScope&&yesterdayIds.has(t.id)?'<span class="yesterday710-label">↶ Gestern geplant</span>':''}${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</span>`)}${taskProgressInline(t)}${nextScope?`<button type="button" class="next38-today ${t.plannedDate===localDate()?'is-planned':''}" data-action="next-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" title="${t.plannedDate===localDate()?'Heute-Vormerkung entfernen':'Ohne Fälligkeitsdatum für heute vormerken'}">${ico('calendar',14)} <span>${t.plannedDate===localDate()?'Heute ✓':'Heute'}</span></button><span class="next38-move"><button type="button" data-action="next-move-up" data-id="${h(t.id)}" aria-label="${h(t.title)} nach oben" title="Nach oben" ${i===0?'disabled':''}>↑</button><button type="button" data-action="next-move-down" data-id="${h(t.id)}" aria-label="${h(t.title)} nach unten" title="Nach unten" ${i===items.length-1?'disabled':''}>↓</button></span>`:''}${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;
+ return items.length?`<div class="task-list ${nextScope?'next38-list':''}" data-scope="${h(scope)}">${items.map((t,i)=>`<div class="task-row ${nextScope?'next38-row':''} ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}" ${nextScope?`data-next-row="${h(t.id)}"`:''}>${nextScope?`<span class="next38-drag" draggable="true" data-next-drag="${h(t.id)}" role="img" aria-label="${h(t.title)} zum Sortieren ziehen" title="Ziehen zum Sortieren, alternativ Pfeiltasten">⠿</span>`:''}<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':''}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button>${inlineTaskTitle(t,`<span ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`:''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}${nextScope&&t.plannedDate===localDate()?' · Für heute vorgemerkt':''}</small>${nextScope&&yesterdayIds.has(t.id)?'<span class="yesterday710-label">↶ Gestern geplant</span>':''}${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</span>`)}${taskProgressInline(t)}${nextScope?`<button type="button" class="next38-today ${t.plannedDate===localDate()?'is-planned':''}" data-action="next-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" title="${t.plannedDate===localDate()?'Heute-Vormerkung entfernen':'Ohne Fälligkeitsdatum für heute vormerken'}">${ico('calendar',14)} <span>${t.plannedDate===localDate()?'Heute ✓':'Heute'}</span></button><span class="next38-move"><button type="button" data-action="next-move-up" data-id="${h(t.id)}" aria-label="${h(t.title)} nach oben" title="Nach oben" ${i===0?'disabled':''}>↑</button><button type="button" data-action="next-move-down" data-id="${h(t.id)}" aria-label="${h(t.title)} nach unten" title="Nach unten" ${i===items.length-1?'disabled':''}>↓</button></span>`:''}${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;
 }
 function waitingSourceAction(t){
  const origin=state?.tasks?.[waitingSourceId(t)];
@@ -1273,7 +1291,7 @@ function treeTaskRows(projectId,parentTaskId=null,depth=0,visited=new Set(),inde
   return `<div class="tree-entry tree-task" data-drag-type="task" data-drag-id="${h(t.id)}"><div class="tree-line tree-drop-target ${selectedTaskId===t.id?'selected':''}" data-drop-type="task" data-drop-id="${h(t.id)}" style="--depth:${depth+1}">
    ${hasChildren?`<button type="button" class="tree-expander" data-action="tree-task-toggle" data-id="${h(t.id)}" aria-label="Unteraufgaben ${collapsed?'anzeigen':'verbergen'}" aria-expanded="${!collapsed}">${collapsed?'▸':'▾'}</button>`:'<span class="tree-expander-space"></span>'}
    <span class="tree-drag-handle" draggable="true" data-drag-type="task" data-drag-id="${h(t.id)}" title="Ziehen zum Verschieben" aria-label="Aufgabe ziehen">⋮⋮</span>
-   ${isTemplateTask(state,t)?`<span class="shopping-master-icon" title="Vorlagen-Eintrag, kein abzuhakender Einkauf">◇</span>`:`<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button>`}
+   ${isTemplateTask(state,t)?`<span class="shopping-master-icon" title="Vorlagen-Eintrag, kein abzuhakender Einkauf">◇</span>`:`<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':''}</button>`}
    ${inlineTaskTitle(t,`<span>${h(t.title)}</span>${due}`,'tree-task-select')}
    ${taskProgressInline(t)}
    ${!t.completed&&!isTemplateTask(state,t)?`<button type="button" class="tree-today-check ${t.plannedDate===localDate()?'is-planned':''}" data-action="tree-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" aria-label="${h(t.title)}: ${t.plannedDate===localDate()?'Aus Heute entfernen':'Für Heute auswählen'}" title="${t.plannedDate===localDate()?'Aus Heute entfernen':'Für Heute auswählen – keine Deadline'}" ${!isActionAvailable(state,t,localDate())&&t.plannedDate!==localDate()?'disabled':''}><span class="tree-today-box" aria-hidden="true">${t.plannedDate===localDate()?'✓':''}</span><span>Heute</span></button>`:''}
@@ -1541,14 +1559,14 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null};}
-function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.feelingCheckins=m.feelingCheckins;if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.feelingCheckins=m.feelingCheckins;if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
 async function syncPersonalJournal(){
  // One E2EE journal flight per device. Mutations during flight queue an immediate
  // follow-up instead of being hidden by a generic "synced" status.
  if(journalSyncInFlight)return journalSyncInFlight;
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine){journalSyncStatus='lokal';return false;}
- const startRevision=journalRevision;
+ const startRevision=journalRevision, journalMeasurement=performanceTrace.start();
  journalSyncInFlight=(async()=>{
   journalSyncBusy=true;journalSyncStatus='abgleich';render();
   const cfg=state.privateDeviceMirror;
@@ -1592,7 +1610,7 @@ async function syncPersonalJournal(){
    journalSyncBusy=false;
    journalSyncInFlight=null;
    if(journalRevision!==startRevision){journalSyncStatus='lokal';scheduleJournalSync(0);}
-   render();
+   render();performanceTrace.end('Journal-Abgleich',tab,journalMeasurement);
   }
  })();
  return journalSyncInFlight;
@@ -1689,6 +1707,12 @@ function systemScreen(){
  <div class="security-line">${ico('check',17)} AES-256-GCM verschlüsselte Speicherung</div><div class="security-line">${ico('check',17)} Passphrase bleibt auf deinem Gerät</div><div class="security-line">${ico('check',17)} Keine privaten Aufgaben in GitHub</div>
  <button class="secondary-btn full" data-action="export-encrypted">Verschlüsseltes Backup herunterladen</button><button class="secondary-btn full" data-action="export-json">Klartext-JSON exportieren</button><p class="small-muted">Klartext-Exporte enthalten unverschlüsselte private Inhalte.</p></section></div>
  ${privateMirrorSettings()}
+ <section class="work-card people-sync719"><div class="work-heading"><span>${ico('people',18)} Kontaktprofile geräteübergreifend</span><span class="quiet-tag">E2EE · ausdrücklich aktivieren</span></div>
+ <p class="muted-line">Bisher wurden Kontakte einschließlich Beziehungslandkarte nur im lokalen Tresor gespeichert. Die normale Projekt-/Inbox-Synchronisierung überträgt keine Kontakte. Mit diesem Schalter werden Kontakte und persönliche Notizen über den bereits eingerichteten, Ende-zu-Ende-verschlüsselten Journalabgleich zusammengeführt. Bitte auf <strong>beiden Geräten</strong> aktivieren. Eine leere Liste überschreibt keine vorhandenen Kontakte.</p>
+ <p class="small-muted">Auf diesem Gerät: <strong>${Object.keys(state?.people||{}).length}</strong> Kontaktprofile · Journalabgleich: ${state?.privateDeviceMirror?.key?'eingerichtet':'nicht eingerichtet'} · Profile: ${state?.peopleSyncEnabled?'freigegeben':'nur lokal'}</p>
+ <div class="system-actions"><button type="button" class="secondary-btn" data-action="people-sync719-toggle" ${!state?.privateDeviceMirror?.key?'disabled':''}>${state?.peopleSyncEnabled?'Kontaktsynchronisierung ausschalten':'Kontaktsynchronisierung aktivieren'}</button>${state?.peopleSyncEnabled?`<button type="button" class="secondary-btn" data-action="people-sync719-now" ${!authToken?'disabled':''}>Kontaktprofile jetzt abgleichen</button>`:''}</div>
+ ${!state?.privateDeviceMirror?.key?'<small>Vorher oben den verschlüsselten Geräteabgleich mit derselben Passphrase auf PC und Handy einrichten. Bis dahin bleiben alle Kontakte lokal und unverändert.</small>':''}</section>
+ ${performancePanel()}
  <section class="work-card ux-settings" aria-label="Darstellung anpassen"><div class="work-heading"><span>${ico('settings',18)} Darstellung & Bedienung</span><span class="quiet-tag">Nur auf diesem Gerät</span></div>
  <p class="muted-line">Diese Einstellungen werden verschlüsselt in deinem lokalen Tresor gespeichert.</p>
  <div class="ux-settings-row"><div><strong>Weitere Ansichten dauerhaft öffnen</strong><small>Flagged, On Hold, Dreams und Aktivitäten in der Navigation anzeigen.</small></div><button type="button" class="secondary-btn" data-action="nav-more">${state?.uiPreferences?.advancedNav?'Ausblenden':'Einblenden'}</button></div>
@@ -1776,6 +1800,7 @@ function peopleScreen(){
  // One pass over tasks/Inbox for all contacts, instead of O(people × tasks × inbox).
  const index=buildPersonAgendaIndex(Object.values(state?.people||{}),state?.tasks,rows(),state?.projects);
  const people=sortPeopleByOpenItems(Object.values(state?.people||{}),index);
+ if(!people.length&&peopleTab==='map')peopleTab='list';
  const selected=people.find(p=>p.id===selectedPersonId)||people[0];
  const taskListFor=p=>index.get(p.id)?.tasks||[];
  const inboxFor=p=>index.get(p.id)?.inbox||[];
@@ -1788,7 +1813,7 @@ function peopleScreen(){
  const contact=selected?contactSummaries.get(selected.id):null;
  const contactLabel=contact?.last?new Date(contact.last.day+'T12:00:00').toLocaleDateString('de-AT'):'Noch kein bestätigter Kontakt';
  const touchSummary=selected&&peopleRadarExpanded?touchPersonSummary(state,selected.id):{count:0,latest:null,suggestions:[]};
- return chrome(`${selected?`<section class="p717-task-strip" aria-label="Offene Punkte zu ${h(selected.name)}"><div><strong>📋 ${h(selected.name)}</strong><small>${related.length} offene Aufgaben · ${relatedInbox.length} offene Inbox-Punkte · ${waiting} Waiting For</small></div><span class="p717-task-strip-count">${related.length+relatedInbox.length} offen</span></section>`:''}<nav class="relationship-tabs" aria-label="Menschen-Ansichten"><button type="button" data-action="people-tab" data-id="list" class="${peopleTab==='list'?'is-active':''}">☷ Kontakte</button><button type="button" data-action="people-tab" data-id="map" class="${peopleTab==='map'?'is-active':''}">◎ Beziehungslandkarte</button></nav><div class="people-grid ${peopleTab==='map'?'map-active':''}">${peopleTab==='map'?peopleMapMarkup(people,selected):`<section class="work-card"><div class="work-heading"><span>${ico('people',18)} Menschen · offene To-dos zuerst</span><span class="quiet-tag">${people.length}</span></div><details class="people-add-person"><summary>${ico('plus',14)} Person hinzufügen</summary><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Hinzufügen</button></form></details><div class="people-list">${visiblePeople.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} Aufgaben · ${inboxFor(p).length} Inbox${contactSummaries.get(p.id)?.last?' · zuletzt '+h(contactSummaries.get(p.id).last.day):''}${p.birthdayMonthDay?` · 🎂 ${h(p.birthdayMonthDay.slice(3))}.${h(p.birthdayMonthDay.slice(0,2))}.`:""}</small></button><div class="people-quick-actions"><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="call" title="Telefonat dokumentieren" aria-label="Telefonat mit ${h(p.name)} dokumentieren">☎</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="meeting" title="Persönliches Treffen dokumentieren" aria-label="Treffen mit ${h(p.name)} dokumentieren">☕</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="email" title="E-Mail dokumentieren" aria-label="E-Mail mit ${h(p.name)} dokumentieren">✉</button></div>`).join('')||'<p class="muted-line">Noch keine Kontakte. Personen und Notizen bleiben in deinem verschlüsselten lokalen Tresor.</p>'}</div>${people.length>visiblePeople.length?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-all">Alle ${people.length} Kontakte anzeigen</button>`:peopleShowAll&&people.length>80?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-less">Nur erste 80 anzeigen</button>`:''}</section>`}
+ return chrome(`${!people.length?`<section class="work-card people-sync719-alert" role="status"><strong>Auf diesem Gerät sind keine Kontaktprofile im lokalen Tresor gespeichert.</strong><p>Die grüne Meldung „Synchronisiert“ gilt bisher für Projekte, Aufgaben und Inbox – nicht automatisch für Menschen. Deine Kontakte können im Tresor eines anderen Geräts liegen. Bitte nicht neu anlegen, bevor du das dort überprüft hast.</p><p>${state?.peopleSyncEnabled?'Kontakt-Sync aktiviert: Auf dem Gerät mit vorhandenen Kontakten ebenfalls aktivieren und beide Geräte abgleichen.':'Für eine sichere Übernahme den verschlüsselten Kontakt-Sync auf beiden Geräten bewusst einschalten.'}</p><button type="button" class="secondary-btn" data-tab="system">Geräteabgleich & Kontakt-Sync öffnen</button></section>`:''}${selected?`<section class="p717-task-strip" aria-label="Offene Punkte zu ${h(selected.name)}"><div><strong>📋 ${h(selected.name)}</strong><small>${related.length} offene Aufgaben · ${relatedInbox.length} offene Inbox-Punkte · ${waiting} Waiting For</small></div><span class="p717-task-strip-count">${related.length+relatedInbox.length} offen</span></section>`:''}<nav class="relationship-tabs" aria-label="Menschen-Ansichten"><button type="button" data-action="people-tab" data-id="list" class="${peopleTab==='list'?'is-active':''}">☷ Kontakte</button><button type="button" data-action="people-tab" data-id="map" class="${peopleTab==='map'?'is-active':''}">◎ Beziehungslandkarte</button></nav><div class="people-grid ${peopleTab==='map'?'map-active':''}">${peopleTab==='map'?peopleMapMarkup(people,selected):`<section class="work-card"><div class="work-heading"><span>${ico('people',18)} Menschen · offene To-dos zuerst</span><span class="quiet-tag">${people.length}</span></div><details class="people-add-person"><summary>${ico('plus',14)} Person hinzufügen</summary><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Hinzufügen</button></form></details><div class="people-list">${visiblePeople.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} Aufgaben · ${inboxFor(p).length} Inbox${contactSummaries.get(p.id)?.last?' · zuletzt '+h(contactSummaries.get(p.id).last.day):''}${p.birthdayMonthDay?` · 🎂 ${h(p.birthdayMonthDay.slice(3))}.${h(p.birthdayMonthDay.slice(0,2))}.`:""}</small></button><div class="people-quick-actions"><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="call" title="Telefonat dokumentieren" aria-label="Telefonat mit ${h(p.name)} dokumentieren">☎</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="meeting" title="Persönliches Treffen dokumentieren" aria-label="Treffen mit ${h(p.name)} dokumentieren">☕</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="email" title="E-Mail dokumentieren" aria-label="E-Mail mit ${h(p.name)} dokumentieren">✉</button></div>`).join('')||'<p class="muted-line">Noch keine Kontakte. Personen und Notizen bleiben in deinem verschlüsselten lokalen Tresor.</p>'}</div>${people.length>visiblePeople.length?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-all">Alle ${people.length} Kontakte anzeigen</button>`:peopleShowAll&&people.length>80?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-less">Nur erste 80 anzeigen</button>`:''}</section>`}
  <section class="work-card"><div class="work-heading"><span>${ico('list',18)} ${selected?h(selected.name):'Gesprächsvorbereitung'}</span>${selected?`<button class="secondary-btn" type="button" data-action="person-remove" data-id="${h(selected.id)}">Entfernen</button>`:''}</div>${selected?`<p class="muted-line">${related.length} offene Aufgaben · ${relatedInbox.length} noch in der Inbox · ${waiting} Waiting For</p>
  <section class="people-agenda-first"><div class="work-heading"><span>${ico('list',17)} Offene To-dos & Gesprächspunkte</span><span class="quiet-tag">${related.length} Aufgaben · ${relatedInbox.length} Inbox</span></div><div class="people-agendas">${related.map(t=>`<div class="person-point-row"><button type="button" class="person-quick-check" data-action="person-task-done" data-id="${h(t.id)}" aria-label="${h(t.title)} als erledigt markieren" title="Aufgabe erledigen" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)}</button><details class="person-point" data-point="task" data-id="${h(t.id)}" ${personOpenPointId===t.id?'open':''}><summary><span class="person-point-symbol">${ico('checkSquare',16)}</span><span class="person-point-title"><strong>${h(t.title)}</strong><small>${h(t.workflow==='waiting'?'Waiting For':'Aufgabe / Agenda')}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="task" data-id="${h(t.id)}"><label>Notiz zu diesem Punkt<textarea name="note" maxlength="3000" rows="3" placeholder="Was haben wir besprochen?">${h(t.note||'')}</textarea></label>${state?.taskConflicts?.[t.id]?'<p class="person-point-warning">Bearbeitungskonflikt: Bitte zuerst in der Aufgabenansicht auflösen.</p>':''}<div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>Notiz speichern</button><button type="submit" name="intent" value="done" class="primary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)} Erledigt</button></div></form></details></div>`).join('')||'<p class="muted-line">Keine offenen Aufgaben mit diesem Personentag.</p>'}</div>${relatedInbox.length?`<section class="people-linked-inbox"><h3>${ico('inbox',16)} Noch in der Inbox · ${relatedInbox.length}</h3>${relatedInbox.map(r=>`<details class="person-point" data-point="inbox" data-id="${h(r.id)}" ${personOpenPointId===r.id?'open':''}><summary><span class="person-point-symbol">${ico('inbox',16)}</span><span class="person-point-title"><strong>${h(r.title)}</strong><small>Noch zu klären · kein erledigbarer Task</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="inbox" data-id="${h(r.id)}"><label>Gesprächsnotiz<textarea name="note" maxlength="10000" rows="3" placeholder="Was ist dazu besprochen worden?">${h(r.note||'')}</textarea></label><div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn">Notiz speichern</button><button type="submit" name="intent" value="discussed" class="primary-btn">${ico('check',15)} Besprochen &amp; archivieren</button></div><small>Archivieren ist keine Erledigung einer Aufgabe. Später kannst du aus der Inbox bei Bedarf eine Next Action erstellen.</small></form></details>`).join('')}</section>`:''}<form id="person-agenda-form" data-id="${h(selected.id)}" class="people-agenda-capture"><label>Gesprächsthema ergänzen<input name="title" required maxlength="180" placeholder="Was möchte ich mit dieser Person besprechen?"/></label><button type="submit" class="secondary-btn">${ico('plus',15)} Hinzufügen</button></form></section>
  <section class="p717-optional-relationship"><button type="button" class="secondary-btn p717-radar-toggle" data-action="people-radar-toggle" aria-expanded="${peopleRadarExpanded}">${ico('people',16)} Beziehung & Nähe ${peopleRadarExpanded?'ausblenden':'anzeigen'} ${ico('chevronDown',15)}</button>${peopleRadarExpanded?`<div class="p717-relationship-panel">${relationshipInspectorMarkup(selected,state?.projects||{},localDate())}<section class="t577-person-strip"><span>${touchSummary.count} Begegnungen erfasst${touchSummary.latest?' · zuletzt '+h(new Date(touchSummary.latest).toLocaleDateString('de-AT')):''}</span><button type="button" class="secondary-btn" data-action="t577-for-person" data-id="${h(selected.id)}">+ Nähe erfassen</button></section></div>`:''}</section>
@@ -2074,6 +2099,7 @@ async function reloadWatchSessions(){
 function rememberPeopleScroll(){if(tab!=='people'||!state)return null;const selectors=['.content','.people-grid','.people-list','.rel567-overlay','.rel567-map-wrap','.people-contact-log'];return {windowY:window.scrollY||0,items:selectors.map(sel=>[sel,app.querySelector(sel)?.scrollTop||0]),selected:selectedPersonId};}
 function restorePeopleScroll(position){if(!position||tab!=='people'||position.selected!==selectedPersonId||typeof requestAnimationFrame!=='function')return;requestAnimationFrame(()=>{for(const [sel,value] of position.items){const el=app.querySelector(sel);if(el)el.scrollTop=value;}window.scrollTo?.({top:position.windowY,behavior:'instant'});});}
 function render(){
+ const renderMeasurement=performanceTrace.start();
  if(editDraftGuard.shouldDefer(editRenderSignature()===lastEditRenderSignature))return;
  const editingContact=document.activeElement?.closest?.('#person-contact-form');
  if(tab==='people'&&!contactSaving&&editingContact&&['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))return;
@@ -2103,6 +2129,8 @@ function render(){
    requestAnimationFrame(()=>refreshPublicKrakenPrices(false));
  }
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
+ performanceTrace.end('Bildschirm rendern',tab,renderMeasurement);
+ if(performanceTrace.enabled&&typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(()=>performanceTrace.end('Render bis Darstellung',tab,renderMeasurement)));
 }
 function bind() {
  const quickCategory=app.querySelector('#pj92-current-category');if(quickCategory)quickCategory.onchange=()=>{worktimeSelectedCategory=quickCategory.value;};
@@ -2178,7 +2206,7 @@ function bind() {
     mm571Note.onblur=()=>{morningJournalBlur().catch(ex=>console.warn('Journal nachbearbeiten:',ex.message));};
   }
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
-    ev.preventDefault();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
+    ev.preventDefault();const unlockMeasurement=performanceTrace.start();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
     try {if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
       // Draft bytes are separate from the full Vault payload, but use the same key.
       state[EDIT_DRAFT_VAULT_KEY]={...(state[EDIT_DRAFT_VAULT_KEY]||{}),...(await vault.loadEditDrafts().catch(()=>({})))};
@@ -2210,7 +2238,7 @@ function bind() {
       const savedMorningDraft=state?.miracleMorning?.draft;if(morningSession&&savedMorningDraft?.id===morningSession.id&&savedMorningDraft.note){morningSession.note=savedMorningDraft.note;}
       syncQuickPublicFromState();restoreCalendarFromVault(state);
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
-      resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}
+      resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}finally{performanceTrace.end('Tresor entsperren',tab,unlockMeasurement);}
   };
 
 
@@ -3046,6 +3074,16 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
+ if(action==='perf719-toggle'){performanceTrace.setEnabled(!performanceTrace.enabled);try{localStorage.setItem('compass.perf.v57719',performanceTrace.enabled?'on':'off');}catch{}render();return;}
+ if(action==='perf719-clear'){performanceTrace.clear();render();return;}
+ if(action==='perf719-export'){download('compass-performance-0.5.77.19.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
+ if(action==='people-sync719-toggle'){
+  if(!state?.privateDeviceMirror?.key){toast('Zuerst den verschlüsselten Geräteabgleich einrichten.',true);return;}
+  if(!state.peopleSyncEnabled&&!confirm('Kontaktprofile einschließlich persönlicher Notizen werden Ende-zu-Ende verschlüsselt mit deinem verbundenen Gerät abgeglichen. Wirklich aktivieren?'))return;
+  await mutate(s=>{s.peopleSyncEnabled=!s.peopleSyncEnabled;});if(state.peopleSyncEnabled&&authToken)scheduleJournalSync(0);toast(state.peopleSyncEnabled?'Kontaktsynchronisierung aktiviert. Auch auf dem anderen Gerät einschalten.':'Kontaktsynchronisierung auf diesem Gerät deaktiviert. Lokale Profile bleiben erhalten.');return;
+ }
+ if(action==='people-sync719-now'){if(state?.peopleSyncEnabled&&state?.privateDeviceMirror?.key&&authToken){try{await syncPersonalJournal();toast('Verschlüsselter Kontaktabgleich geprüft.');}catch(ex){toast('Kontaktsynchronisierung: '+ex.message,true);}}return;}
+
  if(action==='mm571-view'){if(!state)return;morningTab=['routine','create','insights'].includes(id)?id:'routine';morningSettingsOpen=false;render();return;}
  if(action==='mm571-period'){morningPeriod=[7,30,90].includes(Number(id))?Number(id):30;render();return;}
  if(action==='mm571-affirmation-remove'){
@@ -4380,6 +4418,7 @@ async function syncReview(){
 }
 async function syncNow() {
   if(!state||!authToken||busy||!navigator.onLine)return;
+  const syncMeasurement=performanceTrace.start();
   clearTimeout(syncTimer);syncTimer=null;
   busy=true;render();
   try {
@@ -4417,19 +4456,29 @@ async function syncNow() {
     else if(state?.privateDeviceMirror?.mode==='receiver')await receivePrivateMirror();
     if(state?.privateDeviceMirror?.key)await syncPersonalJournal();
     lastSyncAt=Date.now();
-    notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':'Synchronisiert. Alle verfügbaren Änderungen abgeglichen.';
+    notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':state.peopleSyncEnabled&&state.privateDeviceMirror?.key&&journalSyncStatus==='ok'?'Planung, Inbox und aktivierte verschlüsselte Kontaktprofile abgeglichen.':'Planung & Inbox synchronisiert · Kontakte bleiben auf diesem Gerät, sofern nicht ausdrücklich für E2EE aktiviert.';
     error='';
   }catch(ex){
     syncResyncRequested=false;
     error=ex.status===401?'Google-Sitzung abgelaufen. Bitte erneut anmelden.':`Synchronisation: ${ex.message}`;
     if(ex.status===401){authToken='';currentUser='';await vault.clearSession().catch(()=>{});}
   }finally{
-    busy=false;render();
+    busy=false;render();performanceTrace.end('Cloud-Abgleich',tab,syncMeasurement);
     const retry=syncResyncRequested&&Boolean(state?.pending.length||Object.keys(state?.taskPending||{}).length||Object.keys(state?.projectPending||{}).length||Object.keys(state?.eventPending||{}).length||state?.reviewPending)&&Boolean(authToken)&&navigator.onLine&&!error;
     syncResyncRequested=false;
     if(retry)scheduleSync(0);
   }
 }
+// Opt-in, content-free interaction-to-paint measurement attached to a stable root.
+if(typeof app.addEventListener==='function')for(const eventName of ['click','submit'])app.addEventListener(eventName,ev=>{
+ if(!performanceTrace.enabled)return;
+ const target=ev.target?.closest?.('[data-action],[data-tab],button,form');
+ const candidate=eventName==='submit'?(ev.target?.id||'speichern'):(target?.dataset?.action||target?.dataset?.tab||'klick');
+ const safe=/^[a-z0-9:_-]{1,44}$/i.test(candidate)?candidate:'anderes';
+ const kind=eventName==='submit'?'Formular: '+safe:target?.dataset?.tab?'Navigation: '+safe:'Aktion: '+safe;
+ const started=performanceTrace.start(),view=tab;
+ if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(()=>performanceTrace.end(kind,view,started)));
+},{capture:true});
 document.addEventListener('keydown',ev=>{
   const target=ev.target;
   if((ev.key==='Enter'||ev.key===' ')&&target?.matches?.('.fin32-cycle-hit,.fin32-pattern-card')){ev.preventDefault();runAction(target.dataset.action,target.dataset.id);return;}

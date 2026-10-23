@@ -1,3 +1,4 @@
+import {mergePeopleDirectory} from './people-sync-v57719.js';
 import {mergeMorningData} from './miracle-morning-v570.js';
 import {mergeHabitQuick} from './habit-device-sync-v5731.js';
 import {mergeCalendarArchives} from './calendar-cache-v574.js';
@@ -232,7 +233,8 @@ export function mergeJournalData(local,remote){
   feelingCheckins:mergeFeelingCheckins(lc.feelingCheckins,rc.feelingCheckins),
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),
   ...(lc.calendarArchive||rc.calendarArchive?{calendarArchive:mergeCalendarArchives(lc.calendarArchive,rc.calendarArchive)}:{}),
-  ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{})
+  ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{}),
+  ...((lc.people||rc.people||lc.peopleDeleted||rc.peopleDeleted)?mergePeopleDirectory(lc.people,rc.people,lc.peopleDeleted,rc.peopleDeleted):{})
  };
 }
 

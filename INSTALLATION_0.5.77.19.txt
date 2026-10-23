@@ -1,0 +1,32 @@
+COMPASS LIFE 0.5.77.19 — STABILITÄT, MOBILE PROJEKTE, KONTAKTE UND PERFORMANCE
+
+PATCH_FROM_0.5.77.18.zip ausschließlich auf Compass 0.5.77.18 anwenden.
+FULL_SOURCE.zip ist der vollständige Quellstand 0.5.77.19.
+
+ZIP lokal entpacken. Geänderte Dateien mit ihren Pfaden im GitHub-Repository
+ theophil-kroller/compass-life überschreiben; neue Dateien hinzufügen.
+ZIP NICHT als einzelne Datei hochladen. Committen und Deployment prüfen.
+Keine Worker/D1-Migration erforderlich. Browserdaten und Tresor NICHT löschen.
+
+WICHTIG – KONTAKTE AUF HANDY:
+1. Auf dem PC prüfen, ob die Menschen dort vorhanden sind, und ein
+   VERSCHLÜSSELTES Vault-Backup herunterladen.
+2. Am PC System & Synchronisation: verschlüsselten privaten Geräteabgleich
+   aktivieren/verifizieren, dann Kontaktsynchronisierung ausdrücklich aktivieren
+   und "Kontaktprofile jetzt abgleichen" wählen.
+3. Am Handy denselben bereits eingerichteten E2EE-Geräteabgleich benutzen;
+   dort ebenfalls Kontaktsynchronisierung aktivieren und abgleichen.
+4. Prüfen, ob die Kontaktanzahl nicht mehr 0 ist. Wenn sie auch am PC fehlt,
+   nichts zurücksetzen, sondern vorher Backups/anderen Browser prüfen.
+
+PERFORMANCE MESSEN:
+Unter System & Synchronisation → Laufzeitmessung "Messung starten".
+Heute, Inbox, Planen, Menschen verwenden, danach zur Messung zurückkehren
+und die JSON-Messwerte exportieren. Es werden nur Ansicht, Aktionscode,
+Dauer und Häufigkeit erfasst, keine Aufgabeninhalte. Bei Neuladen weg.
+
+MOBILE PROJEKTE:
+Abhaken und Aufgaben-/Projekttitel sind in einer kompakten Zeile sichtbar,
+Flagge und Heute liegen mobil weiter im Aufgaben-Inspector.
+
+Details: CHANGELOG_0.5.77.19.md

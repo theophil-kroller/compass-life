@@ -1,0 +1,24 @@
+/* Compact mobile project tree: prioritize readable titles and primary actions. */
+@media (max-width:700px){
+ .tree-work-card{padding:12px 10px!important;min-width:0;overflow:hidden}
+ .tree-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+ .tree-toolbar-actions{display:flex;gap:6px;flex-wrap:wrap}
+ .tree-toolbar-actions button{padding:8px 9px;font-size:12px;min-height:36px}
+ .unified-tree{width:100%;min-width:0}
+ .tree-line{gap:4px;min-width:0;min-height:43px;padding-right:3px;padding-left:calc(3px + min(28px,calc(var(--depth,0) * 9px)))!important;max-width:100%}
+ .tree-line .tree-drag-handle{display:none!important}
+ .tree-entry{min-width:0;max-width:100%}
+ .tree-line .tree-expander,.tree-line .tree-expander-space{width:13px;min-width:13px;flex:none;margin:0;padding:0}
+ .tree-line .tree-node-icon{min-width:18px;max-width:18px;flex:none}
+ .tree-line.tree-task .task-check{width:23px!important;min-width:23px!important;height:23px!important;min-height:23px!important;padding:0!important;border-radius:7px;font-size:15px;line-height:1;box-shadow:none}
+ .tree-line.tree-task .tree-today-check,.tree-line.tree-task .tree-flag-toggle{display:none!important}
+ .tree-line.tree-task .v559-title-cell{flex:1 1 0!important;min-width:0!important;max-width:100%}
+ .tree-line.tree-task .tree-label{flex:1 1 auto!important;min-width:0!important;font-size:13px;line-height:1.4;padding:6px 1px}
+ .tree-line.tree-task .tree-label>span:first-child{overflow:visible!important;white-space:normal!important;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden!important}
+ .tree-line.fin43-project-row .tree-label,.tree-line.fin43-folder-row .tree-label{font-size:14px;line-height:1.35;padding:7px 2px;min-width:0;flex:1}
+ .tree-line.fin43-project-row .tree-label>span:first-child,.tree-line.fin43-folder-row .tree-label>span:first-child{white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+ .tree-line .tree-inline-add{width:27px;min-width:27px;height:32px;opacity:1;flex:none}
+ .tree-line.tree-task .v42-task-progress{max-width:38px!important;font-size:10px}
+ .tree-task .v559-title-cell .v559-rename-editor{min-width:0;max-width:100%}
+ .tree-line.selected{outline:1px solid #c4dfd0}
+}

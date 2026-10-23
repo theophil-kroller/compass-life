@@ -1,3 +1,5 @@
+> **Aktueller Build: 0.5.77.19** – kontaktfreundlicher, explizit aktivierbarer E2EE-Geräteabgleich, klarer Hinweis bei leeren mobilen Kontaktprofilen, mobile Projektzeilen und echte lokale Aktions-/Render-/Sync-Messwerte. [Changelog](CHANGELOG_0.5.77.19.md) · [Installation](INSTALLATION_0.5.77.19.txt). Bestehende Tresordaten nicht löschen.
+
 > **Aktueller Hotfix: 0.5.77.18** – kritischer Fehler beim Aufbau der Navigation nach dem Entsperren von Version 0.5.77.17 korrigiert. Bestehenden Tresor nicht löschen oder zurücksetzen. Details: `CHANGELOG_0.5.77.18.md`.
 
 > **Aktueller Build: 0.5.77.17.** Vier GTD-Schnellpfade (Heute, Inbox, Planen, Menschen), offene To-dos vor Beziehungseinstellungen, optimierte Tag-/Projektindizes. Siehe [CHANGELOG_0.5.77.17.md](CHANGELOG_0.5.77.17.md).
