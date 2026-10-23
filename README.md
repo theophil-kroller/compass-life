@@ -146,3 +146,7 @@ Siehe `CHANGELOG_0.5.68.1.md` und `INSTALLATION_0.5.68.1.txt`.
 ## Version 0.5.69.2 – Zeitjournal & Ernährung
 
 Siehe [Changelog](CHANGELOG_0.5.69.2.md) und [Installation](INSTALLATION_0.5.69.2.txt). Für den neuen Journal-Geräteabgleich sind Worker-Deployment und D1-Migration 0018 notwendig.
+
+## Compass 0.5.77.9 – Stressmuster im zeitlichen Kontext
+
+Die Stress-Seite zeigt konkrete hohe Stressphasen mit tatsächlichen oder zeitlich nahen Kalender-/Aktivitätseinträgen zuerst; alle vier Stressstufen bleiben unter Details verfügbar. Persönliche wiederholte Beobachtungen erscheinen prominent. Pro Aktivitäts-/Kalendertyp vergleicht Compass echte Garmin-Stresswerte 30 Min. davor, währenddessen und 60 Min. danach, einschließlich gepaarter Vorher-/Nachher-Veränderungen, Stichprobengrößen, Kalenderabdeckungswarnungen und aufklappbaren Einzelbeobachtungen. Diese Daten erlauben keine kausalen oder diagnostischen Aussagen. Siehe [CHANGELOG_0.5.77.9.md](CHANGELOG_0.5.77.9.md) und [INSTALLATION_0.5.77.9.txt](INSTALLATION_0.5.77.9.txt).

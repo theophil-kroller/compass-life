@@ -48,6 +48,6 @@ test('stress page receives contexts, without API changes or sending calendar tit
  const html=insightsStressView(importData,'7',day,'','day',14,0,{calendarEvents:[meeting],calendarCoverage:full,activities:[]});
  assert.match(html,/Was war bei meinen Stresswerten los/);assert.match(html,/Belastungsstufen/);assert.match(html,/Hohe Stressphasen/);
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.8'/);
- assert.match(main,/calendarCoverage,activities:activeActivities\(watchSessions,state\)/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.9'/);
+ assert.match(main,/calendarCoverage,calendarConnected:Boolean\(calendarToken&&Date\.now\(\)<calendarExpires\),activities:activeActivities\(watchSessions,state\)/);
 });

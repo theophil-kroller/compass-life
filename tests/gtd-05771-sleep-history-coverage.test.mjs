@@ -44,5 +44,5 @@ test('Garmin backfill merges older July nights without replacing October records
 test('Main has independent year paging action, preserving granularity buttons',()=>{
  const src=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(src,/action==='insights-year-window'/);assert.match(src,/action==='insights-year-mode'/);
- assert.match(src,/insightYearAnchor/);assert.match(src,/COMPASS_CLIENT_VERSION='0\.5\.77\.(?:7|8)'/);
+ assert.match(src,/insightYearAnchor/);assert.match(src,/COMPASS_CLIENT_VERSION='0\.5\.77\.(?:7|8|9)'/);
 });

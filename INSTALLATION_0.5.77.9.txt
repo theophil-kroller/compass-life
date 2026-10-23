@@ -1,0 +1,18 @@
+COMPASS LIFE 0.5.77.9 – Stressmuster rund um Aktivitäten
+
+PATCH: Compass_0.5.77.9_PATCH_FROM_0.5.77.8.zip direkt auf deinen Quellstand 0.5.77.8 in GitHub anwenden.
+FULL SOURCE: Compass_0.5.77.9_FULL_SOURCE.zip enthält den kompletten Quellstand, ohne persönliche lokale Vault-Daten.
+
+Die Verzeichnisstruktur aus der ZIP direkt in das Repository-Stammverzeichnis übernehmen.
+Nach dem Commit den GitHub-Actions-Deployment-Status prüfen und Compass ggf. hart aktualisieren.
+
+ANZEIGE: Compass > Insights > Gesundheit > Stress, unter den bisherigen Raincloud-Plots und der Stresskontextanalyse.
+
+Voraussetzungen:
+- bereits importierte Garmin-Stressmesspunkte aus Wellness/FIT,
+- bei Kalenderdaten: archivierte/synchronisierte Google-Kalenderdaten für den untersuchten Zeitraum,
+- bei Aktivitäten: protokollierte Activity-Sessions und/oder Garmin-Sessions.
+- für verlässliche Vorher/Nachher-Auswertung mindestens zwei valide Stressmesspunkte in jedem der beiden Fenster.
+
+Die Funktion arbeitet ausschließlich lokal im entsperrten Vault. Keine D1-Migration, kein Worker-Update, kein gesonderter Datenimport notwendig, wenn die Quellen schon vorhanden sind.
+Sie verändert weder Termine noch Aufgaben, Klassifizierungen oder Messwerte. Nicht gemessene Zeiten werden nicht geschätzt.

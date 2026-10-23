@@ -12,7 +12,7 @@ const shortDay=day=>new Date(day+'T12:00:00').toLocaleDateString('de-AT',{day:'n
 const clock=ms=>new Date(ms).toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
 const STRESS_BANDS=[{id:'rest',label:'Ruhe',lo:0,hi:25},{id:'low',label:'Niedrig',lo:26,hi:50},{id:'medium',label:'Mittel',lo:51,hi:75},{id:'high',label:'Hoch',lo:76,hi:100}];
 export const stressBand=value=>!Number.isFinite(value)||value<0||value>100?null:value<=25?'rest':value<=50?'low':value<=75?'medium':'high';
-function timedRows(calendarEvents,activities,garminSessions,rules,overrides){
+export function timedRows(calendarEvents,activities,garminSessions,rules,overrides){
  const events=[],sessions=[],seenEvents=new Set(),seenSessions=new Set();
  for(const e of calendarEvents||[]){
   if(!e||e.status==='cancelled'||!e.start?.dateTime||!e.end?.dateTime)continue;
@@ -49,7 +49,7 @@ function timedRows(calendarEvents,activities,garminSessions,rules,overrides){
  const index=list=>{const byDay=new Map();for(const e of list){const days=[localDay(e.start),localDay(Math.max(e.start,e.end-1))];for(const day of new Set(days)){
    if(!byDay.has(day))byDay.set(day,[]);byDay.get(day).push(e);
   }}return byDay;};
- return {calendar:index(events),activity:index(sessions),calendarTotal:events.length,activityTotal:sessions.length,activityCsvUnzoned:sessions.some(s=>s.uncertain)};
+ return {calendar:index(events),activity:index(sessions),calendarRows:events,activityRows:sessions,calendarTotal:events.length,activityTotal:sessions.length,activityCsvUnzoned:sessions.some(s=>s.uncertain)};
 }
 function coverageIncludes(coverage,day){return !!(coverage?.complete!==false&&DAY.test(coverage?.start||'')&&DAY.test(coverage?.end||'')&&day>=coverage.start&&day<=coverage.end);}
 const topEntries=map=>[...map.values()].sort((a,b)=>b.count-a.count||a.title.localeCompare(b.title,'de')).slice(0,4);
@@ -76,18 +76,47 @@ export function buildStressContext({model,calendarEvents=[],activities=[],garmin
  for(const e of point.calendar)current.calendar.set(e.category+'|'+e.title,e);
  for(const a of point.activities)current.activities.set(a.category+'|'+a.title,a);
  }
- const recentPeaks=episodes.sort((a,b)=>b.start-a.start).slice(0,12).map(e=>({...e,calendar:[...e.calendar.values()].slice(0,5),activities:[...e.activities.values()].slice(0,5)}));
+ // Nearby entries are contextual clues, NOT temporally overlapping events.
+ // A compact look-back/forward helps explain peaks after meetings or activity.
+ const nearWindow=45*MIN;
+ const nearbyFor=(episode,list)=>list.filter(item=>
+  item.end<=episode.start&&episode.start-item.end<=nearWindow||
+  item.start>episode.end+5*MIN&&item.start-(episode.end+5*MIN)<=nearWindow
+ ).map(item=>({title:item.title,category:item.category,source:item.source,
+  relation:item.end<=episode.start?'before':'after',
+  minutes:Math.round((item.end<=episode.start?episode.start-item.end:item.start-(episode.end+5*MIN))/MIN),
+  uncertain:item.uncertain})).sort((a,b)=>a.minutes-b.minutes).slice(0,3);
+ const recentPeaks=episodes.sort((a,b)=>b.start-a.start).slice(0,12).map(e=>({
+  ...e,calendar:[...e.calendar.values()].slice(0,5),activities:[...e.activities.values()].slice(0,5),
+  nearbyCalendar:e.covered?nearbyFor(e,indexed.calendarRows):[],
+  nearbyActivities:nearbyFor(e,indexed.activityRows)
+ }));
  return {bands:STRESS_BANDS.map(z=>({...bins[z.id],calendar:topEntries(bins[z.id].calendarLabels),activities:topEntries(bins[z.id].activityLabels),calendarLabels:undefined,activityLabels:undefined})),recentPeaks,episodesCount:episodes.length,range:{first,last},calendarCoverage,knownDays,incompleteDays,activityCsvUnzoned:indexed.activityCsvUnzoned,activityTotal:indexed.activityTotal,calendarTotal:indexed.calendarTotal};
 }
 /** Render in the existing Stress page below the Raincloud chart. */
+/** Task-first contextual readout: first actual high-stress moments, then optional data audit. */
 export function stressContextView(result){
- const bands=result.bands||[],total=bands.reduce((s,b)=>s+b.count,0);
+ const bands=result.bands||[],total=bands.reduce((sum,b)=>sum+b.count,0);
  if(!total)return `<section class="stress-context" aria-label="Stress im Kontext"><h3>Was war bei meinen Stresswerten los?</h3><p>Keine gültigen Garmin-Stressmessungen im ausgewählten Zeitraum.</p></section>`;
- const list=(entries,type)=>entries.length?`<ul>${entries.map(e=>`<li><span>${esc(e.title)}</span><small>${esc(e.category)} · ${fmt(e.count)} Messpunkte mit zeitlicher Überschneidung</small></li>`).join('')}</ul>`:`<p class="stress-context-empty">${type==='calendar'?'Keine zeitgleichen Einträge in den geladenen Kalenderdaten':'Keine zeitgleich dokumentierten Aktivitäten'}.</p>`;
- const sections=bands.map(b=>`<article class="stress-context-zone" data-zone="${b.id}"><header><strong>${esc(b.label)} <small>${b.lo}–${b.hi}</small></strong><span>${fmt(b.count)} Messpunkte · ${total?Math.round(100*b.count/total):0} %</span></header><div class="stress-context-columns"><div><h4>Kalender</h4><p>${fmt(b.calendarCount)} von ${fmt(b.count)} Messpunkten mit Kalenderüberschneidung · ${fmt(b.covered)} Punkte im vollständig geladenen Kalenderfenster</p>${list(b.calendar,'calendar')}</div><div><h4>Aktivitäten</h4><p>${fmt(b.activityCount)} von ${fmt(b.count)} Messpunkten zeitgleich zu einer dokumentierten Aktivität</p>${list(b.activities,'activity')}</div></div></article>`).join('');
- const peaks=result.recentPeaks.map(p=>`<div class="stress-context-peak"><div><strong>${esc(shortDay(p.day))} · ${esc(clock(p.start))}${p.end>p.start?'–'+esc(clock(p.end+5*MIN)):''}</strong><span>Spitzenwert ${fmt(p.peak)} · ${fmt(p.points)} Messpunkte</span></div><div class="stress-context-peak-tags">${p.calendar.length?p.calendar.map(e=>`<span>📅 ${esc(e.title)}</span>`).join(''):(p.covered?'<small>📅 Kein zeitgleicher Kalendereintrag</small>':'<small>📅 Kalenderabdeckung fehlt</small>')}${p.activities.length?p.activities.map(a=>`<span>🏃 ${esc(a.title)}${a.uncertain?' (Uhrzeit unsicher)':''}</span>`).join(''):'<small>🏃 Keine dokumentierte Aktivität zur selben Zeit</small>'}</div></div>`).join('');
- const missing=result.incompleteDays?`Kalenderdaten sind nur für ${fmt(result.knownDays)} von ${fmt(result.knownDays+result.incompleteDays)} Messtagen vollständig geladen. „Kein Eintrag“ wird außerhalb dieser Abdeckung nicht behauptet. `:'';
- return `<section class="stress-context" aria-label="Stresswerte und zeitgleiche Kalender- und Aktivitätsdaten"><div class="stress-context-heading"><div><small>04 · STRESS × KALENDER × AKTIVITÄTEN</small><h3>Was war bei meinen Stresswerten los?</h3></div><span class="stress-context-chip">${fmt(total)} gemessene Punkte</span></div><p class="stress-context-intro">Garmin-Stressmessungen mit <strong>zeitgleichen</strong> Kalendereinträgen und protokollierten Aktivitäten. So siehst du, was bei Ruhe, niedrigem, mittlerem oder hohem Stress eingeplant oder erfasst war.</p><div class="stress-context-grid">${sections}</div>
- <details class="stress-context-details" ${result.episodesCount?'open':''}><summary>Hohe Stressphasen – Uhrzeiten und Termine (${fmt(result.episodesCount)})</summary>${peaks?`<div class="stress-context-peaks">${peaks}</div>`:'<p>Im gewählten Zeitraum wurden keine Messwerte über 75 erfasst.</p>'}${result.episodesCount>12?'<small>Hier erscheinen die zwölf jüngsten hohen Stressphasen.</small>':''}</details>
- <p class="insight-figure-note">${missing}Kalendertermine sind geplante Einträge, kein Beweis für Teilnahme. Aktivitäten stammen aus dokumentierten Sitzungen oder Garmin-Exporten. Übereinstimmungen beweisen keinen Einfluss auf den Stress. Bei mehreren gleichzeitigen Einträgen kann derselbe Messpunkt mehrfach in den Titellisten vorkommen. Nur gültige Messpunkte zählen; ungemessene Zeiten bleiben unbekannt. ${result.activityCsvUnzoned?'Garmin-Activities-CSV-Zeiten haben keine Zeitzonenangabe; ihre Zuordnung kann verschoben sein. ':''}Diese Auswertung wird ausschließlich lokal im entsperrten Vault erstellt.</p></section>`;
+ const high=result.recentPeaks||[],observed=high.filter(p=>p.calendar.length||p.activities.length).length;
+ const totalHigh=result.episodesCount||0;
+ const exact=(items,icon)=>items.map(x=>`<span>${icon} ${esc(x.title)} <small>zeitgleich</small></span>`).join('');
+ const near=(items,icon)=>items.map(x=>`<span>${icon} ${esc(x.title)} <small>${x.relation==='before'?`${fmt(x.minutes)} Min. davor beendet`:`${fmt(x.minutes)} Min. danach begonnen`}${x.uncertain?' · Zeit ungenau':''}</small></span>`).join('');
+ const row=p=>`<article class="stress-context-peak"><div><strong>${esc(shortDay(p.day))} · ${esc(clock(p.start))}${p.end>p.start?'–'+esc(clock(p.end+5*MIN)):''}</strong><span>Garmin-Spitze ${fmt(p.peak)} · ${fmt(p.points)} Messpunkte</span></div>
+  <div class="stress-context-peak-tags">${exact(p.calendar,'📅')}${exact(p.activities,'🏃')}${near(p.nearbyCalendar||[],'📅')}${near(p.nearbyActivities||[],'🏃')}
+  ${!(p.calendar.length||p.activities.length||p.nearbyCalendar?.length||p.nearbyActivities?.length)?`<small>${p.covered?'Kein passender Kalendereintrag oder dokumentierte Aktivität im ±45-Minuten-Umfeld':'Kalenderabdeckung fehlt für diesen Tag'}; nicht erfasste Tätigkeiten bleiben unbekannt.</small>`:''}</div></article>`;
+ const label=b=>`<strong>${esc(b.label)} <small>${b.lo}–${b.hi}</small></strong><span>${fmt(b.count)} Messpunkte (${total?Math.round(100*b.count/total):0} %)</span>`;
+ const list=(entries)=>entries.length?`<ul>${entries.map(e=>`<li>${esc(e.title)} <small>${esc(e.category)} · ${fmt(e.count)} zeitgleiche Messpunkte (keine Ereignisanzahl)</small></li>`).join('')}</ul>`:'<p class="stress-context-empty">Keine passende Aufzeichnung im betrachteten Messfenster.</p>';
+ const zones=bands.map(b=>`<article class="stress-context-zone" data-zone="${b.id}"><header>${label(b)}</header><div class="stress-context-columns"><div><h4>Kalender</h4>${list(b.calendar)}</div><div><h4>Aktivitäten</h4>${list(b.activities)}</div></div></article>`).join('');
+ const distribution=`<div class="stress-context-bandbar" role="img" aria-label="Gemessene Stressstufen: ${bands.map(b=>`${b.label} ${Math.round(100*b.count/total)} Prozent`).join(', ')}">${bands.map(b=>`<span data-zone="${b.id}" style="width:${100*b.count/total}%" title="${esc(b.label)}: ${fmt(b.count)} Messpunkte"></span>`).join('')}</div><div class="stress-context-bandlabels">${bands.map(b=>`<span data-zone="${b.id}">${esc(b.label)} <strong>${Math.round(100*b.count/total)} %</strong></span>`).join('')}</div>`;
+ const coverage=result.incompleteDays?`Kalenderdaten sind nur für ${fmt(result.knownDays)} von ${fmt(result.knownDays+result.incompleteDays)} Messtagen vollständig geladen. Außerhalb dieses Fensters bleiben Einträge unbekannt.`:`Kalenderabdeckung für alle ${fmt(result.knownDays)} ausgewerteten Messtage vorhanden.`;
+ const missingCount=high.filter(p=>!p.covered).length;
+ return `<section class="stress-context" aria-label="Stress mit Terminen und Aktivitäten"><div class="stress-context-heading"><div><small>04 · STRESS × MEIN TAGESVERLAUF</small><h3>Was war bei meinen Stresswerten los?</h3></div><span class="stress-context-chip">${fmt(total)} Messpunkte</span></div>
+  <p class="stress-context-intro">Zuerst die <strong>konkreten hohen Stressphasen</strong>: Was stand zur gleichen Zeit oder kurz davor/danach im Kalender? Danach die Verteilung über Ruhe, niedrig, mittel und hoch. Eine zeitliche Nähe ist noch keine Ursache.</p>
+  ${distribution}
+  <div class="stress-context-key-results"><strong>Hohe Stressphasen</strong><span>${fmt(totalHigh)} Phasen · unter den letzten ${fmt(high.length)} haben ${fmt(observed)} zeitgleich dokumentierte Termine oder Aktivitäten${missingCount?` · ${fmt(missingCount)} ohne vollständige Kalenderabdeckung`:''}</span></div>
+  ${high.length?`<div class="stress-context-peaks">${high.slice(0,6).map(row).join('')}</div>${high.length>6?`<details class="stress-context-details"><summary>Weitere ${high.length-6} Stressphasen ansehen</summary><div class="stress-context-peaks">${high.slice(6).map(row).join('')}</div></details>`:''}`:'<p class="stress-context-empty">Im ausgewählten Zeitraum wurden keine Garmin-Stresswerte über 75 gemessen.</p>'}
+  <details class="stress-context-details"><summary>Ruhe, niedrige und mittlere Stresswerte · Kalendereinträge und Aktivitäten vergleichen</summary><p class="stress-context-intro">Diese Titellisten basieren auf Messpunkten, nicht auf unabhängigen Ereignissen. Wie sich wiederholte Ereignisse unterscheiden, zeigt die folgende Musteranalyse.</p><div class="stress-context-grid">${zones}</div></details>
+  <p class="insight-figure-note">${esc(coverage)} ${result.activityCsvUnzoned?'Garmin-Activities-CSV-Zeiten haben keine Zeitzonenangabe; Zuordnungen können verschoben sein. ':''}Garmin-Stress ist ein physiologischer Indikator; insbesondere während Sport fehlen oft Messwerte. Kalender bedeutet geplant, Aktivitäten bedeutet dokumentiert. Keine Diagnose oder Kausalitätsbehauptung. Alles wird lokal ausgewertet.</p>
+ </section>`;
 }

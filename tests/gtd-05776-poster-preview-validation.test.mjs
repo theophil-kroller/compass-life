@@ -46,5 +46,5 @@ test('UI shows only loadable posters and allows continuation / manual replacemen
  assert.match(main,/discovery-poster-next/);
  assert.match(main,/data-poster-preview-key/);
  assert.match(main,/posterLookupSelected\.delete\(failed\.key\)/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.(?:7|8)'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.(?:7|8|9)'/);
 });
