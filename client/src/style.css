@@ -2844,6 +2844,7 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .pj92-quick-category select{border-radius:12px;border:1px solid #dfe7e6;background:#fff;padding:10px;color:#27483d;font:inherit;width:100%}
 .pj92-food-panel{width:min(530px,100%);gap:12px}
 .pj92-food-grid{display:flex;flex-direction:column;gap:13px;max-height:min(65vh,550px);overflow:auto;overscroll-behavior:contain}
+.pj92-matcha-note{margin:0 0 9px;color:#607b70;font-size:.74rem;line-height:1.35}
 .pj92-food-group h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.055em;text-transform:uppercase;color:#627972}
 .pj92-food-group>div{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .pj92-food-tile{border:1px solid #dde8e2;border-radius:14px;background:#f8fbf8;min-height:88px;padding:9px 5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:background .14s,border-color .14s;color:#26483a;overflow-wrap:anywhere}

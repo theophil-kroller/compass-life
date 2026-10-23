@@ -1,0 +1,20 @@
+COMPASS 0.5.77.11 – MATCHA-FRÜHSTÜCK
+
+1. PATCH direkt auf Version 0.5.77.10 anwenden.
+   Alle Dateien aus Compass_0.5.77.11_PATCH_FROM_0.5.77.10.zip
+   im Stammverzeichnis des GitHub-Repositories mit gleicher Verzeichnisstruktur hochladen.
+2. Alternativ die FULL_SOURCE verwenden (vollständiger, konsolidierter Stand).
+3. Commit erstellen und GitHub Actions auf erfolgreichen Client-Build kontrollieren.
+4. Compass neu laden. Unter Ernährung/Schnellerfassung in der Gruppe
+   „Frühstück“ zwei Matcha-Varianten wählen:
+   - Matcha mit Hafermilch (ohne Honig)
+   - Matcha mit Hafermilch & Honig
+5. Kalorien stehen wie bisher im Hintergrund und im Ernährungstagebuch.
+   Für genauere Werte beim Eintrag „Menge“ ändern, z.B.
+   „1 Becher (ca. 500 ml; 120 ml Hafermilch)“.
+
+HINWEIS: 500 ml = Gesamtgetränk, überwiegend heißes Wasser.
+Default-Annahme 75 ml Hafermilch; kein automatischer Kalorienansatz
+für 500 ml Milch. Alte „matcha“-Einträge bleiben erhalten.
+
+Keine D1-Migration, kein neues Worker-Deployment notwendig.

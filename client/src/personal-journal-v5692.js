@@ -8,7 +8,11 @@ export const TIME_AREAS=[
  ['leisure','⚽','Sport & Freizeit'],['health','🌿','Gesundheit & Erholung'],['personal','🏡','Alltag'],['other','○','Unklassifiziert']
 ];
 export const FOOD_PRESETS=[
- ['matcha','🍵','Matcha mit Honig','Getränke','1 Tasse (250 ml)',70,160],['oat-latte','☕','Hafermilch-Latte mit Karamellsirup','Getränke','1 Glas (300 ml)',160,310],
+ // Existing `matcha` ID deliberately retained: older nutrition entries remain compatible.
+ // 500 ml describes the prepared drink (mostly water), not 500 ml of oat milk.
+ ['matcha-oat-plain','🍵','Matcha mit Hafermilch (ohne Honig)','Frühstück','1 Becher (ca. 500 ml; 75 ml Hafermilch)',35,60],
+ ['matcha','🍯','Matcha mit Hafermilch & Honig','Frühstück','1 Becher (ca. 500 ml; 75 ml Hafermilch)',55,85],
+ ['oat-latte','☕','Hafermilch-Latte mit Karamellsirup','Getränke','1 Glas (300 ml)',160,310],
  ['smoothie','🥤','Smoothie','Getränke','1 Glas (300 ml)',120,280],['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['tea-honey','🫖','Tee mit Honig','Getränke','1 Tasse (250 ml)',20,75],
  ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke','1 Tasse (250 ml)',130,270],['coffee','☕','Kaffee','Getränke','1 Tasse (200 ml)',0,10],
  ['latella','🥛','Lattella','Getränke','500 ml',250,360],
@@ -31,7 +35,12 @@ export const FOOD_PRESETS=[
  ['pringles','🥔','Pringles','Snacks','1 Dose (165 g)',830,920],
  ['chio-chips','🥔','Chio Chips','Snacks','1 Packung (150 g)',740,830],
  ['other-food','➕','Anderes','Sonstiges']
-].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({id,emoji,title,group,defaultAmount,kcalLow,kcalHigh}));
+].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({
+ id,emoji,title,group,defaultAmount,kcalLow,kcalHigh,
+ ...(id==='matcha'||id==='matcha-oat-plain'?{
+  recipeNote:`1 TL Matcha (ca. 2 g), heißes Wasser, geschätzt 75 ml Hafermilch${id==='matcha'?', 1 TL Honig (ca. 7 g)':''}. Die gesamte Trinkmenge (ca. 500 ml) ist nicht die Hafermilchmenge.`
+ }:{})
+}));
 const isoTime=x=>typeof x==='string'&&Number.isFinite(new Date(x).getTime());
 export function timeLabel(k){return TIME_AREAS.find(c=>c[0]===k)?.[2]||'Unklassifiziert';}
 export function timeCategoryOptions(selected='work'){
@@ -115,6 +124,19 @@ export function nutritionKcalEstimate(food,amount){
  if(!food||!Number.isFinite(food.kcalLow)||!Number.isFinite(food.kcalHigh))return null;
  const original=String(food.defaultAmount||'').toLowerCase(),given=String(amount||food.defaultAmount||'').toLowerCase().trim();
  if(!given)return null;
+ // Matcha is a recipe, not a uniform-calorie beverage: don't multiply oat milk
+ // calories by total drink volume. The old 250-ml matcha logs had no breakdown,
+ // so we use the same explicitly documented 75-ml estimate for those as well.
+ if(food.id==='matcha'||food.id==='matcha-oat-plain'){
+  const milkMatch=given.match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:hafermilch|haferdrink)\b/i);
+  const milkMl=milkMatch?Number(milkMatch[1].replace(',','.')):75;
+  if(!Number.isFinite(milkMl)||milkMl<0||milkMl>1000)return null;
+  const honey=food.id==='matcha';
+  // ~40–70 kcal/100 ml oat drink, ~5–9 kcal matcha (2 g), ~20–25 kcal honey (7 g).
+  // Round to 5-kcal bands to avoid false precision in a brand-dependent estimate.
+  const round5=value=>Math.round(value/5)*5;
+  return {low:round5(5+milkMl*.40+(honey?20:0)),high:round5(9+milkMl*.70+(honey?25:0)),kind:'Schätzung'};
+ }
  const parseNumber=v=>Number(String(v).replace(',','.'));
  const quantity=v=>{const m=v.match(/(\d+(?:[.,]\d+)?)\s*(stücke|stück|scheiben|scheibe|g|gramm|ml|liter|l\b|packung|dose|teller)/i);return m?{value:parseNumber(m[1]),unit:m[2].toLowerCase()}:null;};
  const a=quantity(original),b=quantity(given);
@@ -150,7 +172,7 @@ export function timeJournalView(state,{period=7,editingId='',showForm=false}={})
 }
 export function nutritionQuickView(state,{selectedFoodId='',dateToday}={}){
  const foods=nutritionFoods(state),groups=[...new Set(foods.map(f=>f.group))];
- return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3><div>${foods.filter(f=>f.group===group).map(f=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}${f.defaultAmount?` · ${esc(f.defaultAmount)}`:''}</small></button>`).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. kcal-Schätzungen und ein freiwilliges persönliches Ziel findest du im Ernährungstagebuch. Details können später ergänzt werden. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
+ return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3>${group==='Frühstück'?'<p class="pj92-matcha-note">Matcha: 1 TL Pulver, heißes Wasser, ca. 75 ml Hafermilch; optional 1 TL Honig. Die ca. 500 ml sind die gesamte Trinkmenge. Hafermilch-Menge im Tagebuch bearbeitbar.</p>':''}<div>${foods.filter(f=>f.group===group).map(f=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.recipeNote||f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}${f.defaultAmount?` · ${esc(f.defaultAmount)}`:''}</small></button>`).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. kcal-Schätzungen und ein freiwilliges persönliches Ziel findest du im Ernährungstagebuch. Details können später ergänzt werden. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
 }
 export function nutritionInsightsView(state,{period=30,editingId=''}={}){
  const stats=nutritionStats(state,period),foods=nutritionFoods(state),editing=nutritionEntries(state).find(e=>e.id===editingId);

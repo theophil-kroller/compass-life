@@ -154,3 +154,7 @@ Die Stress-Seite zeigt konkrete hohe Stressphasen mit tatsächlichen oder zeitli
 ## Compass 0.5.77.10 – Tagesstress & Aufgaben vom Vortag
 
 Ein gemeinsamer Tageszeitstrahl auf der Stress-Seite zeigt gemessene Garmin-Stresswerte, konkrete Kalendereinträge, Garmin-/Compass-Aktivitäten und genau protokollierte Zeiten. Generische `Work`-Blöcke sind nur neutrale Platzhalter und zählen nicht zu interpretierten Stressereignissen. Morgen-/Tag-/Abend-Statistik und Abdeckungswarnung bleiben lokal im Vault. Unter **Heute** werden exakt die unerledigten Absichten von gestern mit freiwilligem Knopf „Heute +“ angezeigt; unter **Next Actions** erscheint eine nur einen Tag gültige Kennzeichnung. [Changelog](CHANGELOG_0.5.77.10.md) · [Installation](INSTALLATION_0.5.77.10.txt).
+
+## Compass 0.5.77.11 – Matcha-Frühstück in zwei Varianten
+
+In **Ernährung → Frühstück** stehen Matcha mit Hafermilch **ohne Honig** (ca. 35–60 kcal) und mit **1 TL Honig** (ca. 55–85 kcal) zur Auswahl. Beide nutzen etwa 1 TL Matcha, heißes Wasser und eine explizit als *Annahme* deklarierte Zugabe von 75 ml Hafermilch zu einem Becher von ca. 500 ml Gesamtvolumen. Die tatsächliche Hafermilchmenge lässt sich im Ernährungstagebuch je Eintrag durch `120 ml Hafermilch` o. Ä. überschreiben. Vorhandene Matcha-mit-Honig-Einträge behalten ihre ID und werden mit der präzisierten Rezeptschätzung bewertet. [Changelog](CHANGELOG_0.5.77.11.md) · [Installation](INSTALLATION_0.5.77.11.txt).

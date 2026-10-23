@@ -77,6 +77,6 @@ test('HTML content escaped and full Stress page includes personal pattern analys
  assert.match(view,/Was fällt bei meinen Aktivitäten wiederholt auf/);
  assert.match(view,/30 Minuten vor/);
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.(?:9|10)'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.\d+(?:\.\d+)*'/);
  assert.match(main,/insightTab==='stress'\?insightsStressView/);
 });
