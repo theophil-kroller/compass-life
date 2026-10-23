@@ -1,0 +1,31 @@
+/* Compass 0.5.77.15 · unobtrusive Waiting For GTD follow-ups. */
+.wf715-inspector{margin:12px 0;border:1px solid #dbe8df;border-radius:12px;background:#f8faf8;padding:12px;color:#31473a;font-size:12px}
+.wf715-inspector details>summary{cursor:pointer;color:#2d6b5a;font-weight:700;list-style-position:inside}
+.wf715-inspector details>p{color:#61746a;font-size:11px;line-height:1.55;margin:10px 0}
+#wf715-create{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+#wf715-create label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:600;color:#50675b}
+#wf715-create input{min-width:0;width:100%;border-radius:8px;padding:9px 10px;border:1px solid #dbe5dc;background:white;color:#293e33;font-size:12px}
+#wf715-create>small{color:#75847a;line-height:1.4}
+.wf715-suggestions-label{font-size:11px;color:#5c7266}
+.wf715-suggestions{display:flex;flex-wrap:wrap;gap:5px}
+.wf715-suggest{flex:1 1 90px;min-width:0;border:1px solid #d9e5dc;border-radius:8px;padding:7px 5px;background:#fff;color:#406558;font-size:11px;font-weight:600;cursor:pointer;text-align:center}
+.wf715-suggest small{display:block;color:#88998f;font-size:10px;font-weight:400;margin-top:3px}
+.wf715-suggest.is-active,.wf715-suggest:hover{background:#e7f3ea;border-color:#80b99c}
+.wf715-existing{display:flex;flex-direction:column;gap:6px}.wf715-existing span{color:#5d7267}.wf715-existing button{align-self:flex-start}
+.wf715-source{border:1px solid #dfe9e2;border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:2px;font-size:11px;margin:8px 0;color:#61766b}.wf715-source .text-link{margin:0}
+.wf715-today{margin:12px 0 16px;padding:13px;border:1px solid #daeadf;border-radius:12px;background:#f7faf7}
+.wf715-today header{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:#315949}.wf715-today header small{color:#83958b}
+.wf715-today>p{font-size:11px;color:#61786b;line-height:1.5;margin:7px 0 9px}
+.wf715-row{display:flex;gap:9px;align-items:center;justify-content:space-between;padding:9px 0;border-top:1px solid #e3eee5;min-width:0}
+.wf715-row>div:first-child{min-width:0;flex:1}.wf715-row strong{display:block;font-size:12px;color:#324b3e;overflow-wrap:anywhere}.wf715-row small{display:block;font-size:10px;color:#829186;margin-top:3px}
+.wf715-row-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.wf715-row-actions button{padding:6px 8px;min-height:29px;font-size:11px}
+@media(max-width:660px){.wf715-row{align-items:stretch;flex-direction:column}.wf715-row-actions{justify-content:flex-start}}
+
+/* Voluntary task-friction self-assessment; compact in the existing task inspector. */
+.tf715-reflection{border:1px solid #e2e7e2;border-radius:10px;padding:10px 12px;margin:12px 0;background:#fafbf9;color:#476452}
+.tf715-reflection>summary{font-size:12px;font-weight:650;cursor:pointer;list-style-position:inside}
+.tf715-reflection>p,.tf715-reflection>small{display:block;color:#75857a;font-size:11px;line-height:1.5;margin:9px 0}
+.tf715-reflection label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:600;color:#536f5c;min-width:0}
+.tf715-reflection select{background:white;min-width:0;width:100%;padding:8px 9px;border-radius:8px;border:1px solid #d8e4dd;color:#344b3e;font-size:12px}
+.tf715-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:10px 0}
+@media(max-width:420px){.tf715-fields{grid-template-columns:1fr}}

@@ -1,9 +1,19 @@
 {
   "name": "@compass/worker",
   "private": true,
-  "version": "0.5.5-beta.1",
+  "version": "0.5.77.15",
   "type": "module",
-  "scripts": {"dev":"wrangler dev", "deploy":"wrangler deploy", "check":"node --check src/index.js && node --check src/validation.js && node --check src/watch.js && node --check src/schema.js && node --check src/health-daily.js && node --check src/widget-preview.js && node --check src/discovery-events.js && node --check src/weekly-review.js && node --check src/projects.js && node --check src/tasks.js && node --check src/private-device-mirror.js && node --check src/private-device-chunks-v552.js", "db:local":"wrangler d1 migrations apply compass-db --local", "db:remote":"wrangler d1 migrations apply compass-db --remote"},
-  "dependencies": {"jose":"^6.0.0"},
-  "devDependencies": {"wrangler":"^4.40.0"}
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "node --check src/index.js && node --check src/validation.js && node --check src/watch.js && node --check src/schema.js && node --check src/health-daily.js && node --check src/widget-preview.js && node --check src/discovery-events.js && node --check src/weekly-review.js && node --check src/projects.js && node --check src/tasks.js && node --check src/private-device-mirror.js && node --check src/private-device-chunks-v552.js",
+    "db:local": "wrangler d1 migrations apply compass-db --local",
+    "db:remote": "wrangler d1 migrations apply compass-db --remote"
+  },
+  "dependencies": {
+    "jose": "^6.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
 }

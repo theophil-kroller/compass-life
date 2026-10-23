@@ -1,3 +1,5 @@
+import * as waiting715 from '../client/src/waiting-followup-v57715.js';
+import * as friction715 from '../client/src/task-friction-v57715.js';
 import * as habitSync5731 from '../client/src/habit-device-sync-v5731.js';
 import * as calendarCache574 from '../client/src/calendar-cache-v574.js';
 import * as yesterday710 from '../client/src/yesterday-intentions-v57710.js';
@@ -44,7 +46,7 @@ function setup(){
  const app={innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null};
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const ctx={document,window:{addEventListener:()=>{}},location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(Error('offline')),setTimeout,clearTimeout};
- Object.assign(ctx,yesterday710,lifeBalance63,radar555,dailyPlanning,capacity,deadline,projectExchange,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,discoveryFreshness5777,relationships,relationshipRadar,feelingWheel65,contactCare568,calendarSuggestions568);
+ Object.assign(ctx,waiting715,friction715,yesterday710,lifeBalance63,radar555,dailyPlanning,capacity,deadline,projectExchange,gtd23,life,tasks,calendar,occasions,activities,people,perspectives,review,tags,personMatching,personLinks,discoveryFilter,discoveryFreshness5777,relationships,relationshipRadar,feelingWheel65,contactCare568,calendarSuggestions568);
  Object.assign(ctx,habitSync5731,calendarCache574);
  ctx.touchPersonSummary=touchPersonSummary;
  ctx.technicalSettings=technicalSettings;

@@ -51,7 +51,7 @@ test('today marker does not change deadline and unavailable items cannot be sele
  assert.equal(isActionAvailable(s,t,day),false);
 });
 test('in daily task list, progress +1 is reusable from project task, including on mobile',()=>{
- assert.match(main,/taskList\(tasksForDay\(state,selectedDay\), 'day'\)/);
+ assert.match(main,/taskList\(dayTasks, 'day'\)/);
  assert.match(main,/function taskProgressInline\(t\)/);
  assert.match(main,/\$\{taskProgressInline\(t\)\}/);
  assert.match(main,/data-action="task-progress-plus"/);

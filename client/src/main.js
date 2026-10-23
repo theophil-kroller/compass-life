@@ -3,6 +3,9 @@ import {deadlineIntelligence} from './deadline-intelligence-v45.js';
 import {proactivePlan} from './proactive-planner-v47.js';
 import {dayPlanBlocks,dayCandidates,dayDropTargets,placeDayBlock,updateDayBlock,dayPlanStatus} from './daily-planning-v48.js';
 import {yesterdayIntentions,previousLocalDay} from './yesterday-intentions-v57710.js';
+import {suggestedFollowupDates,nextAustrianWorkday,isAustrianWorkday,austrianPublicHoliday,waitingSourceId,visibleWaitingNote,retainWaitingLink,currentFollowupFor,makeWaitingFollowup,waitingFollowupsDue,postponeWaitingFollowup} from './waiting-followup-v57715.js';
+import {taskFriction,stripTaskFriction,taskNoteWithFriction,OVERCOMING,EFFORT,BLOCKERS} from './task-friction-v57715.js';
+import './waiting-followup-v57715.css';
 import './stress-day-timeline-v57710.css';
 import {needsDateDecision} from './urgency-intelligence-v48.js';
 import {exportProjectPlan,parseProjectPlan,projectImportPreview,applyProjectPlan} from './project-exchange-v45.js';
@@ -119,7 +122,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.14';
+const COMPASS_CLIENT_VERSION='0.5.77.15';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -1050,12 +1053,14 @@ function yesterday710Panel(day){
 }
 function todayWork(locked=false){
  const selected=localDateString(new Date())===selectedDay;
+ const dayTasks=tasksForDay(state,selectedDay).filter(t=>!waitingSourceId(t));
  return `<div class="today-layout">${calendarRail()}<div class="today-center">
  <section class="work-card appointments"><div class="work-heading"><span>${ico('calendar',18)} Termine ${selected?'heute':h(dayFormat(new Date(`${selectedDay}T12:00:00`)))}</span><span class="quiet-tag">${h(calendarStatus)}</span></div>
  ${calendarToken?calendarCardRows(selectedDay)+calendarFilterToggle():calendarConnectUI()}</section>${eventAgendaPanel()}${selectedDay===localDate()?researchRefreshPanel('today'): ''}
- <section class="work-card today-tasks"><div class="work-heading"><span>${ico('list',18)} Meine Aufgaben ${selected?'für heute':'für diesen Tag'}</span><span class="quiet-tag">${tasksForDay(state,selectedDay).filter(t=>t.completed).length} / ${tasksForDay(state,selectedDay).length} erledigt</span></div>
+ <section class="work-card today-tasks"><div class="work-heading"><span>${ico('list',18)} Meine Aufgaben ${selected?'für heute':'für diesen Tag'}</span><span class="quiet-tag">${dayTasks.filter(t=>t.completed).length} / ${dayTasks.length} erledigt</span></div>
  ${yesterday710Panel(selectedDay)}
- ${taskList(tasksForDay(state,selectedDay), 'day')}
+ ${waiting715TodayPanel(selectedDay)}
+ ${taskList(dayTasks, 'day')}
  ${state?`<details class="calm-create"><summary>${ico('plus',15)} Neue Aufgabe hinzufügen</summary>${taskCreateForm(selectedDay)}</details>`:''}
  <div class="capture-inline"><form id="capture-form"><label class="sr-only" for="capture">Schnell in die Inbox erfassen</label><input id="capture" name="title" maxlength="1000" required placeholder="Gedanken sofort in der Inbox festhalten …" ${locked?'disabled':''}/><button type="submit" class="primary-btn" ${locked?'disabled':''}>${ico('plus',17)} Erfassen</button></form><small>Inbox bleibt ein eigener Eingang; eine Aufgabe erhält bewusst ein Datum.</small></div></section>
  <div class="below-today"><section class="work-card deadline-card"><div class="work-heading"><span>${ico('flag',18)} Fristen & Vorausschau</span><span class="quiet-tag">–</span></div><div class="preview-empty-small">${dueTasks(state,4).map(t=>`<div class="deadline-inline"><strong>${h(t.dueDate)}</strong> ${h(t.title)}</div>`).join('')||'Noch keine offenen Deadlines erfasst.'}</div></section>
@@ -1163,16 +1168,45 @@ function taskList(items,scope,hideEmpty=false){
  const yesterdayIds=nextScope?new Set(yesterdayIntentions(state,localDate()).map(x=>x.task.id)):new Set();
  return items.length?`<div class="task-list ${nextScope?'next38-list':''}" data-scope="${h(scope)}">${items.map((t,i)=>`<div class="task-row ${nextScope?'next38-row':''} ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}" ${nextScope?`data-next-row="${h(t.id)}"`:''}>${nextScope?`<span class="next38-drag" draggable="true" data-next-drag="${h(t.id)}" role="img" aria-label="${h(t.title)} zum Sortieren ziehen" title="Ziehen zum Sortieren, alternativ Pfeiltasten">⠿</span>`:''}<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':'○'}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button>${inlineTaskTitle(t,`<span ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`:''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}${nextScope&&t.plannedDate===localDate()?' · Für heute vorgemerkt':''}</small>${nextScope&&yesterdayIds.has(t.id)?'<span class="yesterday710-label">↶ Gestern geplant</span>':''}${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</span>`)}${taskProgressInline(t)}${nextScope?`<button type="button" class="next38-today ${t.plannedDate===localDate()?'is-planned':''}" data-action="next-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" title="${t.plannedDate===localDate()?'Heute-Vormerkung entfernen':'Ohne Fälligkeitsdatum für heute vormerken'}">${ico('calendar',14)} <span>${t.plannedDate===localDate()?'Heute ✓':'Heute'}</span></button><span class="next38-move"><button type="button" data-action="next-move-up" data-id="${h(t.id)}" aria-label="${h(t.title)} nach oben" title="Nach oben" ${i===0?'disabled':''}>↑</button><button type="button" data-action="next-move-down" data-id="${h(t.id)}" aria-label="${h(t.title)} nach unten" title="Nach unten" ${i===items.length-1?'disabled':''}>↓</button></span>`:''}${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;
 }
+function waitingSourceAction(t){
+ const origin=state?.tasks?.[waitingSourceId(t)];
+ return origin&&!origin.archived?`<div class="wf715-source"><span>↳ Verknüpft mit abgeschlossener Aufgabe</span><button type="button" class="text-link" data-action="wf715-open-origin" data-id="${h(origin.id)}">${h(origin.title)} ↗</button></div>`:'';
+}
+function waitingFollowupInspector(t){
+ const current=currentFollowupFor(state,t.id);
+ if(current)return `<section class="wf715-inspector wf715-existing" aria-label="Auf Antwort warten"><strong>📨 Antwort-Wiedervorlage vorhanden</strong><span>${h(current.title)} · prüfen ab ${h(current.plannedDate)}</span><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(current.id)}">Waiting For öffnen →</button></section>`;
+ const day=localDate(),suggestions=suggestedFollowupDates(day),defaultDate=suggestions[2].date;
+ return `<section class="wf715-inspector" aria-label="Auf Antwort warten"><details><summary>✉️ Auf Antwort warten · Wiedervorlage erstellen</summary><p>Deine E-Mail ist abgeschickt. Die Ausgangsaufgabe bleibt erledigt; die Rückmeldung wird separat unter Waiting For geführt und ab dem Prüftag in „Heute“ angezeigt.</p>
+ <form id="wf715-create" data-id="${h(t.id)}"><label>Worauf wartest du?<input name="title" maxlength="180" value="${h(('Rückmeldung zu: '+t.title).slice(0,180))}" required></label>
+ <span class="wf715-suggestions-label">Prüftermin wählen (Österreich, ohne Wochenenden und gesetzliche Feiertage)</span>
+ <div class="wf715-suggestions">${suggestions.map((o,i)=>`<button type="button" class="wf715-suggest ${i===2?'is-active':''}" data-action="wf715-suggest" data-day="${h(o.date)}">${h(o.label)} <small>${h(o.date)}</small></button>`).join('')}</div>
+ <label>Prüfen ab<input type="date" name="checkDate" value="${h(defaultDate)}" required></label><small>Keine Deadline für die Gegenseite. Falls du manuell ein Wochenende oder einen Feiertag wählst, verschiebt Compass auf den nächsten Werktag.</small>
+ <button type="submit" class="primary-btn">${ico('clock',15)} Als Waiting For vormerken</button></form></details></section>`;
+}
+function waiting715TodayPanel(day){
+ if(day!==localDate())return '';
+ const due=waitingFollowupsDue(state,day);
+ if(!due.length)return '';
+ return `<section class="wf715-today" aria-label="Antworten nachfassen"><header><strong>📨 Auf Antworten warten · heute prüfen</strong><small>${due.length} ${due.length===1?'Wiedervorlage':'Wiedervorlagen'}</small></header>
+ <p>Der Prüftag ist erreicht. Falls die Antwort noch aussteht, kannst du nachfassen oder den Termin verschieben. Nichts wird automatisch als erledigt markiert.</p>
+ ${due.map(t=>`<div class="wf715-row"><div><strong>${h(t.title)}</strong><small>${t.plannedDate<day?'Seit '+h(t.plannedDate)+' offen':'Heute prüfen'} · Waiting For</small></div><div class="wf715-row-actions"><button class="secondary-btn" type="button" data-action="task-select" data-id="${h(t.id)}">Details</button><button class="secondary-btn" type="button" data-action="wf715-postpone" data-id="${h(t.id)}">+5 Werktage</button><button class="secondary-btn" type="button" data-action="wf715-complete" data-id="${h(t.id)}">Antwort da ✓</button></div></div>`).join('')}</section>`;
+}
 function taskEditor(){const t=state?.tasks?.[selectedTaskId];if(!t||t.archived)return '<div class="task-empty">Wähle eine Aufgabe, um ihre Details zu bearbeiten.</div>';
  const progress=t.progressTarget!=null&&Number.isSafeInteger(t.progressTarget)&&t.progressTarget>0;
- const current=t.progressCurrent??0,template=isTemplateTask(state,t),locked=!!t.completed||template;
- return `${template?'<p class="shopping-master-help">Dieser Eintrag gehört zur bearbeitbaren Vorlage. Änderungen gelten für künftige Kopien, nicht für bereits erstellte Einkaufslisten.</p>':''}<div class="task-gpt712" ${template?'hidden':''}><button type="button" class="task-gpt712-copy" data-action="task-gpt712-copy" data-id="${h(t.id)}" title="Gesprächseinstieg für ChatGPT kopieren">✦ GPT-Hilfe für diese Aufgabe</button><a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" title="ChatGPT in neuem Tab öffnen">ChatGPT ↗</a><small>Nur auf Klick: Gesprächsprompt mit Aufgabentitel und vorhandener Notiz kopieren. Nichts wird automatisch gesendet.</small></div><form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form v559-inspector-form">
+ const current=t.progressCurrent??0,template=isTemplateTask(state,t),locked=!!t.completed||template,friction=taskFriction(t.note),taskMemo=stripTaskFriction(visibleWaitingNote(t.note));
+ return `${template?'<p class="shopping-master-help">Dieser Eintrag gehört zur bearbeitbaren Vorlage. Änderungen gelten für künftige Kopien, nicht für bereits erstellte Einkaufslisten.</p>':''}<div class="task-gpt712" ${template?'hidden':''}><button type="button" class="task-gpt712-copy" data-action="task-gpt712-copy" data-id="${h(t.id)}" title="Gesprächseinstieg für ChatGPT kopieren">✦ GPT-Hilfe für diese Aufgabe</button><a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" title="ChatGPT in neuem Tab öffnen">ChatGPT ↗</a><small>Nur auf Klick: Gesprächsprompt mit Aufgabentitel und vorhandener Notiz kopieren. Nichts wird automatisch gesendet.</small></div>${!template&&t.completed?waitingFollowupInspector(t):t.workflow==='waiting'?waitingSourceAction(t):''}<form id="task-edit-form" data-id="${h(t.id)}" class="task-edit-form v559-inspector-form">
  ${template?`<label class="shopping713-master-title">Vorlageneintrag bearbeiten<input name="title" maxlength="180" required value="${h(t.title)}"/></label>`: ''}
  <div class="v559-progress-row"><span>Stückfortschritt</span><span class="v559-progress-actions">${progress?`<strong>${current}/${t.progressTarget}</strong><button type="button" data-action="task-progress-minus" data-id="${h(t.id)}" ${locked||current<=0?'disabled':''} aria-label="Ein Stück zurücknehmen">−1</button><button type="button" data-action="task-progress-plus" data-id="${h(t.id)}" ${locked||current>=t.progressTarget?'disabled':''} aria-label="Ein Stück hinzufügen">+1</button>`:'<small>Kein Zählziel</small>'}</span></div>
  <div class="v559-main-dates" aria-label="Aufgabenplanung">${compactInspectorDate('deferUntil','Defer',t.deferUntil,'Frühestens verfügbar; keine Deadline')}${compactInspectorDate('plannedDate','Geplant',t.plannedDate,'Gewünschter Planungstag; keine Deadline')}${compactInspectorDate('dueDate','Due',t.dueDate,'Tatsächliche Fälligkeit')}</div>
  <div class="v559-compact-field"><label for="v559-task-duration">${ico('clock',15)} Dauer (Min.)</label><input id="v559-task-duration" name="estimateMinutes" type="number" min="5" max="1440" step="5" value="${t.estimateMinutes??''}" placeholder="Optional"/></div>
  <div class="v559-compact-field"><label for="v559-task-context">${ico('tag',15)} Kontexte</label><input id="v559-task-context" name="contextTags" data-smart-tags maxlength="300" value="${h((t.contextTags||[]).join(', '))}" placeholder="@büro, @laptop"/></div>
- <details class="v559-note" ${t.note?'open':''}><summary>${ico('pencil',15)} Notiz ${t.note?`<span class="v559-note-preview">${h(t.note.slice(0,42))}${t.note.length>42?'…':''}</span>`:'<span class="v559-note-preview">Hinzufügen</span>'}</summary><textarea name="note" maxlength="3000" rows="3" placeholder="Optional">${h(t.note||'')}</textarea></details>
+ <details class="v559-note" ${taskMemo?'open':''}><summary>${ico('pencil',15)} Notiz ${taskMemo?`<span class="v559-note-preview">${h(taskMemo.slice(0,42))}${taskMemo.length>42?'…':''}</span>`:'<span class="v559-note-preview">Hinzufügen</span>'}</summary><textarea name="note" maxlength="3000" rows="3" placeholder="Optional">${h(taskMemo)}</textarea></details>
+ <details class="tf715-reflection" ${friction.overcoming||friction.effort||friction.blocker?'open':''}><summary>🪨 Überwindung & Energie ${friction.overcoming==='high'?'· hohe Hürde':''}</summary>
+ <p>Eine Aufgabe kann wenig Zeit brauchen und trotzdem schwer anzufangen sein. Freiwillige Selbsteinschätzung; kein Dringlichkeitsscore.</p>
+ <div class="tf715-fields"><label>Überwindungsgrenze<select name="taskOvercoming">${OVERCOMING.map(([value,label])=>`<option value="${value}" ${friction.overcoming===value?'selected':''}>${h(label)}</option>`).join('')}</select></label><label>Energieaufwand<select name="taskEffort">${EFFORT.map(([value,label])=>`<option value="${value}" ${friction.effort===value?'selected':''}>${h(label)}</option>`).join('')}</select></label></div>
+ <label>Was macht den Einstieg schwierig? (optional)<select name="taskBlocker">${BLOCKERS.map(([value,label])=>`<option value="${value}" ${friction.blocker===value?'selected':''}>${h(label)}</option>`).join('')}</select></label>
+ <small>Nur du vergibst diese Einschätzung. Sie wird mit der Aufgabennotiz gespeichert und wie diese synchronisiert. Die GPT-Hilfe berücksichtigt sie erst, wenn du den Prompt bewusst kopierst.</small>
+ </details>
  <details class="v42-progress-editor v559-progress-options"><summary>${ico('settings',14)} Fortschrittsziel festlegen ${progress?'· '+current+'/'+t.progressTarget:''}</summary><div class="v42-progress-edit-grid"><label>Gesamtzahl (Max.)<input name="progressTarget" type="number" min="1" max="100000" step="1" value="${t.progressTarget??''}" placeholder="z. B. 36"/></label><label>Bereits erledigt<input name="progressCurrent" type="number" min="0" max="${t.progressTarget??100000}" step="1" value="${current}"/></label></div><small class="v42-progress-help">Fortschritt zählt Stücke, schließt die Aufgabe aber nicht automatisch ab.</small></details>
  <details class="inspector-extra v559-metadata"><summary>${ico('settings',14)} Titel, Projekt & GTD-Status</summary><div class="v559-meta-fields">${template?'':`<label>Titel<input required name="title" maxlength="180" value="${h(t.title)}"/></label>`}<label>Projekt<select name="projectId">${projectOptions(t.projectId)}</select></label><label>GTD-Status<select name="workflow">${workflowOptions(t.workflow)}</select></label><label>Bereich<select name="category">${categoryOptions(t.category)}</select></label>${t.projectId?`<label>Unteraufgabe von<select name="parentTaskId">${taskParentOptions(t.projectId,t.parentTaskId,t.id)}</select></label>`:''}<label>Agenda-Tags<input name="tags" data-smart-tags maxlength="300" value="${h((t.tags||[]).join(', '))}" placeholder="UKO, Martin"/></label><label class="flag-check"><input type="checkbox" name="flagged" ${t.flagged?'checked':''}/> Flagged</label></div></details>
  <div class="task-edit-actions v559-sticky-actions"><button class="primary-btn" type="submit">Speichern</button><button class="secondary-btn" type="button" data-action="task-archive" data-id="${h(t.id)}">${template?'Aus Vorlage entfernen':'Archivieren'}</button>${t.completed?`<button type="button" class="secondary-btn" data-action="gtd-repeat-task" data-id="${h(t.id)}">${ico('sync',15)} Erneut anlegen</button>`:''}</div></form>${state.taskConflicts?.[t.id]?`<div class="task-conflict"><strong>Änderungskonflikt</strong><p>Die Aufgabe wurde auf einem anderen Gerät bearbeitet. Beide Fassungen bleiben erhalten.</p><button type="button" data-action="task-conflict-local" data-id="${h(t.id)}">Meine Änderungen übernehmen</button><button type="button" data-action="task-conflict-remote" data-id="${h(t.id)}">Cloud-Version übernehmen</button></div>`:''}`;
@@ -2361,6 +2395,19 @@ function bind() {
     });captureBulkPreview=null;captureBulkRaw='';captureBulkOpen=false;toast(`${added} Folgepunkte in Inbox gespeichert${skipped?' · '+skipped+' Dubletten ausgelassen':''}. Im Review einzeln klären.`);}
     catch(ex){toast(ex.message,true);}
   };
+  const waitingForm=app.querySelector('#wf715-create');if(waitingForm)waitingForm.onsubmit=async ev=>{
+    ev.preventDefault();const original=state?.tasks?.[waitingForm.dataset.id];if(!original?.completed)return;
+    const fd=new FormData(waitingForm),title=String(fd.get('title')||'').trim(),requested=String(fd.get('checkDate')||'');
+    try{
+      if(currentFollowupFor(state,original.id))throw Error('Es gibt bereits eine offene Wiedervorlage für diese Aufgabe.');
+      const date=nextAustrianWorkday(requested);
+      if(date<localDate())throw Error('Bitte einen Prüftermin ab heute wählen.');
+      const item=makeWaitingFollowup(original,{id:crypto.randomUUID(),day:date,title,now:stamp()});
+      await mutate(s=>{prepareTasks(s);s.tasks[item.id]=item;s.taskPending[item.id]=true;});
+      selectedTaskId=item.id;todayInspectorOpen=true;
+      toast(date!==requested?`Wiedervorlage angelegt. Das Datum wurde wegen Wochenende/Feiertag auf ${date} verschoben.`:'Waiting-For-Wiedervorlage gespeichert. Sie erscheint ab dem Prüftag unter Heute.');
+    }catch(ex){toast(ex.message,true);}
+  };
   const taskForm=app.querySelector('#task-create-form');if(taskForm)taskForm.onsubmit=async ev=>{
     ev.preventDefault();const fd=new FormData(taskForm);
     const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:fd.get('parentTaskId')||null,sortOrder:0,tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,progressTarget:fd.get('progressTarget')?Number(fd.get('progressTarget')):null,progressCurrent:0,updatedAt:stamp()};
@@ -2371,7 +2418,7 @@ function bind() {
   };
   const taskEditForm=app.querySelector('#task-edit-form');if(taskEditForm)taskEditForm.onsubmit=async ev=>{
     ev.preventDefault();const id=taskEditForm.dataset.id,fd=new FormData(taskEditForm);const existing=state.tasks[id];if(!existing)return;
-    const t={...existing,title:String(fd.get('title')||'').trim(),note:String(fd.get('note')||'').trim(),plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:(fd.get('projectId')===existing.projectId?fd.get('parentTaskId')||null:null),tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,progressTarget:fd.get('progressTarget')?Number(fd.get('progressTarget')):null,progressCurrent:fd.get('progressTarget')?Number(fd.get('progressCurrent')||0):0,updatedAt:stamp()};
+    const t={...existing,title:String(fd.get('title')||'').trim(),note:retainWaitingLink(existing.note,taskNoteWithFriction(String(fd.get('note')||'').trim(),{overcoming:String(fd.get('taskOvercoming')||''),effort:String(fd.get('taskEffort')||''),blocker:String(fd.get('taskBlocker')||'')})),plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:(fd.get('projectId')===existing.projectId?fd.get('parentTaskId')||null:null),tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,progressTarget:fd.get('progressTarget')?Number(fd.get('progressTarget')):null,progressCurrent:fd.get('progressTarget')?Number(fd.get('progressCurrent')||0):0,updatedAt:stamp()};
     if(state.projects?.[existing.projectId]?.isTemplate)t.projectId=existing.projectId;
     if(!validLocalTask(t)||!validTaskParent(state,id,t.projectId,t.parentTaskId)){toast('Aufgabenfelder bzw. Hierarchie prüfen.',true);return;}
     if(t.projectId!==existing.projectId&&Object.values(state.tasks).some(child=>!child.archived&&child.parentTaskId===id)){toast('Unteraufgaben zuerst einzeln verschieben, bevor du das Projekt dieser Aufgabe wechselst.',true);return;}
@@ -4132,6 +4179,26 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       return;
     }
     if(action==='task-flag'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].flagged=!s.tasks[id].flagged;s.taskPending[id]=true;});return;}
+    if(action==='wf715-suggest'){
+      const date=String(day||'');
+      const field=app.querySelector('#wf715-create [name="checkDate"]');
+      if(field&&isAustrianWorkday(date)){field.value=date;app.querySelectorAll('.wf715-suggest').forEach(x=>x.classList.toggle('is-active',x.dataset.day===date));}
+      return;
+    }
+    if(action==='wf715-open-origin'){
+      const t=state?.tasks?.[id];if(!t)return;selectedTaskId=id;todayInspectorOpen=true;render();return;
+    }
+    if(action==='wf715-postpone'){
+      const task=state?.tasks?.[id];if(!task)return;
+      try{const shifted=postponeWaitingFollowup(task,localDate(),5);await mutate(s=>{s.tasks[id]=shifted;s.taskPending[id]=true;});toast('Wiedervorlage um 5 österreichische Werktage verschoben.');}
+      catch(ex){toast(ex.message,true);}return;
+    }
+    if(action==='wf715-complete'){
+      const task=state?.tasks?.[id];if(!task||task.completed||!waitingSourceId(task))return;
+      if(!confirm('Ist die erwartete Antwort eingetroffen? Die Waiting-For-Aufgabe wird abgeschlossen, die Ausgangsaufgabe bleibt unverändert.'))return;
+      await mutate(s=>{s.tasks[id].completed=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
+      toast('Rückmeldung als erledigt markiert.');return;
+    }
     if(action==='task-toggle'){if(!state?.tasks?.[id])return;if(state.projects?.[state.tasks[id].projectId]?.isTemplate){toast('Vorlage bleibt unverändert. Erstelle eine neue Liste daraus.');return;}await mutate(s=>{s.tasks[id].completed=!s.tasks[id].completed;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});return;}
     if(action==='task-archive'){if(!confirm('Aufgabe archivieren?'))return;await mutate(s=>{s.tasks[id].archived=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});selectedTaskId=null;todayInspectorOpen=false;return;}
     if(action==='task-conflict-local'||action==='task-conflict-remote'){

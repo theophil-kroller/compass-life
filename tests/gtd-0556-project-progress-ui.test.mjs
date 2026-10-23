@@ -18,7 +18,7 @@ test('Today and Next Actions share an accessible progress meter and preserved +1
   assert.match(helper,/\$\{current\}\/\$\{target\}/);
   assert.match(helper,/data-action="task-progress-plus"/);
   assert.match(main,/\$\{taskProgressInline\(t\)\}/);
-  assert.match(main, /taskList\(tasksForDay\(state,selectedDay\), 'day'\)/);
+  assert.match(main, /taskList\(dayTasks, 'day'\)/);
   assert.match(css,/\.task-row \.v42-progress-meter progress\s*\{display:block!important/);
   assert.match(css,/\.tree-task \.v42-progress-meter progress\s*\{display:none!important/);
 });
