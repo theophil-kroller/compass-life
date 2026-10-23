@@ -10,9 +10,14 @@ export const TIME_AREAS=[
 export const FOOD_PRESETS=[
  // Existing `matcha` ID deliberately retained: older nutrition entries remain compatible.
  // 500 ml describes the prepared drink (mostly water), not 500 ml of oat milk.
- ['matcha-oat-plain','🍵','Matcha mit Hafermilch (ohne Honig)','Frühstück','1 Becher (ca. 500 ml; 75 ml Hafermilch)',35,60],
- ['matcha','🍯','Matcha mit Hafermilch & Honig','Frühstück','1 Becher (ca. 500 ml; 75 ml Hafermilch)',55,85],
- ['oat-latte','☕','Hafermilch-Latte mit Karamellsirup','Getränke','1 Glas (300 ml)',160,310],
+ ['matcha-oat-plain','🍵','MatchaTherapy mit Hafermilch (ohne Honig)','Frühstück','1 Becher (ca. 500 ml; 75 ml Hafermilch)',41,45],
+ ['matcha','🍯','MatchaTherapy mit Hafermilch & Honig','Frühstück','1 Becher (ca. 500 ml; 75 ml Hafermilch)',62,67],
+ ['oat-latte','☕','Hafermilch-Latte mit Monin Salted Caramel','Getränke','200 ml Hafermilch; 10 ml Sirup',125,140],
+ ['milk-my-vay','🥛','My Vay Barista Haferdrink','Zutaten','100 ml',48,48],
+ ['monin-caramel','🍮','Monin Salted Caramel Sirup','Zutaten','10 ml',32,33],
+ ['matcha-powder','🍃','MatchaTherapy Matchapulver','Zutaten','1 TL (2 g)',5,9],
+ ['bio-kornbrot','🍞','Zurück zum Ursprung Bio Nur-Kornbrot','Zutaten','1 Scheibe (50 g)',134,134],
+ ['butter-hofer','🧈','Hofer Bio-Butter','Zutaten','10 g',72,76],
  ['smoothie','🥤','Smoothie','Getränke','1 Glas (300 ml)',120,280],['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['tea-honey','🫖','Tee mit Honig','Getränke','1 Tasse (250 ml)',20,75],
  ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke','1 Tasse (250 ml)',130,270],['coffee','☕','Kaffee','Getränke','1 Tasse (200 ml)',0,10],
  ['latella','🥛','Lattella','Getränke','500 ml',250,360],
@@ -23,17 +28,19 @@ export const FOOD_PRESETS=[
  ['mensa','🍲','Mensaessen','Mahlzeiten','1 Teller',400,1000],
  ['wholegrain-toast-butter-jam','🍞','Vollkorn-Toast mit Butter & Marmelade','Frühstück','1 Stück',140,260],
  ['fried-egg','🍳','Spiegelei','Frühstück','1 Stück',95,160],
- ['dark-bread-butter','🍞','Schwarzbrot mit Butter','Frühstück','1 Scheibe',140,260],
+ ['dark-bread-butter','🍞','Bio Nur-Kornbrot mit Hofer Bio-Butter','Frühstück','1 Scheibe (50 g) + Butter (10 g; geschätzt)',202,214],
  ['mensa-study-veggie','🥗','Vegetarischer Study-Teller','Mahlzeiten','1 Teller',450,900],
 ['buffet','🍽️','Buffet / auswärts','Mahlzeiten','1 Portion',450,1100],
- ['bread-cheese','🥪','Käsebrot','Mahlzeiten','1 Stück',220,420],['cheddar','🧀','Cheddar-Scheibe','Snacks','1 Scheibe',65,125],
- ['peanuts','🥜','Gesalzene Erdnüsse','Snacks','1 Portion (50 g)',270,320],['mixed-nuts','🌰','Bio-Nussmischung','Snacks','1 Portion (50 g)',270,340],
- ['dried-mango','🥭','Getrocknete Mango','Snacks','1 Portion (50 g)',140,195],['rice-pudding','🍚','Milchreis','Snacks','1 Schale (200 g)',190,340],
+ ['bread-cheese','🥪','Bio Nur-Kornbrot mit Cheddar & Butter','Mahlzeiten','1 Stück',295,330],['cheddar','🧀','SPAR würziger Cheddar','Snacks','1 Scheibe (25 g; geschätzt)',102,106],
+ ['cheddar-hofer','🧀','Hofer BBQ Cheddar','Snacks','1 Scheibe (33 g)',127,131],
+ ['peanuts','🥜','Hofer gesalzene Erdnüsse','Snacks','1 Handvoll (30 g; geschätzt)',175,190],['mixed-nuts','🌰','MorgenLand Bio Kerniger Nuss Mix','Snacks','1 Handvoll (30 g)',193,197],
+ ['dried-mango','🥭','SPAR Vital Bio-Mangohälften','Snacks','1 Packung (200 g)',590,600],['rice-pudding','🍚','S-BUDGET Milchreis Zimt · SPAR','Snacks','1 Becher (200 g)',225,230],
  ['apple','🍎','Apfel','Snacks','1 Stück',60,120],['chocolate','🍫','Schokoriegel','Snacks','1 Riegel (50 g)',220,300],
  ['snickers','🍫','Snickers','Snacks','1 Riegel (50 g)',225,275],
- ['pistachio-butter-cups','🍬','Pistachio Butter Cups','Snacks','3 Stück',150,330],
+ ['pistachio-butter-cups','🍬','Better Pistachio Butter Cups','Snacks','3 Stück (39 g)',238,242],
  ['pringles','🥔','Pringles','Snacks','1 Dose (165 g)',830,920],
  ['chio-chips','🥔','Chio Chips','Snacks','1 Packung (150 g)',740,830],
+ ['supplement-fuerstenmed','💊','FürstenMED Kombinationspräparat','Nahrungsergänzung','1 Kapsel',null,null],
  ['other-food','➕','Anderes','Sonstiges']
 ].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({
  id,emoji,title,group,defaultAmount,kcalLow,kcalHigh,
@@ -134,12 +141,27 @@ export function nutritionKcalEstimate(food,amount){
   const honey=food.id==='matcha';
   // ~40–70 kcal/100 ml oat drink, ~5–9 kcal matcha (2 g), ~20–25 kcal honey (7 g).
   // Round to 5-kcal bands to avoid false precision in a brand-dependent estimate.
-  const round5=value=>Math.round(value/5)*5;
-  return {low:round5(5+milkMl*.40+(honey?20:0)),high:round5(9+milkMl*.70+(honey?25:0)),kind:'Schätzung'};
+  const round=value=>Math.round(value);
+  return {low:round(5+milkMl*.48+(honey?21:0)),high:round(9+milkMl*.48+(honey?22:0)),kind:'Etikett + Schätzung'};
+ }
+ if(food.id==='oat-latte'){
+  const milk=given.match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:hafermilch|haferdrink)/i),sirup=given.match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:sirup|monin)/i);
+  const m=milk?Number(milk[1].replace(',','.')):200,sy=sirup?Number(sirup[1].replace(',','.')):10;
+  if(!Number.isFinite(m)||!Number.isFinite(sy)||m<0||m>1000||sy<0||sy>100)return null;
+  const kcal=Math.round(m*.48+sy*3.26+2);
+  return {low:Math.max(0,kcal-2),high:kcal+2,kind:'Etikett + Schätzung'};
  }
  const parseNumber=v=>Number(String(v).replace(',','.'));
  const quantity=v=>{const m=v.match(/(\d+(?:[.,]\d+)?)\s*(stücke|stück|scheiben|scheibe|g|gramm|ml|liter|l\b|packung|dose|teller)/i);return m?{value:parseNumber(m[1]),unit:m[2].toLowerCase()}:null;};
- const a=quantity(original),b=quantity(given);
+ const parsePortion=(str)=>{
+  const q=quantity(str);if(q)return q;
+  const hand=str.match(/(\d+(?:[.,]\d+)?)?\s*handvoll/i);
+  if(hand)return {value:(hand[1]?parseNumber(hand[1]):1)*30,unit:'g'};
+  if(/becher/i.test(str)&&food.id==='rice-pudding')return {value:200,unit:'g'};
+  if(/packung/i.test(str)&&food.id==='dried-mango')return {value:200,unit:'g'};
+  return null;
+ };
+ const a=parsePortion(original),b=parsePortion(given);
  if(!a||!b)return given===original?{low:food.kcalLow,high:food.kcalHigh,kind:'Schätzung'}:null;
  const unit=u=>u==='gramm'?'g':u==='scheiben'?'scheibe':u==='stücke'?'stück':u==='liter'||u==='l'?'ml':u;
  let ratio;

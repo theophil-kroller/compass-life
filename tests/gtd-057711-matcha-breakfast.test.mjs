@@ -24,34 +24,34 @@ test('two distinct one-tap breakfast matcha variants have explicit oat milk and 
 });
 
 test('oat-milk based estimates differ by one tsp of honey, not by water volume',()=>{
- assert.deepEqual(nutritionKcalEstimate(plain,plain.defaultAmount),{low:35,high:60,kind:'Schätzung'});
- assert.deepEqual(nutritionKcalEstimate(honey,honey.defaultAmount),{low:55,high:85,kind:'Schätzung'});
- assert.deepEqual(nutritionKcalEstimate(plain,'500 ml Getränk · 75 ml Hafermilch'),{low:35,high:60,kind:'Schätzung'});
- assert.deepEqual(nutritionKcalEstimate(plain,'250 ml Getränk · 75 ml Hafermilch'),{low:35,high:60,kind:'Schätzung'});
- assert.deepEqual(nutritionKcalEstimate(plain,'600 ml Getränk · 75 ml Hafermilch'),{low:35,high:60,kind:'Schätzung'});
- assert.deepEqual(nutritionKcalEstimate(plain,'500 ml Getränk · 50 ml Hafermilch'),{low:25,high:45,kind:'Schätzung'});
- assert.deepEqual(nutritionKcalEstimate(honey,'500 ml Getränk · 100 ml Hafermilch'),{low:65,high:105,kind:'Schätzung'});
- assert.deepEqual(nutritionKcalEstimate(plain,'500 ml Hafermilch'),{low:205,high:360,kind:'Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(plain,plain.defaultAmount),{low:41,high:45,kind:'Etikett + Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(honey,honey.defaultAmount),{low:62,high:67,kind:'Etikett + Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(plain,'500 ml Getränk · 75 ml Hafermilch'),{low:41,high:45,kind:'Etikett + Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(plain,'250 ml Getränk · 75 ml Hafermilch'),{low:41,high:45,kind:'Etikett + Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(plain,'600 ml Getränk · 75 ml Hafermilch'),{low:41,high:45,kind:'Etikett + Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(plain,'500 ml Getränk · 50 ml Hafermilch'),{low:29,high:33,kind:'Etikett + Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(honey,'500 ml Getränk · 100 ml Hafermilch'),{low:74,high:79,kind:'Etikett + Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(plain,'500 ml Hafermilch'),{low:245,high:249,kind:'Etikett + Schätzung'});
 });
 
 test('historical matcha logs keep their legacy ID and are recalculated without changing entries',()=>{
  const state={nutritionJournal:{entries:[{id:'old',foodId:'matcha',at:'2026-10-23T07:00:00Z',amount:'1 Tasse (250 ml)',note:'wie früher'}],customFoods:[]}};
  const old=JSON.stringify(state.nutritionJournal.entries[0]);
  assert.equal(nutritionFoods(state).filter(x=>x.id==='matcha').length,1);
- assert.deepEqual(nutritionKcalEstimate(honey,state.nutritionJournal.entries[0].amount),{low:55,high:85,kind:'Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(honey,state.nutritionJournal.entries[0].amount),{low:62,high:67,kind:'Etikett + Schätzung'});
  assert.equal(JSON.stringify(state.nutritionJournal.entries[0]),old);
  const added=addNutrition(state,{id:'today',foodId:'matcha-oat-plain',at:'2026-10-23T07:35:00Z'});
  assert.equal(added.amount,plain.defaultAmount);
  assert.equal(nutritionEntries(state).length,2);
- assert.deepEqual(nutritionKcalSummary(state,7,now),{low:90,high:145,known:2,unknown:0,total:2,complete:true});
+ assert.deepEqual(nutritionKcalSummary(state,7,now),{low:103,high:112,known:2,unknown:0,total:2,complete:true});
 });
 
-test('existing non-Matcha nutrition scaling is unchanged and build versions are aligned',()=>{
+test('updated bread recipe remains scalable and build versions are aligned',()=>{
  const bread=FOOD_PRESETS.find(x=>x.id==='dark-bread-butter');
- assert.deepEqual(nutritionKcalEstimate(bread,'2 Scheiben'),{low:280,high:520,kind:'Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(bread,'2 Scheiben'),{low:404,high:428,kind:'Schätzung'});
  const root=JSON.parse(readFileSync(new URL('../package.json',import.meta.url)));
  const client=JSON.parse(readFileSync(new URL('../client/package.json',import.meta.url)));
- assert.equal(root.version,'0.5.77.11');assert.equal(client.version,root.version);
+ assert.equal(root.version,'0.5.77.12');assert.equal(client.version,root.version);
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.11'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.12'/);
 });

@@ -158,3 +158,7 @@ Ein gemeinsamer Tageszeitstrahl auf der Stress-Seite zeigt gemessene Garmin-Stre
 ## Compass 0.5.77.11 – Matcha-Frühstück in zwei Varianten
 
 In **Ernährung → Frühstück** stehen Matcha mit Hafermilch **ohne Honig** (ca. 35–60 kcal) und mit **1 TL Honig** (ca. 55–85 kcal) zur Auswahl. Beide nutzen etwa 1 TL Matcha, heißes Wasser und eine explizit als *Annahme* deklarierte Zugabe von 75 ml Hafermilch zu einem Becher von ca. 500 ml Gesamtvolumen. Die tatsächliche Hafermilchmenge lässt sich im Ernährungstagebuch je Eintrag durch `120 ml Hafermilch` o. Ä. überschreiben. Vorhandene Matcha-mit-Honig-Einträge behalten ihre ID und werden mit der präzisierten Rezeptschätzung bewertet. [Changelog](CHANGELOG_0.5.77.11.md) · [Installation](INSTALLATION_0.5.77.11.txt).
+
+## Version 0.5.77.12
+
+Nutrition Intelligence: Markenprodukt- und Rezeptprofile, quellenbewusste Tagesübersicht für Makro-/Mikronährstoffe mit Abdeckungswarnungen. Task-Inspector: opt-in GPT-Klärungsprompt per Klick kopieren. Details in `CHANGELOG_0.5.77.12.md`.

@@ -1,24 +1,21 @@
-Compass Life 0.5.76.1 - CI-Fix fuer fehlgeschlagenen GitHub Actions Run #155
+COMPASS LIFE 0.5.77.12 — INSTALLATION
 
-Ursache
-Der Regressionstest tests/touch-multi-05761.test.mjs legte p1 ohne relationKind an,
-obwohl die Touch-Personenauswahl seit dem letzten Build absichtlich nur
-family, partner und friend zulaesst. Dieser Widerspruch fuehrte zu
-"not ok 796 - multiple checkboxes in direct form and explicit person choices".
+PATCH: auf Version 0.5.77.11 anwenden.
+FULL SOURCE: vollständige konsolidierte Version.
 
-Korrektur
-- p1 im Test als 'friend' klassifiziert
-- p2 als 'colleague', p3 als 'partner', p4 als 'family', p5 als 'acquaintance'
-- Test prueft nun, dass friend/partner/family angeboten und
-  colleague/acquaintance ausgeschlossen werden.
-- Kein Anwendungscode, keine Datenbank, keine Nutzerdaten veraendert.
+ZIP entpacken; Dateien und Unterordner ins Stammverzeichnis des bestehenden
+GitHub-Repositories theophil-kroller/compass-life hochladen, gleiche Pfade ersetzen, committen.
+NICHT die ZIP als einzelne Datei ins Repository legen.
 
-Installation: Datei tests/touch-multi-05761.test.mjs nach GitHub
-in exakt dasselbe Verzeichnis hochladen und vorhandene Datei ersetzen.
-ZIP-Inhalt: nur 1 aktualisierte Testdatei und diese Anleitung.
+Prüfe GitHub Actions / Pages-Deployment. Zur Laufzeit „Insights → Ernährung"
+öffnen, Tab „Makro & Mikro" auswählen. Tagespfeile wählen. Bei „Produktwissen"
+ein Etikettprofil auswählen.
+Im Task-Inspector unter Heute kann „✦ GPT-Hilfe für diese Aufgabe" den
+Gesprächseinstieg in die Zwischenablage kopieren. Danach ChatGPT öffnen und
+den Prompt einfügen. Keine automatischen privaten Datenweitergaben.
 
-Pruefung: Isolierter Test mit lokal vorhandener aktueller Touch-Komponente:
-node --test tests/touch-multi-05761.test.mjs
-5 Tests, 5 bestanden. GitHub-Run #155: 799 von 800 Tests bestanden;
-den verbliebenen Test lokal reproduziert und behoben.
-Vollstaendiger CI-Workflow und Vite-Build sind erst nach Upload verifizierbar.
+Historische Verzehr-Einträge und Termine werden nicht gelöscht. Keine
+D1-Migration, kein Worker-Update. Tests: 882 grün. Lokaler Vite-Build nicht
+möglich (vite nicht installiert), GitHub Actions ist die finale Build-Prüfung.
+
+Details: CHANGELOG_0.5.77.12.md

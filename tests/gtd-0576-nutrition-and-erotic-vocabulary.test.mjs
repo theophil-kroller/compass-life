@@ -10,14 +10,14 @@ const NOW=new Date('2026-10-22T15:00:00Z');
 const goal={enabled:true,birthYear:1983,birthMonth:6,heightCm:185,formulaSex:'male',method:'mifflin',activity:'moderate',deficit:300};
 const state=()=>({healthImports:{fitdays:[{at:'2026-10-21T09:00:00Z',weightKg:80,bodyFatPct:20}]},nutritionJournal:{entries:[],customFoods:[],energyGoal:goal}});
 test('0.5.76 three breakfast foods with sensible editable default portions',()=>{
- for(const [id,portion] of [['wholegrain-toast-butter-jam','1 Stück'],['fried-egg','1 Stück'],['dark-bread-butter','1 Scheibe']]){
+ for(const [id,portion] of [['wholegrain-toast-butter-jam','1 Stück'],['fried-egg','1 Stück'],['dark-bread-butter','1 Scheibe (50 g) + Butter (10 g; geschätzt)']]){
   const f=FOOD_PRESETS.find(x=>x.id===id);assert.ok(f);assert.equal(f.group,'Frühstück');assert.equal(f.defaultAmount,portion);assert.ok(f.kcalLow>0&&f.kcalHigh>f.kcalLow);
   const s=state();const row=addNutrition(s,{foodId:id,at:NOW.toISOString()});assert.equal(row.amount,portion);
   const estimate=nutritionKcalEstimate(f,row.amount);assert.equal(estimate.low,f.kcalLow);
  }
- assert.deepEqual(nutritionKcalEstimate(FOOD_PRESETS.find(f=>f.id==='dark-bread-butter'),'2 Scheiben'),{low:280,high:520,kind:'Schätzung'});
+ assert.deepEqual(nutritionKcalEstimate(FOOD_PRESETS.find(f=>f.id==='dark-bread-butter'),'2 Scheiben'),{low:404,high:428,kind:'Schätzung'});
  assert.match(nutritionQuickView(null),/Vollkorn-Toast/);
- assert.match(nutritionQuickView(null),/Schwarzbrot mit Butter/);
+ assert.match(nutritionQuickView(null),/Bio Nur-Kornbrot mit Hofer Bio-Butter/);
 });
 test('0.5.76 early-day kcal band is transparent about missing data',()=>{
  const s=state();addNutrition(s,{foodId:'wholegrain-toast-butter-jam',at:'2026-10-22T06:30:00Z'});

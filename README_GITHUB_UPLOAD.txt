@@ -1,13 +1,21 @@
-COMPASS 0.5.76.1 – Buildfix #152 + Berührung & Nähe
+COMPASS LIFE 0.5.77.12 — INSTALLATION
 
-ZIP-Inhalte unter den exakt angegebenen Pfaden ins vorhandene GitHub-Repo hochladen.
-Kein Anwendungsskript, keine Migration. Bestehende Einträge bleiben lesbar.
+PATCH: auf Version 0.5.77.11 anwenden.
+FULL SOURCE: vollständige konsolidierte Version.
 
-Hinzugefügt:
-- Direkter Nähezugriff in der Topbar, unabhängig vom Insights-Tab.
-- Mehrfachauswahl (z.B. Tanzen, Küssen, Kuscheln gleichzeitig) mit einer Zeitangabe.
-- Person aus dem bestehenden Compass-Kontaktverzeichnis auswählen, stabile Person-ID.
-- Kontaktbereich / Beziehungslandkarte zeigt die zugehörigen bisherigen Begegnungen.
-- Vorschläge je Person NUR aus bisherigen eigenen Berührungsaufzeichnungen.
-- Keine automatischen Annahmen über Sex oder Beziehung, keine Bewertungen.
-- Korrigierte alte CI-Tests, die keine neuen Insights und keinen Balken bei deaktiviertem Ziel zuließen.
+ZIP entpacken; Dateien und Unterordner ins Stammverzeichnis des bestehenden
+GitHub-Repositories theophil-kroller/compass-life hochladen, gleiche Pfade ersetzen, committen.
+NICHT die ZIP als einzelne Datei ins Repository legen.
+
+Prüfe GitHub Actions / Pages-Deployment. Zur Laufzeit „Insights → Ernährung"
+öffnen, Tab „Makro & Mikro" auswählen. Tagespfeile wählen. Bei „Produktwissen"
+ein Etikettprofil auswählen.
+Im Task-Inspector unter Heute kann „✦ GPT-Hilfe für diese Aufgabe" den
+Gesprächseinstieg in die Zwischenablage kopieren. Danach ChatGPT öffnen und
+den Prompt einfügen. Keine automatischen privaten Datenweitergaben.
+
+Historische Verzehr-Einträge und Termine werden nicht gelöscht. Keine
+D1-Migration, kein Worker-Update. Tests: 882 grün. Lokaler Vite-Build nicht
+möglich (vite nicht installiert), GitHub Actions ist die finale Build-Prüfung.
+
+Details: CHANGELOG_0.5.77.12.md
