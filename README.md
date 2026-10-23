@@ -150,3 +150,7 @@ Siehe [Changelog](CHANGELOG_0.5.69.2.md) und [Installation](INSTALLATION_0.5.69.
 ## Compass 0.5.77.9 – Stressmuster im zeitlichen Kontext
 
 Die Stress-Seite zeigt konkrete hohe Stressphasen mit tatsächlichen oder zeitlich nahen Kalender-/Aktivitätseinträgen zuerst; alle vier Stressstufen bleiben unter Details verfügbar. Persönliche wiederholte Beobachtungen erscheinen prominent. Pro Aktivitäts-/Kalendertyp vergleicht Compass echte Garmin-Stresswerte 30 Min. davor, währenddessen und 60 Min. danach, einschließlich gepaarter Vorher-/Nachher-Veränderungen, Stichprobengrößen, Kalenderabdeckungswarnungen und aufklappbaren Einzelbeobachtungen. Diese Daten erlauben keine kausalen oder diagnostischen Aussagen. Siehe [CHANGELOG_0.5.77.9.md](CHANGELOG_0.5.77.9.md) und [INSTALLATION_0.5.77.9.txt](INSTALLATION_0.5.77.9.txt).
+
+## Compass 0.5.77.10 – Tagesstress & Aufgaben vom Vortag
+
+Ein gemeinsamer Tageszeitstrahl auf der Stress-Seite zeigt gemessene Garmin-Stresswerte, konkrete Kalendereinträge, Garmin-/Compass-Aktivitäten und genau protokollierte Zeiten. Generische `Work`-Blöcke sind nur neutrale Platzhalter und zählen nicht zu interpretierten Stressereignissen. Morgen-/Tag-/Abend-Statistik und Abdeckungswarnung bleiben lokal im Vault. Unter **Heute** werden exakt die unerledigten Absichten von gestern mit freiwilligem Knopf „Heute +“ angezeigt; unter **Next Actions** erscheint eine nur einen Tag gültige Kennzeichnung. [Changelog](CHANGELOG_0.5.77.10.md) · [Installation](INSTALLATION_0.5.77.10.txt).

@@ -81,6 +81,7 @@ export function buildStressPatterns({model,calendarEvents=[],activities=[],garmi
  const startRange=points[0].time,endRange=points.at(-1).time;
  for(const [source,events] of [['calendar',contexts.calendarRows],['activity',contexts.activityRows]]){
   for(const e of events){
+   if(source==='calendar'&&e.generic)continue; // A generic Work block is not a concrete observed event.
    if(e.start>endRange+30*MIN||e.end<startRange-60*MIN)continue;
    // Do not compare overnight blocks or implausible tiny sessions as if they were one activity.
    if(e.end-e.start<10*MIN||e.end-e.start>8*60*MIN)continue;

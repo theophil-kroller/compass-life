@@ -5,6 +5,7 @@ import {insightsRange} from './insights.js';
 import {rollingEnvelopeChart} from './health-rolling.js';
 import {buildStressContext,stressContextView} from './stress-context-v5778.js';
 import {buildStressPatterns,stressPatternsView} from './stress-patterns-v5779.js';
+import {buildStressDayTimeline,stressDayTimelineView} from './stress-day-timeline-v57710.js';
 const safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dayFmt=new Intl.DateTimeFormat('sv-SE',{year:'numeric',month:'2-digit',day:'2-digit'});
 const clockFmt=new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
@@ -168,6 +169,7 @@ export function insightsStressView(imported={},period='28',today=new Date().toIS
  const model=buildWellnessInsights(imported,period==='all'?today:nav.end,period),list=model.stressDays,day=list.find(x=>x.day===selected)||list.at(-1)||null;
  const contextAnalysis=buildStressContext({model,garminSessions:imported?.garminSessions||[],...context});
  const patterns=buildStressPatterns({model,garminSessions:imported?.garminSessions||[],...context});
+ const timeline=day?buildStressDayTimeline({daySummary:day,garminSessions:imported?.garminSessions||[],...context}):null;
  const calendarHint=!context?.calendarCoverage?.start?`<div class="insight-data-note" role="status"><strong>Kalenderhistorie fehlt für diesen Vergleich.</strong> Damit Compass konkrete Termine bei Stressspitzen findet, muss der historische Kalender vollständig synchronisiert sein. <button type="button" class="secondary-btn" data-action="${context.calendarConnected?'calendar-refresh':'calendar-connect'}">${context.calendarConnected?'Kalenderhistorie aktualisieren':'Google Kalender verbinden'}</button></div>`:'';
  return `<div class="insight-wellness">
  <div class="insight-kpi-grid">${card('Ø Stress',num(model.avgStress),'Gültige Garmin-Stresswerte')}${card('Messtage',num(list.length),'Mit gültigen Stresswerten')}${card('Stress-Messpunkte',num(model.stressCount),'5-Minuten-Zeitfenster')}${card('Letzter Messtag',list.length?formatDay(list.at(-1).day):'–','Importierte Garmin-Wellness-Dateien')}</div>
@@ -179,9 +181,10 @@ export function insightsStressView(imported={},period='28',today=new Date().toIS
  ${shell('Rollender Stressverlauf','02B · ROLLING STRESS',rollingEnvelopeChart(model.stressDays,'avgStress',{title:'Täglicher Stressmittelwert',unit:'Garmin-Stress',windowDays,color:'#C28669',range:model.range,stressZones:true}),`Rollender Median und Streuung auf Tagesbasis (Fenster ${windowDays} Tage).`)}
  </div>
  ${calendarHint}
+ ${day?daySelector(list,day.day)+stressDayTimelineView(timeline):''}
  ${stressContextView(contextAnalysis)}
  ${stressPatternsView(patterns)}
- ${shell('Mein Stress im Tagesverlauf','03 · DAILY STRESS',list.length?daySelector(list,day.day)+wellnessDayChart(day,'stress'):missing('Stress'),'Lücken werden nicht aufgefüllt; hohe Werte sind nicht automatisch negative emotionale Erlebnisse.')}
+ ${shell('Mein Stress im Tagesverlauf','03 · DAILY STRESS',list.length?wellnessDayChart(day,'stress'):missing('Stress'),'Lücken werden nicht aufgefüllt; hohe Werte sind nicht automatisch negative emotionale Erlebnisse.')}
  <div class="insight-footnote">Wichtig: Zum Ergänzen der neuen Stresswerte bereits früher importierte Garmin-Tages-ZIPs unter „Datenquellen“ erneut auswählen. Compass erkennt gleiche Zeitpunkte und legt keine Duplikate an.</div>
  </div>`;
 }

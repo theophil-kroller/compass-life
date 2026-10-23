@@ -80,5 +80,5 @@ test('malformed JSON and invalid field names fail transparently with specific fe
  assert.match(main,/id="discovery-import-feedback"/);
  assert.match(main,/role="alert"/);
  assert.match(main,/\$\{h\(discoveryImportDraft\)\}<\/textarea>/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.(?:7|8|9)'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.(?:7|8|9|10)'/);
 });

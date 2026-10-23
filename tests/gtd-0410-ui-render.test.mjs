@@ -1,5 +1,6 @@
 import * as habitSync5731 from '../client/src/habit-device-sync-v5731.js';
 import * as calendarCache574 from '../client/src/calendar-cache-v574.js';
+import * as yesterday710 from '../client/src/yesterday-intentions-v57710.js';
 import * as contactCare568 from '../client/src/relationship-intelligence-v568.js';
 import * as calendarSuggestions568 from '../client/src/calendar-intelligence-v568.js';
 import * as feelingWheel65 from '../client/src/feeling-wheel-v565.js';
@@ -58,7 +59,7 @@ function context(){
  const document={getElementById:()=>app,querySelector:()=>null,addEventListener:()=>{},visibilityState:'visible'};
  const window={addEventListener:()=>{}};
  const ctx={app,document,window,location:{search:''},history:{replaceState:()=>{}},navigator:{onLine:false},URLSearchParams,URL,Date,Intl,crypto:webcrypto,structuredClone,console,fetch:()=>Promise.reject(new Error('No network')),setTimeout,clearTimeout};
- Object.assign(ctx,dailyPlanning,capacity,deadline,projectExchange,treeWorkspace,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
+ Object.assign(ctx,yesterday710,dailyPlanning,capacity,deadline,projectExchange,treeWorkspace,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,contactCare568,calendarSuggestions568);
  Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,discoveryFreshness5777,cinemaModule5772,cinemaDetails5773,eventSync,relationships);
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});

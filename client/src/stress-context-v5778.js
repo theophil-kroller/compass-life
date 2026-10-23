@@ -7,6 +7,7 @@ const DAY=/^\d{4}-\d{2}-\d{2}$/;
 const MIN=60000;
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('de-AT');
+export const genericStressCalendarBlock=title=>/^(?:work|working|arbeit|arbeitszeit|work ?block|research blocker|focus block|blocker|office hours|bürozeit)$/i.test(String(title||'').trim());
 const localDay=ms=>{const d=new Date(ms);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const shortDay=day=>new Date(day+'T12:00:00').toLocaleDateString('de-AT',{day:'numeric',month:'short'});
 const clock=ms=>new Date(ms).toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
@@ -22,7 +23,7 @@ export function timedRows(calendarEvents,activities,garminSessions,rules,overrid
   if(seenEvents.has(id))continue;seenEvents.add(id);
   const appearance=classifyCalendarEvent(e,rules,overrides);
   if(appearance.hidden)continue;
-  events.push({start,end,title:String(appearance.displayTitle||e.summary||'Kalendereintrag').slice(0,150),category:appearance.category||'Neutral',source:'calendar'});
+  events.push({start,end,title:String(appearance.displayTitle||e.summary||'Kalendereintrag').slice(0,150),category:appearance.category||'Neutral',source:'calendar',generic:genericStressCalendarBlock(appearance.displayTitle||e.summary)});
  }
  for(const a of activities||[]){
   if(!a||a.deleted||!Number.isFinite(a.durationMinutes)||a.durationMinutes<=0||a.durationMinutes>1440)continue;
@@ -60,7 +61,7 @@ export function buildStressContext({model,calendarEvents=[],activities=[],garmin
   for(const p of d.points||[]){const zone=stressBand(p.stress);if(!zone)continue;
    const t=Date.parse(p.at);if(!Number.isFinite(t))continue;
    const bucket=bins[zone];bucket.count++;if(covered)bucket.covered++;
-   const calendarHits=(indexed.calendar.get(d.day)||[]).filter(e=>e.start<t+5*MIN&&e.end>t);
+   const calendarHits=(indexed.calendar.get(d.day)||[]).filter(e=>!e.generic&&e.start<t+5*MIN&&e.end>t);
    const activityHits=(indexed.activity.get(d.day)||[]).filter(e=>e.start<t+5*MIN&&e.end>t);
    if(calendarHits.length){bucket.calendarCount++;for(const e of calendarHits){const key=e.category+'|'+e.title,entry=bucket.calendarLabels.get(key)||{title:e.title,category:e.category,count:0};entry.count++;bucket.calendarLabels.set(key,entry);}}
    if(activityHits.length){bucket.activityCount++;for(const a of activityHits){const key=a.category+'|'+a.title,entry=bucket.activityLabels.get(key)||{title:a.title,category:a.category,count:0};entry.count++;bucket.activityLabels.set(key,entry);}}
@@ -88,7 +89,7 @@ export function buildStressContext({model,calendarEvents=[],activities=[],garmin
   uncertain:item.uncertain})).sort((a,b)=>a.minutes-b.minutes).slice(0,3);
  const recentPeaks=episodes.sort((a,b)=>b.start-a.start).slice(0,12).map(e=>({
   ...e,calendar:[...e.calendar.values()].slice(0,5),activities:[...e.activities.values()].slice(0,5),
-  nearbyCalendar:e.covered?nearbyFor(e,indexed.calendarRows):[],
+  nearbyCalendar:e.covered?nearbyFor(e,indexed.calendarRows.filter(x=>!x.generic)):[],
   nearbyActivities:nearbyFor(e,indexed.activityRows)
  }));
  return {bands:STRESS_BANDS.map(z=>({...bins[z.id],calendar:topEntries(bins[z.id].calendarLabels),activities:topEntries(bins[z.id].activityLabels),calendarLabels:undefined,activityLabels:undefined})),recentPeaks,episodesCount:episodes.length,range:{first,last},calendarCoverage,knownDays,incompleteDays,activityCsvUnzoned:indexed.activityCsvUnzoned,activityTotal:indexed.activityTotal,calendarTotal:indexed.calendarTotal};

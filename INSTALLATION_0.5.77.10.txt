@@ -1,0 +1,24 @@
+COMPASS LIFE 0.5.77.10 – Tageszeitstrahl & Gestern geplant
+
+PATCH: Compass_0.5.77.10_PATCH_FROM_0.5.77.9.zip
+Voraussetzung: GitHub-Quellstand Compass 0.5.77.9.
+
+FULL SOURCE: Compass_0.5.77.10_FULL_SOURCE.zip
+Enthält vollständige Quellen, ohne persönliche Vault-Daten.
+
+ZIP entpacken und die enthaltenen Verzeichnisse und Dateien wie bisher direkt ins
+GitHub-Repository-Stammverzeichnis übernehmen. Commit durchführen und GitHub
+Actions > Deploy Compass Web auf erfolgreiches Build und Deployment prüfen.
+Danach ggf. Browser-Cache/PWA neu laden.
+
+NEU:
+- Insights > Gesundheit > Stress: Tages-Zeitstrahl mit Garmin-Kurve, echten
+  Kalenderterminen, Garmin-/Compass-Aktivitäten und konkreten Zeitjournal-Einträgen.
+  Ein generischer "Work"-Block ist nur Hintergrund, keine beobachtete Tätigkeit.
+- Heute > Meine Aufgaben: "Gestern geplant · noch offen". "Heute +" übernimmt
+  nur gewählte unerledigte Aufgaben; ohne neue Frist.
+- Next Actions: Kennzeichen "Gestern geplant" für exakt einen Folgetag.
+
+Vorhandene Garmin-Messungen, Kalenderhistorie und Zeitprotokolle werden rein lokal
+verwendet. Ohne historische Aufzeichnungen keine rückwirkend erfundenen Aktivitäten.
+Kein neues Server-API, Worker-Update und keine D1-Migration notwendig.
