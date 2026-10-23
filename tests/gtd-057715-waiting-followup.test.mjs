@@ -65,5 +65,5 @@ test('0.5.77.15 integrates post-completion inspector, non-deadline Today queue a
  assert.match(main,/note:retainWaitingLink\(existing.note/);
  assert.match(css,/\.wf715-today/);
  const p=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
- assert.ok(p.version==='0.5.77.15'||p.version==='0.5.77.16');
+ assert.match(p.version,/^0\.5\.77\.(?:1[5-9]|[2-9]\d+)$/);
 });

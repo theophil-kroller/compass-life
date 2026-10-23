@@ -1,3 +1,5 @@
+> **Aktueller Build: 0.5.77.17.** Vier GTD-Schnellpfade (Heute, Inbox, Planen, Menschen), offene To-dos vor Beziehungseinstellungen, optimierte Tag-/Projektindizes. Siehe [CHANGELOG_0.5.77.17.md](CHANGELOG_0.5.77.17.md).
+
 > **Aktueller Build: 0.5.77.16.** Siehe [CHANGELOG_0.5.77.16.md](CHANGELOG_0.5.77.16.md) für den Schutz ungespeicherter Projekt-/Aufgaben-Entwürfe und die Performance-Optimierungen.
 
 > **Neu in 0.5.77.15:** Abgeschlossene Aufgaben können im Inspector eine eigenständige **Waiting-For-Wiedervorlage** erhalten; Vorschläge berücksichtigen österreichische Werktage und bundesweite Feiertage. Fällige Rückmeldungen erscheinen unter **Heute** mit Nachfass-/Verschieben-Aktion. Im Inspector lassen sich optional **Überwindung**, **Energieaufwand** und ein Hinderungsgrund dokumentieren und bewusst an die GPT-Aufgabenhilfe übergeben. Details: [CHANGELOG_0.5.77.15.md](CHANGELOG_0.5.77.15.md).

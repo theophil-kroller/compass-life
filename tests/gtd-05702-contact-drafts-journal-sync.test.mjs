@@ -20,7 +20,8 @@ test('contact initiator is explicit and preserved in new entries',()=>{
 });
 test('contact drafts saved in encrypted vault without re-render on each keystroke',()=>{
  assert.match(main,/state\.contactDrafts\?\?=\{\}/);
- assert.match(main,/contactDraftSaveTimer=setTimeout\(\(\)=>\{persist\(\)/);
+ assert.doesNotMatch(main.slice(main.indexOf('    const saveDraft=()=>{'),main.indexOf('  if(contactForm)contactForm.onsubmit')),/persist\(/);
+ assert.match(fs.readFileSync(new URL('../client/src/edit-draft-guard-v57716.js',import.meta.url),'utf8'),/'person-contact-form'/);
  assert.match(main,/if\(tab==='people'&&!contactSaving&&editingContact/);
  assert.match(main,/if\(s\.contactDrafts\)delete s\.contactDrafts\[id\]/);
  assert.match(code,/initiator:item\.initiator\|\|'unknown'/);

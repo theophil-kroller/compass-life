@@ -10,8 +10,14 @@ export function ageDays(iso,day=localDate()){
 }
 export function projectHealth(state,day=localDate()){
  const available=new Set(nextActions(state,day).map(x=>x.id));
+ // Build once; projectTasks() previously scanned the entire task set per project.
+ const byProject=new Map();
+ for(const task of Object.values(state?.tasks||{}))if(task&&!task.archived&&task.projectId){
+  if(!byProject.has(task.projectId))byProject.set(task.projectId,[]);
+  byProject.get(task.projectId).push(task);
+ }
  const items=Object.values(state?.projects||{}).filter(p=>(p.kind||'project')==='project'&&p.status==='active'&&!p.isTemplate).map(p=>{
-  const tasks=projectTasks(state,p.id),open=tasks.filter(t=>!t.completed),ready=open.filter(t=>available.has(t.id));
+  const tasks=byProject.get(p.id)||[],open=tasks.filter(t=>!t.completed),ready=open.filter(t=>available.has(t.id));
   const reviewDue=projectNeedsReview(p,day),reviewAge=ageDays(p.reviewedAt,day);
   const hasNoAction=ready.length===0;
   const due=p.dueDate&&p.dueDate<day;
