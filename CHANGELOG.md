@@ -1,7 +1,6 @@
-# CI-Hotfix nach Compass 0.5.77.38
-
-- Aktualisiert einen veralteten Nutrition-2-Regressionstest für die kleine kcal-Pille.
-- Prüft weiterhin beide unterschiedlichen Fehlwerttypen: normales Lebensmittel und Supplement.
-- Prüft die korrekten Artikelnamen, die Prüfen-Aktion und dass kein breiter alter Aufklappbalken zurückkehrt.
-- Entfernt keine Tests und schwächt keine fachliche Prüfung zu fehlenden vs. Nullwerten ab.
-- Kein Eingriff in die Trainingsdaten, Muskelkarte oder Anwendungsversion.
+# Compass 0.5.77.39 – CI-Hotfix
+- Fehlgeschlagenen GitHub-Actions-Lauf #198 analysiert.
+- Fehlerursache: Regressionstest `premium map shows front and back and does not add cycling to strength sets` erwartet den Text `/nicht in Sätze umgerechnet/`.
+- Beschreibung des kombinierten Aktivitätsmodus so angepasst, dass sie die fachlich richtige Trennung explizit formuliert.
+- 9/9 zugehörige Redesign-Tests bestanden.
+- Keine Änderungen an Datenmodell, Layout, gespeicherten Übungssätzen oder importierten Daten.

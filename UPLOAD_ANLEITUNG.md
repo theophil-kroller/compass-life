@@ -1,31 +1,20 @@
-# Upload-Anleitung – Compass 0.5.77.39
+# Compass 0.5.77.39 – GitHub Actions Hotfix (Workflow #198)
 
-Dieses Paket baut auf **0.5.77.38** auf und enthält zugleich den nötigen Test-Hotfix für den letzten fehlgeschlagenen Deploy.
+**Nur eine Datei ersetzen:**
 
-## Zu ersetzen im GitHub-Repository
+`client/src/strength-premium-v57738.js`
 
-- `client/strength-premium738-bridge.js`
-- `client/src/strength-premium-v57738.js`
-- `client/src/strength-premium-v57738.css`
-- `tests/gtd-057726-nutrition-trends-missing.test.mjs`
+Der Test `tests/compass-057738.test.mjs` verlangt explizit die textliche Zusicherung
+„nicht in Sätze umgerechnet“. Das neue .39-Redesign trennt Radfahrminuten bereits
+korrekt von Kraftsätzen, aber der Hinweistext benutzte eine andere Formulierung.
+Dies ist jetzt im Modul korrigiert. Das Layout, die Muskelkarte und die Datenlogik
+werden dabei nicht verändert.
 
-## Vorgehen
+## Schritte
+1. Das ZIP entpacken.
+2. Die Datei `client/src/strength-premium-v57738.js` unter genau diesem Pfad in GitHub ersetzen.
+3. Commit durchführen; danach `Deploy Compass Web` unter GitHub Actions kontrollieren.
+4. Falls Tests erfolgreich sind, aber `npm run build` anschließend fehlschlägt, die erste Fehlerzeile aus diesem Schritt weitergeben.
 
-1. ZIP entpacken.
-2. Die vier Dateien unter exakt denselben Pfaden in dein GitHub-Repository hochladen und vorhandene Dateien ersetzen.
-3. Commit abschließen.
-4. Unter GitHub Actions prüfen, dass **Deploy Compass Web** erfolgreich durchläuft.
-5. Danach sollte Compass in der Oberfläche **0.5.77.39** anzeigen.
-
-## Kurztest nach dem Deploy
-
-- Krafttraining öffnen.
-- Prüfen, ob die Muskelkarte deutlich schlanker und näher an deiner Referenz wirkt.
-- Prüfen, ob Vorder-/Rückansicht weiterhin korrekt reagieren.
-- Ernährung → Tagesverlauf prüfen: rechts unter dem Kalorienwert sollte weiterhin die kleine kcal-Pille stehen und **kein breiter Aufklappbalken** mehr.
-
-## Lokaler Prüfstatus dieses Pakets
-
-- Syntaxprüfung der geänderten JS-Dateien: **bestanden**
-- Smoke-Test der neuen Muskelkartenfunktionen: **bestanden**
-- Vollständiger Produktionsbuild: muss nach Upload über GitHub Actions bestätigt werden.
+**Version:** bleibt `0.5.77.39`.
+**Tests:** `node --test tests/compass-057738.test.mjs` in einem lokalen Patch-Arbeitsstand: 9/9 bestanden. Der vollständige GitHub-Check sowie das Deployment sind noch nicht bestätigt.
