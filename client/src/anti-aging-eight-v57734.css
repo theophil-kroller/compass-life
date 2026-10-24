@@ -1,0 +1,16 @@
+/* Anti-Aging Eight: compact health observability, not a red/green health score. */
+.aa734-root{display:grid;gap:14px;min-width:0;margin-top:10px}
+.aa734-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.aa734-header h2{font-size:1.15rem;margin:0 0 6px}.aa734-header p,.aa734-disclaimer{font-size:.8rem;color:var(--text-muted,#67766f);line-height:1.55;margin:0}
+.aa734-header a{font-size:.78rem}.aa734-day{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.aa734-day button{border:1px solid var(--line,#d6e3dd);border-radius:9px;min-width:42px;min-height:42px;background:var(--surface,#fff);color:inherit;cursor:pointer}
+.aa734-day button:disabled{opacity:.4;cursor:default}.aa734-day strong{font-size:.88rem;font-variant-numeric:tabular-nums}
+.aa734-metrics{display:flex;flex-wrap:wrap;gap:8px}.aa734-metrics span{border-radius:10px;background:var(--surface-secondary,#edf3ef);padding:8px 12px;font-size:.78rem}
+.aa734-metrics strong{font-size:1rem}.aa734-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px}
+.aa734-item{min-width:0;display:flex;flex-direction:column;gap:10px;border:1px solid var(--line,#dde8e1);border-radius:13px;padding:13px;background:var(--surface,#fff)}
+.aa734-item.is-observed{border-left:4px solid #368663}.aa734-item.is-partial{border-left:4px solid #c7983f}.aa734-item.is-unmeasurable{border-left:4px solid #98a5a0}
+.aa734-item-title{display:flex;align-items:start;gap:9px}.aa734-item-title>span{font-size:1.3rem}.aa734-item-title>div{display:grid;gap:4px}.aa734-item-title strong{font-size:.9rem}.aa734-item-title small{font-size:.73rem;line-height:1.4;color:var(--text-muted,#687770)}
+.aa734-observation{display:grid;gap:4px}.aa734-observation>strong{font-size:.86rem;line-height:1.4}.aa734-status{font-size:.73rem;font-weight:650;color:#507367}.aa734-item.is-partial .aa734-status{color:#9b7632}.aa734-item.is-unmeasurable .aa734-status,.aa734-item.is-unknown .aa734-status{color:var(--text-muted,#74837a)}
+.aa734-item p{font-size:.75rem;line-height:1.5;margin:0;color:var(--text-muted,#74837a)}
+.dd734-autoproof{color:#368663!important;font-weight:600}.dd734-manualproof{color:#42789b!important;font-weight:600}.dd734-progress-note{color:#ad7f2c!important}
+@media(max-width:570px){.aa734-root{gap:10px}.aa734-grid{grid-template-columns:1fr}.aa734-item{padding:10px}.aa734-metrics span{padding:7px}}

@@ -1,3 +1,5 @@
+import {dailyDozenEvidence} from './daily-dozen-auto-v57734.js';
+export {dailyDozenEvidence} from './daily-dozen-auto-v57734.js';
 /** Dr. Michael Greger's Daily Dozen. User-controlled servings, source-aware.
  * 12 food/activity groups, 24 total daily ticks, including exercise and beverages.
  * No inference from imprecise nutrition logs. Encrypted nutritionJournal sync uses
@@ -24,9 +26,11 @@ const dateLocal=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}
 export const shiftDailyDozenDate=(day,n)=>{const dt=new Date(day+'T12:00:00');dt.setDate(dt.getDate()+n);return dateLocal(dt);};
 export function dailyDozenSummary(state,day){
  const record=state?.nutritionJournal?.dailyDozen?.[day]||{};
- const rows=DAILY_DOZEN.map(c=>({...c,count:clamp(record[c.id]?.count,c.target),updatedAt:record[c.id]?.updatedAt||''}));
+ const evidence=dailyDozenEvidence(state,day);
+ const rows=DAILY_DOZEN.map(c=>{const auto=clamp(evidence.totals[c.id]||0,c.target),manual=record[c.id];
+  const explicit=manual!==undefined;return {...c,count:explicit?clamp(manual?.count??manual,c.target):auto,source:explicit?'manual':auto?'auto':'unknown',auto,provenance:evidence.notes[c.id]||[],updatedAt:manual?.updatedAt||''};});
  const completed=rows.reduce((n,x)=>n+x.count,0),total=rows.reduce((n,x)=>n+x.target,0);
- return {day,rows,completed,total,percentage:Math.round(completed/total*100),completedGroups:rows.filter(x=>x.count===x.target).length,groups:rows.length};
+ return {day,rows,completed,total,percentage:Math.round(completed/total*100),completedGroups:rows.filter(x=>x.count===x.target).length,groups:rows.length,evidence};
 }
 export function setDailyDozen(state,day,id,delta){
  if(!isDay(day))throw Error('Ungültiges Datum.');
@@ -35,7 +39,8 @@ export function setDailyDozen(state,day,id,delta){
  state.nutritionJournal??={entries:[],customFoods:[]};
  state.nutritionJournal.dailyDozen??={};
  const record=state.nutritionJournal.dailyDozen[day]??={};
- const value=clamp(record[id]?.count,cat.target); const next=clamp(value+delta,cat.target);
+ const prior=record[id]; const suggested=dailyDozenEvidence(state,day).totals[id]||0;
+ const value=prior!==undefined?clamp(prior?.count??prior,cat.target):clamp(suggested,cat.target);const next=clamp(value+delta,cat.target);
  if(next===value)return next;
  record[id]={count:next,updatedAt:new Date().toISOString()};return next;
 }
@@ -55,9 +60,9 @@ export function mergeDailyDozen(local={},remote={}){
 }
 export function dailyDozenView(state,{day=dateLocal(new Date()),today=dateLocal(new Date())}={}){
  const m=dailyDozenSummary(state,day),pct=m.percentage,canNext=day<today;
- return `<section class="dd733-root" aria-label="Dr. Greger Daily Dozen"><div class="dd733-header"><div><h2>🌿 Dr. Greger’s Daily Dozen</h2><p>12 Kategorien · 24 Portionen und Aktivitäten pro Tag. Du entscheidest, was du abhaken möchtest.</p></div><a href="https://nutritionfacts.org/topics/daily-dozen/" target="_blank" rel="noopener noreferrer">Originalempfehlungen ↗</a></div>
+ return `<section class="dd733-root" aria-label="Dr. Greger Daily Dozen"><div class="dd733-header"><div><h2>🌿 Dr. Greger’s Daily Dozen</h2><p>12 Kategorien · 24 Portionen und Aktivitäten. Eindeutig protokollierte Lebensmittel zählen automatisch; du kannst jede Zuordnung korrigieren.</p></div><a href="https://nutritionfacts.org/topics/daily-dozen/" target="_blank" rel="noopener noreferrer">Originalempfehlungen ↗</a></div>
  <div class="dd733-top"><div class="dd733-day"><button type="button" data-action="dd733-day" data-id="prev" aria-label="Vortag">‹</button><strong>${esc(day)} ${day===today?'· Heute':''}</strong><button type="button" data-action="dd733-day" data-id="next" ${!canNext?'disabled':''} aria-label="Folgetag">›</button><button type="button" data-action="dd733-day" data-id="today">Heute</button></div>
  <div class="dd733-summary"><strong>${m.completed} / ${m.total}</strong><span>abgehakte Portionen · ${pct}%</span><small>${m.completedGroups} von ${m.groups} Kategorien vollständig</small><div class="dd733-meter" role="progressbar" aria-valuenow="${m.completed}" aria-valuemin="0" aria-valuemax="${m.total}" aria-label="Daily Dozen Portionen"><span style="width:${pct}%"></span></div></div></div>
- <div class="dd733-grid">${m.rows.map(x=>`<article class="dd733-item ${x.count>=x.target?'is-complete':''}"><div class="dd733-item-heading"><span class="dd733-icon">${x.emoji}</span><div><strong>${esc(x.name)}</strong><small>${esc(x.detail)}</small></div></div><div class="dd733-controls"><button type="button" data-action="dd733-step" data-id="-${esc(x.id)}" aria-label="${esc(x.name)}: eine Portion entfernen" ${x.count===0?'disabled':''}>−</button><span aria-label="${x.count} von ${x.target} Portionen">${x.count} / ${x.target}</span><button type="button" data-action="dd733-step" data-id="+${esc(x.id)}" aria-label="${esc(x.name)}: eine Portion hinzufügen" ${x.count===x.target?'disabled':''}>+</button></div></article>`).join('')}</div>
- <p class="dd733-note">Nur bewusst bestätigte Portionen werden gezählt. Unvollständige Tage zeigen nicht „zu wenig gegessen“, sondern nur den Dokumentationsstand. Fortschritt wird verschlüsselt im Ernährungsjournal gespeichert und bei aktiviertem Journal-Abgleich pro Kategorie zusammengeführt.</p></section>`;
+ <div class="dd733-grid">${m.rows.map(x=>`<article class="dd733-item ${x.count>=x.target?'is-complete':''}"><div class="dd733-item-heading"><span class="dd733-icon">${x.emoji}</span><div><strong>${esc(x.name)}</strong><small>${esc(x.detail)}</small>${x.source==='auto'?`<small class="dd734-autoproof" title="${esc(x.provenance.join(' · '))}">✓ Aus Tagebuch erkannt</small>`:x.source==='manual'?'<small class="dd734-manualproof">✓ Von dir bestätigt / korrigiert</small>':''}${x.id==='nuts'&&!x.count&&m.evidence.nutGrams>0?`<small class="dd734-progress-note">${m.evidence.nutGrams} g von ca. 30 g erfasst (Daily Dozen)</small>`:''}</div></div><div class="dd733-controls"><button type="button" data-action="dd733-step" data-id="-${esc(x.id)}" aria-label="${esc(x.name)}: eine Portion entfernen" ${x.count===0?'disabled':''}>−</button><span aria-label="${x.count} von ${x.target} Portionen">${x.count} / ${x.target}</span><button type="button" data-action="dd733-step" data-id="+${esc(x.id)}" aria-label="${esc(x.name)}: eine Portion hinzufügen" ${x.count===x.target?'disabled':''}>+</button></div></article>`).join('')}</div>
+ <p class="dd733-note">Eindeutig erkannte Portionen werden automatisch gezählt; manuelle Korrekturen haben Vorrang. Unvollständige Tage zeigen nicht „zu wenig gegessen“, sondern nur den Dokumentationsstand. Fortschritt wird verschlüsselt im Ernährungsjournal gespeichert und bei aktiviertem Journal-Abgleich pro Kategorie zusammengeführt.</p></section>`;
 }
