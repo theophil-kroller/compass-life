@@ -1,0 +1,19 @@
+Lies das hochgeladene Foto oder PDF eines Supermarkt-Kassenbons aus. Gib AUSSCHLIESSLICH valides JSON zurück (keine Markdown-Codezäune) nach diesem Schema:
+{
+  "schema":"compass_receipt_v1",
+  "merchant":"Hofer",
+  "date":"2026-10-24",
+  "currency":"EUR",
+  "total":null,
+  "items":[{
+    "description":"Produktname wie am Bon",
+    "quantity":1,
+    "unit":"Stück",
+    "unit_price":null,
+    "total":2.49,
+    "category":"Lebensmittel",
+    "confidence":"high"
+  }],
+  "notes":["Unsichere Positionen oder Rabattzuordnungen erläutern"]
+}
+Regeln: Belasse unbekannte Felder bei null. Rate keine Produktnamen, Grammzahlen oder Preise. Trenne nach Möglichkeit Mengen, Einzelpreis und Zeilensumme. Erhalte Rabatte als eigene negative Position NICHT; beschreibe sie in notes und gib ggf. den tatsächlich gezahlten Artikelpreis an. Wähle category aus Lebensmittel, Getränke, Haushalt, Drogerie, Sonstiges. Für confidence high/medium/low. Bestimme Datum und Gesamtsumme nur wenn lesbar; EUR nur wenn der Bon es unterstützt. Erfasse keinerlei Zahlungs- oder Kartennummern, Namen, Anschriften, Kunden-IDs. Stimmt die Summe der Positionen nicht mit total überein, notiere die Abweichung; erfinde keine Position. Die Rückgabe dient ausschließlich einer prüfbaren Compass-Vorschau und erzeugt keine Finanzbuchung.

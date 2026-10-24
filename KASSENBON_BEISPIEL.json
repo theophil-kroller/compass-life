@@ -1,0 +1,19 @@
+{
+  "schema": "compass_receipt_v1",
+  "merchant": "Hofer",
+  "date": "2026-10-24",
+  "currency": "EUR",
+  "total": 4.99,
+  "items": [
+    {
+      "description": "Blaubeeren 125 g",
+      "quantity": 1,
+      "unit": "Packung",
+      "unit_price": 4.99,
+      "total": 4.99,
+      "category": "Lebensmittel",
+      "confidence": "high"
+    }
+  ],
+  "notes": []
+}

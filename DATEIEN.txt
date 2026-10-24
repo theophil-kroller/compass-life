@@ -1,18 +1,17 @@
-Compass 0.5.77.42 – GitHub-Upload-Dateien
+Compass 0.5.77.43 · GitHub-Upload-Differenz zur erfolgreichen 0.5.77.42
 
-Hinzufügen:
-client/strength-sync742-bridge.js
-client/src/strength-device-sync-v57742.js
-tests/compass-057742-strength-sync.test.mjs
+client/compass743-bridge.js                         NEU
+client/src/dream-journal-v57743.js                  NEU
+client/src/dream-journal-v57743.css                 NEU
+client/src/receipt-gpt-v57743.js                   NEU
+client/src/receipt-gpt-v57743.css                  NEU
+client/vite.config.js                              ERSETZEN
+tests/compass-057743-bridge-integration.test.mjs   NEU
+tests/compass-057743-dream-receipts.test.mjs       NEU
 
-Ersetzen:
-client/vite.config.js
-tests/compass-057738.test.mjs
-tests/compass-057741.test.mjs
-
-Optional Dokumentation:
-CHANGELOG_0.5.77.42.md
+Zusätzliche Hilfsdateien (nicht benötigt für Build):
+KASSENBON_GPT_PROMPT.txt
+KASSENBON_BEISPIEL.json
+CHANGELOG_0.5.77.43.md
 UPLOAD_ANLEITUNG.md
 DATEIEN.txt
-
-Nicht löschen oder überschreiben: vorhandene Vault-Daten; Garmin-Imports; private Schlüssel.

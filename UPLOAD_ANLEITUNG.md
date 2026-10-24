@@ -1,39 +1,31 @@
-# Compass 0.5.77.42 – Upload und Schutz deiner Trainingsdaten
+# Compass 0.5.77.43 – GitHub-Upload
 
-## Vorher: Daten sichern
+**Voraussetzung: Compass 0.5.77.42 im Repository, GitHub Actions erfolgreich.**
 
-1. **Am Desktop**, wo du die Übungen bereits zugeordnet hast, ein **verschlüsseltes Vault-Backup** erstellen. Bitte noch keine Trainingszuordnungen neu eingeben oder löschen.
-2. Falls am Handy eigene Trainingseinträge vorhanden sind, auch dort zuvor ein Backup erstellen.
-3. Weder den Vault noch App-Daten auf einem Gerät löschen.
+1. Bitte zuerst ein **verschlüsseltes Vault-Backup** anfertigen, vor allem vom Desktop mit den bereits klassifizierten Garmin-Kraftübungen.
+2. ZIP entpacken und die unten genannten Dateien unter exakt denselben Pfaden im Repository hochladen.
+3. `client/vite.config.js` ersetzen. Die bestehenden `.41`/`.42`-Module NICHT löschen oder mit früheren Fassungen überschreiben.
+4. Unter GitHub Actions den Workflow **Deploy Compass Web** prüfen.
+5. Auf beiden Geräten die gleiche Version **0.5.77.43** verwenden; Vault entsperren und den verschlüsselten Geräteabgleich verbunden lassen.
+6. Nach dem Wiederöffnen der App wird der E2EE-Journalabgleich selbstständig ausgelöst. Die manuelle Schaltfläche bleibt als Fehlerbehebung bestehen.
 
-## GitHub-Upload
+## Neu/ersetzt
 
-1. ZIP entpacken.
-2. Folgende Dateien unter denselben relativen Pfaden hochladen; identische Pfade **ersetzen**:
-   - `client/strength-sync742-bridge.js` (neu)
-   - `client/src/strength-device-sync-v57742.js` (neu)
-   - `client/vite.config.js` (ersetzen)
-   - `tests/compass-057738.test.mjs` (ersetzen)
-   - `tests/compass-057741.test.mjs` (ersetzen)
-   - `tests/compass-057742-strength-sync.test.mjs` (neu)
-3. GitHub Actions abwarten: **Deploy Compass Web** muss grün bis zum Deploy sein. Ein roter Lauf bedeutet: keine neue veröffentlichte Version.
-4. Nach dem Deploy muss Compass `0.5.77.42` anzeigen. Bei einer PWA eventuell einmal aktualisieren, aber keine App-Daten entfernen.
+- `client/compass743-bridge.js` (**neu**)
+- `client/src/dream-journal-v57743.js` (**neu**)
+- `client/src/dream-journal-v57743.css` (**neu**)
+- `client/src/receipt-gpt-v57743.js` (**neu**)
+- `client/src/receipt-gpt-v57743.css` (**neu**)
+- `client/vite.config.js` (**ersetzen**)
+- `tests/compass-057743-bridge-integration.test.mjs` (**neu**)
+- `tests/compass-057743-dream-receipts.test.mjs` (**neu**)
 
-## Bestehende Übungen zwischen Desktop und Handy übertragen
+## Nachprüfen
 
-1. **Desktop zuerst**: verschlüsselten Vault entsperren, mit dem Compass-Konto anmelden, Krafttraining öffnen.
-2. Im Abschnitt `Übungen & Gewichte nachtragen` auf **„↻ Übungen zwischen Geräten abgleichen“** tippen. Auf eine bestätigte Meldung warten.
-3. **Handy anschließend**: dieselbe App-Version und denselben **verschlüsselten Geräteabgleich** verwenden, Vault entsperren und Krafttraining öffnen.
-4. Auf denselben Abgleich-Knopf tippen. Danach sollte die Zuordnung derselben Garmin-Trainingseinheit statt `unbekannte Übung` angezeigt werden.
-5. **Erst nach Kontrolle am Handy** weitere Sätze bearbeiten oder neue Aktivitäten importieren.
+- Unter Insights: Traumwelt öffnen, Nachttraum speichern, auf einem zweiten Gerät nach dem Öffnen nachsehen.
+- Eine vorher am Desktop klassifizierte Garmin-Kraftaktivität auf dem Handy öffnen. Bei verbundenem Geräteabgleich sollen die manuellen Übungsnamen/Gewichte erscheinen.
+- Einkaufsliste öffnen: Bereich „Kassenbons“; Prompt kopieren, Beispielbon in ChatGPT auslesen lassen, JSON einfügen, Vorschau prüfen, bestätigen.
+- Derselbe Bon darf nicht zweimal importierbar sein.
+- Im Monatsüberblick gelten Kassenbonpositionen als **gekauft**, nicht als gegessen.
 
-## Wenn es weiterhin nicht funktioniert
-
-- Prüfen, ob Desktop und Handy **denselben privaten Geräteabgleich** aktiviert haben und online sind.
-- Aus zwei unabhängig eingerichteten Vaults mit **verschiedenen Synchronisierungsschlüsseln** kann Compass die Daten nicht automatisch verbinden.
-- Ein Sync-Fehler soll **keine bestehenden Desktop-Zuordnungen löschen**; für Diagnose den angezeigten Status und ggf. die Fehlermeldung notieren.
-- Ein blindes Neuimportieren der Garmin-Dateien ist **keine Lösung**, denn die Trainingsdetails werden als separate manuelle Annotationen gespeichert.
-
-## Technischer Stand
-
-Die lokalen Tests für die Änderung bestehen. Ein vollständiger CI- oder Produktions-Build ist hier nicht verifiziert. Der GitHub-Actions-Lauf bestätigt, ob die App erfolgreich veröffentlicht wurde.
+Bei fehlender E2EE-Verbindung werden Einträge weiterhin **nur im lokalen Vault** gespeichert; die App überträgt sie nicht unverschlüsselt.
