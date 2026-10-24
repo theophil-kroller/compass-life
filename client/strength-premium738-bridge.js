@@ -8,7 +8,10 @@ export function strengthPremium738Bridge(){
   const path=id.replace(/\\/g,'/').split('?')[0];
   if(path.endsWith('/client/src/main.js')){
    let s=once(source,"const COMPASS_CLIENT_VERSION='0.5.77.37.1';","const COMPASS_CLIENT_VERSION='0.5.77.40';",'version');
-   s=once(s,"import './strength-recent-defaults-v577371.css';","import './strength-recent-defaults-v577371.css';\nimport './strength-premium-v57738.css';",'premiummuskelkarte styles');
+   s=once(s,"import './strength-recent-defaults-v577371.css';","import './strength-recent-defaults-v577371.css';\nimport './strength-premium-v57738.css';\nimport {mountPremiumAnatomy} from './strength-premium-v57738.js';",'premiummuskelkarte styles und Anatomie-Mount');
+   s=once(s,'app.innerHTML=html;bind();editDraftGuard.afterRender(editDraftFocus);',
+     "app.innerHTML=html;bind();void mountPremiumAnatomy(app).catch(err=>console.warn('Compass Anatomiekarte konnte nicht geladen werden:',err));editDraftGuard.afterRender(editDraftFocus);",
+     'Anatomie nach jedem Rendervorgang einsetzen');
    return {code:s,map:null};
   }
   if(path.endsWith('/client/src/strength-insights-v57728.js')){
