@@ -1,21 +1,31 @@
-# Compass 0.5.77.38 – GitHub Actions Hotfix
+# Upload-Anleitung – Compass 0.5.77.39
 
-**Basis:** Commit `e62be0e` (fehlgeschlagener Workflow-Lauf #196).
+Dieses Paket baut auf **0.5.77.38** auf und enthält zugleich den nötigen Test-Hotfix für den letzten fehlgeschlagenen Deploy.
 
-## Upload
+## Zu ersetzen im GitHub-Repository
 
-Lade **nur diese eine Datei** in dasselbe GitHub-Repository hoch und **ersetze** dort die gleichnamige Datei:
+- `client/strength-premium738-bridge.js`
+- `client/src/strength-premium-v57738.js`
+- `client/src/strength-premium-v57738.css`
+- `tests/gtd-057726-nutrition-trends-missing.test.mjs`
 
-`tests/gtd-057726-nutrition-trends-missing.test.mjs`
+## Vorgehen
 
-Keine anderen Dateien aus älteren Paketen erneut hochladen. Der App-Quellcode einschließlich des Muskelkarten-Redesigns 0.5.77.38 bleibt unverändert.
+1. ZIP entpacken.
+2. Die vier Dateien unter exakt denselben Pfaden in dein GitHub-Repository hochladen und vorhandene Dateien ersetzen.
+3. Commit abschließen.
+4. Unter GitHub Actions prüfen, dass **Deploy Compass Web** erfolgreich durchläuft.
+5. Danach sollte Compass in der Oberfläche **0.5.77.39** anzeigen.
 
-## Diagnose
+## Kurztest nach dem Deploy
 
-Workflow #196 scheiterte bei `npm run check`: Ein Ernährungstest aus der alten Oberfläche erwartete „1 Lebensmittel ohne kcal-Schätzung“, „Supplement(e) ohne Energiedeklaration“ und den früheren großen Aufklappbalken. Die aktuelle Oberfläche verwendet eine kleine Pille und zeigt korrekt beide datensatzbezogenen Lücken als „2 ohne kcal“ mit den Produktnamen. Der neue Test prüft gerade diese wichtigen Eigenschaften.
+- Krafttraining öffnen.
+- Prüfen, ob die Muskelkarte deutlich schlanker und näher an deiner Referenz wirkt.
+- Prüfen, ob Vorder-/Rückansicht weiterhin korrekt reagieren.
+- Ernährung → Tagesverlauf prüfen: rechts unter dem Kalorienwert sollte weiterhin die kleine kcal-Pille stehen und **kein breiter Aufklappbalken** mehr.
 
-## Kontrolle
+## Lokaler Prüfstatus dieses Pakets
 
-Nach dem Upload: GitHub → Actions → `Deploy Compass Web` → neuester Lauf. `npm run check`, `npm run build` und `deploy-pages` sollten jeweils grün werden. Sollte ein weiterer Fehler bei `npm run build` auftreten, muss dessen exakter Log getrennt geprüft werden; für den neuen Lauf liegt noch kein Ergebnis vor.
-
-Die gespeicherten Compass-Vault-Daten werden durch diesen Testdatei-Fix nicht berührt.
+- Syntaxprüfung der geänderten JS-Dateien: **bestanden**
+- Smoke-Test der neuen Muskelkartenfunktionen: **bestanden**
+- Vollständiger Produktionsbuild: muss nach Upload über GitHub Actions bestätigt werden.
