@@ -69,5 +69,7 @@ test('bridge fails closed on incorrect installed base and version config',async(
  const {strengthPremium738Bridge}=await load('client/strength-premium738-bridge.js');
  assert.throws(()=>strengthPremium738Bridge().transform('no known content','/project/client/src/strength-insights-v57728.js'),/Integrationsstelle/);
  const vite=readFileSync(`${base}/client/vite.config.js`,'utf8');
- assert.match(vite,/nutritionPill577371Bridge\(\), strengthPremium738Bridge\(\), VitePWA/);
+ const sequence=['nutritionPill577371Bridge()', 'strengthPremium738Bridge()', 'compass741Bridge()', 'strengthSync742Bridge()', 'VitePWA('];
+ let previous=-1;
+ for(const step of sequence){const index=vite.indexOf(step);assert.ok(index>previous,`${step} must follow the previous Vite stage`);previous=index;}
 });

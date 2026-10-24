@@ -1,11 +1,18 @@
-Compass 0.5.77.41 GitHub-Upload-Manifest
-client/vite.config.js                        ERSETZEN
-client/compass741-bridge.js                  NEU
-client/src/compass741.css                    NEU
-client/src/activity-energy-57741.js          NEU
-client/src/water-sport-muscles-57741.js       NEU
-tests/compass-057741.test.mjs                NEU
-tests/compass-057741-bridges.test.mjs        NEU
-CHANGELOG_0.5.77.41.md                      INFO
-UPLOAD_ANLEITUNG.md                         INFO
-DATEIEN.txt                                 INFO
+Compass 0.5.77.42 – GitHub-Upload-Dateien
+
+Hinzufügen:
+client/strength-sync742-bridge.js
+client/src/strength-device-sync-v57742.js
+tests/compass-057742-strength-sync.test.mjs
+
+Ersetzen:
+client/vite.config.js
+tests/compass-057738.test.mjs
+tests/compass-057741.test.mjs
+
+Optional Dokumentation:
+CHANGELOG_0.5.77.42.md
+UPLOAD_ANLEITUNG.md
+DATEIEN.txt
+
+Nicht löschen oder überschreiben: vorhandene Vault-Daten; Garmin-Imports; private Schlüssel.

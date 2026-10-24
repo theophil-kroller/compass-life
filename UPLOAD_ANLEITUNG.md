@@ -1,27 +1,39 @@
-# Compass 0.5.77.41 – GitHub-Upload
+# Compass 0.5.77.42 – Upload und Schutz deiner Trainingsdaten
 
-**Voraussetzung:** Bereits erfolgreich deployte Version 0.5.77.40 (GitHub Actions #201).
+## Vorher: Daten sichern
 
-Ersetze oder füge die Dateien mit GENAU dieser Ordnerstruktur hinzu:
+1. **Am Desktop**, wo du die Übungen bereits zugeordnet hast, ein **verschlüsseltes Vault-Backup** erstellen. Bitte noch keine Trainingszuordnungen neu eingeben oder löschen.
+2. Falls am Handy eigene Trainingseinträge vorhanden sind, auch dort zuvor ein Backup erstellen.
+3. Weder den Vault noch App-Daten auf einem Gerät löschen.
 
-| Pfad | Aktion |
-|---|---|
-| `client/vite.config.js` | ersetzen |
-| `client/compass741-bridge.js` | neu |
-| `client/src/compass741.css` | neu |
-| `client/src/activity-energy-57741.js` | neu |
-| `client/src/water-sport-muscles-57741.js` | neu |
-| `tests/compass-057741.test.mjs` | neu |
-| `tests/compass-057741-bridges.test.mjs` | neu |
+## GitHub-Upload
 
-**Wichtig:** Die Versionen in `package.json` und `client/package.json` NICHT verändern; die Altkompatibilität der Vite-Bridges erfordert die bisherige Quellversionsbasis. Die UI zeigt nach dem Build `0.5.77.41`.
+1. ZIP entpacken.
+2. Folgende Dateien unter denselben relativen Pfaden hochladen; identische Pfade **ersetzen**:
+   - `client/strength-sync742-bridge.js` (neu)
+   - `client/src/strength-device-sync-v57742.js` (neu)
+   - `client/vite.config.js` (ersetzen)
+   - `tests/compass-057738.test.mjs` (ersetzen)
+   - `tests/compass-057741.test.mjs` (ersetzen)
+   - `tests/compass-057742-strength-sync.test.mjs` (neu)
+3. GitHub Actions abwarten: **Deploy Compass Web** muss grün bis zum Deploy sein. Ein roter Lauf bedeutet: keine neue veröffentlichte Version.
+4. Nach dem Deploy muss Compass `0.5.77.42` anzeigen. Bei einer PWA eventuell einmal aktualisieren, aber keine App-Daten entfernen.
 
-1. ZIP entpacken und Dateien hochladen, bei `client/vite.config.js` die vorhandene Datei ersetzen.
-2. GitHub Actions > **Deploy Compass Web** auf vollständigen Erfolg kontrollieren.
-3. Nach dem Aktualisieren ggf. PWA-Seite neu laden. Bei älterem Service-Worker einmal ganz schließen und erneut öffnen.
-4. Prüfen: aktives Shopping-Projekt => 🛒 oben; letzte Liste archivieren => Symbol weg.
-5. Prüfen: Ernährungsschnellerfassung enthält Hofer Germknödel und Hofer Laugenbreze mit Butter.
-6. Prüfen: Krafttraining > 🛶 Kajak/SUP mit geeigneten Garmin-Aktivitätsdaten.
-7. Prüfen: Energieziel aktiv + Garmin-Monitoringtage: dynamische Tagesziele mit gelb-roter Skala. Bei unzureichenden Daten bleibt der alte Basiswert erhalten.
+## Bestehende Übungen zwischen Desktop und Handy übertragen
 
-Alle gespeicherten Daten bleiben im bestehenden lokalen Vault. Die neuen UI-Module speichern selbst nichts Zusätzliches.
+1. **Desktop zuerst**: verschlüsselten Vault entsperren, mit dem Compass-Konto anmelden, Krafttraining öffnen.
+2. Im Abschnitt `Übungen & Gewichte nachtragen` auf **„↻ Übungen zwischen Geräten abgleichen“** tippen. Auf eine bestätigte Meldung warten.
+3. **Handy anschließend**: dieselbe App-Version und denselben **verschlüsselten Geräteabgleich** verwenden, Vault entsperren und Krafttraining öffnen.
+4. Auf denselben Abgleich-Knopf tippen. Danach sollte die Zuordnung derselben Garmin-Trainingseinheit statt `unbekannte Übung` angezeigt werden.
+5. **Erst nach Kontrolle am Handy** weitere Sätze bearbeiten oder neue Aktivitäten importieren.
+
+## Wenn es weiterhin nicht funktioniert
+
+- Prüfen, ob Desktop und Handy **denselben privaten Geräteabgleich** aktiviert haben und online sind.
+- Aus zwei unabhängig eingerichteten Vaults mit **verschiedenen Synchronisierungsschlüsseln** kann Compass die Daten nicht automatisch verbinden.
+- Ein Sync-Fehler soll **keine bestehenden Desktop-Zuordnungen löschen**; für Diagnose den angezeigten Status und ggf. die Fehlermeldung notieren.
+- Ein blindes Neuimportieren der Garmin-Dateien ist **keine Lösung**, denn die Trainingsdetails werden als separate manuelle Annotationen gespeichert.
+
+## Technischer Stand
+
+Die lokalen Tests für die Änderung bestehen. Ein vollständiger CI- oder Produktions-Build ist hier nicht verifiziert. Der GitHub-Actions-Lauf bestätigt, ob die App erfolgreich veröffentlicht wurde.

@@ -45,7 +45,8 @@ test('unknown kayak imports do not generate fake muscle contribution',()=>{
 });
 test('Vite keeps all previous bridges in order and runs the new one before PWA',()=>{
  const config=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
- assert.match(config,/strengthPremium738Bridge\(\), compass741Bridge\(\), VitePWA/);
+ const sequence=['strengthPremium738Bridge()', 'compass741Bridge()', 'strengthSync742Bridge()', 'VitePWA('];
+ let prev=-1;for(const stage of sequence){const at=config.indexOf(stage);assert.ok(at>prev,stage+' must follow prior stage');prev=at;}
 });
 test('main.js transformed chrome shows shopping only with active lists and includes direct action',()=>{
  const sample=`const COMPASS_CLIENT_VERSION='0.5.77.40';\nimport './strength-premium-v57738.css';\nfunction chrome(content){\n ${'${worktimeQuickButton()}${habitQuickButton()}'}\n}\nif(action==='shopping713-create'){ }\nif(!['combined','strength','cycling'].includes(id))return;`;
