@@ -16,6 +16,8 @@ import {isShoppingTemplate,isShoppingList,shoppingLists,shoppingProgress,instant
 import './shopping-lists-v57713.css';
 import {inboxTaskDraft} from './inbox-promotion-v27.js';
 import {inboxTodayTaskDraft} from './inbox-today-v557.js';
+import {parseOutlookFlags,outlookCandidates,outlookTask,outlookInboxRecord,chooseOutlookItems,outlookBridgeUrl} from './outlook-bridge-v57724.js';
+import './outlook-bridge-v57724.css';
 import {buildLifeBalanceRadar,buildLifeBalanceHistory,lifeBalanceRadarView,validateBalanceGoals} from './life-balance-radar-v563.js';
 import {inspectorDateShift,inspectorTitle} from './inspector-v559.js';
 import {createEditDraftGuard,EDIT_DRAFT_VAULT_KEY} from './edit-draft-guard-v57716.js';
@@ -136,7 +138,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.23';
+const COMPASS_CLIENT_VERSION='0.5.77.24';
 const app=document.getElementById('app');
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
@@ -352,6 +354,42 @@ function restoreCaptureDraft(focus){
 }
 let captureAfterUnlock=false;
 let inboxQuery='';
+// The Outlook token stays only in this tab's memory and is forgotten on vault lock.
+// No Outlook endpoint is contacted unless the user explicitly connects.
+let outlook724Token='',outlook724Port=8765,outlook724Preview=[],outlook724Status='',outlook724Busy=false,outlook724Connected=false,outlook724Open=false,outlook724LastFetch=0;
+function outlook724Markup(){
+ const seen=state?.outlookBridgeImported||{};
+ const pending=outlook724Preview.filter(x=>!seen[x.id]);
+ return `<details class="work-card outlook724" id="outlook724-details" ${outlook724Open||outlook724Connected||outlook724Preview.length?'open':''}><summary>✉️ Outlook · markierte E-Mails <small>lokal · optional</small></summary>
+ <p class="outlook724-intro">Klassisches Outlook für Windows: markierte Nachrichten lokal lesen und anschließend als Inbox-Eintrag, Next Action oder Waiting For übernehmen. <strong>Keine Mail wird geändert.</strong></p>
+ <div class="outlook724-config"><label class="outlook724-port">Port<input type="number" id="outlook724-port" value="${outlook724Port}" min="1024" max="65535" /></label><label>Lokaler Bridge-Schlüssel<input id="outlook724-key" type="password" placeholder="Schlüssel aus Windows-Konsole" value="${h(outlook724Token)}" autocomplete="off" spellcheck="false"/></label></div>
+ <div class="outlook724-actions"><button type="button" class="secondary-btn" data-action="outlook724-fetch" ${outlook724Busy?'disabled':''}>${outlook724Busy?'Verbinde …':'Lokal abrufen'}</button><label class="secondary-btn" for="outlook724-file">JSON-Datei einlesen</label><input type="file" id="outlook724-file" accept=".json,application/json" class="outlook724-hidden"/></div>
+ <p class="outlook724-status" role="status">${h(outlook724Status||'Die Brücke wird nur nach Eingabe des Schlüssels aktiviert. Beim verbundenen, geöffneten Inbox-Bereich wird gelegentlich lokal aktualisiert.')}</p>
+ <p class="outlook724-security">Datenschutz: Nur Betreff und technische Prüfsumme werden lokal eingelesen, weder Mailtext noch Anhang. Bei bestätigter Übernahme können die Aufgabentitel über den normalen Compass-Cloud-Abgleich synchronisiert werden. Auf einem TU-Graz-Gerät bitte die geltenden IT- und Vertraulichkeitsregeln beachten.</p>
+ ${pending.length?`<form id="outlook724-confirm" class="outlook724-preview"><strong>${pending.length} noch nicht übernommene Markierungen</strong><p class="muted-line">Titel und GTD-Typ vor Übernahme prüfen. Outlook-Nachverfolgung ist keine harte Deadline. Die Daten bleiben zunächst nur in der Vorschau.</p>${pending.map(x=>`<div class="outlook724-row"><input type="checkbox" name="selected" value="${x.id}" checked aria-label="Nachricht übernehmen"/><div class="outlook724-fields"><label>Aufgabentitel<input name="title-${x.id}" value="${h(x.title)}" required maxlength="180"/></label><label>Ziel<select name="kind-${x.id}"><option value="next">Next Action · keine Deadline</option><option value="inbox">Inbox · später klären</option><option value="waiting">Waiting For · keine künstliche Frist</option></select></label>${x.flagDueDate?`<small>Outlook-Nachverfolgung: ${h(x.flagDueDate)} · wird nicht als Deadline übernommen</small>`:''}</div></div>`).join('')}<button type="submit" class="primary-btn">Ausgewählte Einträge übernehmen</button><button type="button" class="secondary-btn" data-action="outlook724-clear">Vorschau verwerfen</button></form>`:''}
+ </details>`;
+}
+async function outlook724Fetch(auto=false){
+ if(!state||outlook724Busy||!outlook724Token)return;
+ if(auto&&(tab!=='inbox'||document.visibilityState!=='visible'||app.querySelector('#outlook724-confirm')||document.activeElement?.closest?.('form')))return;
+ outlook724Busy=true;
+ try{
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),6500);
+  let response;
+  try{response=await fetch(outlookBridgeUrl(outlook724Port),{headers:{'X-Compass-Bridge-Key':outlook724Token},mode:'cors',cache:'no-store',signal:controller.signal});}
+  finally{clearTimeout(timeout);}
+  if(!response.ok)throw Error('Lokale Brücke antwortet mit HTTP '+response.status);
+  const rows=outlookCandidates(await response.json(),state.outlookBridgeImported||{});
+  const unseen=rows.filter(x=>!x.alreadyImported);
+  const changed=outlook724Preview.map(x=>x.id).join('|')!==unseen.map(x=>x.id).join('|');
+  outlook724Connected=true;outlook724LastFetch=Date.now();
+  outlook724Status=unseen.length?`${unseen.length} markierte Nachrichten zur Prüfung bereit.`:'Keine neuen Markierungen gefunden. Bereits übernommene E-Mails bleiben in Compass.';
+  if(!auto||changed){outlook724Preview=unseen;if(tab==='inbox')render();}
+ }catch(ex){outlook724Connected=false;outlook724Status='Outlook nicht erreichbar: '+(ex.name==='AbortError'?'Zeitüberschreitung':ex.message)+'. Alternativ die JSON-Datei exportieren und hier auswählen.';if(!auto&&tab==='inbox')render();}
+ finally{outlook724Busy=false;}
+}
+if(typeof setInterval==='function')setInterval(()=>{if(state&&outlook724Connected&&outlook724Token&&Date.now()-outlook724LastFetch>90000)outlook724Fetch(true).catch(()=>{});},30000);
+
 let captureBulkOpen=false,captureBulkMode='lines',captureBulkRaw='',captureBulkPreview=null;
 const bootSearch=new URLSearchParams(location.search);
 const bootCapture=bootSearch.get('capture')==='1';
@@ -1494,6 +1532,7 @@ function inboxScreen(){
  const current=list.find(r=>r.id===selectedInboxId)||list[0]||null;
  return chrome(`<div class="inbox-mvp-layout"><section class="module-card module-active inbox-mvp-card">
  <div class="inbox-mvp-head"><div><h2>Offene Eingänge <span class="count">${fullList.length}</span></h2></div><button type="button" class="primary-btn" data-action="capture-focus">${ico('plus',17)} Erfassen</button></div>
+ ${outlook724Markup()}
  ${captureBulkPanel()}
  <div class="inbox-search-box">${ico('search',17)}<input id="inbox-query" type="search" placeholder="Einträge durchsuchen …" value="${h(inboxQuery)}" autocomplete="off" aria-label="Inbox durchsuchen"/></div>
  <div class="inbox-mvp-list" aria-label="Manuell sortierbare Inbox-Einträge">
@@ -2500,6 +2539,42 @@ function bind() {
       notice=state?'Sicher in deiner Inbox gespeichert'+(authToken?' · Cloud-Abgleich vorgemerkt':' · nur auf diesem Gerät')+'.':'Verschlüsselt vorgemerkt. Nach dem Entsperren gelangt der Eintrag in deine Inbox.';error='';render();
     }catch(ex){if(submit)submit.disabled=false;toast(ex.message,true);}
   });
+  const outlookDetails=app.querySelector('#outlook724-details');if(outlookDetails)outlookDetails.ontoggle=()=>{outlook724Open=outlookDetails.open;};
+  const outlookKey=app.querySelector('#outlook724-key');if(outlookKey)outlookKey.oninput=()=>{outlook724Token=outlookKey.value;};
+  const outlookPort=app.querySelector('#outlook724-port');if(outlookPort)outlookPort.oninput=()=>{outlook724Port=Number(outlookPort.value)||8765;};
+  const outlookFile=app.querySelector('#outlook724-file');if(outlookFile)outlookFile.onchange=async()=>{
+    try{const file=outlookFile.files?.[0];if(!file)return;if(file.size>150000)throw Error('Datei zu groß (max. 150 KB).');
+      outlook724Preview=outlookCandidates(await file.text(),state?.outlookBridgeImported||{}).filter(x=>!x.alreadyImported);
+      outlook724Status=outlook724Preview.length?`${outlook724Preview.length} neue Nachrichten in der Vorschau.`:'Keine neuen markierten Nachrichten in dieser Datei.';
+      render();
+    }catch(ex){outlook724Status='Import fehlgeschlagen: '+ex.message;render();}
+  };
+  const outlookConfirm=app.querySelector('#outlook724-confirm');if(outlookConfirm)outlookConfirm.onsubmit=async ev=>{
+    ev.preventDefault();
+    try{
+      const selected=chooseOutlookItems(outlook724Preview,new FormData(outlookConfirm),state?.outlookBridgeImported||{});
+      if(!selected.length)return toast('Bitte mindestens eine neue Nachricht auswählen.',true);
+      if(!confirm(`${selected.length} Outlook-Markierungen in Compass übernehmen? Die Titel werden Teil deines verschlüsselten lokalen Tresors; bei aktivem Cloud-Abgleich auch über die Aufgaben-/Inbox-Synchronisierung übertragen. Keine E-Mail wird verändert.`))return;
+      const at=stamp(),prepared=selected.map(x=>({sourceId:x.id,kind:x.kind,entryId:crypto.randomUUID(),at,title:x.title}));
+      await mutate(s=>{
+        s.outlookBridgeImported??={};
+        for(const item of prepared){
+          if(s.outlookBridgeImported[item.sourceId])continue;
+          const source={id:item.sourceId,title:item.title};
+          if(item.kind==='inbox'){
+            const record=outlookInboxRecord(source,item.entryId,item.at,item.title);
+            s.records[record.id]=record;s.pending.push(makeMutation(record));s.history.push({type:'captured',at:item.at,id:record.id});
+          }else{
+            const task=outlookTask(source,item.entryId,item.at,item.kind,item.title);
+            if(!validLocalTask(task))throw Error('Outlook-Aufgabe nicht gültig.');
+            s.tasks[task.id]=task;s.taskPending[task.id]=true;
+          }
+          s.outlookBridgeImported[item.sourceId]={id:item.entryId,at:item.at,kind:item.kind};
+        }
+      });
+      outlook724Preview=outlook724Preview.filter(x=>!selected.some(y=>y.id===x.id));outlook724Status=`${selected.length} Einträge übernommen · Outlook unverändert.`;render();
+    }catch(ex){outlook724Status='Übernahme fehlgeschlagen: '+ex.message;render();}
+  };
   const bulkDetails=app.querySelector('#capture-bulk-details');if(bulkDetails)bulkDetails.ontoggle=()=>{captureBulkOpen=bulkDetails.open;};
   const bulkForm=app.querySelector('#capture-bulk-form');if(bulkForm)bulkForm.onsubmit=ev=>{
     ev.preventDefault();const fd=new FormData(bulkForm);captureBulkRaw=String(fd.get('text')||'');captureBulkMode=String(fd.get('mode')||'lines');
@@ -3163,6 +3238,13 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
+ if(action==='outlook724-fetch'){
+  const key=app.querySelector('#outlook724-key');if(key)outlook724Token=key.value.trim();
+  const port=app.querySelector('#outlook724-port');if(port)outlook724Port=Number(port.value)||8765;
+  if(!outlook724Token){outlook724Status='Bitte den Bridge-Schlüssel aus der Windows-Konsole eingeben.';render();return;}
+  await outlook724Fetch();return;
+ }
+ if(action==='outlook724-clear'){outlook724Preview=[];outlook724Status='Vorschau verworfen. In Outlook wurde nichts verändert.';render();return;}
  if(action==='perf719-toggle'){performanceTrace.setEnabled(!performanceTrace.enabled);try{localStorage.setItem('compass.perf.v57719',performanceTrace.enabled?'on':'off');}catch{}render();return;}
  if(action==='perf719-clear'){performanceTrace.clear();render();return;}
  if(action==='perf719-export'){download('compass-performance-0.5.77.23.json',{version:COMPASS_CLIENT_VERSION,measurements:performanceTrace.entries(),summary:performanceTrace.summary()});return;}
@@ -4262,7 +4344,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
       await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
     }
-    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];await editDraftGuard.flush().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];await editDraftGuard.flush().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;outlook724Token='';outlook724Connected=false;outlook724Preview=[];authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){

@@ -1,3 +1,5 @@
+> **Aktueller Build: 0.5.77.24** – optionale klassische Windows-Outlook-Bridge für markierte E-Mails, kontrollierte GTD-Übernahme (Inbox, Next Action, Waiting For), lokale Token-/Origin-Absicherung und JSON-Ausweichweg. [Changelog](CHANGELOG_0.5.77.24.md) · [Installation](INSTALLATION_0.5.77.24.txt). Keine D1-/Tresormigration.
+
 > **Aktueller Build: 0.5.77.23** – schnelle, lokale Mahlzeiten-Beschreibung inklusive Symbol-Kacheln, editierbaren Gramm-Angaben, wiederverwendbaren Rezepten, salt-aware Makro-/Mikronährstoffschätzung, optionaler GPT-JSON-Übernahme und persönlicher Makroorientierung. [Changelog](CHANGELOG_0.5.77.23.md) · [Installation](INSTALLATION_0.5.77.23.txt). Keine D1-/Tresormigration.
 
 > **Aktueller Build: 0.5.77.20** – Menschen nach Alle / Arbeitskollegen / Privat filtern (Liste + Beziehungslandkarte), sichere Vermeidung unnötiger Tresorspeicherungen bei unveränderten Cloud-Snapshots. Gemessene Engpässe dokumentiert. [Changelog](CHANGELOG_0.5.77.20.md) · [Installation](INSTALLATION_0.5.77.20.txt). E2EE-Kontakte aus .19 bleiben opt-in.

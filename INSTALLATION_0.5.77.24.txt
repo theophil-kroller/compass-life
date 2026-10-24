@@ -1,0 +1,72 @@
+COMPASS LIFE 0.5.77.24 — Outlook Bridge MVP
+==========================================
+
+1. VOR DEM DEPLOYMENT
+- Verschlüsseltes Compass-Tresor-Backup anlegen.
+- PATCH_FROM_0.5.77.23.zip auf den bestehenden Repositorystand 0.5.77.23 anwenden
+  oder FULL_SOURCE.zip als vollständige Version übernehmen.
+- GitHub Actions prüfen; Compass muss 0.5.77.24 anzeigen.
+- Keine D1-Migration, kein Worker-Update, keine Änderung des Tresorformats.
+
+2. WINDOWS-OUTLOOK VORBEREITEN (nur klassisches Desktop-Outlook)
+- Klassisches Outlook für Windows starten und das TU-Graz-Postfach öffnen.
+- Python 3.10+ mit 'py' Launcher installieren, sofern nicht vorhanden.
+- Einmalig in der Eingabeaufforderung/PowerShell ausführen:
+    py -m pip install pywin32
+- Entweder im geklonten bzw. entpackten GitHub-Repository doppelklicken:
+    tools\start_outlook_bridge.cmd
+  und die origin deiner Compass-Website angeben (z.B.
+  https://theophil-kroller.github.io, NICHT /compass-life/ anhängen).
+- Oder manuell aus dem Repositoryordner:
+    py tools\outlook_bridge.py --serve --origin https://theophil-kroller.github.io
+- Nur die tatsächlich verwendete HTTPS-Origin freigeben. Der Server lauscht
+  auf 127.0.0.1:8765, ist NICHT für andere Geräte im Netzwerk erreichbar.
+- Die Konsole zeigt einen zufällig erzeugten Bridge-Schlüssel: nicht teilen,
+  nicht in Cloud/GitHub speichern. Das Konsolenfenster geöffnet lassen.
+
+3. AUS COMPASS ABRUFEN
+- Compass im gleichen Windows-Rechner und Browser öffnen, Tresor entsperren.
+- Inbox → 'Outlook · markierte E-Mails' aufklappen.
+- Schlüssel aus dem Konsolenfenster ins Feld einfügen.
+- 'Lokal abrufen' anklicken. Eventuell fragt Chrome nach Erlaubnis für
+  den Zugriff auf ein lokales Netzwerk/Loopback: nur der eigenen Compass-Website erlauben.
+- Flaggen werden als Vorschau angezeigt. Je Mail den Titel und Ziel wählen:
+    Next Action / Inbox / Waiting For
+- 'Ausgewählte Einträge übernehmen' und Sicherheitsbestätigung abgeben.
+- Danach: bereits importierte Markierungen werden auf DIESEM lokalen Gerät
+  erkannt, sodass derselbe Export nicht erneut angelegt wird.
+- Solange die Verbindung aktiv und Compass in der Inbox geöffnet und entsperrt
+  ist, wird spätestens nach ca. 90 Sekunden erneut abgefragt. Ohne geöffneten
+  Browser erfolgt KEINE Hintergrundübernahme.
+
+4. FALLS LOKALER ZUGRIFF BLOCKIERT IST (oder COM-Sicherheitsrichtlinien)
+- Alternative, auf dem Windows-Rechner:
+    py tools\outlook_bridge.py --export outlook-flags.json
+- Compass → Inbox → Outlook → 'JSON-Datei einlesen' → Datei auswählen.
+- Inhalte lokal prüfen und ausdrücklich übernehmen. Die JSON-Datei enthält
+  BETREFFZEILEN IM KLARTEXT; nach Import vertraulich behandeln bzw. löschen.
+
+5. PRIVATSPHÄRE UND GRENZEN
+- Outlook wird nur LESEND verwendet. Niemals Senden, Löschen, Markierung ändern.
+- Es werden KEINE Mailtexte, Absenderdaten, Empfänger und Anhänge exportiert.
+- Nur markierte Mails werden aus dem Outlook-To-Do-Suchordner (falls vorhanden),
+  Posteingang und gesendeten Nachrichten gelesen; andere Ordner ggf. nicht abgedeckt.
+- Betreffzeilen können dienstliche vertrauliche Angaben enthalten. Die
+  Übernahme in Compass ist freiwillig; Cloud-Aufgaben-/Inbox-Abgleich kann
+  nach der Bestätigung Titel an das konfigurierte Worker-Backend übertragen.
+  Vor Nutzung TU-Graz-IT-Regeln prüfen. Dienstliche Mails bei Bedarf nicht übernehmen.
+- Source-IDs sind lokale SHA-256-Prüfsummen von Outlook-IDs. Beim Verschieben
+  einer Nachricht kann sich deren Outlook-ID ändern; dann ist erneute Erkennung
+  möglich. Originalmails bleiben in Outlook verlinkt über Outlook selbst,
+  es gibt noch KEINEN Deep Link zum Öffnen der Nachricht aus Compass.
+- Keine Outlook-Synchronisierung am Handy; die Brücke funktioniert nur
+  auf demselben Windows-PC. Die übernommenen GTD-Aufgaben können wie gewohnt
+  über den bestehenden Compass-Abgleich erscheinen.
+
+6. QUALITÄT
+- npm test: 948/948 Tests inklusive 5 neuer Outlook-Tests
+- python -m unittest discover -s tests -p '*windows_safety_test.py': 3/3
+- npm run check -w worker: OK
+- Windows Outlook COM + echte Browser/Worker-Verbindung sind vor Ort zu testen.
+- Vite-Produktionsbuild mangels installierter Build-Abhängigkeiten hier
+  nicht ausgeführt; bitte GitHub Actions auf Build-Erfolg prüfen.
