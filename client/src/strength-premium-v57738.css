@@ -51,3 +51,18 @@
 @media(max-width:760px){.str739-figures.str738-figures{gap:4px}.str739-figure .str739-body{width:min(100%,300px)!important;height:430px!important;min-height:280px!important}.str738-visual-head h3{font-size:1.05rem}}
 @media(max-width:650px){.str738-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.str738-calendar{padding:12px 10px}.str738-calendar-grid{gap:2px}.str738-day{height:15px;border-radius:2px}.str738-visual{padding:13px 9px}.str739-figures.str738-figures{grid-template-columns:repeat(2,minmax(0,1fr));gap:0}.str739-figure .str739-body{width:100%!important;height:310px!important;min-height:0!important;max-height:340px!important}.str738-figures figcaption{font-size:.62rem}.str738-visual-legend{gap:9px 12px;font-size:.62rem}.str738-ranked{padding:12px}.str738-muscle-row{grid-template-columns:14px minmax(90px,1fr) minmax(68px,.65fr);gap:6px;padding:8px 0}.str738-muscle-detail{grid-column:2 / 4;text-align:left;padding-left:2px}.str738-kpi>strong{font-size:1.2rem}}
 @media(max-width:390px){.str739-figure .str739-body{height:266px!important}.str738-visual-head h3{font-size:1rem}}
+
+/* 0.5.77.40 — genuine anatomical SVG muscle atlas (not hand-drawn polygons).
+ * Apache-2.0 body-muscles paths supplied locally through the build. */
+.str740-figures.str739-figures{max-width:800px;gap:clamp(8px,2vw,24px);align-items:start}
+.str740-figure.str739-figure{max-width:400px;width:100%;min-width:0}
+.str740-figure .str740-svg{display:block;width:100%!important;max-width:380px!important;height:auto!important;min-height:0!important;max-height:none!important;aspect-ratio:35/93;overflow:visible;filter:drop-shadow(0 5px 20px rgba(0,0,0,.2))}
+.str740-figure .str740-svg path{transition:fill .14s ease,filter .14s ease,stroke .14s ease;cursor:crosshair}
+.str740-figure .str740-svg path:focus-visible,.str740-figure .str740-svg path:hover{filter:brightness(1.23) drop-shadow(0 0 .32px #ecc466);stroke:#ffe2a2!important;outline:none}
+.str740-figure .str740-svg path.is-active{filter:drop-shadow(0 0 .12px rgba(243,190,89,.2))}
+.str740-figure .str740-svg .str740-loading{font-size:2px;fill:#98a6b9}
+.str740-figures figure{position:relative;min-width:0;max-width:100%;display:grid;justify-items:center}
+.str740-muscle-tip{display:block;position:absolute;left:50%;bottom:32px;transform:translateX(-50%);z-index:3;width:max-content;max-width:min(310px,94%);text-align:center;background:#f5f1e8;color:#142030;border:1px solid #dec38b;border-radius:10px;padding:9px 12px;box-shadow:0 6px 22px rgba(0,0,0,.25);font-size:.74rem;line-height:1.4;font-weight:600;pointer-events:none}
+.str740-muscle-tip[hidden]{display:none!important}
+.str740-figures figcaption{margin-top:1px}
+@media(max-width:650px){.str740-figures.str739-figures{gap:0;grid-template-columns:repeat(2,minmax(0,1fr))}.str740-figure .str740-svg{width:100%!important;height:auto!important;max-height:none!important;aspect-ratio:35/93}.str740-muscle-tip{font-size:.63rem;padding:6px;bottom:24px;max-width:96%;white-space:normal}}

@@ -1,0 +1,12 @@
+Compass Muscle Atlas · Open-Source Attribution
+
+Body Muscles (body-muscles 1.0.0)
+Copyright 2024 Ivan Vulović
+https://github.com/vulovix/body-muscles
+Licensed under Apache License 2.0.
+
+This product includes software developed by Ivan Vulović.
+See licenses/Apache-2.0.txt for the license text.
+The anatomy paths are loaded from the unmodified package and colored
+by Compass training data. The surrounding UI, hover translations and
+Compass exercise/region mappings are independent Compass code.

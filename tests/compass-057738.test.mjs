@@ -20,11 +20,12 @@ test('premium map shows front and back and does not add cycling to strength sets
  const {strengthPremiumMap}=await load('client/src/strength-premium-v57738.js');
  const html=strengthPremiumMap(model,bike,'combined','front');
  assert.match(html,/VORNE/);assert.match(html,/HINTEN/);assert.match(html,/KRAFT \+ RAD/);
- assert.match(html,/Hip|Gesäß/);assert.match(html,/Wadenmuskel/);
+ assert.match(html,/Gesäß/);assert.match(html,/calves_gastro/);
+ assert.match(html,/str740-svg/);assert.match(html,/data-anatomy-info=/);
  assert.match(html,/nicht in Sätze umgerechnet/);
  assert.match(html,/str738-body/);
 });
-test('bike-only mode retains same vector outlines and contextual labels',async()=>{
+test('bike-only mode retains front/back anatomical viewports and contextual labels',async()=>{
  const {strengthPremiumMap}=await load('client/src/strength-premium-v57738.js');
  const html=strengthPremiumMap({...model,sessions:[],events:[],activeSets:0},bike,'cycling','back');
  assert.match(html,/Qualitative Beanspruchung beim Treten/);

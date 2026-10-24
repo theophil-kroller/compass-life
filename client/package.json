@@ -1,19 +1,13 @@
 {
   "name": "@compass/client",
   "private": true,
-  "version": "0.5.77.26",
+  "version": "0.5.77.40",
   "type": "module",
-  "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
+  "scripts": {"dev":"vite --host 127.0.0.1", "build":"vite build", "preview":"vite preview"},
   "dependencies": {
+    "body-muscles": "1.0.0",
     "fflate": "^0.8.2",
     "xlsx": "0.18.5"
   },
-  "devDependencies": {
-    "vite": "^7.1.0",
-    "vite-plugin-pwa": "^1.0.3"
-  }
+  "devDependencies": {"vite":"^7.1.0", "vite-plugin-pwa":"^1.0.3"}
 }

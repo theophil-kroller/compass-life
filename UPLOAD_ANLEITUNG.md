@@ -1,20 +1,33 @@
-# Compass 0.5.77.39 – GitHub Actions Hotfix (Workflow #198)
+# Compass 0.5.77.40 – GitHub-Upload
 
-**Nur eine Datei ersetzen:**
+Voraussetzung: 0.5.77.39 (Workflow #199 erfolgreich veröffentlicht).
 
-`client/src/strength-premium-v57738.js`
+## Ersetzen / hinzufügen
 
-Der Test `tests/compass-057738.test.mjs` verlangt explizit die textliche Zusicherung
-„nicht in Sätze umgerechnet“. Das neue .39-Redesign trennt Radfahrminuten bereits
-korrekt von Kraftsätzen, aber der Hinweistext benutzte eine andere Formulierung.
-Dies ist jetzt im Modul korrigiert. Das Layout, die Muskelkarte und die Datenlogik
-werden dabei nicht verändert.
+- `client/package.json` **ersetzen** (fügt die lokale NPM-Abhängigkeit `body-muscles@1.0.0` hinzu)
+- `client/strength-premium738-bridge.js` **ersetzen**
+- `client/src/strength-premium-v57738.js` **ersetzen**
+- `client/src/strength-premium-v57738.css` **ersetzen**
+- `tests/compass-057738.test.mjs` **ersetzen** (alter Test erwartete alte SVG-Polygone)
+- `tests/compass-057740.test.mjs` **neu** (Hover + Muskelzuordnung)
+- `client/public/THIRD_PARTY_MUSCLE_ATLAS.txt` **neu** (Attribution)
+- `client/public/licenses/Apache-2.0.txt` **neu** (Lizenz)
 
-## Schritte
-1. Das ZIP entpacken.
-2. Die Datei `client/src/strength-premium-v57738.js` unter genau diesem Pfad in GitHub ersetzen.
-3. Commit durchführen; danach `Deploy Compass Web` unter GitHub Actions kontrollieren.
-4. Falls Tests erfolgreich sind, aber `npm run build` anschließend fehlschlägt, die erste Fehlerzeile aus diesem Schritt weitergeben.
+## Installation
 
-**Version:** bleibt `0.5.77.39`.
-**Tests:** `node --test tests/compass-057738.test.mjs` in einem lokalen Patch-Arbeitsstand: 9/9 bestanden. Der vollständige GitHub-Check sowie das Deployment sind noch nicht bestätigt.
+Entpacke ZIP. Lade diese Dateien mit der angegebenen Ordnerstruktur auf GitHub hoch.
+
+GitHub Actions: `npm install` holt die Open-Source-Bibliothek `body-muscles@1.0.0` und Vite bündelt sie in die PWA. Es wird **keine Live-Verbindung** zu einem Bildserver benötigt.
+
+Unter GitHub Actions sicherstellen, dass **npm run check**, **npm run build** und **Deploy Pages** grün sind. Erst dann Version 0.5.77.40 im Browser prüfen.
+
+## Sichtprüfung
+
+1. Muskelkarte öffnen. Anstelle der Comic-Polygone sollten fein gegliederte Silhouetten mit einzelnen Muskelkonturen vorn und hinten sichtbar sein.
+2. Mit Maus auf Bizeps oder Waden zeigen – ein **deutscher Tooltip** mit Namen und Sätzen sollte erscheinen.
+3. Auf dem Handy antippen – derselbe Hinweis bleibt eingeblendet.
+4. Kraft / Rad / Gemeinsam und verschiedene Zeiträume prüfen.
+
+## Teststatus hier
+
+Die 9 angepassten bisherigen Muskelkarten-Tests und 4 neue Tests für Datenmapping/Hover bestehen (13/13). JS-Syntaxprüfungen erfolgreich. Vollständiges `npm install`/Vite-Produktionsbuild ist in diesem Container wegen fehlenden Internetzugriffs nicht möglich.

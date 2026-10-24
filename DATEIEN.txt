@@ -1,8 +1,11 @@
-UPLOAD-MANIFEST – relativ zum GitHub-Repository:
-client/strength-premium738-bridge.js                     ersetzen
-client/src/strength-premium-v57738.js                    ersetzen
-client/src/strength-premium-v57738.css                   ersetzen
-tests/gtd-057726-nutrition-trends-missing.test.mjs      ersetzen
-CHANGELOG_0.5.77.39.md                                   optional
-UPLOAD_ANLEITUNG.md                                      optional
-DATEIEN.txt                                              optional
+Compass 0.5.77.40 — nur relative GitHub-Dateipfade:
+client/package.json
+client/strength-premium738-bridge.js
+client/src/strength-premium-v57738.js
+client/src/strength-premium-v57738.css
+client/public/THIRD_PARTY_MUSCLE_ATLAS.txt
+client/public/licenses/Apache-2.0.txt
+tests/compass-057738.test.mjs
+tests/compass-057740.test.mjs
+CHANGELOG_0.5.77.40.md (optional)
+UPLOAD_ANLEITUNG.md (optional)
