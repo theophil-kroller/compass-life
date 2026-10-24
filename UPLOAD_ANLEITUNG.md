@@ -1,34 +1,29 @@
-# Compass Life 0.5.77.49.1 — Deployment-Hotfix
+# Compass Life 0.5.77.50 – Upload
 
-## Ausgangslage
+Ausgangsbasis ist das erfolgreich deployte **0.5.77.49.1** (GitHub Actions **#211**). Dies ist ein ZIP mit **fertigen Dateien**, kein auszuführendes Skript.
 
-Im GitHub-Repository sind die Dateien von 0.5.77.49 bereits hochgeladen (Commit `2458e50`). GitHub Actions #210 meldete **1189/1189 Tests bestanden**, aber der Vite-Build brach mit `Compass .49: body insights screen: expected one integration anchor; found 0` ab.
+## Ersetzen
+- `client/vite.config.js`
 
-## Hochladen
+## Neu hinzufügen
+- `client/compass750-bridge.js`
+- `client/src/insights-navigation-v57750.js`
+- `client/src/insights-navigation-v57750.css`
+- `tests/compass-057750-insights-nav.test.mjs`
 
-Dieses ZIP entpacken und **nur die enthaltenen Dateien** in GitHub im gleichen Verzeichnispfad hochladen. Die alten Versionen der folgenden Dateien ersetzen:
+## Optional
+- `CHANGELOG_0.5.77.50.md`
+- `UPLOAD_ANLEITUNG.md`
 
-- `client/compass749-bridge.js` — **ersetzen**
-- `tests/compass-0577491-vite-hotfix.test.mjs` — **neu**
-- `CHANGELOG_0.5.77.49.1.md` — neu, optional
-- `UPLOAD_ANLEITUNG.md` — ersetzen, optional
+Die Ordnerstruktur im ZIP unverändert ins **Repository-Hauptverzeichnis** übertragen. Bestehende Dateien nicht löschen. Keine D1-Migration notwendig.
 
-Keine anderen Dateien entfernen! Alle übrigen Dateien von 0.5.77.48 und 0.5.77.49 müssen im Repository bleiben.
+## Funktionstest nach GitHub Actions / Deploy
+1. Actions: `npm run check` und `npm run build` müssen beide grün sein.
+2. In der Insights-Seitenleiste gibt es genau fünf Kategorien statt der vielen einzelnen Einträge.
+3. `Übersicht & Intelligence` öffnet das Cockpit; Untertabs `Wochenkompass` und `Fristen & Kapazität` öffnen die bisherigen Auswertungen.
+4. `Gesundheit & Körper`: Körperanalyse, Krafttraining, Ernährung und Aktivitäten erreichbar; bisherige Daten sichtbar.
+5. `Zeit & Produktivität`: Arbeitszeit **und** Zeitjournal separat unter derselben Themenkategorie erreichbar.
+6. `Leben & Orte`: Karte und Traumwelt/Erholung erreichbar.
+7. Handy: fünf erste Kategorien, eine waagerecht scrollbarere Zeile für Untertabs; keine überstehenden Felder.
 
-## Warum es scheiterte
-
-Seit Build 0.5.77.28 liegt im transformierten Insights-Code zwischen **Körper** und **Aktivität** der separate **Krafttraining**-Tab. Das frühere 0.5.77.49-Bridge-Skript suchte fälschlicherweise `body` unmittelbar vor `activity` und scheiterte daher erst beim echten Vite-Build. Der alte Modultest hatte die vollständige Plugin-Kette nicht simuliert.
-
-Der korrigierte Anker hängt nur vom eindeutig vorhandenen Körper-Ausdruck ab. Der zusätzliche Regressionstest rekonstruiert ausdrücklich den `body → strength → activity`-Fall und schützt gegen fehlende/doppelte Anker.
-
-## Testen
-
-Nach dem Commit in GitHub **Actions → Deploy Compass Web** prüfen:
-
-1. `npm run check` grün, einschließlich Test `compass-0577491-vite-hotfix`.
-2. `npm run build` grün (dieser Schritt schlug bei #210 fehl).
-3. `Deploy to GitHub Pages` grün.
-4. Compass neu laden und **Insights → Gesundheit → Körper** aufrufen; die neue Body-Transformation-Karte sollte oberhalb des bisherigen Fitdays-Reports erscheinen.
-5. In **Fristen & Kapazität** speichern und prüfen, dass vorhandene Arbeitspakete bestehen bleiben.
-
-Kein Datenbank-Update und keine Neuanmeldung erforderlich. Ist der Vite-Build erneut rot, ist der konkrete Fehler im GitHub-Actions-Protokoll maßgeblich.
+**Hinweis:** Aktivitäten, Erholung und Fortschritt öffnen weiterhin ihre bisherigen eigenständigen Screens. Beim Zurückwechseln zu Insights lässt sich der passende Unterbereich wieder öffnen.
