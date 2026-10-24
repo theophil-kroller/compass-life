@@ -1,4 +1,4 @@
-/** Compass Life 0.5.77.55 - Lightning Fast Today + Focus / Extended mode.
+/** Compass Life 0.5.77.55.1 - Lightning Fast Today + Focus / Extended mode.
  * All source changes are guarded and occur after .54 on-demand plugin.
  * GTD state, persistence, syncing and the encrypted Vault schema are preserved.
  */
@@ -9,15 +9,15 @@ export function compass755Bridge(){
   if(!file.endsWith('/client/src/main.js'))return null;
   let s=source;
   const ch=(a,b,label)=>{s=once(s,a,b,label);};
-  ch("const COMPASS_CLIENT_VERSION='0.5.77.54';","const COMPASS_CLIENT_VERSION='0.5.77.55';",'version');
+  ch("const COMPASS_CLIENT_VERSION='0.5.77.54';","const COMPASS_CLIENT_VERSION='0.5.77.55.1';",'version');
   ch("import './on-demand-v57754.css';", "import './on-demand-v57754.css';\nimport './fast-today-v57755.css';", 'UX stylesheet');
   ch("const app=document.getElementById('app');", "const app=document.getElementById('app');\nconst COMPASS55_MODE_KEY='compass.ui.focus.v57755';\nlet compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();",'Focus / Extended persistence');
   // Keep the main GTD navigation intact. Only the two analysis groups are hidden in Focus.
-  ch('<div class="shell"><aside class="sidebar"', '<div class="shell compass55-${compass55Mode}"><aside class="sidebar"','shell mode');
+  ch('<div class="shell premium751"><aside class="sidebar"', '<div class="shell premium751 compass55-${compass55Mode}"><aside class="sidebar"','shell mode after .51');
   // Page title and date are redundant with navigation and the selected day in Today.
   // Keep a screen-reader heading without occupying a row of visual space.
   ch('<div class="page-intro page-intro-compact"><h1>${h(title)}</h1><span class="page-compact-info">${h(today)}</span></div>', '<h1 class="sr-only">${h(title)}</h1>', 'remove redundant global page header');
-  const brand='<div class="brand"><span class="brand-icon">${ico(\'compass\',24)}</span><span class="brand-name">Compass<small>Personal Life Manager · ${COMPASS_CLIENT_VERSION}</small></span></div>';
+  const brand='<div class="brand"><span class="brand-icon premium751-brandmark"><img src="${import.meta.env.BASE_URL}icon-192.png" width="38" height="38" alt="" decoding="async"/></span><span class="brand-name">Compass<small>Personal Life Manager · ${COMPASS_CLIENT_VERSION}</small></span></div>';
   ch(brand,brand+`\n <div class="compass55-mode-switch" role="group" aria-label="Compass Anzeigemodus"><button type="button" data-action="compass55-mode" data-id="focus" class="\${compass55Mode==='focus'?'is-active':''}" aria-pressed="\${compass55Mode==='focus'}">Focus</button><button type="button" data-action="compass55-mode" data-id="extended" class="\${compass55Mode==='extended'?'is-active':''}" aria-pressed="\${compass55Mode==='extended'}">Extended</button></div>`, 'Focus switch');
   // Scope CSS visibility through a class on the two group wrappers, not through hide/show of contents.
   const insightGroupAnchor='<div class="calm-nav-group">\n <button type="button" class="calm-group-toggle ${calmNavGroup===\'insights\'';
@@ -36,6 +36,18 @@ export function compass755Bridge(){
     }
     `;
   ch("if(action==='finance-pane'){",modeHandler+"if(action==='finance-pane'){",'mode handler');
+  ch("if(action==='calm-nav-group'){calmNavGroup=calmNavGroup===id?'':id;render();return;}",
+     "if(action==='calm-nav-group'){if(id==='insights'||id==='finance'){tab=id;calmNavGroup=id;if(id==='insights')insightTab='intelligence';else{financePane='Überblick';financeReviewPage=0;financeLedgerPage=0;}render();return;}calmNavGroup=calmNavGroup===id?'':id;render();return;}",
+     'load Insights/Finance on header click');
+  // Instrument the REAL unlock stages separately: the supplied .54 trace contains no unlock entries.
+  // Markers contain no titles, values or personal data and reuse existing opt-in performanceTrace.
+  ch("try {if(hasVault){state=await vault.unlock(p);}else {", "try {const compass55UnlockStep=performanceTrace.start();if(hasVault){state=await vault.unlock(p);}else {",'unlock timing begin');
+  ch("state=await vault.create(p);hasVault=true;}\n      // Draft bytes", "state=await vault.create(p);hasVault=true;}performanceTrace.end('Tresor: Entschlüsseln',tab,compass55UnlockStep);\n      // Draft bytes",'unlock timing end');
+  ch("state[EDIT_DRAFT_VAULT_KEY]={...(state[EDIT_DRAFT_VAULT_KEY]||{}),...(await vault.loadEditDrafts().catch(()=>({})))};", "const compass55DraftStep=performanceTrace.start();state[EDIT_DRAFT_VAULT_KEY]={...(state[EDIT_DRAFT_VAULT_KEY]||{}),...(await vault.loadEditDrafts().catch(()=>({})))};performanceTrace.end('Tresor: Entwürfe laden',tab,compass55DraftStep);",'draft timing');
+  ch("prepareTasks(state);eventState(state);prunePastEvents(state,localDate());await persist();",
+     "const compass55Keys=['tasks','taskPending','taskVersions','taskConflicts','projects','projectPending','projectVersions','projectConflicts','discoveredEvents','eventPreferences','eventVersions','eventPending','eventDeleted','eventConflicts'];const compass55Missing=compass55Keys.some(key=>state[key]==null);prepareTasks(state);eventState(state);const compass55Pruned=prunePastEvents(state,localDate());const compass55SaveStep=performanceTrace.start();if(compass55Missing||compass55Pruned>0){await persist();performanceTrace.end('Tresor: Startzustand speichern',tab,compass55SaveStep);}else{performanceTrace.end('Tresor: Startzustand unverändert',tab,compass55SaveStep);}",
+     'skip redundant full encryption on unchanged unlock');
+  
 
   // Extract inspector markup once. Full Today render and targeted rail refresh use exactly
   // the same renderer, avoiding diverging forms or stale field values.

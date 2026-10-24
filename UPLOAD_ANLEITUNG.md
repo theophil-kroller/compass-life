@@ -1,33 +1,11 @@
-# Compass Life 0.5.77.55 — Upload
+# Compass 0.5.77.55.1 — HOTFIX
 
-**Voraussetzung**: Version 0.5.77.54 liegt bereits auf `main` (GitHub Actions #216 grün).
+1. ZIP entpacken. **Nur die beiden enthaltenen Code/Testdateien** in die entsprechenden Repository-Pfade hochladen und die vorhandenen Versionen überschreiben.
+2. `client/compass755-bridge.js` ersetzen.
+3. `tests/compass-057755-lightning-fast.test.mjs` ersetzen.
+4. Alle Änderungen in einem Commit auf `main` hochladen; GitHub Actions soll bei **Tests und `npm run build`** grün werden.
+5. Danach Compass neu laden. Es sollte die Version `0.5.77.55.1` anzeigen.
 
-1. ZIP entpacken.
-2. Unterordner `client` und `tests` mit identischer Ordnerstruktur in `theophil-kroller/compass-life` nach GitHub hochladen.
-3. Bei bestehenden Dateien Ersetzen wählen. Alle Änderungen möglichst in **einem Commit** hochladen.
-4. In GitHub Actions den Workflow „Deploy Compass Web“ beobachten. Tests UND Produktionsbuild müssen grün sein.
-5. Nach dem Deploy Compass/PWA aktualisieren. Falls eine installierte PWA einen alten Stand cached, normal neu starten/aktualisieren – **niemals den Tresor löschen**.
+**Nicht** aus dem alten .55-Patch `vite.config.js` erneut hochladen; es liegt bereits auf `main`. Keine Passwörter, lokalen Vault-Dateien oder Sync-Daten löschen.
 
-## Bestehende Dateien ersetzen
-
-- `client/vite.config.js`
-- `tests/compass-057750-insights-nav.test.mjs`
-- `tests/compass-057751-premium-ui.test.mjs`
-- `tests/compass-057752-chart-first.test.mjs`
-- `tests/compass-057753-finance-performance.test.mjs`
-- `tests/compass-057754-on-demand.test.mjs`
-
-## Neue Dateien anlegen
-
-- `client/compass755-bridge.js`
-- `client/src/fast-today-v57755.css`
-- `tests/compass-057755-lightning-fast.test.mjs`
-
-`client/src/main.js`, gespeicherte Nutzerdaten, Worker, D1, Vault und Kalenderzugänge **nicht** ersetzen.
-
-## Woran du es erkennst
-
-- Unter „Compass“ in der linken Seitenleiste erscheint der Focus/Extended-Umschalter.
-- Im Focus-Modus sind Insights und Finanzen nicht sichtbar. Im Extended-Modus bleiben sie aufrufbar, ohne automatisch Analysen zu laden.
-- Die große Kopfzeile mit „Insights/Heute/...“ und Datum erscheint nicht mehr.
-- In „Heute“ öffnet der Inspector ohne Neuladen des restlichen Fensters; die Checkbox reagiert unmittelbar.
+Nach erfolgreichem Build kannst du im lokalen Performance-Panel die Messung aktivieren und 2–3 Entsperrvorgänge durchführen. Der folgende Export zeigt drei getrennte Stufen; der .54-Export konnte den Entsperrvorgang nicht analysieren.
