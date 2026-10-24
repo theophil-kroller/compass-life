@@ -1,0 +1,40 @@
+/* Compass 0.5.77.37 · detailed anatomy / personal recipes. Safe in light + dark themes. */
+.str737-detail-svg{height:390px;max-width:220px;width:100%;filter:drop-shadow(0 2px 4px rgba(30,40,36,.04))}
+.str737-detail-svg path[tabindex]{transition:filter .12s ease,stroke .12s ease;cursor:help}
+.str737-detail-svg path[tabindex]:hover,.str737-detail-svg path[tabindex]:focus-visible{stroke:#253f38;stroke-width:2.6;filter:brightness(.96);outline:none}
+.str735-two-maps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px;width:100%}
+.str735-map{min-width:0;display:grid;justify-items:center;margin:0;gap:6px}
+.str735-map figcaption{font-size:.82rem;font-weight:650;color:var(--muted,#63776d)}
+.str737-detail-table{margin-top:14px;min-width:0;display:grid;gap:2px}
+.str737-detail-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;padding-bottom:7px;border-bottom:1px solid var(--border,#dde6e1)}
+.str737-detail-head strong{font-size:.88rem}.str737-detail-head small{font-size:.68rem;color:var(--muted,#64756a)}
+.str737-detail-row{display:grid;grid-template-columns:10px minmax(90px,1.3fr) minmax(60px,.7fr) minmax(65px,1fr);gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border,#e2e7e4);font-size:.76rem}
+.str737-detail-row strong{font-variant-numeric:tabular-nums;text-align:right}.str737-detail-row small{font-size:.69rem;color:var(--muted,#6b786f);text-align:right}
+.str737-circle{width:9px;height:9px;border-radius:50%}.r737-edit{margin:12px 0;padding:12px;border-radius:14px;border:1px solid var(--border,#d5e2db);min-width:0}
+.r737-edit legend{font-weight:750}.r737-edit p{font-size:.77rem;color:var(--muted,#61796e);margin:6px 0 12px;line-height:1.5}
+.r737-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.r737-fields label{min-width:0;display:grid;gap:4px;font-size:.77rem;font-weight:580}
+.r737-fields label span{display:flex;align-items:center;gap:8px}
+.r737-fields input{min-width:0;width:100%;box-sizing:border-box;font-size:16px;min-height:43px;border-radius:9px;padding:8px 10px;background:var(--surface,#fff);color:inherit;border:1px solid var(--border,#cedfd4)}
+.r737-fields label small{color:var(--muted,#68766e);font-weight:400}
+@media(max-width:600px){.str737-detail-svg{height:min(50vh,320px)}.str735-two-maps{gap:4px}.str737-detail-row{grid-template-columns:9px minmax(80px,1fr) 62px 68px;gap:5px;font-size:.71rem}.str737-detail-row small{font-size:.63rem}.r737-fields{grid-template-columns:1fr}}
+/* v0.5.77.37: two fine-anatomy panels, warm cycling overlay, compact responsive filters. */
+.str737-activity-tabs{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:14px 0 8px}
+.str737-activity-tabs button{border:1px solid var(--border,#d7dfdc);border-radius:10px;background:transparent;color:inherit;padding:9px 14px;font:inherit;font-size:.83rem;cursor:pointer;min-height:40px}
+.str737-activity-tabs button.selected{background:#f9eddb;border-color:#d58f30;color:#5a3e0e;font-weight:700}
+.str737-ride-info{display:grid;gap:5px;font-size:.81rem;padding:12px 14px;margin:8px 0 14px;border-radius:12px;background:#fdf8ee;border:1px solid #f1d9ae;color:#654a25}
+.str737-ride-info small{color:#82643d;font-size:.74rem;line-height:1.45}
+.str737-detail-svg{width:100%;height:min(390px,55vh)}
+.str737-detail-table{display:grid;gap:3px;margin:12px 0}.str737-detail-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin:6px 0 12px}.str737-detail-head strong{font-size:.89rem}.str737-detail-head small{font-size:.7rem;color:var(--muted,#7c8883)}
+.str737-detail-row{display:grid;grid-template-columns:9px minmax(115px,1fr) 67px minmax(90px,.9fr);gap:9px;align-items:center;padding:7px 3px;border-bottom:1px solid var(--border,#e3eae5);font-size:.77rem}
+.str737-detail-row .str737-circle{height:9px;width:9px;border-radius:50%}.str737-detail-row strong{font-size:.72rem;font-variant-numeric:tabular-nums}.str737-detail-row small{color:var(--muted,#667870);font-size:.69rem}
+.str737-coarse{border-top:1px solid var(--border,#e3eae5);margin-top:14px}.str737-coarse summary{cursor:pointer;font-weight:600;font-size:.77rem;padding:8px 2px}
+/* Private recipes: full-width quantities, touch-friendly input, no side overflow. */
+.r737-edit{display:block;border:1px solid var(--border,#d7e4dc);padding:12px;border-radius:12px;min-width:0;max-width:100%;box-sizing:border-box;margin:15px 0}
+.r737-edit legend{font-weight:700;font-size:.86rem;padding:0 5px}.r737-edit p{font-size:.76rem;color:var(--muted,#69796f);line-height:1.5;margin:3px 0 11px}
+.r737-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 11px;min-width:0}
+.r737-fields label{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;min-width:0;padding:8px 10px;background:var(--surface-soft,#f4f8f5);border-radius:8px;font-size:.76rem}
+.r737-fields label span{display:flex;align-items:center;gap:4px;color:var(--muted,#667a6b);white-space:nowrap;margin-left:auto}
+.r737-fields input{width:78px;max-width:78px;min-width:0;box-sizing:border-box;padding:8px 6px;border:1px solid var(--border,#d6e2d9);border-radius:8px;font:inherit;color:inherit;background:var(--surface,#fff);font-variant-numeric:tabular-nums}
+@media(max-width:760px){.str737-detail-row{grid-template-columns:9px minmax(96px,1fr) 65px minmax(76px,.8fr);gap:6px}.str737-detail-svg{height:285px}.r737-fields{grid-template-columns:1fr}.r737-fields label{min-height:43px}}
+@media(max-width:430px){.str737-activity-tabs{gap:5px}.str737-activity-tabs button{padding:8px 10px;flex:1}.str737-detail-row small{font-size:.65rem}}
