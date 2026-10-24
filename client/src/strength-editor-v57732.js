@@ -36,8 +36,22 @@ export const EXERCISES=Object.freeze([
  ['plank','Plank','Rumpf','core',['shoulders']],
  ['dead-bug','Dead Bug','Rumpf','core',[]],
  ['crunch','Crunches','Rumpf','core',[]],
- ['pallof-press','Pallof Press','Rumpf','core',['shoulders']]
+ ['pallof-press','Pallof Press','Rumpf','core',['shoulders']],
+ // Compass .33: compound exercises that also target primary/secondary muscle groups.
+ ['military-press','Military Press (stehend, Langhantel)','StrongLifts 5×5','shoulders',['triceps','core']],
+ ['curl-to-press','Curl to Press (Bizepscurl → Schulterdrücken)','Kombinationsübungen','biceps',['shoulders','triceps','forearms']],
+ ['hammer-to-press','Hammer Curl to Press (Hammercurl → Schulterdrücken)','Kombinationsübungen','shoulders',['biceps','triceps','forearms']],
+ ['triceps-curl','Trizeps-Curl / French Press (Strecken)','Arme','triceps',[]],
+ ['skullcrusher','Skull Crushers / liegendes Trizepsstrecken','Arme','triceps',[]],
+ ['close-grip-bench','Enges Bankdrücken','Brust','triceps',['chest','shoulders']],
+ ['reverse-curl','Reverse Curls','Arme','forearms',['biceps']],
+ ['concentration-curl','Konzentrationscurls','Arme','biceps',['forearms']],
+ ['seated-dumbbell-press','Kurzhantel-Schulterdrücken sitzend','Schultern','shoulders',['triceps']]
 ].map(([id,name,group,primary,secondary])=>Object.freeze({id,name,group,primary,secondary})));
+export const STRONGLIFTS_5X5=Object.freeze({
+ A:Object.freeze([{exerciseId:'squat',sets:5,reps:5},{exerciseId:'bench',sets:5,reps:5},{exerciseId:'barbell-row',sets:5,reps:5}]),
+ B:Object.freeze([{exerciseId:'squat',sets:5,reps:5},{exerciseId:'military-press',sets:5,reps:5},{exerciseId:'deadlift',sets:1,reps:5}])
+});
 const byId=new Map(EXERCISES.map(x=>[x.id,x]));
 export function manualExerciseMuscles(id){const x=byId.get(id);return x?{name:x.name,primary:x.primary,secondary:x.secondary,known:true}:{name:'Übung offen',primary:null,secondary:[],known:false};}
 export function strengthAnnotationKey(s){return String(s?.id||'');}
@@ -68,7 +82,7 @@ export function putStrengthAnnotation(state,{sessionId,start,sets}){
  return item;
 }
 export function strengthSetRow(i,s={}){
- const groups=[...new Set(EXERCISES.map(x=>x.group))],options='<option value="">Übung zuordnen …</option>'+groups.map(g=>`<optgroup label="${esc(g)}">${EXERCISES.filter(x=>x.group===g).map(x=>`<option value="${esc(x.id)}" ${s.exerciseId===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`).join('');
+ const groups=['StrongLifts 5×5',...new Set(EXERCISES.map(x=>x.group).filter(g=>g!=='StrongLifts 5×5'))],options='<option value="">Übung zuordnen …</option>'+groups.map(g=>`<optgroup label="${esc(g)}">${EXERCISES.filter(x=>x.group===g).map(x=>`<option value="${esc(x.id)}" ${s.exerciseId===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`).join('');
  return `<div class="str732-set" data-strength-set="${i}"><span class="str732-count">Satz ${i+1}</span><label>Übung<select name="exercise-${i}">${options}</select></label><label>Wdh.<input inputmode="numeric" type="number" min="0" max="500" step="1" name="reps-${i}" placeholder="–" value="${Number.isFinite(s.reps)?s.reps:''}"></label><label>kg<input inputmode="decimal" type="number" min="0" max="500" step="0.25" name="weight-${i}" placeholder="–" value="${Number.isFinite(s.weightKg)?s.weightKg:''}"></label></div>`;
 }
 export function strengthEditorView(state,sessions=[],editingId=''){

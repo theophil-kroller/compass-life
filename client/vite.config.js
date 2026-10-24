@@ -6,11 +6,12 @@ import { strength729Bridge } from './strength729-bridge.js';
 import { strength730Bridge } from './strength730-bridge.js';
 import { nutrition731Bridge } from './nutrition731-bridge.js';
 import { strengthNutrition732Bridge } from './strength-nutrition732-bridge.js';
+import { nutritionStrength733Bridge } from './nutrition-strength733-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 export default defineConfig({
   base,
-  plugins: [nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), VitePWA({
+  plugins: [nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), nutritionStrength733Bridge(), VitePWA({
     registerType: 'autoUpdate',
     base,
     includeAssets: ['compass-icon.svg','icon-192.png','icon-512.png','runtime-config.json'],
