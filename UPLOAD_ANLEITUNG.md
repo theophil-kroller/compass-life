@@ -1,16 +1,27 @@
-# Compass 0.5.77.31 · GitHub-Upload
+# GitHub Upload — Compass 0.5.77.32
 
-**Voraussetzung:** Version 0.5.77.30 mit funktionierenden Nutrition-3- und Strength-Bridges. Diese Version ist ein schlankes Folge-Build, kein Vollquellcode.
+**Voraussetzung:** Compass 0.5.77.31 ist bereits installiert (im Repo: `client/vite.config.js` bindet `nutrition731Bridge()` ein).
 
-1. ZIP entpacken und Dateien in die **gleichen Repository-Unterordner** hochladen. `client/vite.config.js` ersetzen; neue `.js`- und `.css`-Dateien ergänzen.
-2. Dateien aus vorigen Builds **nicht löschen** (`nutrition3-bridge.js`, `strength728-bridge.js`, `strength729-bridge.js`, `strength730-bridge.js` bleiben bestehen).
-3. Nach dem GitHub-Pages-Deployment Compass/PWA neu laden. Links unten soll **0.5.77.31** stehen.
-4. **Insights → Ernährung → 🥑 Fettqualität** wählen. Ab jetzt erscheinen auch lokale, früher protokollierte Ernährungseinträge, sofern die Fettwerte ableitbar sind.
-5. Eintrag „Hofer gesalzene Erdnüsse“ verwendet für **neue** Portionen standardmäßig **20 g/Handvoll**. Bei alten ausdrücklich erfassten 30 g bleibt 30 g; ggf. manuell editieren.
-6. Referenzen sind für Markenprodukte **Schätzungen anhand generischer Lebensmitteltabellen**, keine verifizierten Laborwerte. Produktdatenlücken sind explizit ausgewiesen.
+Alle Dateien unter `client/` in den entsprechenden Ordnern im bestehenden GitHub-Repository hochladen. Nur die aufgeführten Pfade sind nötig.
 
-## Tests
+## Dateien
+1. `client/vite.config.js` — bereits vorhandene Datei **ersetzen** (behält Nutrition 3 / Strength 28–30 / Nutrition 31 und ergänzt die neue Bridge).
+2. `client/strength-nutrition732-bridge.js` — **neu**.
+3. `client/src/strength-editor-v57732.js` — **neu**.
+4. `client/src/strength-editor-v57732.css` — **neu**.
+5. `tests/gtd-057732-strength-editor-mobile-nutrition.test.mjs` — optional für GitHub-/lokale Tests.
 
-`node --test tests/gtd-057731-fat-quality.test.mjs`
+Die Anleitung und das Änderungsprotokoll kannst du mit hochladen, musst du aber nicht. **Keine alten Dateien, keine früheren ZIPs erneut hochladen.**
 
-Es wurde kein vollständiger Vite-Produktionsbuild ausgeführt: das ganze GitHub-Repository und sämtliche npm-Pakete waren in der lokalen Umgebung nicht verfügbar. Die neuen Dateien sind syntaktisch geprüft und Modul-/Bridge-Tests bestanden.
+## Nach dem GitHub-Deployment
+- App auf Desktop und Handy einmal aktualisieren, sodass die Versionsanzeige `0.5.77.32` zeigt (ggf. installierte PWA schließen und neu öffnen).
+- Handy: Ernährungsschnellerfassung öffnen. Kategorien/Kacheln müssen vor der individuellen Mahlzeitbeschreibung stehen; beim Scrollen darf die Anzeige durch einen Hintergrund-Render nicht zum Anfang springen.
+- Krafttraining unter Insights öffnen: Nach neuen Garmin-CSV-Imports zeigt Compass oben eine Aufforderung zur Zuordnung. Trainingseinheit anklicken → Sätze auswählen → Wiederholungen + kg ergänzen → speichern.
+- Muskelkarte mit „Vorne“/„Hinten“ prüfen. Import der ursprünglichen Garmin Activities.csv genügt; zusätzliche Aktivitäts-FIT-Dateien sind optional.
+- **Nur wenn der ältere Importer die Satzsummen noch nie eingelesen hat**, Activities.csv einmal nach dem Update erneut importieren.
+
+## Lokal testen
+`node --test tests/gtd-057732-strength-editor-mobile-nutrition.test.mjs`
+
+## Hinweis
+Die manuellen Übungszuordnungen werden im lokalen verschlüsselten Vault abgelegt; eine verifizierte Synchronisation zu anderen Geräten ist noch kein Bestandteil von 0.5.77.32.
