@@ -1,22 +1,19 @@
-# Compass 0.5.77.29 · Upload nach GitHub
+# Compass 0.5.77.30 · GitHub-Upload (kumulativ ab 0.5.77.28)
 
-**Basis:** Compass 0.5.77.28 muss bereits installiert sein, einschließlich Nutrition 3.
+## Installation
 
-1. ZIP entpacken und die Ordnerstruktur beibehalten.
-2. Dateien in dein vorhandenes GitHub-Repository `theophil-kroller/compass-life` hochladen:
-   - **Ersetzen:** `client/vite.config.js`
-   - **Ersetzen:** `client/src/strength-insights-v57728.js`
-   - **Ersetzen:** `client/src/strength-insights-v57728.css`
-   - **Neu:** `client/strength729-bridge.js`
-   - **Neu:** `tests/gtd-057729-strength-csv.test.mjs`
-   - **Neu:** `CHANGELOG_0.5.77.29.md`
-3. GitHub Pages-Deployment abwarten und Compass aktualisieren (bei PWA gegebenenfalls Seite neu laden).
-4. **`Activities(2).csv` in Compass nochmals unter den bisherigen Garmin-Datenquellen importieren.** Der alte Import hatte die Satz-/Wiederholungszahlen noch nicht gespeichert.
-5. **Insights → Krafttraining** aufrufen. Bei deiner Datei vom 24. Oktober sollten 2 Einheiten, 1 Trainingstag, 6 Sätze und 72 Wiederholungen erscheinen. Die Körperkarte bleibt zunächst neutral, weil die CSV keine einzelnen Übungen enthält.
-6. Damit die Muskelgruppen eingefärbt werden: Garmin Connect → jeweilige Krafttrainingseinheit öffnen → **Original/FIT exportieren**. Diese Aktivitäts-FIT in Compass importieren; nicht den täglichen Wellness-FIT-ZIP verwechseln.
+1. **Voraussetzung:** Nutrition 3 (0.5.77.27) und Muscle Map (0.5.77.28) sind bereits installiert.
+2. ZIP entpacken, alle enthaltenen Dateien mit ihren originalen Pfaden ins Repository hochladen.
+3. Ersetzen: `client/vite.config.js`, `client/src/strength-insights-v57728.js`, `client/src/strength-insights-v57728.css`.
+4. Neu: `client/strength729-bridge.js`, `client/strength730-bridge.js`, Tests und Changelog. Dateien aus .29 sind **schon enthalten**: .29 nicht separat hochladen.
+5. Nach erfolgreichem GitHub-Pages-Deploy die Seite neu laden und unten links auf **0.5.77.30** prüfen. Falls noch .28 angezeigt wird, GitHub Actions/Pages prüfen und PWA-Cache aktualisieren.
+6. Insights → Aktivitäten → Kachel **💪 Krafttraining**. Mit Klick darauf wird diese Sportart allein in der Zeitreihe angezeigt.
+7. Insights → Krafttraining: Damit bereits früher importierte CSV-Einheiten Satz- und Wiederholungszahlen bekommen, dieselbe `Activities(2).csv` einmal erneut importieren (wird dedupliziert).
 
-**Architektur:** `nutrition3Bridge()` → `strength728Bridge()` → `strength729Bridge()` → `VitePWA()`; kein Überschreiben von `client/src/main.js` und keine Datenbank-Migration erforderlich.
+## Datenverständnis
 
-**Tests:** `node --test tests/gtd-057728-strength-training.test.mjs tests/gtd-057729-strength-csv.test.mjs`.
+Die CSV hat nur die Gesamtzahl von Sätzen/Wiederholungen je Aktivität, nicht die Übungsnamen. FIT-Dateien des **konkreten Krafttrainings** (nicht Wellness-ZIP) sind für die Muskelzuordnung erforderlich.
 
-**Hinweis:** Die Garmin Activities CSV verrät Set-Gesamtzahlen, nicht Einzelgewichte/Übungsnamen. Es werden keine Muskelzuordnungen erfunden. Spätere FIT-Details ersetzen nicht die vorhandenen Daten unkontrolliert, sondern werden mit CSV-Zusammenfassungen verrechnet.
+**Tests:** `node --test tests/gtd-057730-strength-sport-category.test.mjs tests/gtd-057729-strength-csv.test.mjs`
+
+**Bausteine in dieser Version:** Nutrition-Bridge .27 → Strength-Bridge .28 → CSV-Bridge .29 → Sports-Bridge .30 → PWA. Keine Änderung an `client/src/main.js`.
