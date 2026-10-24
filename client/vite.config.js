@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { nutrition3Bridge } from './nutrition3-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 export default defineConfig({
   base,
-  plugins: [VitePWA({
+  plugins: [nutrition3Bridge(), VitePWA({
     registerType: 'autoUpdate',
     base,
     includeAssets: ['compass-icon.svg','icon-192.png','icon-512.png','runtime-config.json'],

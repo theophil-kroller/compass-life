@@ -1,0 +1,26 @@
+/* Nutrition Insights 3 · compact dot-first, source-honest and responsive */
+.ni727-root{display:grid;gap:14px;min-width:0}.ni727-root>.work-card{min-width:0;overflow:hidden}
+.ni727-controls{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:10px 0}
+.ni727-ranges,.ni727-inputs{display:flex;gap:5px;flex-wrap:wrap}
+.ni727-ranges button,.ni727-inputs button{font:inherit;font-size:.78rem;color:inherit;border:1px solid var(--border,#d9e1de);border-radius:10px;background:transparent;padding:7px 9px;cursor:pointer}
+.ni727-ranges button.selected,.ni727-inputs button.selected{border-color:#507C9A;background:var(--surface-soft,#edf4f7);font-weight:700}
+.ni727-inputs{margin-bottom:13px}.ni727-select-row{display:flex;align-items:center;gap:8px;min-width:0}
+.ni727-select-row label{font-size:.76rem;font-weight:650;color:var(--muted,#68786f);white-space:nowrap}
+.ni727-select-row select{font:inherit;font-size:.81rem;color:inherit;background:var(--surface,#fff);max-width:320px;min-width:180px;min-height:34px;border-radius:10px;border:1px solid var(--border,#d9e1de);padding:5px 8px}
+.ni727-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 12px}
+.ni727-kpis>div{display:grid;gap:4px;background:var(--surface-soft,#f3f5f3);padding:10px 12px;border-radius:12px;min-width:0}
+.ni727-kpis small{font-size:.69rem;color:var(--muted,#718076)}.ni727-kpis strong{font-size:1.15rem;font-variant-numeric:tabular-nums}
+.ni727-scroller{overflow-x:auto;max-width:100%;border-bottom:1px solid var(--border,#d9e1de)}
+.ni727-scroller svg{display:block;width:100%;min-width:530px;max-width:900px;margin-inline:auto;height:auto}
+.ni727-scroller text{font-size:11px;fill:currentColor;opacity:.72;font-family:inherit}.ni727-scroller .ni727-axis-label{font-size:11px;opacity:.92}
+.ni727-dot:hover,.ni727-dot:focus-visible{stroke-width:3;outline:none}
+.ni727-note,.ni727-footnote{font-size:.76rem;color:var(--muted,#718076);line-height:1.55;margin:9px 0 11px}
+.ni727-empty{padding:28px 12px;text-align:center;color:var(--muted,#718076);font-size:.85rem}
+.ni727-legend{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 4px;color:var(--muted,#718076);font-size:.72rem}
+.ni727-legend span{display:flex;align-items:center;gap:6px}.ni727-legend i{height:12px;width:12px;border-radius:50%;display:inline-block;border:2px solid #507C9A}
+.ni727-solid{background:#507C9A}.ni727-outline{background:var(--surface,#fff)}
+.ni727-details summary{cursor:pointer;font-size:.81rem;font-weight:600;padding:8px 0}
+.ni727-table-scroll{overflow:auto;max-height:420px}.ni727-table-scroll table{border-collapse:collapse;width:100%;font-size:.77rem;min-width:390px}
+.ni727-table-scroll th,.ni727-table-scroll td{padding:8px 9px;border-bottom:1px solid var(--border,#e6eae7);text-align:left;font-variant-numeric:tabular-nums}
+.ni727-table-scroll th{position:sticky;top:0;background:var(--surface,#fff);font-size:.7rem}
+@media(max-width:700px){.ni727-root>.work-card{padding:12px}.ni727-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ni727-select-row{width:100%}.ni727-select-row select{flex:1;min-width:0;max-width:100%}.ni727-inputs button{font-size:.73rem}.ni727-scroller svg{width:660px;max-width:none}}
