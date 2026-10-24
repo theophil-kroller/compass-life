@@ -23,6 +23,13 @@ return \`<div class="shell premium751"><aside class="sidebar"><div class="brand"
 <div class="page-intro page-intro-compact"><h1>\${h(title)}</h1><span class="page-compact-info">\${h(today)}</span></div>\${content}</div></main></div>\`;}
 function taskEditor(){return 'Editor';}
 function todaySmartPanel(){return 'Recommendations';}
+function occasionPanel(){
+ return \`\${[1].map(o=>{const steps=[1];return \`<div class="occasion-suggestions">\${steps.map(st=>{
+ const status={kind:'pending'},active=true;
+ return \`<div class="occasion-suggestion \${status.kind!=='pending'?'occasion-quiet':''}"><span>\${h(st.label)}<small>\${status.kind==='accepted'?'Als Aufgabe übernommen':status.kind==='dismissed'?'Für diesen Anlass ausgeblendet':\`Sinnvoll bis \${h((()=>{const d=new Date(o.date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-st.deadlineBefore);return d.toISOString().slice(0,10)})())}\`}</small></span><div>\${status.kind==='pending'?\`<button type="button" class="primary-btn" data-action="occasion-accept" data-id="\${h(o.id)}" data-step="\${h(st.id)}">Übernehmen</button><button type="button" class="secondary-btn" data-action="occasion-dismiss" data-id="\${h(o.id)}" data-step="\${h(st.id)}">Nicht nötig</button>\`:status.kind==='dismissed'?\`<button type="button" class="secondary-btn" data-action="occasion-reset" data-id="\${h(o.id)}" data-step="\${h(st.id)}">Wieder anzeigen</button>\`:\`<button type="button" class="secondary-btn" data-action="task-view" data-id="\${h(status.task.id)}">Aufgabe ansehen</button>\`}</div></div>\`;
+  }).join('')}</div>\`;}).join('')}\`;
+}
+function timelinePanel(){return null;}
 function todayWork(locked=false){return \`<div class="today-layout"><div class="today-center">Tasks</div><aside class="inspector-rail today-context-rail" aria-label="\${todayInspectorOpen?'Aufgaben-Inspector':'Was passt jetzt?'}">\${todayInspectorOpen&&state?.tasks?.[selectedTaskId]&&!state.tasks[selectedTaskId].archived?\`<section class="work-card inspector-card today-focus-inspector"><div class="work-heading"><span>Aufgabe bearbeiten</span><button data-action="today-inspector-close">x</button></div>\${taskEditor()}</section>\`:todaySmartPanel()}</aside></div>\`;}
 function radarScreen(){return null;}
 async function unlockFixture(){
@@ -65,7 +72,7 @@ test('Vite chain keeps the prior lazy loader and introduces .55 last',()=>{
 
 test('today inspector and task checkbox get narrowly targeted handlers and no redundant header',()=>{
  const out=compass755Bridge().transform(fixture,'/repo/client/src/main.js').code;
- assert.match(out,/COMPASS_CLIENT_VERSION='0\.5\.77\.55\.1'/);
+ assert.match(out,/COMPASS_CLIENT_VERSION='0\.5\.77\.55\.2'/);
  assert.match(out,/function compass55InspectorContent\(\)/);
  assert.match(out,/function compass55RefreshInspector\(\)/);
  assert.match(out,/if\(!compass55RefreshInspector\(\)\)render\(\)/);
@@ -112,4 +119,23 @@ test('Insight and Finance header click start their own route and progress loader
  assert.match(out,/Tresor: Startzustand unverändert/);
  assert.doesNotMatch(out,/class="shell compass55-/);
  assert.match(out,/class="shell premium751 compass55-/);
+});
+
+test('Occasion UI keeps deadline inline and compact accessible action icons',()=>{
+ const out=compass755Bridge().transform(fixture,'/repo/client/src/main.js').code;
+ assert.match(out,/occasion55-copy/);
+ assert.match(out,/occasion55-date/);
+ assert.match(out,/occasion55-actions/);
+ assert.match(out,/aria-label="Als Aufgabe übernehmen" title="Übernehmen">✓/);
+ assert.match(out,/aria-label="Vorschlag ausblenden" title="Nicht nötig">×/);
+ assert.match(out,/function timelinePanel\(\)/);
+ const css=readFileSync(new URL('../client/src/occasion-compact-v577552.css',import.meta.url),'utf8');
+ assert.match(css,/\.occasion-panel \.occasion-suggestion\{display:flex;flex-direction:row/);
+});
+
+test('Render anchor accepts existing inserted code ahead of the measurement hook',()=>{
+ const withPrelude=fixture.replace('function render(){\n const renderMeasurement=', 'function render(){\n // Other feature hook comes first.\n const renderMeasurement=');
+ const out=compass755Bridge().transform(withPrelude,'/repo/client/src/main.js').code;
+ assert.match(out,/if\(state&&compass55Mode==='focus'/);
+ assert.match(out,/Other feature hook comes first/);
 });

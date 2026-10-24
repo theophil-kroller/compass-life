@@ -1,0 +1,12 @@
+/* Compass 0.5.77.55.2 · dense occasion suggestions (Focus and Extended). */
+.occasion-panel .occasion-suggestions{gap:3px;margin-top:7px}
+.occasion-panel .occasion-suggestion{display:flex;flex-direction:row;align-items:center;gap:9px;padding:5px 8px;min-height:34px}
+.occasion-panel .occasion55-copy{display:flex;flex:1;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12px;line-height:1.35;min-width:0}
+.occasion-panel .occasion55-date{display:inline;font-size:11px;line-height:1.2;margin:0;color:#76897e;white-space:nowrap}
+.occasion-panel .occasion55-actions{display:flex;flex-shrink:0;align-items:center;gap:5px;flex-wrap:nowrap}
+.occasion-panel .occasion55-actions [data-action="occasion-accept"],
+.occasion-panel .occasion55-actions [data-action="occasion-dismiss"]{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;min-height:27px;padding:0!important;border-radius:8px;line-height:1;font-size:17px;font-weight:600}
+.occasion-panel .occasion55-actions [data-action="occasion-dismiss"]{background:transparent;border:1px solid #d6e2da;color:#506e60;box-shadow:none}
+.occasion-panel .occasion55-actions [data-action="occasion-accept"]:focus-visible,
+.occasion-panel .occasion55-actions [data-action="occasion-dismiss"]:focus-visible{outline:2px solid #237b64;outline-offset:2px}
+@media(max-width:890px){.occasion-panel .occasion-suggestion{flex-direction:row;align-items:center}.occasion-panel .occasion55-copy{gap:3px 7px}.occasion-panel .occasion55-actions{margin-left:auto}}

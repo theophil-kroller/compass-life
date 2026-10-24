@@ -1,4 +1,4 @@
-/** Compass Life 0.5.77.55.1 - Lightning Fast Today + Focus / Extended mode.
+/** Compass Life 0.5.77.55.2 - Lightning Fast Today + Focus / Extended mode.
  * All source changes are guarded and occur after .54 on-demand plugin.
  * GTD state, persistence, syncing and the encrypted Vault schema are preserved.
  */
@@ -9,8 +9,9 @@ export function compass755Bridge(){
   if(!file.endsWith('/client/src/main.js'))return null;
   let s=source;
   const ch=(a,b,label)=>{s=once(s,a,b,label);};
-  ch("const COMPASS_CLIENT_VERSION='0.5.77.54';","const COMPASS_CLIENT_VERSION='0.5.77.55.1';",'version');
+  ch("const COMPASS_CLIENT_VERSION='0.5.77.54';","const COMPASS_CLIENT_VERSION='0.5.77.55.2';",'version');
   ch("import './on-demand-v57754.css';", "import './on-demand-v57754.css';\nimport './fast-today-v57755.css';", 'UX stylesheet');
+  ch("import './fast-today-v57755.css';", "import './fast-today-v57755.css';\nimport './occasion-compact-v577552.css';", 'occasion styling');
   ch("const app=document.getElementById('app');", "const app=document.getElementById('app');\nconst COMPASS55_MODE_KEY='compass.ui.focus.v57755';\nlet compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();",'Focus / Extended persistence');
   // Keep the main GTD navigation intact. Only the two analysis groups are hidden in Focus.
   ch('<div class="shell premium751"><aside class="sidebar"', '<div class="shell premium751 compass55-${compass55Mode}"><aside class="sidebar"','shell mode after .51');
@@ -49,6 +50,18 @@ export function compass755Bridge(){
      'skip redundant full encryption on unchanged unlock');
   
 
+  // Compact occasion step: one-line label + due date and accessible check/cross actions.
+  // Keep existing occasion-accept / occasion-dismiss business logic unchanged.
+  const occasionStart=s.indexOf('function occasionPanel(){');
+  const occasionEnd=occasionStart>=0?s.indexOf('\nfunction timelinePanel(){',occasionStart):-1;
+  if(occasionStart<0||occasionEnd<0)throw Error('Compass .55.2: occasion panel unavailable');
+  let occ=s.slice(occasionStart,occasionEnd);
+  const occOnce=(before,after,reason)=>{const n=occ.split(before).length-1;if(n!==1)throw Error('Compass .55.2: '+reason+': expected one match, found '+n);occ=occ.replace(before,after);};
+  occOnce('<span>${h(st.label)}<small>', '<span class="occasion55-copy">${h(st.label)}<small class="occasion55-date">','occasion label and inline date');
+  occOnce('</small></span><div>${status.kind', '</small></span><div class="occasion55-actions">${status.kind', 'occasion actions');
+  occOnce('data-step="${h(st.id)}">Übernehmen</button>', 'data-step="${h(st.id)}" aria-label="Als Aufgabe übernehmen" title="Übernehmen">✓</button>', 'accept icon');
+  occOnce('data-step="${h(st.id)}">Nicht nötig</button>', 'data-step="${h(st.id)}" aria-label="Vorschlag ausblenden" title="Nicht nötig">×</button>', 'dismiss icon');
+  s=s.slice(0,occasionStart)+occ+s.slice(occasionEnd);
   // Extract inspector markup once. Full Today render and targeted rail refresh use exactly
   // the same renderer, avoiding diverging forms or stale field values.
   const todayStart=s.indexOf('function todayWork(locked=false){');
@@ -123,8 +136,8 @@ function compass55FastTaskPaint(id){
 }
 `;
   ch('function bind() {',helpers+'\nfunction bind() {','fast handlers declaration');
-  ch('function render(){\n const renderMeasurement=performanceTrace.start();',
-     "function render(){\n if(state&&compass55Mode==='focus'&&['insights','finance','activity','recovery','progress'].includes(tab)){tab='today';todayInspectorOpen=false;calmNavGroup='';}\n const renderMeasurement=performanceTrace.start();", 'Focus only GTD, including saved direct views');
+  ch('function render(){',
+     "function render(){\n if(state&&compass55Mode==='focus'&&['insights','finance','activity','recovery','progress'].includes(tab)){tab='today';todayInspectorOpen=false;calmNavGroup='';}", 'Focus only GTD, including saved direct views');
   const select="if(action==='task-select'){if(!state?.tasks?.[id])return;selectedTaskId=id;if(tab==='today')todayInspectorOpen=true;render();";
   ch(select,"if(action==='task-select'){if(!state?.tasks?.[id])return;selectedTaskId=id;if(tab==='today')todayInspectorOpen=true;if(!compass55RefreshInspector())render();",'fast Inspector selection');
   ch("if(action==='today-inspector-close'){todayInspectorOpen=false;selectedTaskId=null;render();return;}","if(action==='today-inspector-close'){todayInspectorOpen=false;selectedTaskId=null;if(!compass55RefreshInspector())render();return;}",'fast Inspector close');
