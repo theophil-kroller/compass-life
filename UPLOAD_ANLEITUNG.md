@@ -1,24 +1,21 @@
-# Compass 0.5.77.38 – GitHub-Upload
+# Compass 0.5.77.38 – GitHub Actions Hotfix
 
-**Basis:** Repo `theophil-kroller/compass-life`, mindestens Version 0.5.77.37.1 vollständig im Repository (auch wenn die GitHub-Actions-Veröffentlichung zuletzt fehlgeschlagen ist).
+**Basis:** Commit `e62be0e` (fehlgeschlagener Workflow-Lauf #196).
 
-1. Dieses ZIP entpacken.
-2. Alle Pfade aus `client/` und `tests/` in **das Hauptverzeichnis des bestehenden GitHub-Repositorys** hochladen. Die Verzeichnisstruktur erhalten; gleichnamige Dateien **ersetzen**. Keine neuen Unterordner mit dem ZIP-Namen anlegen.
-3. Unter GitHub → **Actions → Deploy Compass Web** kontrollieren: `npm run check` muss erfolgreich sein, anschließend `npm run build` und `deploy-pages`.
-4. Sobald die Veröffentlichung erfolgreich ist: Compass mit Strg+Umschalt+R neu laden bzw. PWA schließen und erneut starten. Links muss `0.5.77.38` stehen. Bei unveränderter Versionsanzeige zuerst Actions prüfen, nicht den Tresor zurücksetzen.
+## Upload
 
-## Was dieses Paket repariert
+Lade **nur diese eine Datei** in dasselbe GitHub-Repository hoch und **ersetze** dort die gleichnamige Datei:
 
-- Die sieben CI-Testfehler des vorherigen Uploads: `tests/compass-0577371.test.mjs` enthielt noch absolute Pfade des Entwicklungscontainers (`/mnt/data/...`). Diese sind durch relative Pfade zum Repository ersetzt. Die letzte Veröffentlichung war deshalb blockiert, obwohl die Quelldateien bereits hochgeladen waren.
-- Ernährung: `client/src/nutrition-history-v577.js` ist **direkt** mit der schmalen Pille rechts unter den kcal versehen. Die bisherige 0.5.77.37.1-Vite-Transformation erkennt diese Änderung und verändert die Ansichtsdatei nicht doppelt.
-- Trizeps Extension und andere Übungen: zuletzt eingetragene Gewichte/Wdh. werden auch sofort beim Öffnen eines schon ausgewählten Satzes vorgeschlagen, wenn dessen Felder noch leer sind.
+`tests/gtd-057726-nutrition-trends-missing.test.mjs`
 
-## Muskelkarte
+Keine anderen Dateien aus älteren Paketen erneut hochladen. Der App-Quellcode einschließlich des Muskelkarten-Redesigns 0.5.77.38 bleibt unverändert.
 
-Neue dunkle Darstellung mit zwei größeren anatomischen SVGs vorne/hinten, 25 Regionen, Hover-/Tastaturbeschriftung, Wochenraster, kompakter KPIs-/Satz-Übersicht, Rangliste; Krafttraining und Radfahren werden getrennt erfasst. Der Satzeditor ist jetzt **unter** dem Dashboard, nicht darüber.
+## Diagnose
 
-Die SVG-Grafik ist original für Compass auf Grundlage der bestehenden 25-Regionen-Datei gestaltet. Sie ist keine Kopie fremder App-Assets. Sätze bezeichnen dokumentierte Trainingseinheiten, keine gemessene Muskelaktivierung. Garmin-Radfahrten zeigen eine qualitative anatomische Beteiligung und werden nicht in Kraftsätze umgerechnet.
+Workflow #196 scheiterte bei `npm run check`: Ein Ernährungstest aus der alten Oberfläche erwartete „1 Lebensmittel ohne kcal-Schätzung“, „Supplement(e) ohne Energiedeklaration“ und den früheren großen Aufklappbalken. Die aktuelle Oberfläche verwendet eine kleine Pille und zeigt korrekt beide datensatzbezogenen Lücken als „2 ohne kcal“ mit den Produktnamen. Der neue Test prüft gerade diese wichtigen Eigenschaften.
 
-## Teststand
+## Kontrolle
 
-16 gezielte lokale Tests erfolgreich (die sieben bisher fehlschlagenden alten Tests eingeschlossen). Syntax-/Transformationsprüfung der bearbeiteten Strength-Datei bestanden. **Kein vollständiger lokaler Vite-Produktionsbuild**, da hier die komplette Repository-Installation nicht lokal verfügbar ist; dessen Ergebnis ist erst nach GitHub Actions verifiziert.
+Nach dem Upload: GitHub → Actions → `Deploy Compass Web` → neuester Lauf. `npm run check`, `npm run build` und `deploy-pages` sollten jeweils grün werden. Sollte ein weiterer Fehler bei `npm run build` auftreten, muss dessen exakter Log getrennt geprüft werden; für den neuen Lauf liegt noch kein Ergebnis vor.
+
+Die gespeicherten Compass-Vault-Daten werden durch diesen Testdatei-Fix nicht berührt.

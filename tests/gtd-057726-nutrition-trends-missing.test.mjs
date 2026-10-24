@@ -45,15 +45,23 @@ test('Nutrition 2: updated entry invalidates only affected per-day cache and doe
  entry.deleted=true;entry.updatedAt='3';
  assert.ok(nutritionTrendsSeries(s,{...opts,metric:'protein'}).rows.some(r=>r.day==='2026-10-23'&&r.totals.protein===undefined));
 });
-test('Nutrition 2: product-aware missing energy names the food; supplements are not shown as kcal=0 or missing meal',()=>{
+test('Nutrition 2: compact kcal pill names missing foods and supplements without treating them as zero',()=>{
  const s=make();s.nutritionJournal.entries.push({id:'mystery',foodId:'other-food',at:'2026-10-23T12:30:00Z',amount:'1 Teller',updatedAt:'1'});
  const records=nutritionDailyHistory(s,{period:7,now});const yesterday=records.find(r=>r.day==='2026-10-23');
  assert.equal(yesterday.unknown,1);assert.equal(yesterday.supplementItems.length,1);
  assert.equal(yesterday.missingItems.length,1);assert.match(yesterday.missingItems[0].reason,/kcal-Angabe/);
  const html=nutritionHistoryView(s,{period:7,now});
- assert.match(html,/1 Lebensmittel ohne kcal-Schätzung/);assert.match(html,/Supplement\(e\) ohne Energiedeklaration/);
- assert.match(html,/Fehlende Energieangaben anzeigen/);assert.match(html,/Anderes/);
+ // Version 0.5.77.38 moves details below the daily kcal amount into one small pill.
+ // Both records must remain identifiable without a full-width expandable row.
+ assert.match(html,/<details class="n577-pill-details">/);
+ assert.match(html,/<summary class="n577-mini-pill"/);
+ assert.match(html,/2 ohne kcal/);
+ assert.match(html,/Anderes/);
+ assert.match(html,/Bluebonnet ONE for Men/);
+ assert.match(html,/Nahrungsergänzung · keine kcal-Deklaration; kein Nullwert angenommen/);
  assert.match(html,/data-action="pj92-food-edit"/);
+ assert.doesNotMatch(html,/Fehlende Energieangaben anzeigen/);
+ assert.doesNotMatch(html,/class="n577-missing-items"/);
  assert.doesNotMatch(html,/1 ohne Wert/);
 });
 test('Nutrition 2: one 1-TL matcha has a nonempty energy estimate, and a capsule cannot end a fasting interval',()=>{
