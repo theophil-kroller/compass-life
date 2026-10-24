@@ -1,100 +1,52 @@
 TAP version 13
-# Subtest: Cycling imported Garmin CSV/FIT once despite timezone offset
-ok 1 - Cycling imported Garmin CSV/FIT once despite timezone offset
+# Subtest: previous exercise values use latest explicit reps and last known weight, not zero
+ok 1 - previous exercise values use latest explicit reps and last known weight, not zero
   ---
-  duration_ms: 8.073377
+  duration_ms: 6.657375
   type: 'test'
   ...
-# Subtest: No cycling as virtual lifting sets
-ok 2 - No cycling as virtual lifting sets
+# Subtest: future and current session never leak into defaults
+ok 2 - future and current session never leak into defaults
   ---
-  duration_ms: 1.450153
+  duration_ms: 0.412398
   type: 'test'
   ...
-# Subtest: Different activity contexts render same detailed anatomy
-ok 3 - Different activity contexts render same detailed anatomy
+# Subtest: unsaved rows use exercise-specific suggestion; changing exercise clears only unchanged auto-filled values
+ok 3 - unsaved rows use exercise-specific suggestion; changing exercise clears only unchanged auto-filled values
   ---
-  duration_ms: 6.779077
+  duration_ms: 12.841549
   type: 'test'
   ...
-# Subtest: All three personal recipe presets have correctly exposed defaults
-ok 4 - All three personal recipe presets have correctly exposed defaults
+# Subtest: kcal pill shows details on hover/tap without wide details bar
+ok 4 - kcal pill shows details on hover/tap without wide details bar
   ---
-  duration_ms: 0.139159
+  duration_ms: 3.312222
   type: 'test'
   ...
-# Subtest: Salad has 20g salted peanuts, optional vegetables/avocado default omitted
-ok 5 - Salad has 20g salted peanuts, optional vegetables/avocado default omitted
+# Subtest: pill distinguishes missing regular food from supplements
+ok 5 - pill distinguishes missing regular food from supplements
   ---
-  duration_ms: 0.313579
+  duration_ms: 0.418887
   type: 'test'
   ...
-# Subtest: No zero nutrients are fabricated from unknown seasonings
-ok 6 - No zero nutrients are fabricated from unknown seasonings
+# Subtest: guarded bridge updates main and nutrition history only
+ok 6 - guarded bridge updates main and nutrition history only
   ---
-  duration_ms: 0.38701
+  duration_ms: 1.807918
   type: 'test'
   ...
-# Subtest: Egg recipe reflects extra virgin olive oil and spices
-ok 7 - Egg recipe reflects extra virgin olive oil and spices
+# Subtest: CSS keeps pill directly under values, on desktop and phone
+ok 7 - CSS keeps pill directly under values, on desktop and phone
   ---
-  duration_ms: 0.134281
+  duration_ms: 0.241011
   type: 'test'
   ...
-# Subtest: Editable weights preserve other recipe snapshots
-ok 8 - Editable weights preserve other recipe snapshots
-  ---
-  duration_ms: 15.324731
-  type: 'test'
-  ...
-# Subtest: Food energy estimates explicitly from ingredient parts
-ok 9 - Food energy estimates explicitly from ingredient parts
-  ---
-  duration_ms: 0.550324
-  type: 'test'
-  ...
-# Subtest: Bridge plugin present and safe for unrelated files
-ok 10 - Bridge plugin present and safe for unrelated files
-  ---
-  duration_ms: 0.538998
-  type: 'test'
-  ...
-# Subtest: Two separate Garmin rides of equal duration are not merged merely because they are two hours apart
-ok 11 - Two separate Garmin rides of equal duration are not merged merely because they are two hours apart
-  ---
-  duration_ms: 0.271677
-  type: 'test'
-  ...
-# Subtest: Undocumented rides do not generate cycling muscle colors
-ok 12 - Undocumented rides do not generate cycling muscle colors
-  ---
-  duration_ms: 0.219459
-  type: 'test'
-  ...
-# Subtest: Cycling layer can be hidden without altering resistance annotations
-ok 13 - Cycling layer can be hidden without altering resistance annotations
-  ---
-  duration_ms: 0.336985
-  type: 'test'
-  ...
-# Subtest: Guarded bridge transforms expected post-.36 source anchors
-ok 14 - Guarded bridge transforms expected post-.36 source anchors
-  ---
-  duration_ms: 0.211627
-  type: 'test'
-  ...
-# Subtest: Guarded anatomy bridge emits both SVG views and cycling tab
-ok 15 - Guarded anatomy bridge emits both SVG views and cycling tab
-  ---
-  duration_ms: 0.150285
-  type: 'test'
-  ...
-1..15
-# tests 15
+1..7
+# tests 7
 # suites 0
-# pass 15
+# pass 7
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 91.978033
+# duration_ms 84.412394

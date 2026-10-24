@@ -1,0 +1,20 @@
+/* Compass 0.5.77.37.1 · Floating pill under the DAILY kcal value (not a full-width bar). */
+.n577-history .n577-day{align-items:center;position:relative}
+.n577-history .n577-amount{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px;min-width:0;text-align:right;font-variant-numeric:tabular-nums;position:relative}
+.n577-history .n577-kcal-value{display:block;white-space:nowrap;font-size:inherit;font-weight:650}
+.n577-history .n577-pill-details{position:relative;max-width:100%;width:max-content;font-size:11px;font-weight:400;line-height:1.2;color:inherit}
+.n577-history .n577-mini-pill{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:3px 8px;margin:0;border-radius:999px;border:1px solid #d9dfdc;background:#f5f7f5;color:#566b61;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:500;font-size:10.5px;list-style:none;touch-action:manipulation;user-select:none;transition:background .12s ease,border-color .12s ease}
+.n577-history .n577-mini-pill::-webkit-details-marker{display:none}
+.n577-history .n577-mini-pill::marker{content:''}
+.n577-history .n577-mini-pill:hover,.n577-history .n577-pill-details[open]>.n577-mini-pill{border-color:#b1c7ba;background:#eaf2ed;color:#274d3c}
+.n577-history .n577-mini-pill:focus-visible{outline:2px solid #318569;outline-offset:2px}
+.n577-history .n577-pill-popover{position:absolute;z-index:40;right:0;top:calc(100% + 7px);width:min(300px,calc(100vw - 35px));box-sizing:border-box;max-height:min(290px,55vh);overflow:auto;padding:12px;background:var(--surface,#fff);border:1px solid #d5e0d9;box-shadow:0 8px 26px rgba(30,55,43,.16);border-radius:12px;text-align:left;color:#354e42;font:400 12px/1.45 system-ui,sans-serif;white-space:normal}
+.n577-history .n577-pill-details:not([open])>.n577-pill-popover{display:none}
+@media(hover:hover) and (pointer:fine){.n577-history .n577-pill-details:not([open]):hover>.n577-pill-popover,.n577-history .n577-pill-details:not([open]):focus-within>.n577-pill-popover{display:block}}
+.n577-history .n577-pill-heading{display:block;font-weight:700;margin-bottom:7px}
+.n577-history .n577-pill-item{padding:7px 0;border-top:1px solid #e8eeea;overflow-wrap:anywhere}
+.n577-history .n577-pill-name{display:block;color:inherit;line-height:1.4}
+.n577-history .n577-pill-item>small{display:block;margin:3px 0 0;color:#697b70;font-size:11px;line-height:1.5}
+.n577-history .n577-pill-edit{font:inherit;font-weight:650;margin-top:6px;cursor:pointer;color:#266c51;background:transparent;border:0;padding:3px 0;text-align:left}
+.n577-history .n577-days{overflow:visible}
+@media(max-width:580px){.n577-history .n577-mini-pill{font-size:10px;padding:3px 6px}.n577-history .n577-pill-popover{width:min(265px,calc(100vw - 25px))}}

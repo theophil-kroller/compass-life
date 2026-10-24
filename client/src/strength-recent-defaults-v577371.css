@@ -1,0 +1,3 @@
+/* Small, unobtrusive previous-set provenance; stays below inputs on phones. */
+.str732-set .str7371-recent-hint{display:block;grid-column:1/-1;font-size:.73rem;line-height:1.35;color:var(--text-muted,#64766d);margin:-1px 0 1px;white-space:normal}
+.str732-set .str7371-recent-hint[hidden]{display:none}
