@@ -1,26 +1,33 @@
-# Hochladen: Compass Life 0.5.77.54
+# Compass Life 0.5.77.55 — Upload
 
-**Voraussetzung:** 0.5.77.53 muss auf `main` sein. GitHub-Actions-Lauf #215 war erfolgreich.
+**Voraussetzung**: Version 0.5.77.54 liegt bereits auf `main` (GitHub Actions #216 grün).
 
-1. ZIP entpacken und alle **Dateien unter `client/` und `tests/`** mit unveränderter Unterordnerstruktur in das GitHub-Repository `theophil-kroller/compass-life` hochladen.
-2. Bestehende Dateien ersetzen, neue Dateien zusätzlich anlegen. Bitte keine Dateien aus dem ZIP ins Repo-Hauptverzeichnis legen.
-3. Möglichst gemeinsam committen. Unter GitHub Actions den Lauf **Deploy Compass Web** kontrollieren: alle Node-Tests sowie `vite build` müssen grün sein.
-4. Nach dem Deploy Compass neu laden; bei installierter PWA ggf. die App schließen und neu öffnen. **Nicht den Vault löschen.**
-5. Prüfen: Gesperrt = grüne Vollfläche; Entsperren = Heute; Wechsel zu Insights = zunächst kurzer Modulfortschritt; Wechsel zu Finanzen = eigener Modulfortschritt. Zurück zu Heute sollte direkt möglich sein.
-6. Ladefehler: Kommt beim ersten Offline-Aufruf eines noch nicht zwischengespeicherten Moduls ein Fehler, Internetverbindung prüfen und auf **Erneut versuchen** klicken. Erstmalig geladene Komponenten verbleiben danach im aktuellen App-Prozess.
+1. ZIP entpacken.
+2. Unterordner `client` und `tests` mit identischer Ordnerstruktur in `theophil-kroller/compass-life` nach GitHub hochladen.
+3. Bei bestehenden Dateien Ersetzen wählen. Alle Änderungen möglichst in **einem Commit** hochladen.
+4. In GitHub Actions den Workflow „Deploy Compass Web“ beobachten. Tests UND Produktionsbuild müssen grün sein.
+5. Nach dem Deploy Compass/PWA aktualisieren. Falls eine installierte PWA einen alten Stand cached, normal neu starten/aktualisieren – **niemals den Tresor löschen**.
 
-## Ersetzte Dateien
+## Bestehende Dateien ersetzen
+
 - `client/vite.config.js`
 - `tests/compass-057750-insights-nav.test.mjs`
 - `tests/compass-057751-premium-ui.test.mjs`
 - `tests/compass-057752-chart-first.test.mjs`
 - `tests/compass-057753-finance-performance.test.mjs`
-
-## Neue Dateien
-- `client/compass754-bridge.js`
-- `client/src/lazy-routes-v57754.js`
-- `client/src/on-demand-v57754.js`
-- `client/src/on-demand-v57754.css`
 - `tests/compass-057754-on-demand.test.mjs`
 
-Die große `client/src/main.js` wird **nicht** überschrieben. Sie wird wie zuvor über die Vite-Bridge in der Build-Pipeline generiert und transformiert.
+## Neue Dateien anlegen
+
+- `client/compass755-bridge.js`
+- `client/src/fast-today-v57755.css`
+- `tests/compass-057755-lightning-fast.test.mjs`
+
+`client/src/main.js`, gespeicherte Nutzerdaten, Worker, D1, Vault und Kalenderzugänge **nicht** ersetzen.
+
+## Woran du es erkennst
+
+- Unter „Compass“ in der linken Seitenleiste erscheint der Focus/Extended-Umschalter.
+- Im Focus-Modus sind Insights und Finanzen nicht sichtbar. Im Extended-Modus bleiben sie aufrufbar, ohne automatisch Analysen zu laden.
+- Die große Kopfzeile mit „Insights/Heute/...“ und Datum erscheint nicht mehr.
+- In „Heute“ öffnet der Inspector ohne Neuladen des restlichen Fensters; die Checkbox reagiert unmittelbar.

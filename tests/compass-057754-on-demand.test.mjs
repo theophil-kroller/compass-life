@@ -93,5 +93,5 @@ test('fail-closed bridge rejects missing anchors, rather than silently shipping 
 test('existing Vite chain remains ordered and includes the new lazy route stage last',()=>{
  const s=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
  assert.match(s,/import \{ compass754Bridge \} from '\.\/compass754-bridge\.js'/);
- assert.match(s,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\)\]/);
+ assert.match(s,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\)\]/);
 });
