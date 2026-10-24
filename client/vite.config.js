@@ -18,11 +18,12 @@ import { strengthSync742Bridge } from './strength-sync742-bridge.js';
 import { compass743Bridge } from './compass743-bridge.js';
 import { compass744Bridge } from './compass744-bridge.js';
 import { compass745Bridge } from './compass745-bridge.js';
+import { compass746Bridge } from './compass746-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 export default defineConfig({
   base,
-  plugins: [nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), nutritionStrength733Bridge(), nutritionLongevity734Bridge(), strengthTouch735Bridge(), nutrition736Bridge(), anatomyRecipes737Bridge(), nutritionPill577371Bridge(), strengthPremium738Bridge(), compass741Bridge(), strengthSync742Bridge(), compass743Bridge(), compass744Bridge(), compass745Bridge(), VitePWA({
+  plugins: [nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), nutritionStrength733Bridge(), nutritionLongevity734Bridge(), strengthTouch735Bridge(), nutrition736Bridge(), anatomyRecipes737Bridge(), nutritionPill577371Bridge(), strengthPremium738Bridge(), compass741Bridge(), strengthSync742Bridge(), compass743Bridge(), compass744Bridge(), compass745Bridge(), compass746Bridge(), VitePWA({
     registerType: 'autoUpdate',
     base,
     includeAssets: ['compass-icon.svg','icon-192.png','icon-512.png','runtime-config.json'],

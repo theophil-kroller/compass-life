@@ -74,5 +74,5 @@ test('last bridge changes only once and syntax of transformed source is valid',(
 test('bridge fails closed when a previous integration anchor changes',()=>assert.throws(()=>compass744Bridge().transform('no base code','/work/client/src/main.js'),/integration anchor/));
 test('Vite pipeline keeps historical ordering and appends .44 once',()=>{
  const config=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
- assert.match(config,/compass741Bridge\(\), strengthSync742Bridge\(\), compass743Bridge\(\), compass744Bridge\(\), compass745Bridge\(\), VitePWA/);
+ assert.match(config,/compass741Bridge\(\), strengthSync742Bridge\(\), compass743Bridge\(\), compass744Bridge\(\), compass745Bridge\(\), compass746Bridge\(\), VitePWA/);
 });

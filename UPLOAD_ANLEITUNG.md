@@ -1,29 +1,21 @@
-# Compass 0.5.77.45 – GitHub Upload
+# Compass 0.5.77.46 – GitHub-Upload
 
-Voraussetzung: 0.5.77.44 liegt bereits im Repository (GitHub Actions #205 war erfolgreich).
+**Basis: Compass 0.5.77.45**, erfolgreiches Deployment #205.
 
-## Dateien hochladen
+1. ZIP entpacken.
+2. Den Inhalt des Pakets unter den jeweils identischen Pfaden in `theophil-kroller/compass-life` hochladen. **`client/vite.config.js` ersetzen**, keinesfalls den Ordner `client` zusätzlich verschachteln.
+3. Die neuen Module `client/src/weekly-intelligence-v57746.js`, `.css` und den Plugin-Baustein `client/compass746-bridge.js` ergänzen.
+4. Drei ältere Regressionstests ersetzen, da diese noch verlangten, dass nach .45 unmittelbar die PWA-Integration folgt.
+5. Den neuen Test `tests/compass-057746-weekly.test.mjs` hinzufügen.
+6. GitHub Actions `Deploy Compass Web` prüfen. Nur bei grünem Gesamt-Check wird die neue Version veröffentlicht.
+7. Im Browser gegebenenfalls neu laden. In der Navigation **Insights → Wochenkompass** öffnen. Version `0.5.77.46` prüfen.
 
-Die folgende Pfadstruktur ist **relativ zum GitHub-Repository** (nicht zum lokalen Rechner):
+## Was du erwarten kannst
+- Beginnt mit dem jüngsten vollständig vergangenen Sieben-Tage-Fenster, nicht mit Live-Daten von heute.
+- Garmin/Fitdays müssen weiterhin importiert werden. Ein leerer oder alter Import führt zu deutlichen Datenlücken bzw. Aktualitätshinweisen.
+- Auf einen einzelnen Tag klicken/hovern: SVG-Dot zeigt Datum und beobachteten Wert.
+- Die Schaltflächen `←`, `→`, `Letzte 7 Tage` wechseln den historischen Auswertungszeitraum.
+- Der Fristenbereich nutzt den aktuellen GTD-Vault, nicht den Datenstand älterer importierter Fitnesstracker.
 
-- `client/vite.config.js` — ersetzen
-- `client/compass745-bridge.js` — neu
-- `client/src/receipt-gpt-v57743.js` — ersetzen
-- `client/src/receipt-categories-v57745.js` — neu
-- `client/src/receipt-categories-v57745.css` — neu
-- `tests/compass-057743-dream-receipts.test.mjs` — ersetzen (CI-Test auf neuen letzten Vite-Baustein angepasst)
-- `tests/compass-057744-fixes.test.mjs` — ersetzen (CI-Test auf neuen letzten Vite-Baustein angepasst)
-- `tests/compass-057745-receipt-categories.test.mjs` — neu
-
-`CHANGELOG_0.5.77.45.md` und diese Anleitung sind optional.
-
-## Prüfen
-1. GitHub Actions: „Deploy Compass Web“ vollständig erfolgreich durchlaufen lassen.
-2. Compass neu laden und Versionsnummer 0.5.77.45 prüfen.
-3. Einkaufswagen öffnen: Oben unter „Wofür gibst du beim Einkaufen Geld aus?“ die kategorisierten Monatsausgaben ansehen.
-4. „Produktgruppen prüfen und korrigieren“ aufklappen. Eine unklare Position auswählen und Kategorie ändern. Beträge aktualisieren sich, ohne die lange Seite neu aufzubauen.
-5. Anderes Gerät synchronisieren: Die korrigierte Zuordnung sollte auch dort erscheinen.
-6. Den selben Kassenbon erneut importieren: weiterhin Dubletten verhindern, bestehende Regeln behalten.
-
-## Datenschutz und Grenzen
-Im ZIP liegen nur Programmdateien und künstliche Testfälle, **keine** privaten Kassenbons. GPT-Ausgaben mit Unklarheiten bleiben markiert. Keine automatisch erzeugten Bankbuchungen und keine erfassten Mahlzeiten aus Einkaufspositionen.
+## Datensicherheit
+Kein Vault-Schemawechsel und kein Datenverlust; die neue Wochenansicht liest bereits vorhandene Daten **nur lesend**. Keine Änderungen an bestehenden Garmin-, Ernährung-, Finanz- oder Zeiteinträgen.

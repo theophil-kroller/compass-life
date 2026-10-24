@@ -1,10 +1,13 @@
-client/vite.config.js
-client/compass745-bridge.js
-client/src/receipt-gpt-v57743.js
-client/src/receipt-categories-v57745.js
-client/src/receipt-categories-v57745.css
-tests/compass-057743-dream-receipts.test.mjs
-tests/compass-057744-fixes.test.mjs
-tests/compass-057745-receipt-categories.test.mjs
-CHANGELOG_0.5.77.45.md
-UPLOAD_ANLEITUNG.md
+DATEIEN FÜR GITHUB (Pfade relativ zum Repository)
+
+client/vite.config.js                                     ersetzen
+client/compass746-bridge.js                               neu
+client/src/weekly-intelligence-v57746.js                  neu
+client/src/weekly-intelligence-v57746.css                 neu
+tests/compass-057743-dream-receipts.test.mjs              ersetzen
+tests/compass-057744-fixes.test.mjs                       ersetzen
+tests/compass-057745-receipt-categories.test.mjs          ersetzen
+tests/compass-057746-weekly.test.mjs                      neu
+CHANGELOG_0.5.77.46.md                                    optional
+UPLOAD_ANLEITUNG.md                                       optional
+DATEIEN.txt                                               optional

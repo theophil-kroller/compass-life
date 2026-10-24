@@ -96,7 +96,7 @@ async function runAction(action,id){ if(action==='receipts743-cancel'){ receiptD
 });
 test('Vite plugin ordering and previous regression tests include the new last plugin',()=>{
  const vite=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
- assert.match(vite,/compass744Bridge\(\), compass745Bridge\(\), VitePWA/);
+ assert.match(vite,/compass744Bridge\(\), compass745Bridge\(\), compass746Bridge\(\), VitePWA/);
  for(const file of ['compass-057743-dream-receipts.test.mjs','compass-057744-fixes.test.mjs']){
   const s=readFileSync(new URL(file,import.meta.url),'utf8');
   assert.match(s,/compass745Bridge/);

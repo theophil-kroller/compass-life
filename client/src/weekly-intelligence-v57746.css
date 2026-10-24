@@ -1,0 +1,25 @@
+/* Compass Weekly Life Intelligence – compact, provenance-first layout */
+.weekly746-shell{min-width:0;max-width:1380px;margin:auto;display:grid;gap:13px}
+.weekly746-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;flex-wrap:wrap;background:var(--surface,#fff);border:1px solid #dfe7e1;border-radius:18px;padding:20px 21px}
+.weekly746-heading h2{margin:2px 0 5px;font-size:clamp(1.4rem,2.2vw,1.9rem);color:var(--text,#1c4135)}
+.weekly746-heading p{margin:0;font-size:.82rem;color:var(--muted,#70847a)}
+.weekly746-kicker{font-size:.64rem!important;letter-spacing:.12em;font-weight:800;color:#a57538!important}
+.weekly746-nav{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.weekly746-nav>span{white-space:nowrap;font-size:.81rem;font-weight:700;padding:5px 7px}
+.weekly746-nav button{font-size:.76rem;padding:7px 11px;min-height:35px}.weekly746-nav button:disabled{opacity:.38}
+.weekly746-context{display:flex;flex-wrap:wrap;gap:7px}.weekly746-context>span{border:1px solid #dce7df;background:#f5f8f4;border-radius:99px;color:#5b7667;padding:6px 11px;font-size:.68rem}
+.weekly746-section-heading{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-top:8px}.weekly746-section-heading h3{font-size:.98rem;margin:0;color:var(--text,#18382c)}.weekly746-section-heading>span{font-size:.7rem;color:var(--muted,#71867b)}
+.weekly746-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:stretch}
+.weekly746-finance{grid-template-columns:repeat(2,minmax(0,1fr))}
+.weekly746-card{border:1px solid #dce6df;background:var(--surface,#fff);padding:14px 15px;border-radius:16px;min-width:0;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.weekly746-card-title{display:flex;gap:6px;align-items:center;font-size:.75rem;color:var(--text,#1d4035)}.weekly746-card-title>strong{font-size:.77rem;line-height:1.3}.weekly746-card-title .weekly746-coverage{margin-left:auto;font-size:.62rem;white-space:nowrap;color:#6e8277;background:#f0f5f0;border-radius:50px;padding:3px 6px}
+.weekly746-value{font-size:clamp(1.1rem,2vw,1.55rem);font-weight:780;font-variant-numeric:tabular-nums;line-height:1.25;color:var(--text,#1b4335)}.weekly746-value small{font-size:.73rem;font-weight:500;color:var(--muted,#6f8078)}
+.weekly746-source{color:var(--muted,#73897a);font-size:.64rem;line-height:1.38;min-height:26px}
+.weekly746-dots{width:100%;height:auto;max-height:100px;margin:2px 0;overflow:visible}.weekly746-dots circle[tabindex]:focus{outline:none;stroke:#e9a84a;stroke-width:2.5px}
+.weekly746-no-data{min-height:85px;margin:0;display:grid;place-items:center;font-size:.71rem;color:#83958b;border-radius:9px;background:#f7f9f7;text-align:center;padding:8px}
+.weekly746-note{margin:0;margin-top:auto;color:var(--muted,#7a8980);font-size:.68rem;line-height:1.5}
+.weekly746-deadlines{list-style:none;margin:5px 0;padding:0;max-height:205px;overflow:auto}.weekly746-deadlines li{display:flex;align-items:baseline;gap:7px;padding:7px 1px;border-bottom:1px solid #e7ece8}.weekly746-deadlines span{font-size:.69rem;color:#967049;white-space:nowrap}.weekly746-deadlines strong{font-size:.73rem;flex:1;overflow-wrap:anywhere}.weekly746-deadlines small{color:#6a8375;font-size:.62rem}.weekly746-due{color:#a65d3c;margin:5px 0;font-weight:600;font-size:.78rem}
+.weekly746-bottom{display:grid;grid-template-columns:1.2fr 1fr;gap:10px}.weekly746-insight,.weekly746-freshness{background:var(--surface,#fff);border:1px solid #dce6df;padding:16px 18px;border-radius:16px;min-width:0}.weekly746-bottom h3{margin:0 0 10px;font-size:.87rem}.weekly746-insight ul{margin:0;padding-left:19px;font-size:.78rem;line-height:1.6}.weekly746-bottom p{font-size:.7rem;line-height:1.5;color:var(--muted,#789086);margin:12px 0 0}.weekly746-freshness dl{margin:0;display:grid;gap:4px}.weekly746-freshness dl>div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #eef0ed;padding:3px 0}.weekly746-freshness dt,.weekly746-freshness dd{margin:0;font-size:.74rem}.weekly746-freshness dd{font-weight:660;color:var(--text,#1d3b32)}
+@media(max-width:1100px){.weekly746-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.weekly746-heading{padding:14px}.weekly746-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.weekly746-finance{grid-template-columns:1fr}.weekly746-bottom{grid-template-columns:1fr}.weekly746-card{padding:11px 10px}.weekly746-nav>span{font-size:.7rem}.weekly746-context>span{font-size:.6rem}}
+@media(max-width:390px){.weekly746-grid{grid-template-columns:1fr}}
