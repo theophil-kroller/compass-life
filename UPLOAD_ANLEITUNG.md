@@ -1,25 +1,29 @@
-# Compass 0.5.77.44 – GitHub-Upload
+# Compass 0.5.77.45 – GitHub Upload
 
-**Voraussetzung:** 0.5.77.43 ist im Repository installiert (erfolgreicher GitHub-Lauf #204).
+Voraussetzung: 0.5.77.44 liegt bereits im Repository (GitHub Actions #205 war erfolgreich).
 
-**Geänderte Dateien mit exakter Pfadstruktur hochladen:**
+## Dateien hochladen
 
-- `client/vite.config.js` – ersetzen
-- `client/compass744-bridge.js` – neu
-- `client/src/receipt-gpt-v57743.js` – ersetzen
-- `client/src/receipt-gpt-v57743.css` – ersetzen
-- `tests/compass-057743-dream-receipts.test.mjs` – ersetzen
-- `tests/compass-057744-fixes.test.mjs` – neu
+Die folgende Pfadstruktur ist **relativ zum GitHub-Repository** (nicht zum lokalen Rechner):
 
-`KASSENBON_GPT_PROMPT.txt` und `CHANGELOG_0.5.77.44.md` sind optionale Informationsdateien.
+- `client/vite.config.js` — ersetzen
+- `client/compass745-bridge.js` — neu
+- `client/src/receipt-gpt-v57743.js` — ersetzen
+- `client/src/receipt-categories-v57745.js` — neu
+- `client/src/receipt-categories-v57745.css` — neu
+- `tests/compass-057743-dream-receipts.test.mjs` — ersetzen (CI-Test auf neuen letzten Vite-Baustein angepasst)
+- `tests/compass-057744-fixes.test.mjs` — ersetzen (CI-Test auf neuen letzten Vite-Baustein angepasst)
+- `tests/compass-057745-receipt-categories.test.mjs` — neu
 
-Nach Upload GitHub Actions prüfen, erst danach die App öffnen / ggf. auf Handy neu starten. App-Version sollte **0.5.77.44** anzeigen.
+`CHANGELOG_0.5.77.45.md` und diese Anleitung sind optional.
 
-**Praxistest:**
+## Prüfen
+1. GitHub Actions: „Deploy Compass Web“ vollständig erfolgreich durchlaufen lassen.
+2. Compass neu laden und Versionsnummer 0.5.77.45 prüfen.
+3. Einkaufswagen öffnen: Oben unter „Wofür gibst du beim Einkaufen Geld aus?“ die kategorisierten Monatsausgaben ansehen.
+4. „Produktgruppen prüfen und korrigieren“ aufklappen. Eine unklare Position auswählen und Kategorie ändern. Beträge aktualisieren sich, ohne die lange Seite neu aufzubauen.
+5. Anderes Gerät synchronisieren: Die korrigierte Zuordnung sollte auch dort erscheinen.
+6. Den selben Kassenbon erneut importieren: weiterhin Dubletten verhindern, bestehende Regeln behalten.
 
-1. Mit entsperrtem Tresor auf 🌙 in der Titelleiste tippen: Traumwelt öffnet sich, Eingabefeld wird fokussiert.
-2. Den Einkaufswagen anklicken, auch wenn keine Einkaufsliste aktiv ist: Einkaufslisten und Kassenbons sind erreichbar.
-3. GPT-JSON mit zwei `compass_receipt_v1`-Objekten in einem Array einfügen. Die Vorschau zeigt beide Bonpositionen getrennt, anschließend gemeinsam bestätigen.
-4. Gleichen JSON-Block erneut importieren: Es werden keine weiteren Bonbuchungen angelegt.
-
-Das Paket enthält KEINE persönlichen Bons. Der separate nutzerspezifische JSON-Download wird nicht automatisch ins GitHub-Repository veröffentlicht.
+## Datenschutz und Grenzen
+Im ZIP liegen nur Programmdateien und künstliche Testfälle, **keine** privaten Kassenbons. GPT-Ausgaben mit Unklarheiten bleiben markiert. Keine automatisch erzeugten Bankbuchungen und keine erfassten Mahlzeiten aus Einkaufspositionen.

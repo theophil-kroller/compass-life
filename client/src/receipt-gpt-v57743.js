@@ -1,3 +1,4 @@
+import {categoryInfo,RECEIPT_CATEGORY_GROUPS,receiptCategoryForItem,mergeReceiptCategoryRules} from './receipt-categories-v57745.js';
 /** Compass 0.5.77.44: GPT-assisted receipt JSON inbox (not finance bookings).
  * User checks before commit; unknowns are null; no silent bank/food logging.
  */
@@ -96,13 +97,13 @@ export function putReceipts(state,receipts){
 export function deleteReceipt(state,id){const row=state?.receiptJournal?.entries?.find(x=>x.id===id);if(!row)return false;row.deleted=true;row.updatedAt=new Date().toISOString();return true;}
 export function mergeReceiptJournals(a={},b={}){
  const rows=new Map();for(const journal of [a,b])for(const x of journal?.entries||[]){if(!x?.id||x.schema!==RECEIPT_SCHEMA)continue;const prev=rows.get(x.id);if(!prev||String(x.updatedAt)>String(prev.updatedAt)||(x.updatedAt===prev.updatedAt&&x.deleted&&!prev.deleted))rows.set(x.id,x);}
- return {entries:[...rows.values()].sort((x,y)=>x.id.localeCompare(y.id))};
+ return {entries:[...rows.values()].sort((x,y)=>x.id.localeCompare(y.id)),categoryRules:mergeReceiptCategoryRules(a.categoryRules,b.categoryRules)};
 }
 /** Descriptive purchases; never turns a checkout item into a consumed meal. */
 export function receiptMonthSummary(state,month){
  if(!/^\d{4}-\d{2}$/.test(month))throw Error('Monat ungültig');
  const receipts=receiptEntries(state).filter(r=>r.date.startsWith(month));
- const products=new Map(),categories=new Map();
+ const products=new Map(),categories=new Map(),coverage={known:0,missing:0,uncertain:0};
  for(const receipt of receipts)for(const item of receipt.items||[]){
   const key=String(item.description||'').trim().toLocaleLowerCase('de-AT');
   if(!key)continue;const before=products.get(key)||{name:item.description,quantity:0,unit:item.unit||null,amount:0,unknown:0,count:0};
@@ -111,22 +112,32 @@ export function receiptMonthSummary(state,month){
   }else before.unknown++;
   if(item.total!=null)before.amount+=item.total;else before.unknown++;
   products.set(key,before);
-  const category=item.category||'Sonstiges';categories.set(category,(categories.get(category)||0)+(item.total||0));
+  const assignment=receiptCategoryForItem(state,receipt,item);const category=assignment.category;
+  const prior=categories.get(category)||{id:category,label:categoryInfo(category).label,icon:categoryInfo(category).icon,amount:0,count:0,missing:0};
+  prior.count++;if(item.total==null){prior.missing++;coverage.missing++;}else{prior.amount=Math.round(Math.round(prior.amount*100)+Math.round(item.total*100))/100;coverage.known=Math.round(Math.round(coverage.known*100)+Math.round(item.total*100))/100;}
+  if(assignment.confidence!=='high'&&assignment.confidence!=='manual')coverage.uncertain++;
+  categories.set(category,prior);
  }
- return {receipts,products:[...products.values()].sort((a,b)=>b.count-a.count||b.amount-a.amount).slice(0,25),categories:[...categories.entries()].sort((a,b)=>b[1]-a[1])};
+ return {receipts,products:[...products.values()].sort((a,b)=>b.count-a.count||b.amount-a.amount).slice(0,25),categories:[...categories.values()].sort((a,b)=>b.amount-a.amount||a.label.localeCompare(b.label,'de')),coverage};
 }
 const euro=x=>x==null?'–':`${x.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2})} €`;
-export function receiptInboxView(state,{draft=null,now=new Date()}={}){
- const rows=receiptEntries(state),month=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`,{products,receipts:current,categories}=receiptMonthSummary(state,month);
+export function receiptInboxView(state,{draft=null,now=new Date(),month:monthOption=null}={}){
+ const rows=receiptEntries(state),month=/^\d{4}-\d{2}$/.test(monthOption||'')?monthOption:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`,{products,receipts:current,categories,coverage}=receiptMonthSummary(state,month);
  const amount=current.filter(x=>x.total!=null).reduce((s,x)=>s+x.total,0);
  const unknown=current.filter(x=>x.total==null).length;
  const drafts=draft?(Array.isArray(draft)?draft:[draft]):[];
  const previewAmount=drafts.reduce((n,r)=>n+(r.total||0),0);
  const previewKnown=drafts.filter(r=>r.total!=null).length;
+ const allAmount=categories.reduce((sum,c)=>sum+c.amount,0),maxValue=Math.max(1,...categories.map(c=>c.amount));
+ const categoryOptions=(receipt,item)=>{const assignment=receiptCategoryForItem(state,receipt,item),selected=state?.receiptJournal?.categoryRules?.[assignment.key]?.category;return `<option value="auto" ${!selected||selected==='auto'?'selected':''}>Automatisch: ${esc(categoryInfo(assignment.category).label)}</option>`+RECEIPT_CATEGORY_GROUPS.filter(([id])=>id!=='unknown').map(([id,label])=>`<option value="${id}" ${selected===id?'selected':''}>${esc(label)}</option>`).join('')+`<option value="unknown" ${selected==='unknown'?'selected':''}>Noch zu prüfen</option>`;};
  return `<section class="work-card receipts743-root"><div class="work-heading"><span>🧾 Kassenbons · GPT → JSON → Compass</span><small>Prüfen vor Speichern</small></div><p class="muted-line">Bon fotografieren, den untenstehenden Prompt mit dem Bild an ChatGPT senden und das JSON hier einfügen. Keine automatische Bankbuchung, keine automatischen Ernährungseinträge.</p>
+ <section class="receipts745-categories" aria-label="Warenkorb nach Produktgruppen"><div class="receipts745-heading"><div><h3>Wofür gibst du beim Einkaufen Geld aus?</h3><p>Aus den Bonpositionen erkannt · kein Bankumsatz und kein Ernährungsnachweis</p></div><div class="receipts745-month"><button type="button" data-action="receipts745-month" data-id="prev" aria-label="Vormonat">‹</button><strong>${esc(month)}</strong><button type="button" data-action="receipts745-month" data-id="next" aria-label="Folgemonat">›</button></div></div>
+ ${categories.length?`<div class="receipts745-stats"><strong>${euro(allAmount)}</strong> bekannte Positionsausgaben · ${current.length} Bon(s) · ${categories.reduce((n,c)=>n+c.count,0)} Positionen${coverage.missing?' · '+coverage.missing+' ohne Preis':''}</div><div class="receipts745-bars">${categories.map(c=>`<div class="receipts745-bar" title="${esc(c.label)}: ${euro(c.amount)}${c.missing?' · '+c.missing+' fehlende Preise':''}"><span class="receipts745-label">${c.icon} ${esc(c.label)}</span><span class="receipts745-track"><i style="width:${Math.max(0,c.amount/maxValue*100).toFixed(1)}%" class="${c.id==='unknown'?'is-unknown':''}"></i></span><strong>${euro(c.amount)}</strong><small>${allAmount>0?(c.amount/allAmount*100).toFixed(1).replace('.',','):'–'} %</small></div>`).join('')}</div><p class="receipts745-explain">${coverage.uncertain} Position(en) mit unbekannter oder nur grober Einordnung. Bei unsicheren Bonkürzeln keine erfundene Produktkategorie.</p>`:'<p class="muted-line">Für diesen Monat sind noch keine Bonpositionen gespeichert. Mit ‹ und › kannst du andere Monate ansehen.</p>'}
+ ${current.length?`<details class="receipts745-review"><summary>✏️ Produktgruppen prüfen und korrigieren (${current.reduce((n,r)=>n+r.items.length,0)} Positionen)</summary><p>Wählst du eine Gruppe, merkt sich Compass die Zuordnung für dieselbe Produktbezeichnung bei diesem Händler. Der Kassenbon bleibt unverändert.</p><div class="receipts745-lines">${current.flatMap(r=>r.items.map((item,i)=>{const assigned=receiptCategoryForItem(state,r,item);return `<div class="receipts745-line"><span class="receipts745-description"><strong>${esc(item.description)}</strong><small>${esc(r.merchant)} · ${esc(r.date)} · ${euro(item.total)}${assigned.confidence==='low'?' · ⚠️ prüfen':''}</small></span><select class="receipts745-select" data-receipt-id="${esc(r.id)}" data-receipt-index="${i}" aria-label="Kategorie für ${esc(item.description)}">${categoryOptions(r,item)}</select></div>`;})).slice(0,200).join('')}</div>${current.reduce((n,r)=>n+r.items.length,0)>200?'<p>Die ersten 200 Positionen werden angezeigt.</p>':''}</details>`:''}</section>
+
  <details class="receipts743-prompt"><summary>GPT-Prompt anzeigen / kopieren</summary><textarea readonly id="receipts743-prompt" rows="8">${esc(RECEIPT_GPT_PROMPT)}</textarea><button type="button" class="secondary-btn" data-action="receipts743-copy">Prompt kopieren</button></details>
  ${drafts.length?`<div class="receipts743-preview" role="status"><h3>Prüfvorschau: ${drafts.length} ${drafts.length===1?'Bon':'Bons'}</h3><p>${previewKnown} Bonsummen bekannt · ${euro(previewAmount)} · Noch nichts gespeichert</p>
- ${drafts.map((r,i)=>`<section class="receipts744-draft"><h4>${i+1}. ${esc(r.merchant)} · ${esc(r.date)} · ${euro(r.total)}</h4><p>${r.items.length} Positionen</p><div class="receipts743-table">${r.items.map(x=>`<div><span>${esc(x.description)}${x.confidence==='low'?' ⚠️':''}</span><span>${x.quantity??'?'} ${esc(x.unit||'')}</span><strong>${euro(x.total)}</strong></div>`).join('')}</div>
+ ${drafts.map((r,i)=>`<section class="receipts744-draft"><h4>${i+1}. ${esc(r.merchant)} · ${esc(r.date)} · ${euro(r.total)}</h4><p>${r.items.length} Positionen</p><div class="receipts743-table">${r.items.map(x=>`<div><span>${esc(x.description)}${x.confidence==='low'?' ⚠️':''}<small class="receipts745-preview-category"> · ${esc(categoryInfo(receiptCategoryForItem(state,r,x).category).label)}</small></span><span>${x.quantity??'?'} ${esc(x.unit||'')}</span><strong>${euro(x.total)}</strong></div>`).join('')}</div>
  ${receiptWarnings(r).length?`<ul>${receiptWarnings(r).map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'<p>Positionen stimmen rechnerisch mit dem Bon überein. Originalbeleg trotzdem prüfen.</p>'}</section>`).join('')}
  <div class="receipts744-actions"><button type="button" class="primary-btn" data-action="receipts743-confirm">${drafts.length===1?'Geprüften Bon speichern':`${drafts.length} geprüfte Bons speichern`}</button> <button type="button" class="secondary-btn" data-action="receipts743-cancel">Verwerfen</button></div></div>`:
  `<form id="receipts743-form"><label>GPT-JSON hier einfügen<textarea name="json" rows="5" maxlength="160000" placeholder='{"schema":"compass_receipt_v1", ...} oder [ {...}, {...} ]' required></textarea></label><p class="muted-line">Einzelbon und mehrere Bons als JSON-Array werden akzeptiert, ebenso JSON-Codeblöcke aus ChatGPT.</p><button type="submit" class="primary-btn">JSON prüfen (noch nicht speichern)</button></form>`}

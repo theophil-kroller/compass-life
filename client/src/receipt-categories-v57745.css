@@ -1,0 +1,32 @@
+/* Compass 0.5.77.45 — compact receipt categories inspired by Monarch density. */
+.receipts745-categories{margin:15px 0 18px;padding:14px;border:1px solid #d8e5dc;background:#fafcfb;border-radius:15px;min-width:0}
+.receipts745-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.receipts745-heading h3{font-size:1rem;line-height:1.25;margin:0 0 4px;color:#244639}
+.receipts745-heading p{font-size:.73rem;color:#667e71;margin:0 0 6px;line-height:1.4}
+.receipts745-month{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.receipts745-month strong{font-size:.78rem;font-variant-numeric:tabular-nums}
+.receipts745-month button{font:inherit;line-height:1;border:1px solid #d0dfd6;border-radius:8px;background:#fff;color:#255544;min-width:32px;min-height:32px;cursor:pointer}
+.receipts745-stats{font-size:.72rem;color:#688071;margin:8px 0 13px}
+.receipts745-stats strong{font-size:1.08rem;color:#224d39}
+.receipts745-bars{display:flex;flex-direction:column;gap:8px}
+.receipts745-bar{display:grid;grid-template-columns:minmax(170px,1fr) minmax(70px,1.3fr) 80px 44px;align-items:center;gap:9px;font-size:.78rem;min-width:0}
+.receipts745-label{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#355146}
+.receipts745-track{height:9px;border-radius:99px;background:#e3ece6;overflow:hidden;min-width:0}
+.receipts745-track i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#91c8ab,#317d64)}
+.receipts745-track i.is-unknown{background:#d19b5b}
+.receipts745-bar>strong{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:#27473b}
+.receipts745-bar>small{text-align:right;color:#6d8278;font-variant-numeric:tabular-nums}
+.receipts745-explain{font-size:.73rem;color:#7e756a;margin:12px 0 4px}
+.receipts745-review{margin-top:14px;border-top:1px solid #dae6df;padding-top:12px}
+.receipts745-review summary{cursor:pointer;color:#2c6350;font-size:.84rem;font-weight:700}
+.receipts745-review>p{font-size:.74rem;color:#688071;line-height:1.5}
+.receipts745-lines{display:flex;flex-direction:column;gap:0;max-height:460px;overflow:auto;overscroll-behavior:contain}
+.receipts745-line{display:grid;grid-template-columns:minmax(0,1fr) minmax(165px,210px);align-items:center;gap:10px;border-bottom:1px solid #e3eae5;padding:7px 2px}
+.receipts745-description{min-width:0;display:flex;flex-direction:column;gap:2px}
+.receipts745-description strong{color:#334c40;font-size:.77rem;overflow-wrap:anywhere}
+.receipts745-description small{color:#788e80;font-size:.65rem}
+.receipts743-root select.receipts745-select{width:100%;max-width:100%;font:inherit;font-size:.75rem;border-radius:8px;padding:8px;min-height:38px;border:1px solid #cddbd2;background:#fff;color:#254537}
+.receipts743-root select.receipts745-select:disabled{opacity:.6}
+@media(max-width:640px){.receipts745-categories{padding:11px}.receipts745-bar{grid-template-columns:minmax(130px,1fr) minmax(40px,.7fr) 66px;gap:6px;font-size:.7rem}.receipts745-bar>small{display:none}.receipts745-line{grid-template-columns:1fr;gap:4px}.receipts743-root select.receipts745-select{font-size:.8rem}}
+
+.receipts745-preview-category{color:#6e8879;font-weight:400;font-size:.67rem;white-space:normal}
