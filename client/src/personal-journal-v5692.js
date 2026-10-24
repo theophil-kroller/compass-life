@@ -146,6 +146,14 @@ export function nutritionKcalEstimate(food,amount){
   const round=value=>Math.round(value);
   return {low:round(5+milkMl*.48+(honey?21:0)),high:round(9+milkMl*.48+(honey?22:0)),kind:'Etikett + Schätzung'};
  }
+ // MatchaTherapy: a measuring teaspoon is recorded as roughly 2g, not 1g;
+ // explicit gram amounts take precedence, so the estimate stays proportional.
+ if(food.id==='matcha-powder'){
+  const g=given.match(/(\d+(?:[.,]\d+)?)\s*g\b/),tl=given.match(/(\d+(?:[.,]\d+)?)\s*(?:tl|teelöffel)\b/i);
+  const grams=g?Number(g[1].replace(',','.')):tl?Number(tl[1].replace(',','.'))*2:given===original?2:null;
+  if(!Number.isFinite(grams)||grams<=0||grams>50)return null;
+  const ratio=grams/2;return {low:Math.round(food.kcalLow*ratio),high:Math.round(food.kcalHigh*ratio),kind:'Matcha-Schätzung'};
+ }
  if(food.id==='oat-latte'){
   const milk=given.match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:hafermilch|haferdrink)/i),sirup=given.match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:sirup|monin)/i);
   const m=milk?Number(milk[1].replace(',','.')):200,sy=sirup?Number(sirup[1].replace(',','.')):10;
@@ -154,22 +162,29 @@ export function nutritionKcalEstimate(food,amount){
   return {low:Math.max(0,kcal-2),high:kcal+2,kind:'Etikett + Schätzung'};
  }
  const parseNumber=v=>Number(String(v).replace(',','.'));
- const quantity=v=>{const m=v.match(/(\d+(?:[.,]\d+)?)\s*(stücke|stück|scheiben|scheibe|g|gramm|ml|liter|l\b|packung|dose|teller)/i);return m?{value:parseNumber(m[1]),unit:m[2].toLowerCase()}:null;};
- const parsePortion=(str)=>{
-  const q=quantity(str);if(q)return q;
-  const hand=str.match(/(\d+(?:[.,]\d+)?)?\s*handvoll/i);
-  if(hand)return {value:(hand[1]?parseNumber(hand[1]):1)*30,unit:'g'};
-  if(/becher/i.test(str)&&food.id==='rice-pudding')return {value:200,unit:'g'};
-  if(/packung/i.test(str)&&food.id==='dried-mango')return {value:200,unit:'g'};
-  return null;
+ const unit=u=>({gramm:'g',stücke:'stück',scheiben:'scheibe',portionen:'portion',liter:'l'}[u]||u);
+ const measures=str=>{
+  const items=[...str.matchAll(/(\d+(?:[.,]\d+)?)\s*(stücke|stück|scheiben|scheibe|g|gramm|ml|liter|l\b|packung|dose|teller|tassen|tasse|bechern|becher|portionen|portion)\b/gi)]
+   .map(m=>({value:parseNumber(m[1]),unit:unit(m[2].toLowerCase())}));
+  if(/handvoll/i.test(str)){
+   const m=str.match(/(\d+(?:[.,]\d+)?)?\s*handvoll/i);if(m)items.push({value:(m[1]?parseNumber(m[1]):1)*30,unit:'g'});
+  }
+  if(/becher/i.test(str)&&food.id==='rice-pudding')items.push({value:200,unit:'g'});
+  if(/packung/i.test(str)&&food.id==='dried-mango')items.push({value:200,unit:'g'});
+  return items;
  };
- const a=parsePortion(original),b=parsePortion(given);
- if(!a||!b)return given===original?{low:food.kcalLow,high:food.kcalHigh,kind:'Schätzung'}:null;
- const unit=u=>u==='gramm'?'g':u==='scheiben'?'scheibe':u==='stücke'?'stück':u==='liter'||u==='l'?'ml':u;
- let ratio;
- if(unit(a.unit)===unit(b.unit))ratio=b.value/a.value;
- else if(b.unit==='l'&&a.unit==='ml')ratio=b.value*1000/a.value;
- else return null;
+ const a=measures(original),b=measures(food.id==='apple'?given.replace(/(\d+(?:[.,]\d+)?)\s*(?:apfel|äpfel)/ig,'$1 Stück'):given);
+ let ratio=null;
+ // Prefer explicit grams/ml over a generic piece or pack count, but use either
+ // when both descriptions expose the SAME physical unit.
+ for(const u of ['g','ml','l','scheibe','stück','portion','packung','dose','teller','tasse','becher']){
+  const ref=a.find(x=>x.unit===u),value=b.find(x=>x.unit===u);
+  if(ref&&value&&ref.value>0){ratio=value.value/ref.value;break;}
+ }
+ if(ratio===null&&given===original)ratio=1;
+ if(ratio===null){const ref=a.find(x=>x.unit==='ml'),lit=b.find(x=>x.unit==='l');if(ref&&lit&&ref.value>0)ratio=lit.value*1000/ref.value;}
+ if(ratio===null){const ref=a.find(x=>x.unit==='l'),ml=b.find(x=>x.unit==='ml');if(ref&&ml&&ref.value>0)ratio=ml.value/1000/ref.value;}
+ if(ratio===null)return null;
  if(!Number.isFinite(ratio)||ratio<=0||ratio>20)return null;
  return {low:Math.round(food.kcalLow*ratio),high:Math.round(food.kcalHigh*ratio),kind:'Schätzung'};
 }
@@ -200,7 +215,7 @@ export function nutritionQuickView(state,{selectedFoodId='',dateToday}={}){
 }
 export function nutritionInsightsView(state,{period=30,editingId=''}={}){
  const stats=nutritionStats(state,period),foods=nutritionFoods(state),editing=nutritionEntries(state).find(e=>e.id===editingId);
- return `<div class="pj92-shell"><section class="work-card"><div class="work-heading"><span>🥗 Ernährungstagebuch</span><span class="quiet-tag">${period} Tage</span></div><p class="muted-line">Was esse und trinke ich – und wann? Ohne Bewertung oder automatische Ernährungsnoten.</p><div class="pj92-period">${[7,30,90].map(n=>`<button type="button" class="${n===period?'active':''}" data-action="pj92-nutrition-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${stats.entries.length}</strong><small>erfasste Lebensmittel und Getränke</small></div><details class="pj92-kcal-details"><summary>Geschätzte Energie (optional, unvollständig)</summary>${(()=>{const k=nutritionKcalSummary(state,period);return `<p class="muted-line">${k.known?`Erfasste Einträge mit Referenzwert: ca. ${k.low}–${k.high} kcal für ${period} Tage.`:'Noch keine abschätzbaren Einträge.'} ${k.unknown} Einträge ohne Schätzung. <strong>Keine vollständige Kalorienbilanz.</strong> Werte variieren nach Marke, Sorte und Portionsgröße.</p>`;})()}</details><div class="pj92-category-bars">${stats.ranked.slice(0,12).map(([id,count])=>{const food=foods.find(f=>f.id===id);return `<div class="pj92-bar-row"><span>${food?.emoji||'🍴'} ${esc(food?.title||'Eigenes Lebensmittel')}</span><div><i style="width:${Math.round(count/(stats.ranked[0]?.[1]||1)*100)}%"></i></div><strong>${count}×</strong></div>`;}).join('')||'<p class="muted-line">Noch keine Einträge in diesem Zeitraum.</p>'}</div></section>${energyGoalView(state,{foods,estimate:nutritionKcalEstimate})}<section class="work-card"><div class="work-heading"><span>Letzte Einträge</span><button type="button" class="secondary-btn" data-action="pj92-nutrition-add">Neues Lebensmittel erfassen</button></div><div class="pj92-entry-list">${stats.entries.slice(0,60).map(e=>{const food=foods.find(f=>f.id===e.foodId);return `<button class="pj92-time-row" type="button" data-action="pj92-food-edit" data-id="${esc(e.id)}"><span><strong>${food?.emoji||'🍴'} ${esc(food?.title||'Eintrag')}</strong><small>${esc([e.amount,e.note].filter(Boolean).join(' · ')||'Zum Bearbeiten öffnen')}</small></span><span><strong>${dayFormat(e.at)}</strong><small>${hourFormat(e.at)}</small></span></button>`;}).join('')||'<p class="muted-line">Einfach über das Ernährungssymbol in der Titelzeile beginnen.</p>'}</div></section>${editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>Ernährungseintrag</span><button type="button" data-action="pj92-food-edit-cancel">Schließen</button></div><form id="pj92-food-detail-form"><input type="hidden" name="id" value="${esc(editing.id)}"><label>Zeitpunkt<input type="datetime-local" name="at" value="${esc(toInputDate(editing.at))}" required></label><label>Menge (optional)<input name="amount" maxlength="60" value="${esc(editing.amount||'')}" placeholder="z. B. eine Handvoll"></label><label>Notiz (optional)<textarea name="note" rows="2" maxlength="500">${esc(editing.note||'')}</textarea></label><div class="pj92-form-actions"><button type="submit" class="primary-btn">Speichern</button><button type="button" class="secondary-btn" data-action="pj92-food-delete" data-id="${esc(editing.id)}">Löschen</button></div></form></section>`:''}<section class="work-card"><h3>Eigene Lebensmittel hinzufügen</h3><form id="pj92-add-food-form" class="pj92-inline-form"><label>Bezeichnung<input name="title" maxlength="80" placeholder="z. B. Haferbrei" required></label><button type="submit" class="secondary-btn">Hinzufügen</button></form></section></div>`;
+ return `<div class="pj92-shell"><section class="work-card"><div class="work-heading"><span>🥗 Ernährungstagebuch</span><span class="quiet-tag">${period} Tage</span></div><p class="muted-line">Was esse und trinke ich – und wann? Ohne Bewertung oder automatische Ernährungsnoten.</p><div class="pj92-period">${[7,30,90].map(n=>`<button type="button" class="${n===period?'active':''}" data-action="pj92-nutrition-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${stats.entries.length}</strong><small>erfasste Lebensmittel und Getränke</small></div><details class="pj92-kcal-details"><summary>Geschätzte Energie (optional, unvollständig)</summary>${(()=>{const k=nutritionKcalSummary(state,period);return `<p class="muted-line">${k.known?`Erfasste Einträge mit Referenzwert: ca. ${k.low}–${k.high} kcal für ${period} Tage.`:'Noch keine abschätzbaren Einträge.'} ${k.unknown} Einträge ohne Schätzung. <strong>Keine vollständige Kalorienbilanz.</strong> Werte variieren nach Marke, Sorte und Portionsgröße.</p>`;})()}</details><div class="pj92-category-bars">${stats.ranked.slice(0,12).map(([id,count])=>{const food=foods.find(f=>f.id===id);return `<div class="pj92-bar-row"><span>${food?.emoji||'🍴'} ${esc(food?.title||'Eigenes Lebensmittel')}</span><div><i style="width:${Math.round(count/(stats.ranked[0]?.[1]||1)*100)}%"></i></div><strong>${count}×</strong></div>`;}).join('')||'<p class="muted-line">Noch keine Einträge in diesem Zeitraum.</p>'}</div></section>${energyGoalView(state,{foods,estimate:nutritionKcalEstimate})}<section class="work-card"><div class="work-heading"><span>Letzte Einträge</span><button type="button" class="secondary-btn" data-action="pj92-nutrition-add">Neues Lebensmittel erfassen</button></div><div class="pj92-entry-list">${stats.entries.slice(0,60).map(e=>{const food=foods.find(f=>f.id===e.foodId);return `<button class="pj92-time-row" type="button" data-action="pj92-food-edit" data-id="${esc(e.id)}"><span><strong>${food?.emoji||'🍴'} ${esc(food?.title||'Eintrag')}</strong><small>${esc([e.amount,e.note].filter(Boolean).join(' · ')||'Zum Bearbeiten öffnen')}</small></span><span><strong>${dayFormat(e.at)}</strong><small>${hourFormat(e.at)}</small></span></button>`;}).join('')||'<p class="muted-line">Einfach über das Ernährungssymbol in der Titelzeile beginnen.</p>'}</div></section>${editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>Ernährungseintrag</span><button type="button" data-action="pj92-food-edit-cancel">Schließen</button></div><form id="pj92-food-detail-form"><input type="hidden" name="id" value="${esc(editing.id)}"><label>Zeitpunkt<input type="datetime-local" name="at" value="${esc(toInputDate(editing.at))}" required></label><label>Menge (optional)<input name="amount" maxlength="60" value="${esc(editing.amount||'')}" placeholder="z. B. eine Handvoll"></label><label>Notiz (optional)<textarea name="note" rows="2" maxlength="500">${esc(editing.note||'')}</textarea></label><div class="pj92-form-actions"><button type="submit" class="primary-btn">Speichern</button><button type="button" class="secondary-btn" data-action="pj92-food-delete" data-id="${esc(editing.id)}">Löschen</button></div></form></section>`:''}<section class="work-card"><h3>Eigene Lebensmittel hinzufügen</h3><form id="pj92-add-food-form" class="pj92-inline-form"><label>Bezeichnung<input name="title" maxlength="80" placeholder="z. B. Haferbrei" required></label><label>Portionsbezug<input name="defaultAmount" placeholder="1 Portion" maxlength="60" value="1 Portion"></label><label>kcal min. (optional)<input type="number" name="kcalLow" min="0" max="5000" step="1" placeholder="z. B. 350"></label><label>kcal max. (optional)<input type="number" name="kcalHigh" min="0" max="5000" step="1" placeholder="z. B. 550"></label><button type="submit" class="secondary-btn">Hinzufügen</button></form></section></div>`;
 }
 // Merge encrypted emotion check-ins by immutable ID. Preserve all historical entries
 // from both devices; an explicit later edit wins, with deterministic ties.

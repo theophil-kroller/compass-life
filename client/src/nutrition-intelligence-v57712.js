@@ -116,6 +116,7 @@ function quantityFor(entry,food){
  const a=String(entry?.amount||food?.defaultAmount||'').toLowerCase();
  if(entry.foodId==='apple'&&!/(?:\d+(?:[.,]\d+)?\s*(?:g|gramm)\b)/i.test(a)){const m=a.match(/(\d+(?:[.,]\d+)?)\s*(?:stücke?|äpfel)/i);return {value:(m?amountNumber(m[1]):1)*182,unit:'g'};}
  if(entry.foodId==='coffee'&&!/\d+(?:[.,]\d+)?\s*ml/i.test(a))return {value:200,unit:'ml'};
+ if(entry.foodId==='matcha-powder'&&!/\d+(?:[.,]\d+)?\s*(?:g|gramm)\b/i.test(a)){const m=a.match(/(\d+(?:[.,]\d+)?)\s*(?:tl|teelöffel)\b/i);if(m)return {value:amountNumber(m[1])*2,unit:'g'};}
  const match=a.match(/(\d+(?:[.,]\d+)?)\s*(g|gramm|ml|kapseln?|scheiben?|stücke?|cups?)(?!\w)/i);
  if(match){const val=amountNumber(match[1]),unit=match[2];if(unit.startsWith('kapsel'))return {value:val,unit:'Kapseln'};
  if(unit.startsWith('scheib'))return {value:val*(entry.foodId==='cheddar-hofer'?33:entry.foodId==='cheddar'?25:50),unit:'g'};

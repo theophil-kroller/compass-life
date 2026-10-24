@@ -1,3 +1,5 @@
+> **Aktueller Build: 0.5.77.26** – Nährstoff-Tages-Dotplots (Makros, Salz, Koffein), Mikro-Wochenwerte mit Datenabdeckung, exakte Identifikation der bisherigen Anzeige „1 ohne Wert“, Matcha-TL-/Cheddar-Portionsfix. [Changelog](CHANGELOG_0.5.77.26.md) · [Installation](INSTALLATION_0.5.77.26.txt). Keine D1-/Tresormigration.
+
 > **Aktueller Build: 0.5.77.24** – optionale klassische Windows-Outlook-Bridge für markierte E-Mails, kontrollierte GTD-Übernahme (Inbox, Next Action, Waiting For), lokale Token-/Origin-Absicherung und JSON-Ausweichweg. [Changelog](CHANGELOG_0.5.77.24.md) · [Installation](INSTALLATION_0.5.77.24.txt). Keine D1-/Tresormigration.
 
 > **Aktueller Build: 0.5.77.23** – schnelle, lokale Mahlzeiten-Beschreibung inklusive Symbol-Kacheln, editierbaren Gramm-Angaben, wiederverwendbaren Rezepten, salt-aware Makro-/Mikronährstoffschätzung, optionaler GPT-JSON-Übernahme und persönlicher Makroorientierung. [Changelog](CHANGELOG_0.5.77.23.md) · [Installation](INSTALLATION_0.5.77.23.txt). Keine D1-/Tresormigration.

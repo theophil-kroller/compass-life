@@ -1,0 +1,32 @@
+/* Nutrition Insights 2 · dense, precise daily data, intentionally not a dashboard of donuts. */
+.ni726-root{display:grid;gap:14px;min-width:0}
+.ni726-root>.work-card{min-width:0;overflow:hidden}
+.ni726-metrics{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0 14px}
+.ni726-metrics button{border:1px solid var(--border,#d9e1de);border-radius:11px;padding:8px 10px;font:inherit;font-size:.78rem;background:transparent;color:inherit;cursor:pointer}
+.ni726-metrics button.selected{border-color:#4B83AB;background:var(--surface-soft,#ecf3f6);font-weight:700}
+.ni726-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.ni726-summary>div{display:grid;gap:5px;min-width:0;padding:10px 12px;border-radius:12px;background:var(--surface-soft,#f6f6f3)}
+.ni726-summary small{font-size:.72rem;color:var(--muted,#718076)}
+.ni726-summary strong{font-size:1.13rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ni726-note{color:var(--muted,#718076);font-size:.76rem;line-height:1.5;margin:8px 0 13px}
+.ni726-graph-scroll{max-width:100%;overflow-x:auto;overflow-y:hidden;border-bottom:1px solid var(--border,#e2e7e3);scrollbar-width:thin}
+.ni726-graph-scroll svg{display:block;max-width:none;height:auto}
+.ni726-axis{font-size:11px;fill:currentColor;opacity:.68;font-family:inherit}
+.ni726-dot{transition:r .1s;vector-effect:non-scaling-stroke}
+.ni726-dot:hover,.ni726-dot:focus-visible{stroke-width:3;outline:none}
+.ni726-legend{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0 0;color:var(--muted,#718076);font-size:.73rem}
+.ni726-legend span{display:flex;align-items:center;gap:6px}
+.ni726-legend i{width:12px;height:12px;border-radius:100%;display:inline-block;flex:0 0 auto}
+.ni726-legend .ni726-hollow{background:var(--surface,#fff);border:2px solid}
+.ni726-legend .ni726-dash{width:22px;height:0;border-top:2px dashed #BD6853;border-radius:0}
+.ni726-micro-grid{display:grid;gap:9px}
+.ni726-micro-row{display:grid;grid-template-columns:minmax(125px,1.1fr) minmax(60px,1fr) minmax(180px,1.6fr);gap:10px;align-items:center;border-bottom:1px solid var(--border,#eee);padding-bottom:8px}
+.ni726-micro-name{display:flex;gap:7px;align-items:center;font-size:.81rem;font-weight:600}
+.ni726-micro-meter{height:8px;border-radius:12px;background:var(--surface-soft,#eceeeb);position:relative;overflow:visible}
+.ni726-micro-meter>span{display:block;height:100%;background:#5B8D80;border-radius:12px}
+.ni726-micro-meter>i{position:absolute;top:-3px;height:14px;width:1px;background:#546558;opacity:.7}
+.ni726-micro-num{text-align:right;font-variant-numeric:tabular-nums;font-size:.82rem;min-width:0}
+.ni726-micro-num small{display:block;color:var(--muted,#718076);font-size:.68rem;margin-top:2px;line-height:1.35}
+.ni726-weekdays-scroll svg{display:block;width:100%;height:auto}
+@media(max-width:700px){.ni726-root>.work-card{padding:12px}.ni726-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.ni726-micro-row{grid-template-columns:110px minmax(45px,1fr);gap:7px}.ni726-micro-num{grid-column:1/-1;text-align:left}.ni726-metrics button{padding:7px 8px;font-size:.73rem}}
+@media(max-width:380px){.ni726-summary{grid-template-columns:1fr}.ni726-micro-name{font-size:.73rem}}

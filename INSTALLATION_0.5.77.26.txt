@@ -1,0 +1,16 @@
+COMPASS 0.5.77.26 — NUTRITION INSIGHTS 2
+
+VORAUSSETZUNG: Der PATCH ist ausschließlich für Compass 0.5.77.25.
+Alternative: FULL_SOURCE.zip ins bestehende GitHub-Repository übernehmen.
+
+1. Vorher möglichst eine aktuelle verschlüsselte Compass-Tresorsicherung exportieren.
+2. PATCH-Archiv entpacken und die Dateien unter Beibehaltung der Verzeichnisstruktur ins GitHub-Repository übernehmen. Oder FULL SOURCE verwenden.
+3. Commit / Push; GitHub Actions und Cloudflare Pages Deployment auf Erfolg prüfen.
+4. Browser neu laden (bei PWA ggf. vollständig schließen und erneut öffnen).
+5. Unter Insights → Ernährung → „📊 Nährstoff-Trends“ die Tagespunkte, Woche/Monat/Gesamt und die Mikronährstoff-Abdeckung prüfen.
+6. Für „1 ohne Wert“: Ernährung → Tagebuch → Ernährung · Tagesverlauf; betroffenen Tag aufklappen → Produktname, fehlende kcal-Angabe oder Supplement-Hinweis überprüfen.
+
+ACHTUNG: Keine lokalen Tresordaten löschen, keinen neuen Tresor anlegen. Keine D1-Migration und keine geänderte API.
+Die Outlook-Brücke 0.5.77.24 und Nutrition Insights 1 aus 0.5.77.25 bleiben erhalten.
+
+DOKUMENTATION: CHANGELOG_0.5.77.26.md

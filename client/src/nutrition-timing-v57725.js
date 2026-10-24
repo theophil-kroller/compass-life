@@ -69,7 +69,9 @@ export function nutritionTimingIndex(state){
   const nutrients=nutrientEntry(food,entry);
   const rawKcal=nutrients.values.kcal;
   const kcal=Number.isFinite(rawKcal)?rawKcal:approx?(approx.low+approx.high)/2:null;
-  const caloric=kcal!==null?kcal>0:Boolean(food&&!/^(water|tea|sparkling-water)$/i.test(entry.foodId));
+  // A micronutrient capsule without a declared energy value must NOT be treated
+  // as a meal in fasting windows. This does not assert that it has 0 kcal.
+  const caloric=kcal!==null?kcal>0:Boolean(food&&food.group!=='Nahrungsergänzung'&&!/^(water|tea|sparkling-water)$/i.test(entry.foodId));
   const item={id,ms:+dt,day,title:food?.title||'Unbekanntes Lebensmittel',emoji:food?.emoji||'🍽️',amount:entry.amount||'',kcal,
    kcalLow:approx?.low??kcal,kcalHigh:approx?.high??kcal,caloric,estimated:(!nutrients.knownKeys.has('kcal'))||!!food?.uncertain};
   index.rows.set(id,{sig,...item});

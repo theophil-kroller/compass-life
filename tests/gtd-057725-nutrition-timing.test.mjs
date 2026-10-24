@@ -72,5 +72,5 @@ test('Existing nutrition Insights tabs are extended, not replaced, and navigatio
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  assert.match(main,/data-id="journal"/);assert.match(main,/data-id="nutrients"/);assert.match(main,/data-id="timing"/);
  assert.match(main,/refreshNutritionTimingPanel\(\)/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.25'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.2[5-9]'/);
 });

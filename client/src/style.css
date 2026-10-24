@@ -3249,3 +3249,12 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 
 /* 0.5.77.22 · subtle adult EU-NRV progress (100%+ is clearly labelled, not a warning) */
 .ni722-reference{grid-column:1/-1;display:flex;align-items:center;gap:9px;margin-top:5px;min-width:0}.ni722-track{flex:1;min-width:0;max-width:100%;height:7px;background:#ecf0eb;border-radius:999px;overflow:hidden}.ni722-track>span{display:block;height:100%;border-radius:999px;background:#478d79}.ni722-reference>span{font-size:.71rem;color:#63766a;min-width:98px;text-align:right;white-space:nowrap}.ni722-caffeine{display:grid;gap:7px;background:#f6f8f5;padding:12px;border:1px solid #e3eae5;border-radius:12px;margin-top:10px}.ni722-caffeine>strong{font-size:.88rem}.ni722-caffeine small{font-size:.74rem;line-height:1.5;color:#65746b}@media(max-width:420px){.ni722-reference{gap:5px}.ni722-reference>span{font-size:.62rem;min-width:81px}}
+
+/* 0.5.77.26 · Explain exactly which food is missing kcal coverage. */
+.n577-missing-items{grid-column:1/-1;margin:4px 0 6px;padding:6px 9px;border:1px solid var(--border,#d8ddd9);border-radius:9px;font-size:.77rem;min-width:0}
+.n577-missing-items>summary{cursor:pointer;color:var(--muted,#627267)}
+.n577-missing-food{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:7px 0;border-top:1px solid var(--border,#d8ddd9);overflow-wrap:anywhere}
+.n577-missing-food:first-of-type{margin-top:6px}
+.n577-missing-food span{min-width:0}.n577-missing-food small{display:block;color:var(--muted,#627267);font-size:.72rem}
+.n577-missing-food button{flex:0 0 auto}
+@media(max-width:610px){.n577-missing-food{flex-wrap:wrap}}
