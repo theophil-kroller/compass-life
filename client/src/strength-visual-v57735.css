@@ -1,0 +1,17 @@
+/* V35: Garmin-inspired yellow-orange-red strength heat map, not a direct EMG reading. */
+.str735-menu-icon{width:19px;min-width:19px;height:19px;display:inline-flex;align-items:center;justify-content:center;font-size:19px;line-height:1;filter:saturate(.88)}
+.str728-root .str728-body-panel{padding:12px 9px;gap:8px}
+.str735-two-maps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;align-items:end}
+.str735-map{display:flex;align-items:center;flex-direction:column;min-width:0;margin:0;gap:1px}
+.str735-map figcaption{font-size:.76rem;font-weight:700;text-align:center;color:var(--muted,#68756f)}
+.str735-map .str728-body{width:100%;max-width:160px;height:clamp(230px,37vw,330px)}
+.str735-body-legend{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:7px 11px;font-size:.69rem;color:var(--muted,#6d7773);line-height:1.35}
+.str735-body-legend span{display:inline-flex;align-items:center;gap:5px}.str735-body-legend i{width:10px;height:10px;display:inline-block;border-radius:3px;flex-shrink:0}
+.str735-title{margin:2px 0 0;font-size:.72rem;line-height:1.4;color:var(--muted,#73827a);text-align:center}
+.str735-comparison{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.str735-comparison span{font-size:.71rem;background:var(--surface-soft,#f7f8f6);border:1px solid var(--border,#d9e1d9);border-radius:18px;padding:5px 9px;color:inherit}
+.str728-dot-scroll circle{fill:#E57C35;stroke-width:1.5}
+.str728-root .str728-muscle{min-width:0}
+@media(max-width:700px){.str728-root .str728-visual{gap:13px}.str735-map .str728-body{height:275px}.str735-two-maps{gap:3px}}
+@media(max-width:370px){.str735-map .str728-body{height:235px}.str735-body-legend{font-size:.64rem}}
+@media(min-width:701px){.str728-root .str728-visual{grid-template-columns:minmax(300px,1.08fr) minmax(290px,1.05fr)}}

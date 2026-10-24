@@ -1,18 +1,21 @@
-# Compass 0.5.77.34 – GitHub hochladen
+# Compass 0.5.77.35 installieren
 
-**Voraussetzung:** Die Basis-Version 0.5.77.33 ist bereits vollständig im Repository `theophil-kroller/compass-life` installiert, insbesondere `client/nutrition-strength733-bridge.js` und `client/vite.config.js` mit `nutritionStrength733Bridge()`.
+1. **Voraussetzung:** Zuerst Compass **0.5.77.34** vollständig auf GitHub hochladen und deployen.
+2. Dieses ZIP lokal entpacken.
+3. Im GitHub-Repository `theophil-kroller/compass-life` alle enthaltenen Dateien **unter exakt demselben relativen Pfad** hochladen. Bestehende `client/vite.config.js` ersetzen.
+4. Unverändert bleiben alle vorherigen .27–.34-Bridges, Datenbanken und bisherigen Ernährung/Kraft-Importdateien.
+5. GitHub Actions / Pages deployment abwarten und auf dem Mobilgerät nach dem Update die PWA neu öffnen. Anzeige links sollte **0.5.77.35** lauten.
+6. In **Insights → Krafttraining** siehst du Vorder-/Rückansicht und kannst zwischen Haupt/Neben und Satzbelastung wechseln.
+7. In **Insights → Berührung & Nähe** stehen Streicheln, Tanzen und Massage zur Wahl. Die neue Zeitleiste befindet sich unter der bisherigen Zählübersicht.
 
-## Vorgehen
-1. ZIP entpacken.
-2. In GitHub **alle enthaltenen Dateien unter dem identischen Pfad** hochladen (Unterordner beibehalten).
-3. Bei gleichnamigen Dateien die bisherige Datei **ersetzen** – insbesondere `client/vite.config.js`, `client/src/daily-dozen-v57733.js`, `client/src/strength-editor-v57732.js` und dessen CSS.
-4. Neue Dateien zusätzlich hinzufügen: `client/nutrition-longevity734-bridge.js`, `client/src/anti-aging-eight-v57734.js`, `client/src/anti-aging-eight-v57734.css`, `client/src/daily-dozen-auto-v57734.js`.
-5. Auf das GitHub Pages/Cloudflare Deployment warten und Compass im Browser **neu laden**. Links unten muss **0.5.77.34** stehen.
-6. Testen: Ernährungsschnellerfassung > Getränke > „Chinesischer Grüntee“; Ernährung > Daily Dozen und „Anti-Aging Eight“; Insights > Krafttraining > Trainingseinheit bearbeiten (Handy).
+## Paketinhalt
+- `client/vite.config.js` – aktiviert den zusätzlichen .35 Vite-Bridge nach .34
+- `client/strength-touch735-bridge.js` – additive, abgesicherte Integrationsänderungen
+- `client/src/strength-visual-v57735.css` – Muskelkarte, Navigation und mobile Darstellung
+- `client/src/touch-insights-v57735.js` – freiwilliges Berührungsjournal mit Verlauf
+- `client/src/touch-insights-v57735.css` – kompakte Zeit- und Verteilungsdiagramme
+- `tests/gtd-057735-muscles-touch.test.mjs` – gezielte Tests (auf dem vollständigen Repository ausführbar)
+- `CHANGELOG_0.5.77.35.md`, `UPLOAD_ANLEITUNG.md`
 
-## Hinweise
-- Kein D1-Schema-Update; keine Daten löschen. Bestehende Daily-Dozen-Häkchen bleiben bestehen und haben Vorrang vor neu erkannten Einträgen.
-- In der Vite-Konfiguration sind sämtliche früheren Plugins weiterhin notwendig und bereits enthalten.
-- `tests/gtd-057734-longevity-tea-mobile.test.mjs` ist ein optionaler Regressionstest (Node ≥20).
-- Die im ZIP enthaltenen neuen Dateien **ersetzen nicht** ältere Module, die GitHub bereits hat.
-- Falls die App beim Deployment einen eindeutigen „Integrationsanker fehlt“-Fehler zeigt, ist die Basis nicht exakt .33; bitte dann zuerst die Grundlage prüfen.
+## Testhinweis
+Die Tests wurden erfolgreich mit lokal vorhandenen v.32/v.33-Quellbestandteilen und Modul-Fakes ausgeführt (7/7). Ein komplettes Repository-`npm run build` wurde nicht ausgeführt. Wenn der Vite-Build einen **Integrationsanker** meldet, liegt eine abweichende Quellversion vor; in diesem Fall nicht mit manuellen Teilpatches weitermachen, sondern den genauen Fehler prüfen.
