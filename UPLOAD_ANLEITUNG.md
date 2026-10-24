@@ -1,36 +1,33 @@
-# Compass 0.5.77.48 – GitHub-Upload
+# Compass Life 0.5.77.49 – Patch hochladen
 
-**Voraussetzung:** Compass 0.5.77.47 ist im Repository vorhanden. Das letzte bestätigte GitHub-Actions-Deployment dafür war #208 erfolgreich.
+**Ziel:** `theophil-kroller/compass-life`, Branch `main`.
+**Voraussetzung:** Die Quellcode-Dateien von 0.5.77.48 sind auf `main` (Commit `184e8b0`). Der GitHub-Deploy #209 ist zwar fehlgeschlagen, aber die Dateien liegen bereits im Repository. Bitte **nicht** auf dem vorherigen erfolgreichen Deploy #208 ansetzen.
 
-Dieses ZIP enthält **fertige GitHub-Dateien**, kein selbst auszuführendes Patchskript.
+Das ZIP enthält **fertige Projektdateien in den korrekten Ordnern**. Kein Apply-Skript und kein manuelles Patchen von Textzeilen.
 
 ## Ersetzen
 
-- `client/vite.config.js`
-- `tests/compass-057747-capacity.test.mjs`
+1. `client/vite.config.js`
+2. `tests/compass-057747-capacity.test.mjs`
+3. `tests/compass-057748-calendar-packets.test.mjs`
 
-## Neu hochladen
+## Neu hinzufügen
 
-- `client/compass748-bridge.js`
-- `client/src/capacity-calendar-v57748.js`
-- `client/src/capacity-calendar-v57748.css`
-- `tests/compass-057748-calendar-packets.test.mjs`
+1. `client/compass749-bridge.js`
+2. `client/src/body-transformation-v57749.js`
+3. `client/src/body-transformation-v57749.css`
+4. `client/src/capacity-preserve-v57749.js`
+5. `tests/compass-057749-body-transformation.test.mjs`
 
-Die Pfade müssen identisch bleiben. Im ZIP enthaltene `.md`-Dateien sind optional und informieren über Änderung und Prüfung.
+Optionale Dokumentationsdateien: `CHANGELOG_0.5.77.49.md`, `UPLOAD_ANLEITUNG.md`.
 
-## Funktionstest nach erfolgreichem GitHub-Deploy
+**Anleitung:** ZIP entpacken, den Inhalt mit identischer Ordnerstruktur ins GitHub-Repository hochladen; die drei bestehenden Dateien ersetzen. Beim Commit startet „Deploy Compass Web“. `npm run check` und anschließend `npm run build` müssen erfolgreich sein. Erst danach erscheint die Version 0.5.77.49.
 
-1. In **Insights → Fristen & Kapazität** öffnen. Unter dem bisherigen Fristenmodul erscheint die kalendergestützte Vorschau.
-2. Fokusbudget aus 0.5.77.47 setzen (z. B. 10 h/Woche, 20 % Puffer).
-3. Für eine vorhandene Aufgabe Stückzahl/Minuten pro Einheit und gewünschte Blocklänge einstellen und speichern.
-4. Über **Kalender verbinden / aktualisieren** die Daten bei Bedarf erneuern.
-5. Mit gültigem, vollständigem Kalender sollten Vorschläge erscheinen, die nicht mit bestehenden Ereignissen kollidieren.
-6. Ist der Kalender veraltet oder unvollständig, zeigt Compass stattdessen einen Hinweis und **keine** vermeintlich freien Zeitfenster.
-7. Beispiel mit GTD-Fortschrittszähler prüfen: 60 Prüfungen, davon 20 korrigiert, bedeuten 40 offene Einheiten.
+## Funktionstest danach
 
-## Einschränkungen
+- **Insights → Gesundheit → Körper**: Oben die neue Dashboard-Sektion sehen; Bereich 7/28/90/365 Tage oder „Alles“ wählen, Messpunkte und Quellenstand prüfen.
+- Garmin-Krafttraining und Ernährungsdaten müssen nur dann angezeigt werden, wenn sie bereits im Tresor importiert/protokolliert sind; keine leeren Tage als Nullen auffüllen.
+- **Insights → Fristen & Kapazität**: Arbeitspaket bei Aufgabe eingeben, speichern; Fokusstundenbudget ändern und speichern; danach kontrollieren, ob Arbeitspaket erhalten bleibt.
+- Mit aktuellem, vollständig verfügbarem Kalender soll kein vorgeschlagener Arbeitsblock einen bereits belegten Zeitraum mit eingestelltem Puffer überschneiden.
 
-- Vorschläge sind **keine** Termine im Google Calendar; ein Klick reserviert noch nichts.
-- Die Schätzwerte werden im lokalen Vault gespeichert; eine neue geräteübergreifende Synchronisation dieser Planungseinstellungen wurde **nicht** eingebaut.
-- Wochenstunden sind deine bewusst vorgegebene konzentrierte Arbeitskapazität, keine Prognose aus Gesundheitsdaten.
-- Der echte vollständige Vite-Produktionsbuild muss durch GitHub Actions bestätigt werden.
+**Grenzen:** Nur Quellpatch, kein separater vollständiger Build. Aus diesem Chat heraus wurde kein neuer Commit auf GitHub gepusht; der Patch ist zum eigenen Upload gedacht.

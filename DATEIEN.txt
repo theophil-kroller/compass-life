@@ -1,10 +1,20 @@
-GitHub-Pfade, aus Sicht des Repository-Hauptverzeichnisses:
-client/vite.config.js                         ersetzen
-client/compass748-bridge.js                   neu
-client/src/capacity-calendar-v57748.js        neu
-client/src/capacity-calendar-v57748.css       neu
-tests/compass-057747-capacity.test.mjs        ersetzen
-tests/compass-057748-calendar-packets.test.mjs neu
-CHANGELOG_0.5.77.48.md                       optional
-UPLOAD_ANLEITUNG.md                          optional
-DATEIEN.txt                                  optional
+COMPASS LIFE 0.5.77.49 – Patch direkt nach GitHub 0.5.77.48
+
+Ersetzen:
+ client/vite.config.js
+ tests/compass-057747-capacity.test.mjs
+ tests/compass-057748-calendar-packets.test.mjs
+
+Neu:
+ client/compass749-bridge.js
+ client/src/body-transformation-v57749.js
+ client/src/body-transformation-v57749.css
+ client/src/capacity-preserve-v57749.js
+ tests/compass-057749-body-transformation.test.mjs
+
+Optional:
+ CHANGELOG_0.5.77.49.md
+ UPLOAD_ANLEITUNG.md
+ DATEIEN.txt
+
+Keine SQL-Migration / keine Cloud-Anpassung.

@@ -56,7 +56,11 @@ test('incomplete or stale coverage never suggests concrete free time',()=>{
  assert.equal(partial.status,'partial');assert.equal(stale.status,'stale');assert.equal(partial.plans.length,0);assert.equal(stale.plans.length,0);
 });
 test('opaque meeting with buffer blocks proposed work',()=>{
- const s=example();const busy=[{summary:'Meeting',start:{dateTime:'2026-10-26T09:00:00+01:00'},end:{dateTime:'2026-10-26T14:50:00+01:00'}}];
+ const s=example();
+ // The capacity engine deliberately constructs LOCAL work hours. The event
+ // must use the runner's same local timezone, not a fixed Austria offset.
+ // Otherwise an UTC CI runner sees a bogus 14:00–15:00 free hour.
+ const busy=[{summary:'Meeting',start:{dateTime:new Date('2026-10-26T09:00:00').toISOString()},end:{dateTime:new Date('2026-10-26T14:50:00').toISOString()}}];
  const m=capacityCalendarModel(s,ctx(s,{calendarEvents:busy}));
  assert.ok(m.plans.every(p=>p.day!=='2026-10-26'));
 });
@@ -108,7 +112,7 @@ async function action(action,id){
  try{execFileSync(process.execPath,['--check',p]);}finally{unlinkSync(p);}
  const base=resolve(dirname(fileURLToPath(import.meta.url)),'..');
  const conf=readFileSync(resolve(base,'client/vite.config.js'),'utf8');
- assert.match(conf,/compass747Bridge\(\), compass748Bridge\(\), VitePWA/);
+ assert.match(conf,/compass747Bridge\(\), compass748Bridge\(\), compass749Bridge\(\), VitePWA/);
 });
 
 // Run the 0.5.77.47 and 0.5.77.48 transforms on the *same* source.
