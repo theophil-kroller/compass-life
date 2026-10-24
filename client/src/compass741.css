@@ -1,0 +1,10 @@
+/* Compact shopping shortcut visible only while a shopping list is active. */
+.shopping741-quick{position:relative;white-space:nowrap;display:inline-flex;gap:4px;align-items:center}
+.shopping741-symbol{font-size:1.1rem;line-height:1}
+.shopping741-count{display:inline-block;padding:1px 5px;min-width:17px;border-radius:999px;background:#e7eee7;color:#264d42;font-size:.68rem;font-weight:700;font-variant-numeric:tabular-nums}
+.n741-active-legend{font-size:.76rem;line-height:1.45;color:var(--muted,#6c817a);margin:7px 0 8px}
+.str741-water-sports{background:#192735;color:#e6edf5;border:1px solid #405064;border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:7px 14px;align-items:center;margin:8px 0}
+.str741-water-sports strong{font-size:.85rem}.str741-water-sports span{color:#e8bd70}.str741-water-sports small{color:#b5c4d1;flex-basis:100%;line-height:1.45}
+@media(max-width:700px){.shopping741-quick{padding:6px!important}.shopping741-count{padding:1px 4px}.shopping741-quick .quick-utility-label{display:none}}
+
+.n741-day-goal{display:block;font-size:.68rem;color:var(--muted,#677a72);margin-top:2px;line-height:1.2;white-space:nowrap;text-align:right}

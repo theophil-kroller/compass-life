@@ -1,11 +1,11 @@
-Compass 0.5.77.40 — nur relative GitHub-Dateipfade:
-client/package.json
-client/strength-premium738-bridge.js
-client/src/strength-premium-v57738.js
-client/src/strength-premium-v57738.css
-client/public/THIRD_PARTY_MUSCLE_ATLAS.txt
-client/public/licenses/Apache-2.0.txt
-tests/compass-057738.test.mjs
-tests/compass-057740.test.mjs
-CHANGELOG_0.5.77.40.md (optional)
-UPLOAD_ANLEITUNG.md (optional)
+Compass 0.5.77.41 GitHub-Upload-Manifest
+client/vite.config.js                        ERSETZEN
+client/compass741-bridge.js                  NEU
+client/src/compass741.css                    NEU
+client/src/activity-energy-57741.js          NEU
+client/src/water-sport-muscles-57741.js       NEU
+tests/compass-057741.test.mjs                NEU
+tests/compass-057741-bridges.test.mjs        NEU
+CHANGELOG_0.5.77.41.md                      INFO
+UPLOAD_ANLEITUNG.md                         INFO
+DATEIEN.txt                                 INFO

@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: the known history template gets a day-specific threshold and user-visible kcal goal
+ok 1 - the known history template gets a day-specific threshold and user-visible kcal goal
+  ---
+  duration_ms: 1.295726
+  type: 'test'
+  ...
+# Subtest: nutrition preset and source profiles are added only once with correct source markings
+ok 2 - nutrition preset and source profiles are added only once with correct source markings
+  ---
+  duration_ms: 1.396945
+  type: 'test'
+  ...
+# Subtest: strength view wires the water session summary and new tab
+ok 3 - strength view wires the water session summary and new tab
+  ---
+  duration_ms: 0.257689
+  type: 'test'
+  ...
+# Subtest: no fake daily calorie adjustment with missing monitoring; old goals remain
+ok 4 - no fake daily calorie adjustment with missing monitoring; old goals remain
+  ---
+  duration_ms: 1.538903
+  type: 'test'
+  ...
+# Subtest: duplicate Garmin activity CSV/FIT records count only once
+ok 5 - duplicate Garmin activity CSV/FIT records count only once
+  ---
+  duration_ms: 8.317113
+  type: 'test'
+  ...
+# Subtest: sports day target increases above the observed 28-day baseline, never adds resting calories twice
+ok 6 - sports day target increases above the observed 28-day baseline, never adds resting calories twice
+  ---
+  duration_ms: 0.490231
+  type: 'test'
+  ...
+# Subtest: activity thresholds are relative by day but share the same kcal chart axis
+ok 7 - activity thresholds are relative by day but share the same kcal chart axis
+  ---
+  duration_ms: 0.227084
+  type: 'test'
+  ...
+# Subtest: paddling sessions recognize kayak and SUP independently of strength sets
+ok 8 - paddling sessions recognize kayak and SUP independently of strength sets
+  ---
+  duration_ms: 0.903269
+  type: 'test'
+  ...
+# Subtest: unknown kayak imports do not generate fake muscle contribution
+ok 9 - unknown kayak imports do not generate fake muscle contribution
+  ---
+  duration_ms: 0.556278
+  type: 'test'
+  ...
+# Subtest: Vite keeps all previous bridges in order and runs the new one before PWA
+ok 10 - Vite keeps all previous bridges in order and runs the new one before PWA
+  ---
+  duration_ms: 0.35355
+  type: 'test'
+  ...
+# Subtest: main.js transformed chrome shows shopping only with active lists and includes direct action
+ok 11 - main.js transformed chrome shows shopping only with active lists and includes direct action
+  ---
+  duration_ms: 0.372828
+  type: 'test'
+  ...
+# Subtest: source transforms detect changed integration contract instead of silently failing
+ok 12 - source transforms detect changed integration contract instead of silently failing
+  ---
+  duration_ms: 0.51012
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 85.30139
