@@ -1,0 +1,41 @@
+﻿Compass-Food-ID;Lebensmittel;Stand 24.10.2026 / Datenquelle und Lücke
+matcha-oat-plain;Matcha mit Hafermilch ohne Honig;"Rezeptbestandteile, Haferdrink Fett/SFA erfasst; Omega unbekannt"
+matcha;Matcha mit Hafermilch & Honig;"Rezeptbestandteile, Haferdrink Fett/SFA erfasst; Omega unbekannt"
+oat-latte;Hafermilch-Latte mit Sirup;"Haferdrink Fett/SFA erfasst; Ölsorte nicht ausreichend für Omega-Profil"
+milk-my-vay;My Vay Barista Haferdrink;"Fett/SFA vom Etikett; Omega/MUFA/PUFA unbekannt"
+monin-caramel;Monin Salted Caramel;"Etikett Fett 0; unter Deklarationsgrenze keine exakte chemische Null"
+matcha-powder;MatchaTherapy 30+;Fett und Fettsäuren nicht ausreichend quantifiziert
+bio-kornbrot;Zurück zum Ursprung Bio Nur-Kornbrot;"Fett/SFA vom Etikett; Saatenmischung für Omegas nicht bekannt"
+butter-hofer;Hofer Bio-Butter;Generische Butter-Fettsäuren aus USDA-Daten, markenspezifisch unbestätigt
+smoothie;Smoothie;Rezept/Zutaten unbekannt
+tea-unsweetened;Tee ungesüßt;Kein vollständiges Fettprofil nötig, keine markenspezifische Analyse
+tea-honey;Tee mit Honig;Rezept/Fettprofil unvollständig
+turmeric;Kurkuma-Latte mit Honig;Milchsorte/Zusammensetzung offen
+coffee;Kaffee;Keine detaillierte Fettsäureanalyse bei konkreter Zubereitung
+latella;Lattella;Sorten-/Rezepturabhängigkeit, Fettprofil nicht belegt
+aperol-spritz;Aperol Spritz;Rezepturabhängig, keine vollständige Nährwertdeklaration
+red-wine;Rotwein;Konkrete Abfüllung unbekannt
+white-wine;Weißwein;Konkrete Abfüllung unbekannt
+whiskey;Whiskey;Konkrete Abfüllung unbekannt
+mensa;Mensaessen;Tagesrezept und Öle unbekannt
+wholegrain-toast-butter-jam;Vollkorntoast mit Butter & Marmelade;Rezeptanteile/Mengen unbekannt
+fried-egg;Spiegelei;USDA FDC 173423 generisches Spiegelei 46g/Einheit; Bratfett individuell unbestätigt
+dark-bread-butter;Nur-Kornbrot mit Hofer Bio-Butter;Teilweise ableitbar aus Brot-Etikett und Butter-Referenz
+mensa-study-veggie;Vegetarischer Study-Teller;Tagesrezept und Fettarten unbekannt
+buffet;Buffet / auswärts;Tatsächliche Speisenauswahl unbekannt
+bread-cheese;Nur-Kornbrot mit Cheddar & Butter;Teilweise ableitbar, Brot-Fettsäuren unbekannt
+cheddar;SPAR würziger Cheddar;Generischer Cheddar aus USDA / Canadian Dairy, markenspezifisch unbestätigt
+cheddar-hofer;Hofer BBQ Cheddar;Generischer Cheddar aus USDA / Canadian Dairy, markenspezifisch unbestätigt
+peanuts;Hofer gesalzene Erdnüsse;"USDA gesalzene trocken geröstete Erdnüsse, keine Hofer-Produktanalyse; 20g gewogen"
+mixed-nuts;MorgenLand Bio Kerniger Nuss Mix;"Etikett Fett/SFA bekannt; Nussanteile für Omega-Profil nicht bekannt"
+dried-mango;SPAR Vital Bio-Mangohälften;"Etikett Fett/SFA; Omega unbekannt"
+rice-pudding;S-BUDGET Milchreis Zimt;Fett bekannt, detailliertes Fettprofil nicht verfügbar
+apple;Apfel;USDA generische Fruchtdaten, Fettsäuren in geringer Menge nicht detailliert
+chocolate;Schokoriegel;Marke/Kakaobutteranteil unbekannt
+snickers;Snickers;Rezeptur variiert, keine gesicherte Fett-Unterfraktion
+pistachio-butter-cups;Better Pistachio Butter Cups;Etikett Fett/SFA, Omega-Fraktionen nicht analysiert
+pringles;Pringles;Geschmacksrichtung/Rezeptur und verwendete Öle unbekannt
+chio-chips;Chio Chips;Geschmacksrichtung/Rezeptur und verwendete Öle unbekannt
+supplement-bluebonnet-one-men;Bluebonnet ONE for Men;Mikronährstoffprofil bekannt, Fettprofil der Kapsel nicht quantifiziert
+supplement-fuerstenmed;FürstenMED Kombinationspräparat;Fettprofil der Kapsel nicht quantifiziert
+other-food;Anderes;Individuell nicht spezifiziert

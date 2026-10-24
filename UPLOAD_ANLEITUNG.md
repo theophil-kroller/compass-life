@@ -1,19 +1,16 @@
-# Compass 0.5.77.30 · GitHub-Upload (kumulativ ab 0.5.77.28)
+# Compass 0.5.77.31 · GitHub-Upload
 
-## Installation
+**Voraussetzung:** Version 0.5.77.30 mit funktionierenden Nutrition-3- und Strength-Bridges. Diese Version ist ein schlankes Folge-Build, kein Vollquellcode.
 
-1. **Voraussetzung:** Nutrition 3 (0.5.77.27) und Muscle Map (0.5.77.28) sind bereits installiert.
-2. ZIP entpacken, alle enthaltenen Dateien mit ihren originalen Pfaden ins Repository hochladen.
-3. Ersetzen: `client/vite.config.js`, `client/src/strength-insights-v57728.js`, `client/src/strength-insights-v57728.css`.
-4. Neu: `client/strength729-bridge.js`, `client/strength730-bridge.js`, Tests und Changelog. Dateien aus .29 sind **schon enthalten**: .29 nicht separat hochladen.
-5. Nach erfolgreichem GitHub-Pages-Deploy die Seite neu laden und unten links auf **0.5.77.30** prüfen. Falls noch .28 angezeigt wird, GitHub Actions/Pages prüfen und PWA-Cache aktualisieren.
-6. Insights → Aktivitäten → Kachel **💪 Krafttraining**. Mit Klick darauf wird diese Sportart allein in der Zeitreihe angezeigt.
-7. Insights → Krafttraining: Damit bereits früher importierte CSV-Einheiten Satz- und Wiederholungszahlen bekommen, dieselbe `Activities(2).csv` einmal erneut importieren (wird dedupliziert).
+1. ZIP entpacken und Dateien in die **gleichen Repository-Unterordner** hochladen. `client/vite.config.js` ersetzen; neue `.js`- und `.css`-Dateien ergänzen.
+2. Dateien aus vorigen Builds **nicht löschen** (`nutrition3-bridge.js`, `strength728-bridge.js`, `strength729-bridge.js`, `strength730-bridge.js` bleiben bestehen).
+3. Nach dem GitHub-Pages-Deployment Compass/PWA neu laden. Links unten soll **0.5.77.31** stehen.
+4. **Insights → Ernährung → 🥑 Fettqualität** wählen. Ab jetzt erscheinen auch lokale, früher protokollierte Ernährungseinträge, sofern die Fettwerte ableitbar sind.
+5. Eintrag „Hofer gesalzene Erdnüsse“ verwendet für **neue** Portionen standardmäßig **20 g/Handvoll**. Bei alten ausdrücklich erfassten 30 g bleibt 30 g; ggf. manuell editieren.
+6. Referenzen sind für Markenprodukte **Schätzungen anhand generischer Lebensmitteltabellen**, keine verifizierten Laborwerte. Produktdatenlücken sind explizit ausgewiesen.
 
-## Datenverständnis
+## Tests
 
-Die CSV hat nur die Gesamtzahl von Sätzen/Wiederholungen je Aktivität, nicht die Übungsnamen. FIT-Dateien des **konkreten Krafttrainings** (nicht Wellness-ZIP) sind für die Muskelzuordnung erforderlich.
+`node --test tests/gtd-057731-fat-quality.test.mjs`
 
-**Tests:** `node --test tests/gtd-057730-strength-sport-category.test.mjs tests/gtd-057729-strength-csv.test.mjs`
-
-**Bausteine in dieser Version:** Nutrition-Bridge .27 → Strength-Bridge .28 → CSV-Bridge .29 → Sports-Bridge .30 → PWA. Keine Änderung an `client/src/main.js`.
+Es wurde kein vollständiger Vite-Produktionsbuild ausgeführt: das ganze GitHub-Repository und sämtliche npm-Pakete waren in der lokalen Umgebung nicht verfügbar. Die neuen Dateien sind syntaktisch geprüft und Modul-/Bridge-Tests bestanden.
