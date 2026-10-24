@@ -1,33 +1,34 @@
-# Compass Life 0.5.77.49 – Patch hochladen
+# Compass Life 0.5.77.49.1 — Deployment-Hotfix
 
-**Ziel:** `theophil-kroller/compass-life`, Branch `main`.
-**Voraussetzung:** Die Quellcode-Dateien von 0.5.77.48 sind auf `main` (Commit `184e8b0`). Der GitHub-Deploy #209 ist zwar fehlgeschlagen, aber die Dateien liegen bereits im Repository. Bitte **nicht** auf dem vorherigen erfolgreichen Deploy #208 ansetzen.
+## Ausgangslage
 
-Das ZIP enthält **fertige Projektdateien in den korrekten Ordnern**. Kein Apply-Skript und kein manuelles Patchen von Textzeilen.
+Im GitHub-Repository sind die Dateien von 0.5.77.49 bereits hochgeladen (Commit `2458e50`). GitHub Actions #210 meldete **1189/1189 Tests bestanden**, aber der Vite-Build brach mit `Compass .49: body insights screen: expected one integration anchor; found 0` ab.
 
-## Ersetzen
+## Hochladen
 
-1. `client/vite.config.js`
-2. `tests/compass-057747-capacity.test.mjs`
-3. `tests/compass-057748-calendar-packets.test.mjs`
+Dieses ZIP entpacken und **nur die enthaltenen Dateien** in GitHub im gleichen Verzeichnispfad hochladen. Die alten Versionen der folgenden Dateien ersetzen:
 
-## Neu hinzufügen
+- `client/compass749-bridge.js` — **ersetzen**
+- `tests/compass-0577491-vite-hotfix.test.mjs` — **neu**
+- `CHANGELOG_0.5.77.49.1.md` — neu, optional
+- `UPLOAD_ANLEITUNG.md` — ersetzen, optional
 
-1. `client/compass749-bridge.js`
-2. `client/src/body-transformation-v57749.js`
-3. `client/src/body-transformation-v57749.css`
-4. `client/src/capacity-preserve-v57749.js`
-5. `tests/compass-057749-body-transformation.test.mjs`
+Keine anderen Dateien entfernen! Alle übrigen Dateien von 0.5.77.48 und 0.5.77.49 müssen im Repository bleiben.
 
-Optionale Dokumentationsdateien: `CHANGELOG_0.5.77.49.md`, `UPLOAD_ANLEITUNG.md`.
+## Warum es scheiterte
 
-**Anleitung:** ZIP entpacken, den Inhalt mit identischer Ordnerstruktur ins GitHub-Repository hochladen; die drei bestehenden Dateien ersetzen. Beim Commit startet „Deploy Compass Web“. `npm run check` und anschließend `npm run build` müssen erfolgreich sein. Erst danach erscheint die Version 0.5.77.49.
+Seit Build 0.5.77.28 liegt im transformierten Insights-Code zwischen **Körper** und **Aktivität** der separate **Krafttraining**-Tab. Das frühere 0.5.77.49-Bridge-Skript suchte fälschlicherweise `body` unmittelbar vor `activity` und scheiterte daher erst beim echten Vite-Build. Der alte Modultest hatte die vollständige Plugin-Kette nicht simuliert.
 
-## Funktionstest danach
+Der korrigierte Anker hängt nur vom eindeutig vorhandenen Körper-Ausdruck ab. Der zusätzliche Regressionstest rekonstruiert ausdrücklich den `body → strength → activity`-Fall und schützt gegen fehlende/doppelte Anker.
 
-- **Insights → Gesundheit → Körper**: Oben die neue Dashboard-Sektion sehen; Bereich 7/28/90/365 Tage oder „Alles“ wählen, Messpunkte und Quellenstand prüfen.
-- Garmin-Krafttraining und Ernährungsdaten müssen nur dann angezeigt werden, wenn sie bereits im Tresor importiert/protokolliert sind; keine leeren Tage als Nullen auffüllen.
-- **Insights → Fristen & Kapazität**: Arbeitspaket bei Aufgabe eingeben, speichern; Fokusstundenbudget ändern und speichern; danach kontrollieren, ob Arbeitspaket erhalten bleibt.
-- Mit aktuellem, vollständig verfügbarem Kalender soll kein vorgeschlagener Arbeitsblock einen bereits belegten Zeitraum mit eingestelltem Puffer überschneiden.
+## Testen
 
-**Grenzen:** Nur Quellpatch, kein separater vollständiger Build. Aus diesem Chat heraus wurde kein neuer Commit auf GitHub gepusht; der Patch ist zum eigenen Upload gedacht.
+Nach dem Commit in GitHub **Actions → Deploy Compass Web** prüfen:
+
+1. `npm run check` grün, einschließlich Test `compass-0577491-vite-hotfix`.
+2. `npm run build` grün (dieser Schritt schlug bei #210 fehl).
+3. `Deploy to GitHub Pages` grün.
+4. Compass neu laden und **Insights → Gesundheit → Körper** aufrufen; die neue Body-Transformation-Karte sollte oberhalb des bisherigen Fitdays-Reports erscheinen.
+5. In **Fristen & Kapazität** speichern und prüfen, dass vorhandene Arbeitspakete bestehen bleiben.
+
+Kein Datenbank-Update und keine Neuanmeldung erforderlich. Ist der Vite-Build erneut rot, ist der konkrete Fehler im GitHub-Actions-Protokoll maßgeblich.
