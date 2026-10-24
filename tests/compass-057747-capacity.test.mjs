@@ -109,8 +109,8 @@ test('bridge transforms real markup anchors into syntactically valid JS',()=>{
  const path=join(tmpdir(),'capacity747-'+process.pid+'.mjs');writeFileSync(path,out);
  try{execFileSync(process.execPath,['--check',path]);}finally{unlinkSync(path);}
 });
-test('Vite plugin is ordered directly after Weekly 746 and before PWA',()=>{
+test('Vite plugin is ordered after Weekly 746 and before 748/PWA',()=>{
  const txt=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
  assert.match(txt,/compass746Bridge\(\), compass747Bridge\(\)/);
- assert.equal(txt.split('compass747Bridge(), VitePWA').length-1,1);
+ assert.match(txt,/compass747Bridge\(\), compass748Bridge\(\), VitePWA/);
 });

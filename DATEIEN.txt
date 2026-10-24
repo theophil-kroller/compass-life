@@ -1,13 +1,10 @@
-GITHUB UPLOAD RELATIVE PATHS
-client/vite.config.js                                  ersetzen
-client/compass747-bridge.js                           hinzufügen
-client/src/capacity-guardian-v57747.js                 hinzufügen
-client/src/capacity-guardian-v57747.css                hinzufügen
-tests/compass-057743-dream-receipts.test.mjs           ersetzen
-tests/compass-057744-fixes.test.mjs                    ersetzen
-tests/compass-057745-receipt-categories.test.mjs       ersetzen
-tests/compass-057746-weekly.test.mjs                   ersetzen
-tests/compass-057747-capacity.test.mjs                 hinzufügen
-CHANGELOG_0.5.77.47.md                                 optional
-UPLOAD_ANLEITUNG.md                                    optional
-DATEIEN.txt                                           optional
+GitHub-Pfade, aus Sicht des Repository-Hauptverzeichnisses:
+client/vite.config.js                         ersetzen
+client/compass748-bridge.js                   neu
+client/src/capacity-calendar-v57748.js        neu
+client/src/capacity-calendar-v57748.css       neu
+tests/compass-057747-capacity.test.mjs        ersetzen
+tests/compass-057748-calendar-packets.test.mjs neu
+CHANGELOG_0.5.77.48.md                       optional
+UPLOAD_ANLEITUNG.md                          optional
+DATEIEN.txt                                  optional
