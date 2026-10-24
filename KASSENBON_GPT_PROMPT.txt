@@ -1,4 +1,4 @@
-Lies das hochgeladene Foto oder PDF eines Supermarkt-Kassenbons aus. Gib AUSSCHLIESSLICH valides JSON zurück (keine Markdown-Codezäune) nach diesem Schema:
+Lies das hochgeladene Foto oder PDF eines Supermarkt-Kassenbons aus. Gib AUSSCHLIESSLICH valides JSON zurück (keine Markdown-Codezäune). Bei einem Bon ein Objekt, bei mehreren Bons ein Array solcher Objekte, nach diesem Schema:
 {
   "schema":"compass_receipt_v1",
   "merchant":"Hofer",

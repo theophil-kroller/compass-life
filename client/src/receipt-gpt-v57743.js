@@ -1,4 +1,4 @@
-/** Compass 0.5.77.43: GPT-assisted receipt JSON inbox (not finance bookings).
+/** Compass 0.5.77.44: GPT-assisted receipt JSON inbox (not finance bookings).
  * User checks before commit; unknowns are null; no silent bank/food logging.
  */
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -6,11 +6,20 @@ const validDate=s=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(String(s||'')))return false;c
 const money=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0&&x<100000?Math.round(x*100)/100:null;
 const trim=(x,max)=>String(x||'').trim().slice(0,max);
 export const RECEIPT_SCHEMA='compass_receipt_v1';
-export const RECEIPT_GPT_PROMPT=`Lies das hochgeladene Foto oder PDF eines Supermarkt-Kassenbons aus. Gib AUSSCHLIESSLICH valides JSON zurück (keine Markdown-Codezäune) nach diesem Schema:\n{\n  "schema":"compass_receipt_v1",\n  "merchant":"Hofer",\n  "date":"2026-10-24",\n  "currency":"EUR",\n  "total":null,\n  "items":[{\n    "description":"Produktname wie am Bon",\n    "quantity":1,\n    "unit":"Stück",\n    "unit_price":null,\n    "total":2.49,\n    "category":"Lebensmittel",\n    "confidence":"high"\n  }],\n  "notes":["Unsichere Positionen oder Rabattzuordnungen erläutern"]\n}\nRegeln: Belasse unbekannte Felder bei null. Rate keine Produktnamen, Grammzahlen oder Preise. Trenne nach Möglichkeit Mengen, Einzelpreis und Zeilensumme. Erhalte Rabatte als eigene negative Position NICHT; beschreibe sie in notes und gib ggf. den tatsächlich gezahlten Artikelpreis an. Wähle category aus Lebensmittel, Getränke, Haushalt, Drogerie, Sonstiges. Für confidence high/medium/low. Bestimme Datum und Gesamtsumme nur wenn lesbar; EUR nur wenn der Bon es unterstützt. Erfasse keinerlei Zahlungs- oder Kartennummern, Namen, Anschriften, Kunden-IDs. Stimmt die Summe der Positionen nicht mit total überein, notiere die Abweichung; erfinde keine Position. Die Rückgabe dient ausschließlich einer prüfbaren Compass-Vorschau und erzeugt keine Finanzbuchung.`;
+export const RECEIPT_GPT_PROMPT=`Lies das hochgeladene Foto oder PDF eines Supermarkt-Kassenbons aus. Gib AUSSCHLIESSLICH valides JSON zurück (keine Markdown-Codezäune). Bei einem Bon ein Objekt, bei mehreren Bons ein Array solcher Objekte, nach diesem Schema:\n{\n  "schema":"compass_receipt_v1",\n  "merchant":"Hofer",\n  "date":"2026-10-24",\n  "currency":"EUR",\n  "total":null,\n  "items":[{\n    "description":"Produktname wie am Bon",\n    "quantity":1,\n    "unit":"Stück",\n    "unit_price":null,\n    "total":2.49,\n    "category":"Lebensmittel",\n    "confidence":"high"\n  }],\n  "notes":["Unsichere Positionen oder Rabattzuordnungen erläutern"]\n}\nRegeln: Belasse unbekannte Felder bei null. Rate keine Produktnamen, Grammzahlen oder Preise. Trenne nach Möglichkeit Mengen, Einzelpreis und Zeilensumme. Erhalte Rabatte als eigene negative Position NICHT; beschreibe sie in notes und gib ggf. den tatsächlich gezahlten Artikelpreis an. Wähle category aus Lebensmittel, Getränke, Haushalt, Drogerie, Sonstiges. Für confidence high/medium/low. Bestimme Datum und Gesamtsumme nur wenn lesbar; EUR nur wenn der Bon es unterstützt. Erfasse keinerlei Zahlungs- oder Kartennummern, Namen, Anschriften, Kunden-IDs. Stimmt die Summe der Positionen nicht mit total überein, notiere die Abweichung; erfinde keine Position. Die Rückgabe dient ausschließlich einer prüfbaren Compass-Vorschau und erzeugt keine Finanzbuchung.`;
 function fingerprint(x){const raw=[x.merchant.toLowerCase(),x.date,x.total??'?',...x.items.map(v=>v.description.toLowerCase()+'@'+(v.total??'?'))].join('|');let h=2166136261;for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619);}return 'rcpt-'+(h>>>0).toString(16);}
-export function parseReceiptJSON(text){
- if(typeof text!=='string'||text.length>100000)throw Error('JSON ist zu groß (maximal 100 KB).');
- let obj;try{obj=JSON.parse(text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));}catch{throw Error('Kein gültiges JSON. GPT-Ausgabe bitte vollständig kopieren.');}
+/** Accept plain JSON, GPT markdown fences, and the escaped multiline form from
+ * ChatGPT copy/paste. Only decode copy-format artefacts, never guess prices. */
+export function normalizeReceiptJSONText(raw){
+ if(typeof raw!=='string'||raw.length>160000)throw Error('JSON ist zu groß (maximal 160 KB).');
+ let s=raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
+ // ChatGPT's rich clipboard sometimes turns leading indentation into &#x20;
+ // and inserts backslash-newline as a soft break.
+ if(/&#(?:x20|32);/i.test(s))s=s.replace(/&#(?:x20|32);/gi,' ');
+ if(/\\\r?\n/.test(s))s=s.replace(/\\\r?\n/g,'\n');
+ return s;
+}
+function parseOneReceipt(obj){
  if(!obj||typeof obj!=='object'||Array.isArray(obj)||obj.schema!==RECEIPT_SCHEMA)throw Error('Falsches Schema: compass_receipt_v1 erforderlich.');
  if(!validDate(obj.date))throw Error('Bon-Datum fehlt oder ist nicht im Format JJJJ-MM-TT.');
  const merchant=trim(obj.merchant,100);if(!merchant)throw Error('Händler fehlt.');
@@ -30,6 +39,27 @@ export function parseReceiptJSON(text){
  const x={schema:RECEIPT_SCHEMA,date:obj.date,merchant,currency:'EUR',total,items,notes};
  return {...x,id:fingerprint(x),updatedAt:new Date().toISOString(),deleted:false};
 }
+/** Each item is validated before any preview or encrypted journal write. */
+export function parseReceiptJSONList(raw){
+ let obj;
+ try{obj=JSON.parse(normalizeReceiptJSONText(raw));}
+ catch{throw Error('Kein gültiges JSON. Bitte den vollständigen JSON-Block inklusive [ ] oder { } kopieren.');}
+ const list=Array.isArray(obj)?obj:obj&&typeof obj==='object'&&Array.isArray(obj.receipts)?obj.receipts:[obj];
+ if(!list.length||list.length>40)throw Error('Zwischen 1 und 40 Bons pro Import erlaubt.');
+ const seen=new Set(),results=[];
+ for(const [i,entry] of list.entries()){
+  let receipt;try{receipt=parseOneReceipt(entry);}catch(ex){throw Error(`Bon ${i+1}: ${ex.message}`);}
+  if(seen.has(receipt.id))throw Error(`Bon ${i+1} kommt im selben Import doppelt vor.`);
+  seen.add(receipt.id);results.push(receipt);
+ }
+ return results;
+}
+/** Historical single-receipt API kept for earlier Compass modules/tests. */
+export function parseReceiptJSON(raw){
+ const rows=parseReceiptJSONList(raw);
+ if(rows.length!==1)throw Error(`${rows.length} Kassenbons erkannt: bitte die Mehrfachvorschau verwenden.`);
+ return rows[0];
+}
 export function receiptWarnings(row){
  if(!row)return [];
  const issues=[],known=row.items.filter(x=>x.total!==null).reduce((n,x)=>n+x.total,0);
@@ -47,6 +77,21 @@ export function putReceipt(state,row){
  const i=state.receiptJournal.entries.findIndex(x=>x.id===row.id);
  if(i>=0)state.receiptJournal.entries[i]={...row,deleted:false,updatedAt:new Date().toISOString()};else state.receiptJournal.entries.push(row);
  return row;
+}
+/** Never overwrite existing entries; duplicates are returned as skipped. */
+export function putReceipts(state,receipts){
+ if(!Array.isArray(receipts)||!receipts.length||receipts.length>40)throw Error('Keine gültigen Bons in der Vorschau.');
+ if(!state||typeof state!=='object')throw Error('Tresor nicht verfügbar.');
+ const ids=new Set();for(const row of receipts){
+  if(!row||!row.id||row.schema!==RECEIPT_SCHEMA||ids.has(row.id))throw Error('Bonvorschau ungültig oder doppelt.');
+  ids.add(row.id);
+ }
+ let added=0,skipped=0;
+ for(const row of receipts){
+  if(state.receiptJournal?.entries?.some(x=>x.id===row.id&&!x.deleted)){skipped++;continue;}
+  putReceipt(state,row);added++;
+ }
+ return {added,skipped};
 }
 export function deleteReceipt(state,id){const row=state?.receiptJournal?.entries?.find(x=>x.id===id);if(!row)return false;row.deleted=true;row.updatedAt=new Date().toISOString();return true;}
 export function mergeReceiptJournals(a={},b={}){
@@ -75,13 +120,16 @@ export function receiptInboxView(state,{draft=null,now=new Date()}={}){
  const rows=receiptEntries(state),month=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`,{products,receipts:current,categories}=receiptMonthSummary(state,month);
  const amount=current.filter(x=>x.total!=null).reduce((s,x)=>s+x.total,0);
  const unknown=current.filter(x=>x.total==null).length;
- const warnings=draft?receiptWarnings(draft):[];
+ const drafts=draft?(Array.isArray(draft)?draft:[draft]):[];
+ const previewAmount=drafts.reduce((n,r)=>n+(r.total||0),0);
+ const previewKnown=drafts.filter(r=>r.total!=null).length;
  return `<section class="work-card receipts743-root"><div class="work-heading"><span>🧾 Kassenbons · GPT → JSON → Compass</span><small>Prüfen vor Speichern</small></div><p class="muted-line">Bon fotografieren, den untenstehenden Prompt mit dem Bild an ChatGPT senden und das JSON hier einfügen. Keine automatische Bankbuchung, keine automatischen Ernährungseinträge.</p>
  <details class="receipts743-prompt"><summary>GPT-Prompt anzeigen / kopieren</summary><textarea readonly id="receipts743-prompt" rows="8">${esc(RECEIPT_GPT_PROMPT)}</textarea><button type="button" class="secondary-btn" data-action="receipts743-copy">Prompt kopieren</button></details>
- ${draft?`<div class="receipts743-preview" role="status"><h3>Vorschau: ${esc(draft.merchant)} · ${esc(draft.date)}</h3><p><strong>${euro(draft.total)}</strong> · ${draft.items.length} Positionen</p>
- <div class="receipts743-table">${draft.items.map(x=>`<div><span>${esc(x.description)}${x.confidence==='low'?' ⚠️':''}</span><span>${x.quantity??'?'} ${esc(x.unit||'')}</span><strong>${euro(x.total)}</strong></div>`).join('')}</div>
- ${warnings.length?`<ul>${warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'<p>Keine rechnerischen Warnungen erkannt. Originalbeleg trotzdem prüfen.</p>'}<button type="button" class="primary-btn" data-action="receipts743-confirm">Geprüften Bon speichern</button> <button type="button" class="secondary-btn" data-action="receipts743-cancel">Verwerfen</button></div>`:
- `<form id="receipts743-form"><label>GPT-JSON hier einfügen<textarea name="json" rows="5" maxlength="100000" placeholder='{"schema":"compass_receipt_v1", ...}' required></textarea></label><button type="submit" class="primary-btn">JSON prüfen (noch nicht speichern)</button></form>`}
+ ${drafts.length?`<div class="receipts743-preview" role="status"><h3>Prüfvorschau: ${drafts.length} ${drafts.length===1?'Bon':'Bons'}</h3><p>${previewKnown} Bonsummen bekannt · ${euro(previewAmount)} · Noch nichts gespeichert</p>
+ ${drafts.map((r,i)=>`<section class="receipts744-draft"><h4>${i+1}. ${esc(r.merchant)} · ${esc(r.date)} · ${euro(r.total)}</h4><p>${r.items.length} Positionen</p><div class="receipts743-table">${r.items.map(x=>`<div><span>${esc(x.description)}${x.confidence==='low'?' ⚠️':''}</span><span>${x.quantity??'?'} ${esc(x.unit||'')}</span><strong>${euro(x.total)}</strong></div>`).join('')}</div>
+ ${receiptWarnings(r).length?`<ul>${receiptWarnings(r).map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'<p>Positionen stimmen rechnerisch mit dem Bon überein. Originalbeleg trotzdem prüfen.</p>'}</section>`).join('')}
+ <div class="receipts744-actions"><button type="button" class="primary-btn" data-action="receipts743-confirm">${drafts.length===1?'Geprüften Bon speichern':`${drafts.length} geprüfte Bons speichern`}</button> <button type="button" class="secondary-btn" data-action="receipts743-cancel">Verwerfen</button></div></div>`:
+ `<form id="receipts743-form"><label>GPT-JSON hier einfügen<textarea name="json" rows="5" maxlength="160000" placeholder='{"schema":"compass_receipt_v1", ...} oder [ {...}, {...} ]' required></textarea></label><p class="muted-line">Einzelbon und mehrere Bons als JSON-Array werden akzeptiert, ebenso JSON-Codeblöcke aus ChatGPT.</p><button type="submit" class="primary-btn">JSON prüfen (noch nicht speichern)</button></form>`}
  <div class="receipts743-summary"><strong>${rows.length}</strong> Bons gespeichert · <strong>${esc(month)}</strong>: ${current.length} Bons, bekannte Bonsummen <strong>${euro(amount)}</strong>${unknown?' · '+unknown+' ohne lesbare Gesamtsumme':''}</div>
  ${products.length?`<details class="receipts743-products"><summary>Im ${esc(month)} eingekauft · ${products.length} verschiedene Bezeichnungen</summary>${products.map(x=>`<div><span>${esc(x.name)} · ${x.count}× erfasst</span><strong>${euro(x.amount)}${x.unknown?' · unvollständig':''}</strong></div>`).join('')}<p class="muted-line">Einzelpositionen werden nach Bonbezeichnung gruppiert. Ähnliche Namen werden nicht automatisch zusammengelegt.</p></details>`:''}
  ${rows.slice(0,24).map(x=>`<div class="receipts743-saved"><span>🧾 ${esc(x.date)} · ${esc(x.merchant)} · ${x.items.length} Artikel</span><strong>${euro(x.total)}</strong><button type="button" class="secondary-btn" data-action="receipts743-delete" data-id="${esc(x.id)}">Entfernen</button></div>`).join('')}

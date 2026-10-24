@@ -1,31 +1,25 @@
-# Compass 0.5.77.43 – GitHub-Upload
+# Compass 0.5.77.44 – GitHub-Upload
 
-**Voraussetzung: Compass 0.5.77.42 im Repository, GitHub Actions erfolgreich.**
+**Voraussetzung:** 0.5.77.43 ist im Repository installiert (erfolgreicher GitHub-Lauf #204).
 
-1. Bitte zuerst ein **verschlüsseltes Vault-Backup** anfertigen, vor allem vom Desktop mit den bereits klassifizierten Garmin-Kraftübungen.
-2. ZIP entpacken und die unten genannten Dateien unter exakt denselben Pfaden im Repository hochladen.
-3. `client/vite.config.js` ersetzen. Die bestehenden `.41`/`.42`-Module NICHT löschen oder mit früheren Fassungen überschreiben.
-4. Unter GitHub Actions den Workflow **Deploy Compass Web** prüfen.
-5. Auf beiden Geräten die gleiche Version **0.5.77.43** verwenden; Vault entsperren und den verschlüsselten Geräteabgleich verbunden lassen.
-6. Nach dem Wiederöffnen der App wird der E2EE-Journalabgleich selbstständig ausgelöst. Die manuelle Schaltfläche bleibt als Fehlerbehebung bestehen.
+**Geänderte Dateien mit exakter Pfadstruktur hochladen:**
 
-## Neu/ersetzt
+- `client/vite.config.js` – ersetzen
+- `client/compass744-bridge.js` – neu
+- `client/src/receipt-gpt-v57743.js` – ersetzen
+- `client/src/receipt-gpt-v57743.css` – ersetzen
+- `tests/compass-057743-dream-receipts.test.mjs` – ersetzen
+- `tests/compass-057744-fixes.test.mjs` – neu
 
-- `client/compass743-bridge.js` (**neu**)
-- `client/src/dream-journal-v57743.js` (**neu**)
-- `client/src/dream-journal-v57743.css` (**neu**)
-- `client/src/receipt-gpt-v57743.js` (**neu**)
-- `client/src/receipt-gpt-v57743.css` (**neu**)
-- `client/vite.config.js` (**ersetzen**)
-- `tests/compass-057743-bridge-integration.test.mjs` (**neu**)
-- `tests/compass-057743-dream-receipts.test.mjs` (**neu**)
+`KASSENBON_GPT_PROMPT.txt` und `CHANGELOG_0.5.77.44.md` sind optionale Informationsdateien.
 
-## Nachprüfen
+Nach Upload GitHub Actions prüfen, erst danach die App öffnen / ggf. auf Handy neu starten. App-Version sollte **0.5.77.44** anzeigen.
 
-- Unter Insights: Traumwelt öffnen, Nachttraum speichern, auf einem zweiten Gerät nach dem Öffnen nachsehen.
-- Eine vorher am Desktop klassifizierte Garmin-Kraftaktivität auf dem Handy öffnen. Bei verbundenem Geräteabgleich sollen die manuellen Übungsnamen/Gewichte erscheinen.
-- Einkaufsliste öffnen: Bereich „Kassenbons“; Prompt kopieren, Beispielbon in ChatGPT auslesen lassen, JSON einfügen, Vorschau prüfen, bestätigen.
-- Derselbe Bon darf nicht zweimal importierbar sein.
-- Im Monatsüberblick gelten Kassenbonpositionen als **gekauft**, nicht als gegessen.
+**Praxistest:**
 
-Bei fehlender E2EE-Verbindung werden Einträge weiterhin **nur im lokalen Vault** gespeichert; die App überträgt sie nicht unverschlüsselt.
+1. Mit entsperrtem Tresor auf 🌙 in der Titelleiste tippen: Traumwelt öffnet sich, Eingabefeld wird fokussiert.
+2. Den Einkaufswagen anklicken, auch wenn keine Einkaufsliste aktiv ist: Einkaufslisten und Kassenbons sind erreichbar.
+3. GPT-JSON mit zwei `compass_receipt_v1`-Objekten in einem Array einfügen. Die Vorschau zeigt beide Bonpositionen getrennt, anschließend gemeinsam bestätigen.
+4. Gleichen JSON-Block erneut importieren: Es werden keine weiteren Bonbuchungen angelegt.
+
+Das Paket enthält KEINE persönlichen Bons. Der separate nutzerspezifische JSON-Download wird nicht automatisch ins GitHub-Repository veröffentlicht.
