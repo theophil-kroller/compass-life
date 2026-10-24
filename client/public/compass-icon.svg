@@ -1,6 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="42" fill="#183c3d"/>
-  <circle cx="96" cy="96" r="58" fill="none" stroke="#d9e7df" stroke-width="5" opacity=".75"/>
-  <path d="m117 63-17 40-36 24 17-40z" fill="#caa870" stroke="#fff9e9" stroke-width="3"/>
-  <circle cx="96" cy="96" r="7" fill="#fff8ec"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+ <defs>
+  <linearGradient id="base" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#245f51"/><stop offset=".55" stop-color="#0c362f"/><stop offset="1" stop-color="#0a2524"/></linearGradient>
+  <linearGradient id="rim" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="#fff1c9"/><stop offset=".26" stop-color="#bb7a40"/><stop offset=".51" stop-color="#f0bf7e"/><stop offset=".78" stop-color="#985b2e"/><stop offset="1" stop-color="#ffe0a6"/></linearGradient>
+  <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fbe6b4"/><stop offset=".48" stop-color="#c99558"/><stop offset="1" stop-color="#6f431e"/></linearGradient>
+  <linearGradient id="point" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2c9"/><stop offset=".48" stop-color="#ed9756"/><stop offset="1" stop-color="#8c421e"/></linearGradient>
+  <linearGradient id="shadow" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#547366"/><stop offset="1" stop-color="#0a1d1c"/></linearGradient>
+  <clipPath id="round"><rect x="5" y="5" width="182" height="182" rx="36"/></clipPath>
+ </defs>
+ <g clip-path="url(#round)">
+ <rect x="5" y="5" width="182" height="182" rx="36" fill="url(#base)"/>
+ <g fill="none" stroke="#bea36c" stroke-width=".7" opacity=".17">
+ <path d="M-10 62 C34 25 58 40 96 29 S167 33 205 -2"/>
+ <path d="M-13 82 C33 43 57 56 94 48 S175 48 208 13"/>
+ <path d="M-7 104 C31 63 53 76 90 69 S181 66 202 36"/>
+ <path d="M-2 129 C27 92 63 94 91 89 S155 98 206 66"/>
+ <path d="M-6 154 C32 120 65 118 103 121 S173 121 202 92"/>
+ <path d="M-4 181 C35 141 65 144 96 146 S166 150 206 123"/>
+ </g>
+ <circle cx="96" cy="96" r="76" stroke="#412d1d" stroke-width="8" fill="none" opacity=".65"/>
+ <circle cx="96" cy="96" r="74" stroke="url(#rim)" stroke-width="5" fill="none"/>
+ <circle cx="96" cy="96" r="68" stroke="#e7bb77" stroke-width=".9" fill="none" opacity=".65"/>
+ <g stroke="url(#brass)" stroke-linecap="round">
+ <path d="M96 24v12 M96 156v12 M24 96h12 M156 96h12" stroke-width="3"/>
+ <path d="M47 47l6 6 M139 139l6 6 M47 145l6-6 M139 53l6-6" stroke-width="1.8"/>
+ </g>
+ <g stroke="#402d1b" stroke-width="1.1" stroke-linejoin="round">
+ <path d="M96 38L107 83 154 96 107 108 96 154 84 108 38 96 84 84Z" fill="url(#brass)"/>
+ <path d="M55 55L96 80 136 55 113 96 136 136 96 112 55 136 79 96Z" fill="url(#shadow)"/>
+ <path d="M96 96L135 50 105 107Z" fill="url(#point)" stroke="#f8d5a4"/>
+ <path d="M96 96L57 142 87 85Z" fill="#eed6a3" stroke="#dca976"/>
+ </g>
+ <circle cx="96" cy="96" r="14" fill="url(#rim)" stroke="#6c401f" stroke-width="2"/>
+ <circle cx="96" cy="96" r="7.5" fill="url(#brass)"/>
+ <circle cx="93.5" cy="93.5" r="2" fill="#fff2c9" opacity=".6"/>
+ </g>
+ <rect x="5.7" y="5.7" width="180.6" height="180.6" rx="35" fill="none" stroke="#cc995f" stroke-width="1.4" opacity=".7"/>
 </svg>

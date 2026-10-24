@@ -1,29 +1,26 @@
-# Compass Life 0.5.77.50 – Upload
+# Upload: Compass Life 0.5.77.51
 
-Ausgangsbasis ist das erfolgreich deployte **0.5.77.49.1** (GitHub Actions **#211**). Dies ist ein ZIP mit **fertigen Dateien**, kein auszuführendes Skript.
+**Wichtig:** Als Basis muss `0.5.77.50` (GitHub Actions #212, erfolgreich) im Repository vorhanden sein.
 
-## Ersetzen
+1. Das ZIP lokal entpacken.
+2. Den Inhalt der Unterordner `client/` und `tests/` in GitHub `theophil-kroller/compass-life` an **die identischen Pfade** hochladen.
+3. Bei den bereits existierenden Dateien Ersetzen/Overwrite bestätigen. Für neue Dateien den Pfad unbedingt beibehalten.
+4. Alle Dateien möglichst in einem Commit hochladen und anschließend **Actions → Deploy Compass Web** prüfen. Sowohl `npm run check` als auch `npm run build` müssen grün sein.
+5. Nach erfolgreichem Deploy die App aktualisieren. Installierte PWAs können das App-Icon weiterhin zwischenspeichern; bei Bedarf die Verknüpfung neu installieren. Den Tresor dafür nicht löschen.
+
+## Zu ersetzende Dateien
 - `client/vite.config.js`
+- `client/index.html`
+- `client/public/compass-icon.svg`
+- `client/public/icon-192.png`
+- `client/public/icon-512.png`
+- `tests/compass-057750-insights-nav.test.mjs` (bestehenden Integrationstest anpassen)
 
-## Neu hinzufügen
-- `client/compass750-bridge.js`
-- `client/src/insights-navigation-v57750.js`
-- `client/src/insights-navigation-v57750.css`
-- `tests/compass-057750-insights-nav.test.mjs`
+## Neue Dateien
+- `client/compass751-bridge.js`
+- `client/src/premium-ui-v57751.css`
+- `client/public/apple-touch-icon.png`
+- `tests/compass-057751-premium-ui.test.mjs`
 
-## Optional
-- `CHANGELOG_0.5.77.50.md`
-- `UPLOAD_ANLEITUNG.md`
-
-Die Ordnerstruktur im ZIP unverändert ins **Repository-Hauptverzeichnis** übertragen. Bestehende Dateien nicht löschen. Keine D1-Migration notwendig.
-
-## Funktionstest nach GitHub Actions / Deploy
-1. Actions: `npm run check` und `npm run build` müssen beide grün sein.
-2. In der Insights-Seitenleiste gibt es genau fünf Kategorien statt der vielen einzelnen Einträge.
-3. `Übersicht & Intelligence` öffnet das Cockpit; Untertabs `Wochenkompass` und `Fristen & Kapazität` öffnen die bisherigen Auswertungen.
-4. `Gesundheit & Körper`: Körperanalyse, Krafttraining, Ernährung und Aktivitäten erreichbar; bisherige Daten sichtbar.
-5. `Zeit & Produktivität`: Arbeitszeit **und** Zeitjournal separat unter derselben Themenkategorie erreichbar.
-6. `Leben & Orte`: Karte und Traumwelt/Erholung erreichbar.
-7. Handy: fünf erste Kategorien, eine waagerecht scrollbarere Zeile für Untertabs; keine überstehenden Felder.
-
-**Hinweis:** Aktivitäten, Erholung und Fortschritt öffnen weiterhin ihre bisherigen eigenständigen Screens. Beim Zurückwechseln zu Insights lässt sich der passende Unterbereich wieder öffnen.
+## Unverändert
+`client/src/main.js`, GTD-Aufgaben, gespeicherte Daten, Today-Handler, Kalender-API, Vault, D1/Worker, Sync.
