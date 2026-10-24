@@ -48,7 +48,8 @@ test('bridge wires E2EE journaling, purchase review, Dreamworld navigation and r
  const fs=readFileSync(root+'/client/compass743-bridge.js','utf8');
  for(const x of ['mergeDreamJournals','mergeReceiptJournals','strengthJournal','dreamJournal','receiptJournal','automaticJournalResume743','receiptInboxView','dreamJournalView'])assert.ok(fs.includes(x),x);
  const vite=readFileSync(root+'/client/vite.config.js','utf8');
- assert.match(vite,/strengthSync742Bridge\(\), compass743Bridge\(\), compass744Bridge\(\), compass745Bridge\(\), compass746Bridge\(\), VitePWA/);
+ const chain=['strengthSync742Bridge()', 'compass743Bridge()', 'compass744Bridge()', 'compass745Bridge()', 'compass746Bridge()', 'compass747Bridge()', 'VitePWA('];
+ let prev=-1;for(const key of chain){const at=vite.indexOf(key);assert.ok(at>prev,`Vite order: ${key}`);prev=at;}
 });
 test('strict bridge fails closed if version .42 not present',async()=>{
  const {compass743Bridge}=await load('client/compass743-bridge.js');

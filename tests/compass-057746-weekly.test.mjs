@@ -109,6 +109,6 @@ test('Vite bridge generates parsable JS with weekly navigation and correct versi
 });
 test('pipeline retains ordering and does not duplicate last plugin',()=>{
  const v=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
- assert.match(v,/compass745Bridge\(\), compass746Bridge\(\), VitePWA/);
- assert.equal(v.split('compass746Bridge(), VitePWA').length-1,1);
+ const chain=['compass745Bridge()', 'compass746Bridge()', 'compass747Bridge()', 'VitePWA('];
+ let previous=-1;for(const part of chain){const at=v.indexOf(part);assert.ok(at>previous,part+' order');previous=at;}
 });

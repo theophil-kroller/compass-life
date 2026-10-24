@@ -1,21 +1,30 @@
-# Compass 0.5.77.46 – GitHub-Upload
+# Compass 0.5.77.47 · GitHub-Upload
 
-**Basis: Compass 0.5.77.45**, erfolgreiches Deployment #205.
+Voraussetzung: Vollständige Dateien und Pluginfolge aus **Compass 0.5.77.46** sind vorhanden.
 
-1. ZIP entpacken.
-2. Den Inhalt des Pakets unter den jeweils identischen Pfaden in `theophil-kroller/compass-life` hochladen. **`client/vite.config.js` ersetzen**, keinesfalls den Ordner `client` zusätzlich verschachteln.
-3. Die neuen Module `client/src/weekly-intelligence-v57746.js`, `.css` und den Plugin-Baustein `client/compass746-bridge.js` ergänzen.
-4. Drei ältere Regressionstests ersetzen, da diese noch verlangten, dass nach .45 unmittelbar die PWA-Integration folgt.
-5. Den neuen Test `tests/compass-057746-weekly.test.mjs` hinzufügen.
-6. GitHub Actions `Deploy Compass Web` prüfen. Nur bei grünem Gesamt-Check wird die neue Version veröffentlicht.
-7. Im Browser gegebenenfalls neu laden. In der Navigation **Insights → Wochenkompass** öffnen. Version `0.5.77.46` prüfen.
+Das ZIP ist **kein Skript**, das du selbst starten musst. Entpacke es und lade die unten genannten Dateien mit unveränderter Ordnerstruktur in dein GitHub-Repository hoch (gleiche Pfade ersetzen, neue Dateien anlegen):
 
-## Was du erwarten kannst
-- Beginnt mit dem jüngsten vollständig vergangenen Sieben-Tage-Fenster, nicht mit Live-Daten von heute.
-- Garmin/Fitdays müssen weiterhin importiert werden. Ein leerer oder alter Import führt zu deutlichen Datenlücken bzw. Aktualitätshinweisen.
-- Auf einen einzelnen Tag klicken/hovern: SVG-Dot zeigt Datum und beobachteten Wert.
-- Die Schaltflächen `←`, `→`, `Letzte 7 Tage` wechseln den historischen Auswertungszeitraum.
-- Der Fristenbereich nutzt den aktuellen GTD-Vault, nicht den Datenstand älterer importierter Fitnesstracker.
+## Code
+- `client/vite.config.js` (ersetzen)
+- `client/compass747-bridge.js` (neu)
+- `client/src/capacity-guardian-v57747.js` (neu)
+- `client/src/capacity-guardian-v57747.css` (neu)
 
-## Datensicherheit
-Kein Vault-Schemawechsel und kein Datenverlust; die neue Wochenansicht liest bereits vorhandene Daten **nur lesend**. Keine Änderungen an bestehenden Garmin-, Ernährung-, Finanz- oder Zeiteinträgen.
+## Tests
+- `tests/compass-057743-dream-receipts.test.mjs` (ersetzen; dauerhafte Reihenfolgeprüfung)
+- `tests/compass-057744-fixes.test.mjs` (ersetzen; dauerhafte Reihenfolgeprüfung)
+- `tests/compass-057745-receipt-categories.test.mjs` (ersetzen; dauerhafte Reihenfolgeprüfung)
+- `tests/compass-057746-weekly.test.mjs` (ersetzen; dauerhafte Reihenfolgeprüfung)
+- `tests/compass-057747-capacity.test.mjs` (neu)
+
+## Prüfung nach dem Upload
+
+1. Auf GitHub unter **Actions → Deploy Compass Web** warten, bis der Testschritt **und der eigentliche Vite-Build und Deploy** grün sind.
+2. Compass neu laden und in der linken Navigation **Insights → Fristen & Kapazität** öffnen.
+3. Das wöchentliche Fokusbudget und erste Aufgabe-Schätzzeiten eingeben und speichern.
+4. Die Wochenkompass-Ansicht öffnen: Der Verweis zur Kapazitätsplanung muss vorhanden sein.
+5. Überprüfen, dass offene Aufgaben wirklich in der 14-Tage-Liste stehen. Bei fehlenden Schätzungen darf Compass keine definitive Machbarkeitsaussage treffen.
+
+**Kein Kalenderabgleich:** Gezeigte Fokuszeitfenster sind Szenarien, keine gebuchten oder nachweislich freien Termine.
+**Kein Geräteabgleich versprochen:** Fokusbudget und Schätzungen bleiben zunächst im lokalen Vault, bis die E2EE-Einstellungen explizit in einer Folgeversion integriert werden.
+**Keine aktuellen Gesundheitsschlüsse:** Importdaten haben ihren dokumentierten Datenstand.
