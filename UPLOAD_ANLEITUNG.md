@@ -1,33 +1,26 @@
-# GitHub-Upload — Compass Life 0.5.77.53 PATCH
+# Hochladen: Compass Life 0.5.77.54
 
-**Voraussetzung:** Das bestehende GitHub-Repository enthält bereits `0.5.77.52` (Actions #214 grün).
+**Voraussetzung:** 0.5.77.53 muss auf `main` sein. GitHub-Actions-Lauf #215 war erfolgreich.
 
-1. ZIP auf deinem Rechner entpacken.
-2. Alle Dateien unterhalb von `client/` und `tests/` unter ihren **identischen Pfaden** in `theophil-kroller/compass-life` auf `main` hochladen. Vorhandene Dateien ersetzen, neue hinzufügen.
-3. `CHANGELOG_0.5.77.53.md` kann ebenfalls im Repository-Hauptverzeichnis abgelegt werden. `UPLOAD_ANLEITUNG.md` muss nicht hochgeladen werden.
-4. Möglichst einen Commit für alle Änderungen verwenden.
-5. GitHub → **Actions → Deploy Compass Web**. Der Lauf muss sowohl Tests als auch den Vite-Build erfolgreich durchlaufen; erst danach die Web-PWA neu laden.
+1. ZIP entpacken und alle **Dateien unter `client/` und `tests/`** mit unveränderter Unterordnerstruktur in das GitHub-Repository `theophil-kroller/compass-life` hochladen.
+2. Bestehende Dateien ersetzen, neue Dateien zusätzlich anlegen. Bitte keine Dateien aus dem ZIP ins Repo-Hauptverzeichnis legen.
+3. Möglichst gemeinsam committen. Unter GitHub Actions den Lauf **Deploy Compass Web** kontrollieren: alle Node-Tests sowie `vite build` müssen grün sein.
+4. Nach dem Deploy Compass neu laden; bei installierter PWA ggf. die App schließen und neu öffnen. **Nicht den Vault löschen.**
+5. Prüfen: Gesperrt = grüne Vollfläche; Entsperren = Heute; Wechsel zu Insights = zunächst kurzer Modulfortschritt; Wechsel zu Finanzen = eigener Modulfortschritt. Zurück zu Heute sollte direkt möglich sein.
+6. Ladefehler: Kommt beim ersten Offline-Aufruf eines noch nicht zwischengespeicherten Moduls ein Fehler, Internetverbindung prüfen und auf **Erneut versuchen** klicken. Erstmalig geladene Komponenten verbleiben danach im aktuellen App-Prozess.
 
-## Zu ersetzen
-
+## Ersetzte Dateien
 - `client/vite.config.js`
 - `tests/compass-057750-insights-nav.test.mjs`
 - `tests/compass-057751-premium-ui.test.mjs`
 - `tests/compass-057752-chart-first.test.mjs`
-
-## Neue Dateien
-
-- `client/compass753-bridge.js`
-- `client/src/finance-premium-v57753.js`
-- `client/src/finance-premium-v57753.css`
 - `tests/compass-057753-finance-performance.test.mjs`
 
-## Manuelles UI-Checking
+## Neue Dateien
+- `client/compass754-bridge.js`
+- `client/src/lazy-routes-v57754.js`
+- `client/src/on-demand-v57754.js`
+- `client/src/on-demand-v57754.css`
+- `tests/compass-057754-on-demand.test.mjs`
 
-- Finanzen → Überblick: Kennzahlen, Monatsdiagramm und Kategorieanteile sofort sichtbar (ohne Öffnen von Details).
-- Perioden-/Kontofilter wählen und prüfen, ob das Diagramm entsprechend wechselt.
-- „Cashflow-Details“, „Ausgaben“, „Portfolio“, „Buchungen“ und „Prüfen“ müssen die bisherigen Unterbereiche öffnen.
-- Insights → Gesundheit → Schlaf: zuerst Wochen-Schlafphasen und Schlaftrend, danach KPI- und Erklärungstexte; Boxplot sichtbar.
-- „Heute“: Aufgaben bearbeiten, Inspector öffnen/schließen und Termine ansehen — unverändert.
-
-**Nicht erforderlich:** Vault neu erstellen, lokale Daten löschen oder D1-Migration. Bei PWA-Cache den normalen Reload verwenden; nur wenn der neue Service Worker nicht aktiv wird, App schließen und erneut öffnen.
+Die große `client/src/main.js` wird **nicht** überschrieben. Sie wird wie zuvor über die Vite-Bridge in der Build-Pipeline generiert und transformiert.
