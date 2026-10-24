@@ -24,3 +24,6 @@
 .str728-dot-scroll{overflow-x:auto;overflow-y:hidden;max-width:100%;border-bottom:1px solid var(--border,#e5e9e6)}
 .str728-dot-scroll svg{max-width:none;display:block}
 .str728-axis{font-size:10.5px;fill:currentColor;opacity:.7;font-family:inherit}
+/* .29: imported CSV set counts are visible, but must not look like identified muscle sets. */
+.str728-csv-note{border:1px solid #b9d7c8;background:var(--surface-soft,#edf6f1);border-radius:12px;padding:9px 12px;margin:5px 0 11px;font-size:.78rem;line-height:1.5;color:inherit}
+.str728-csv-note strong{color:#286b58}.str728-csv-note span{color:var(--muted,#667c70)}
