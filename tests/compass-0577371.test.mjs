@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL,fileURLToPath} from 'node:url';
+import {resolve,dirname} from 'node:path';
 
-const root='/mnt/data/compass-pill-0577371';
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const load=path=>import(pathToFileURL(`${root}/${path}`).href);
 const state={strengthJournal:{annotations:[
  {sessionId:'old-1',start:'2026-10-10T11:00:00',sets:[

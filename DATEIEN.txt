@@ -1,0 +1,15 @@
+UPLOAD-MANIFEST – relativ zum GitHub-Repository:
+client/vite.config.js                                    ersetzen
+client/strength-premium738-bridge.js                     neu
+client/nutrition-pill-577371-bridge.js                    ersetzen
+client/src/strength-premium-v57738.js                     neu
+client/src/strength-premium-v57738.css                    neu
+client/src/strength-recent-defaults-v577371.js            ersetzen
+client/src/nutrition-history-v577.js                       ersetzen
+client/src/nutrition-missing-pill-v577371.js               ersetzen/vorhanden
+client/src/nutrition-missing-pill-v577371.css              ersetzen/vorhanden
+tests/compass-0577371.test.mjs                             ersetzen – CI-BLOCKER-FIX
+tests/compass-057738.test.mjs                               neu
+CHANGELOG_0.5.77.38.md                                     optional
+UPLOAD_ANLEITUNG.md                                        optional
+DATEIEN.txt                                                optional

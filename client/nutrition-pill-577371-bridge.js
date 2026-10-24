@@ -16,6 +16,9 @@ export function nutritionPill577371Bridge(){
    return {code:out,map:null};
   }
   if(path.endsWith('/client/src/nutrition-history-v577.js')){
+   // 0.5.77.38 ships an actual history source with the pill inline.
+   // Keep older installations compatible without double-transforming this source.
+   if(source.includes('nutritionMissingEnergyPill(r)'))return null;
    let out=change(source,"import {personalEnergyEstimate} from './energy-goal-v575.js';","import {personalEnergyEstimate} from './energy-goal-v575.js';\nimport {nutritionMissingEnergyPill} from './nutrition-missing-pill-v577371.js';",'Helper-Import');
    const startMarker='<span class="n577-amount">';
    const endMarker="</details>`:''}";
