@@ -186,3 +186,9 @@ Nutrition Intelligence: Markenprodukt- und Rezeptprofile, quellenbewusste Tages�
 
 ## 0.5.77.14
 Bluebonnet ONE for Men (1 Kapsel) im Schnellprotokoll und Nährstoffkatalog; 25 Mikronährstoffe, Pflanzen- und Enzymmischungen sowie Icons bei Makronährstoffen. Quelle: NIH DSLD 332616. Keine automatische Einnahme.
+
+### 0.5.77.25 · Ernährung / Timing & Trends
+
+Im bereits vorhandenen Bereich **Insights → Ernährung** gibt es zusätzlich zu **Tagebuch** und **Makro & Mikro** den Tab **🕒 Timing & Trends**. Dort sind Woche/Monat/Gesamt mit ←/→-Navigation, ein genauer 24-h-Dotplot aller protokollierten Kalorienaufnahmen (Morgen orange, Mittag rot, Abend blau), Tages-Essfenster, dokumentierte Esspausen, die längste Esspause der Woche und Kalorientrends mit einzelnen Messpunkten und 7-Tage-Durchschnitt sichtbar.
+
+Es handelt sich nicht um eine klinisch bestätigte Fastenmessung. Fehlende Einträge dürfen Fastenzeit oder Energiezufuhr nicht als vollständige Tageswerte erscheinen lassen. Die Berechnung nutzt ausschließlich lokal vorhandene Einträge und einen inkrementellen, nicht persistenten Tagescache. **Keine Migration nötig.** Details siehe `CHANGELOG_0.5.77.25.md`.

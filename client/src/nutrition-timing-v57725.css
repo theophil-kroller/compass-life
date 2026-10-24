@@ -1,0 +1,42 @@
+/* Nutrition Insights 1 · dedicated chart layer. All visualizations are SVG (no heavy chart library). */
+.ni725-insights{display:grid;gap:14px;min-width:0}
+.ni725-insights>.work-card{min-width:0;overflow:hidden}
+.ni725-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:13px 0}
+.ni725-range,.ni725-pager{display:flex;align-items:center;gap:4px}
+.ni725-range{background:var(--surface-soft,#f3f5f3);padding:4px;border-radius:13px}
+.ni725-range button,.ni725-pager button{font:inherit;cursor:pointer;border:0;border-radius:9px;padding:8px 12px;color:inherit;background:transparent}
+.ni725-range button.selected{color:#215f56;background:var(--surface,#fff);font-weight:700;box-shadow:0 1px 5px #00000012}
+.ni725-pager strong{min-width:160px;text-align:center;font-size:.84rem}
+.ni725-pager button{font-size:1.7rem;line-height:1;padding:3px 11px;min-width:37px;border:1px solid var(--border,#d9e1de)}
+.ni725-pager button:disabled{opacity:.22;cursor:default}
+.ni725-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.ni725-kpi{padding:12px;border-radius:12px;background:var(--surface-soft,#f5f7f5);display:grid;gap:3px;min-width:0}
+.ni725-kpi>span{font-size:.76rem;color:var(--muted,#718076)}
+.ni725-kpi>strong{font-size:1.25rem;line-height:1.35;font-variant-numeric:tabular-nums}
+.ni725-kpi>small{font-size:.68rem;color:var(--muted,#718076)}
+.ni725-disclaimer{margin:10px 0 0;font-size:.74rem;line-height:1.55;color:var(--muted,#718076)}
+.ni725-dot-scroller{max-height:610px;overflow-y:auto;overflow-x:hidden;margin-top:16px}
+.ni725-dots{width:100%;min-width:0;display:block;overflow:visible}
+.ni725-axis,.ni725-y-label,.ni725-zone-label{font-size:11px;fill:currentColor;opacity:.68;font-family:inherit}
+.ni725-zone-icon{font-size:16px}
+.ni725-zone-label{font-size:10px}
+.ni725-dot{stroke:var(--surface,#fff);stroke-width:1.6;cursor:pointer;transition:r .12s ease,stroke-width .12s ease;vector-effect:non-scaling-stroke}
+.ni725-dot:hover,.ni725-dot:focus-visible,.ni725-dot.is-selected{stroke:var(--text,#263d36);stroke-width:2.5;outline:none}
+.ni725-selected{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;padding:9px;background:var(--surface-soft,#f5f7f5);border-radius:10px;font-size:.82rem}
+.ni725-selected .secondary-btn{white-space:nowrap}
+.ni725-window-list{display:grid;gap:5px;max-height:570px;overflow-y:auto}
+.ni725-window-row{display:grid;grid-template-columns:94px minmax(50px,1fr) 124px 91px;align-items:center;gap:8px;border-bottom:1px solid var(--border,#e2e7e3);padding:7px 0;font-size:.76rem}
+.ni725-window-day{white-space:nowrap;color:var(--muted,#718076)}
+.ni725-timeline{height:13px;position:relative;border-radius:999px;background:linear-gradient(90deg,#d1d9e5,#eff1f3);box-shadow:inset 0 0 0 1px #00000009}
+.ni725-eating-window{position:absolute;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#eea659 0%,#da6765 46%,#5786c2 100%)}
+.ni725-start,.ni725-end{position:absolute;top:-3px;height:19px;width:2px;background:#283c57;transform:translateX(-1px)}
+.ni725-window-times,.ni725-fast{font-variant-numeric:tabular-nums;font-weight:600;text-align:right;white-space:nowrap}
+.ni725-window-times small,.ni725-fast small{display:block;color:var(--muted,#718076);font-size:.67rem;font-weight:400}
+.ni725-fast{color:#476b99}
+.ni725-trend-scroller{overflow:hidden;max-width:100%}
+.ni725-trend-scroller svg{width:100%;height:auto;display:block}
+.ni725-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:.75rem;color:var(--muted,#718076)}
+.ni725-legend>span{display:flex;align-items:center;gap:6px}
+.ni725-legend i{display:inline-block;width:17px;height:3px;border-radius:2px}
+@media(max-width:700px){.ni725-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ni725-insights>.work-card{padding:12px}.ni725-controls{align-items:stretch}.ni725-pager{justify-content:space-between;width:100%}.ni725-pager strong{min-width:0}.ni725-window-row{grid-template-columns:75px minmax(20px,1fr) 78px 66px;gap:4px;font-size:.66rem}.ni725-window-times small,.ni725-fast small{font-size:.57rem}.ni725-dot-scroller{max-height:490px}.ni725-zone-label{font-size:11px}}
+@media(max-width:390px){.ni725-kpi{padding:8px}.ni725-kpi>strong{font-size:1.06rem}.ni725-window-row{grid-template-columns:65px minmax(16px,1fr) 72px 60px}}
