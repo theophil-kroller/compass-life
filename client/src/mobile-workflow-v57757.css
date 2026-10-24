@@ -1,0 +1,57 @@
+/* Compass 0.5.77.57 – one global mode switch, compact mobile navigation. */
+.compass57-mobile-mode{display:none}
+.compass57-desktop-mode{display:flex;align-items:center;flex:none;margin-right:5px}
+.compass57-desktop-mode .compass56-mode-switch{margin:0;padding:0}
+.compass57-desktop-mode .compass56-mode-button{height:36px;width:36px;min-width:36px;border-radius:11px}
+.compass57-shopping-tabs{display:flex;gap:4px;align-items:center;max-width:100%;overflow-x:auto;margin:0 0 12px;padding:3px;background:#eef2ef;border:1px solid #dce5df;border-radius:12px;width:max-content;box-sizing:border-box}
+.compass57-shopping-tabs button{border:0;background:transparent;color:#56736a;border-radius:9px;font-size:13px;font-weight:600;padding:10px 15px;white-space:nowrap;cursor:pointer}
+.compass57-shopping-tabs button.selected{background:white;color:#154d3c;box-shadow:0 1px 4px #1d3b2a12}
+.compass57-shopping-tabs button:focus-visible{outline:2px solid #287a66;outline-offset:2px}
+.compass57-shopping-stats{padding:17px;max-width:850px}
+.compass57-stats-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:9px;margin:14px 0}
+.compass57-stats-head strong{font-size:28px;letter-spacing:-.03em;font-weight:650;color:#204b40}
+.compass57-stats-head span{font-size:12px;color:#789086}
+.compass57-stats-actions{display:flex;flex-wrap:wrap;gap:8px}
+.compass57-stats-actions button{min-height:40px}
+.compass57-stats-note{display:block;font-size:11px;line-height:1.35;color:#84968e;margin-top:16px}
+/* Focus is strictly GTD-first, but the user's quick input remains visible. */
+.compass55-focus .utility-right .t577-top-trigger,.compass55-focus .utility-right .fw65-top-trigger,.compass55-focus .utility-right .pj92-food-trigger{display:inline-flex!important;visibility:visible!important}
+@media(max-width:700px){
+ .shell{position:relative}
+ .shell .sidebar{position:relative;padding-top:9px}
+ .compass57-desktop-mode{display:none!important}
+ .compass57-mobile-mode{display:flex;position:absolute;right:13px;top:16px;z-index:4}
+ .compass57-mobile-mode .compass56-mode-switch{margin:0;padding:0}
+ .compass57-mobile-mode .compass56-mode-button{height:37px;width:37px;min-width:37px}
+ .shell .sidebar .brand{padding-right:55px;margin-bottom:0}
+ /* Icons only in the primary navigation, while submenu labels remain readable. */
+ .shell .calm-side-nav{display:flex;flex-wrap:nowrap;gap:1px;justify-content:space-between;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:5px}
+ .shell .calm-side-nav::-webkit-scrollbar{display:none}
+ .shell .calm-side-nav>.nav-item,.shell .calm-side-nav>.calm-nav-group{min-width:40px;flex:1 0 40px;max-width:74px;position:relative}
+ .shell .calm-side-nav>.nav-item,.shell .calm-side-nav>.calm-nav-group>.calm-group-toggle{min-height:43px;display:flex;align-items:center;justify-content:center;gap:0;padding:7px 4px;border-radius:11px}
+ .shell .calm-side-nav>.nav-item>span:not(.nav-count),
+ .shell .calm-side-nav>.calm-nav-group>.calm-group-toggle>span{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+ .shell .calm-side-nav>.nav-item>.nav-count{position:absolute;top:1px;right:1px;min-width:16px;height:16px;line-height:16px;border-radius:9px;font-size:10px;padding:0 2px}
+ .shell .calm-side-nav>.nav-separator{display:none!important}
+ .shell .calm-side-nav:has(>.calm-nav-group>.calm-group-toggle.is-open){display:flex}
+ .shell .calm-side-nav>.calm-nav-group:has(>.calm-group-toggle.is-open){display:contents!important}
+ .shell .calm-side-nav>.calm-nav-group:has(>.calm-group-toggle.is-open)>.calm-subitems{position:absolute;top:auto;left:8px;right:8px;width:auto;min-width:0;max-width:calc(100vw - 16px);z-index:30;background:white;border:1px solid #dbe6de;border-radius:12px;box-shadow:0 12px 28px #243d3220}
+ .shell .calm-side-nav>.calm-nav-group:has(>.calm-group-toggle.is-open)>.calm-group-toggle{display:none!important}
+ /* Keep capture controls visible, with the touch action among the first buttons. */
+ .shell .utility-bar{min-height:57px;max-height:59px;padding-left:10px;padding-right:10px}
+ .shell .utility-bar .utility-right{gap:6px}
+ .shell .utility-bar .utility-right .fw65-top-trigger,.shell .utility-bar .utility-right .pj92-food-trigger,.shell .utility-bar .utility-right .t577-top-trigger{display:inline-flex!important;min-width:42px;width:42px;height:42px;padding:8px;justify-content:center;align-items:center}
+ .shell .utility-bar .utility-right .t577-top-trigger .quick-utility-label{display:none}
+ .shell .utility-bar .utility-right .connection{display:none}
+ .shell .utility-bar .utility-right .avatar{display:none}
+ .shell .utility-bar .utility-right .weather-quick{display:none}
+ .shell .content{padding-top:10px}
+ .compass57-shopping-tabs{width:100%;gap:1px}
+ .compass57-shopping-tabs button{flex:1;min-width:0;font-size:12px;padding:9px 7px}
+ .shopping713-overview{padding:12px!important;gap:10px!important}
+ .shopping713-overview .shopping713-header h2{font-family:inherit;font-size:18px;margin:0}
+ .shopping713-overview .shopping713-header .primary-btn{width:auto}
+ .shopping713-item{min-height:45px;padding:8px 11px}
+ .shopping713-list{padding:10px}
+}
+@media(prefers-reduced-motion:reduce){.compass57-shopping-tabs button{transition:none}}

@@ -67,7 +67,7 @@ function render(){
 test('Vite chain keeps the prior lazy loader and introduces .55 last',()=>{
  const c=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
  assert.match(c,/import \{ compass755Bridge \} from '\.\/compass755-bridge\.js'/);
- assert.match(c,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\), compass756Bridge\(\)\]/);
+ assert.match(c,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\), compass756Bridge\(\), compass757Bridge\(\)\]/);
 });
 
 test('today inspector and task checkbox get narrowly targeted handlers and no redundant header',()=>{

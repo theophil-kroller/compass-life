@@ -67,6 +67,6 @@ test('chart-first CSS puts real daily charts before explanatory copy and avoids 
 test('plugin order .51→.52 and historical fail-closed ordering are preserved',()=>{
  const c=read('vite.config.js');
  assert.match(c,/import \{ compass752Bridge \} from '\.\/compass752-bridge\.js'/);
- assert.match(c,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\), compass756Bridge\(\)\]/);
+ assert.match(c,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\), compass756Bridge\(\), compass757Bridge\(\)\]/);
  assert.match(c,/compass747Bridge\(\), compass748Bridge\(\), compass749Bridge\(\), VitePWA/);
 });
