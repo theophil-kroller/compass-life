@@ -1,0 +1,43 @@
+﻿Compass-Food-ID;Lebensmittel;Quantifizierte Stoffklasse / Referenz;Datenstatus
+matcha-oat-plain;Matcha mit Hafermilch ohne Honig;EGCG ≥30 mg/g Matchapulver;Quantifiziert · Hersteller-Mindestgehalt (nur bestätigter MatchaTherapy 30+)
+matcha;Matcha mit Hafermilch & Honig;EGCG ≥30 mg/g Matchapulver;Quantifiziert · Hersteller-Mindestgehalt (nur bestätigter MatchaTherapy 30+)
+oat-latte;Hafermilch-Latte mit Sirup;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+milk-my-vay;My Vay Barista Haferdrink;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+monin-caramel;Monin Salted Caramel;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+matcha-powder;MatchaTherapy 30+;EGCG ≥30 mg/g Matchapulver;Quantifiziert · Hersteller-Mindestgehalt (nur bestätigter MatchaTherapy 30+)
+bio-kornbrot;Zurück zum Ursprung Bio Nur-Kornbrot;–;Polyphenole sind mit vorhandenen Fett-/Makroprofilen nicht gleichzusetzen
+butter-hofer;Hofer Bio-Butter;–;Polyphenole sind mit vorhandenen Fett-/Makroprofilen nicht gleichzusetzen
+smoothie;Smoothie;–;Unspezifischer Smoothie ohne Zutatenmengen · nicht quantifizierbar
+tea-unsweetened;Tee ungesüßt;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+tea-honey;Tee mit Honig;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+turmeric;Kurkuma-Latte mit Honig;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+coffee;Kaffee;Chlorogensäuren 27,33–121,25 mg/200 ml;Quantifiziert · Literaturbereich, generisch
+latella;Lattella;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+aperol-spritz;Aperol Spritz;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+red-wine;Rotwein;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+white-wine;Weißwein;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+whiskey;Whiskey;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+mensa;Mensaessen;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+wholegrain-toast-butter-jam;Vollkorntoast mit Butter & Marmelade;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+fried-egg;Spiegelei;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+dark-bread-butter;Nur-Kornbrot mit Hofer Bio-Butter;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+mensa-study-veggie;Vegetarischer Study-Teller;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+buffet;Buffet / auswärts;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+bread-cheese;Nur-Kornbrot mit Cheddar & Butter;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+cheddar;SPAR würziger Cheddar;–;Polyphenole sind mit vorhandenen Fett-/Makroprofilen nicht gleichzusetzen
+cheddar-hofer;Hofer BBQ Cheddar;–;Polyphenole sind mit vorhandenen Fett-/Makroprofilen nicht gleichzusetzen
+peanuts;Hofer gesalzene Erdnüsse;–;Polyphenole sind mit vorhandenen Fett-/Makroprofilen nicht gleichzusetzen
+mixed-nuts;MorgenLand Bio Kerniger Nuss Mix;–;Polyphenole sind mit vorhandenen Fett-/Makroprofilen nicht gleichzusetzen
+dried-mango;SPAR Vital Bio-Mangohälften;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+rice-pudding;S-BUDGET Milchreis Zimt;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+apple;Apfel;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+chocolate;Schokoriegel;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+snickers;Snickers;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+pistachio-butter-cups;Better Pistachio Butter Cups;–;Polyphenole sind mit vorhandenen Fett-/Makroprofilen nicht gleichzusetzen
+pringles;Pringles;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+chio-chips;Chio Chips;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+supplement-bluebonnet-one-men;Bluebonnet ONE for Men;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+supplement-fuerstenmed;FürstenMED Kombinationspräparat;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+other-food;Anderes;–;Keine belastbare Polyphenol-Gehaltsschätzung für konkrete Portion
+green-tea-chinese;Chinesischer Grüntee ungesüßt;Catechine 50–100 mg / 250 ml;Literaturreferenz mit breiter Zubereitungsvariation
+smoothie-personal;Mein Smoothie mit 8 Zutaten;Anthocyane aus Blaubeeren 201,4–402,8 mg/100 g Beeren;Nur Heidelbeeranteil quantifiziert, Rezeptmengen vorläufig

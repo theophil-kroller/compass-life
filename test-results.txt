@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: time-of-day adapts food categories without removing anything
+ok 1 - time-of-day adapts food categories without removing anything
+  ---
+  duration_ms: 1.42489
+  type: 'test'
+  ...
+# Subtest: smoothie comprises exactly eight separate ingredients with assumed weights
+ok 2 - smoothie comprises exactly eight separate ingredients with assumed weights
+  ---
+  duration_ms: 0.394443
+  type: 'test'
+  ...
+# Subtest: editing individual grams preserves defaults for absent fields and actual zero if specified
+ok 3 - editing individual grams preserves defaults for absent fields and actual zero if specified
+  ---
+  duration_ms: 17.947082
+  type: 'test'
+  ...
+# Subtest: per ingredient macro and micronutrients and missing bee-pollen data are not fabricated
+ok 4 - per ingredient macro and micronutrients and missing bee-pollen data are not fabricated
+  ---
+  duration_ms: 0.356856
+  type: 'test'
+  ...
+# Subtest: new source bridge rejects missing anchors rather than silently creating broken versions
+ok 5 - new source bridge rejects missing anchors rather than silently creating broken versions
+  ---
+  duration_ms: 0.563677
+  type: 'test'
+  ...
+# Subtest: personal journal bridge adds tile, snapshot, hour-sensitive sorting and gram editor
+ok 6 - personal journal bridge adds tile, snapshot, hour-sensitive sorting and gram editor
+  ---
+  duration_ms: 0.182454
+  type: 'test'
+  ...
+# Subtest: main bridge preserves already installed .35 but adds local plant-compound tab and per-entry edits
+ok 7 - main bridge preserves already installed .35 but adds local plant-compound tab and per-entry edits
+  ---
+  duration_ms: 0.198058
+  type: 'test'
+  ...
+# Subtest: nutrition intelligence preserves known nutrient sources, models missing ingredients as missing
+ok 8 - nutrition intelligence preserves known nutrient sources, models missing ingredients as missing
+  ---
+  duration_ms: 0.175854
+  type: 'test'
+  ...
+# Subtest: Daily Dozen explicitly and transparently derives portions from saved recipe weights
+ok 9 - Daily Dozen explicitly and transparently derives portions from saved recipe weights
+  ---
+  duration_ms: 0.394282
+  type: 'test'
+  ...
+# Subtest: polyphenols model separates compounds and does not claim ORAC health scores
+ok 10 - polyphenols model separates compounds and does not claim ORAC health scores
+  ---
+  duration_ms: 27.218029
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 161.627211
