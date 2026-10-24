@@ -1,0 +1,98 @@
+/* Compass 0.5.77.52 — chart-first health and body views.
+ * Deliberately scopes all CSS to .cf52-*; Today and finance unaffected.
+ * Real observations only. Charts, missing-data warnings and date controls remain.
+ */
+.premium751 .cf52-insight{--cf52-edge:#dfe7e1;--cf52-ink:#1e4136;--cf52-quiet:#66796f;--cf52-green:#397e72;--cf52-copper:#bd815e}
+.premium751 .cf52-insight>.insight-view-header{margin:2px 0 9px;gap:8px}
+.premium751 .cf52-insight>.insight-view-header h2{font-size:clamp(18px,1.55vw,23px);font-weight:700}
+.premium751 .cf52-insight>.insight-view-header .insight-kicker{font-size:9px;letter-spacing:.075em}
+.premium751 .cf52-insight .insight-kpi-grid{gap:8px}
+.premium751 .cf52-insight .insight-kpi{padding:12px 13px;border:1px solid var(--cf52-edge);border-radius:12px;box-shadow:none}
+.premium751 .cf52-insight .insight-kpi strong{font-variant-numeric:tabular-nums;color:var(--cf52-ink)}
+.premium751 .cf52-insight .insight-data-note{font-size:11px;line-height:1.45;color:var(--cf52-quiet)}
+.premium751 .cf52-insight .insight-chart-grid{gap:10px}
+.premium751 .cf52-insight .insight-chart-card{padding:14px;border-radius:13px;box-shadow:none;min-width:0}
+.premium751 .cf52-insight .insight-figure-title{margin-bottom:8px}
+.premium751 .cf52-insight .insight-figure-title h3{font-family:var(--prem751-font);font-weight:700;font-size:13px;letter-spacing:-.15px}
+.premium751 .cf52-insight .insight-figure-title small{font-size:9px;letter-spacing:.055em;color:#789287}
+.premium751 .cf52-insight .insight-figure-note{font-size:10px;line-height:1.35;color:var(--cf52-quiet);margin:8px 0 0}
+.premium751 .cf52-insight svg[role="img"]{max-width:100%}
+.premium751 .cf52-insight .insight-svg-scroller{overflow-x:auto;max-width:100%;scrollbar-width:thin}
+/* Sleep: charts and real data are above source explanations. The four deeper
+ * sleep/HRV plots are initially expanded via guarded module transform. */
+.premium751 .cf52-sleep .insight-sleep-content{display:flex;flex-direction:column;gap:12px}
+.premium751 .cf52-sleep .insight-sleep-content>.sleep550-extra{order:1;margin:0}
+.premium751 .cf52-sleep .insight-sleep-content>.cf52-provenance{order:3}
+.premium751 .cf52-sleep .insight-sleep-content>.insight-data-note{order:3}
+.premium751 .cf52-sleep .insight-sleep-content>.insight-footnote{order:4}
+.premium751 .cf52-sleep .sleep550-extra>summary{font:650 12px/1.35 var(--prem751-font);color:var(--cf52-ink);padding:10px 0}
+.premium751 .cf52-sleep .sleep550-extra[open]>summary{margin-bottom:8px}
+.premium751 .cf52-sleep .cf52-provenance{border:1px solid var(--cf52-edge);border-radius:10px;padding:9px 12px;background:#f8faf8;color:var(--cf52-quiet)}
+.premium751 .cf52-sleep .cf52-provenance>summary{font-size:11px;font-weight:650;cursor:pointer}
+.premium751 .cf52-sleep .sleep550-extended .insight-chart-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* Stress: filter controls / the actual daily graph first, then summaries,
+ * distribution, contextual intelligence, then device caveats. */
+.premium751 .cf52-stress .insight-wellness,
+.premium751 .cf52-energy .insight-wellness{display:flex;flex-direction:column;gap:10px;min-width:0}
+.premium751 .cf52-stress .insight-wellness>*,
+.premium751 .cf52-energy .insight-wellness>*{order:6;min-width:0}
+.premium751 .cf52-stress .insight-wellness>.health-day-switch,
+.premium751 .cf52-energy .insight-wellness>.health-day-switch{order:0}
+.premium751 .cf52-stress .insight-wellness>.insight-chart-card,
+.premium751 .cf52-energy .insight-wellness>.insight-chart-card{order:1;box-shadow:0 3px 16px rgba(38,79,63,.055);border-color:#ccdcd2}
+.premium751 .cf52-stress .insight-wellness>.insight-chart-card .insight-svg,
+.premium751 .cf52-energy .insight-wellness>.insight-chart-card .insight-svg{min-height:185px;width:100%;height:auto}
+.premium751 .cf52-stress .insight-wellness>.insight-kpi-grid,
+.premium751 .cf52-energy .insight-wellness>.insight-kpi-grid{order:2}
+.premium751 .cf52-stress .insight-wellness>.insight-chart-grid,
+.premium751 .cf52-energy .insight-wellness>.insight-chart-grid{order:3}
+.premium751 .cf52-stress .insight-wellness>.insight-data-note,
+.premium751 .cf52-energy .insight-wellness>.insight-data-note{order:7}
+.premium751 .cf52-stress .insight-wellness>.insight-footnote,
+.premium751 .cf52-energy .insight-wellness>.insight-footnote{order:8}
+.premium751 .cf52-stress .insight-wellness>.insight-chart-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.premium751 .cf52-stress .insight-wellness>.insight-chart-grid>.insight-chart-card:first-child{grid-column:1/-1}
+/* Body: show three precise dot-plots at once, making weight the hero.
+ * Old weight/fat history rows in healthBodyView are duplicates, not unique data.
+ * Keep the multimetric composition graph, its toggles and body-segment figure. */
+.premium751 .cf52-body .bt749-shell{padding:0;border:0;background:transparent;box-shadow:none;overflow:visible;margin:0 0 12px}
+.premium751 .cf52-body .bt749-head{gap:8px;margin-bottom:10px}
+.premium751 .cf52-body .bt749-head h2{font:700 17px/1.25 var(--prem751-font);letter-spacing:-.3px;margin:2px 0}
+.premium751 .cf52-body .bt749-head p{font-size:11px;color:var(--cf52-quiet);margin:2px 0 4px;max-width:75ch}
+.premium751 .cf52-body .bt749-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:11px 0}
+.premium751 .cf52-body .bt749-metric{background:#fff;border:1px solid var(--cf52-edge);border-radius:14px;padding:14px;box-shadow:var(--prem751-shadow)}
+.premium751 .cf52-body .bt749-metric:first-child{grid-column:1/-1;border-color:#cadcd1}
+.premium751 .cf52-body .bt749-metric:first-child .bt749-number{font-size:31px}
+.premium751 .cf52-body .bt749-metric:first-child .bt749-svg{max-height:265px}
+.premium751 .cf52-body .bt749-metric .bt749-number{font-variant-numeric:tabular-nums}
+.premium751 .cf52-body .bt749-metric .bt749-change{min-height:0;margin:3px 0 9px}
+.premium751 .cf52-body .bt749-support{gap:10px}
+.premium751 .cf52-body .bt749-observations{background:#fff;border-color:var(--cf52-edge);padding:13px}
+.premium751 .cf52-body .bt749-footer{margin-top:12px;background:#f6f9f6;border:1px solid #e4ebe6}
+.premium751 .cf52-body .bt749-footer .bt749-disclaimer{font-size:10.5px;line-height:1.45}
+.premium751 .cf52-body .insight-body-view>.health-trend-grid{display:none} /* exactly duplicates the above weight/fat plot */
+.premium751 .cf52-body .insight-body-view>.health-report-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 12px}
+.premium751 .cf52-body .insight-body-view>.health-report-metrics .health-report-metric{box-shadow:none;border:1px solid var(--cf52-edge);border-radius:10px;padding:10px}
+.premium751 .cf52-body .insight-body-view>.health-composition-card{box-shadow:var(--prem751-shadow);border-color:#cfdfd3}
+.premium751 .cf52-body .insight-body-view>.insight-data-note{font-size:11px;color:var(--cf52-quiet)}
+.premium751 .cf52-body .health-composition-card .health-rolling-title{font-size:12px;margin:14px 0 4px}
+.premium751 .cf52-body .fitdays-figure-report{margin-top:12px}
+.premium751 .cf52-body .fitdays-figure-report .fitdays-report-heading p,
+.premium751 .cf52-body .fitdays-figure-panel>p{font-size:11px;line-height:1.35;color:var(--cf52-quiet)}
+.premium751 .cf52-body .fitdays-figure-report .insight-figure-note{font-size:10px}
+/* Desktop charts get the visual space, mobile keeps everything within viewport. */
+@media(max-width:1100px){
+ .premium751 .cf52-body .insight-body-view>.health-report-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .premium751 .cf52-sleep .sleep550-extended .insight-chart-grid{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+ .premium751 .cf52-stress .insight-wellness>.insight-chart-grid,
+ .premium751 .cf52-body .bt749-cards,
+ .premium751 .cf52-body .bt749-support{grid-template-columns:minmax(0,1fr)}
+ .premium751 .cf52-body .bt749-metric:first-child{grid-column:auto}
+ .premium751 .cf52-insight .insight-chart-card{padding:11px}
+ .premium751 .cf52-insight .insight-chart-grid{grid-template-columns:minmax(0,1fr)}
+ .premium751 .cf52-stress .insight-wellness>.insight-chart-grid>.insight-chart-card:first-child{grid-column:auto}
+ .premium751 .cf52-body .insight-body-view>.health-report-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .premium751 .cf52-insight .insight-svg-scroller{overflow-x:auto}
+}

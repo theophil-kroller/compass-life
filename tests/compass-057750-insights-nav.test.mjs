@@ -101,6 +101,6 @@ test('Vite pre-transform follows 0.5.77.49.1 and old CI anchor checks still pass
  assert.match(conf,/import \{ compass750Bridge \} from '\.\/compass750-bridge\.js'/);
  assert.match(conf,/compass747Bridge\(\), compass748Bridge\(\), compass749Bridge\(\), VitePWA/);
  assert.match(conf,/VitePWA\([\s\S]*?\),\s*\/\/ Guarded 0\.5\.77\.50/);
- assert.match(conf,/compass750Bridge\(\), compass751Bridge\(\)\]/);
+ assert.match(conf,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\)\]/);
  assert.match(readFileSync(new URL('../client/compass750-bridge.js',import.meta.url),'utf8'),/enforce:'pre'/);
 });
