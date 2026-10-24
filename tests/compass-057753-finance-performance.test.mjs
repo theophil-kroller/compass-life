@@ -74,5 +74,5 @@ test('sleep renderer shows week and trend before weekly-average tiles, with phas
 test('Vite plugin chain preserves historical transforms and includes .53 after .52',()=>{
  const c=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
  assert.match(c,/import \{ compass753Bridge \} from '\.\/compass753-bridge\.js'/);
- assert.match(c,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\)\]/);
+ assert.match(c,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\), compass756Bridge\(\)\]/);
 });

@@ -47,7 +47,7 @@ test('Actual Vite chain extends .50 without breaking preexisting PWA integration
  assert.match(c,/import \{ compass750Bridge \} from '\.\/compass750-bridge\.js'/);
  assert.match(c,/import \{ compass751Bridge \} from '\.\/compass751-bridge\.js'/);
  assert.match(c,/compass747Bridge\(\), compass748Bridge\(\), compass749Bridge\(\), VitePWA/);
- assert.match(c,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\)\]/);
+ assert.match(c,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\), compass756Bridge\(\)\]/);
  assert.match(c,/compass750Bridge\(\)[\s\S]*compass751Bridge\(\)/);
 });
 

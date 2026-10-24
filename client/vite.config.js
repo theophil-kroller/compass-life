@@ -28,6 +28,7 @@ import { compass752Bridge } from './compass752-bridge.js';
 import { compass753Bridge } from './compass753-bridge.js';
 import { compass754Bridge } from './compass754-bridge.js';
 import { compass755Bridge } from './compass755-bridge.js';
+import { compass756Bridge } from './compass756-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 export default defineConfig({
@@ -61,6 +62,6 @@ export default defineConfig({
   }),
   // Guarded 0.5.77.50 transform executes before VitePWA because enforce='pre'.
   // Leave the established .47-.49/PWA adjacency intact for historical regression fixtures.
-  compass750Bridge(), compass751Bridge(), compass752Bridge(), compass753Bridge(), compass754Bridge(), compass755Bridge()],
+  compass750Bridge(), compass751Bridge(), compass752Bridge(), compass753Bridge(), compass754Bridge(), compass755Bridge(), compass756Bridge()],
   server: {port: 5173, strictPort:true}
 });

@@ -1,0 +1,51 @@
+/* Compass 0.5.77.56 – GTD-first, one coherent working layout. */
+.compass56-mode-switch{display:flex;justify-content:flex-end;width:max-content;max-width:100%;padding:0;border:0;background:transparent;margin:4px 14px 14px auto}
+.compass56-mode-switch .compass56-mode-button{width:38px;height:38px;min-width:38px;display:grid;place-items:center;color:#879c96;background:transparent;border:1px solid #dbe3de;border-radius:12px;box-shadow:none;cursor:pointer;padding:0}
+.compass56-mode-switch .compass56-mode-button.is-active{color:#16735b;border-color:#a5d1c0;background:#e5f4eb;box-shadow:none}
+.compass56-mode-switch .compass56-mode-button:hover{border-color:#6caa96}
+.compass56-mode-switch .compass56-mode-button:focus-visible{outline:2px solid #287a66;outline-offset:3px}
+/* Recording remains available in Focus. Analysis routes stay hidden. */
+.compass55-focus .fw65-top-trigger,.compass55-focus .pj92-food-trigger{display:inline-flex !important;visibility:visible!important}
+.compass55-focus .fw65-top-caption,.compass55-focus .pj92-food-trigger .quick-utility-label{display:none !important}
+.compass55-focus .fw65-top-trigger,.compass55-focus .pj92-food-trigger{min-width:37px;min-height:37px;justify-content:center;align-items:center;padding:6px;border-radius:11px}
+/* Today: a task-centered workspace with small utility elements and crisp hierarchy. */
+.shell .compass56-today{display:grid;grid-template-columns:minmax(158px,196px) minmax(350px,1fr) minmax(265px,320px);align-items:start;gap:16px;max-width:none}
+.shell .compass56-main{min-width:0;display:flex;flex-direction:column;gap:12px}
+.shell .compass56-primary,.shell .compass56-calendar{padding:12px 16px;border-radius:15px;box-shadow:0 1px 3px rgba(12,49,38,.045)}
+.shell .compass56-primary{order:0}
+.shell .compass56-calendar{order:1}
+.shell .compass56-expand{order:3}
+.shell .compass56-extra{order:2;display:flex;flex-direction:column;gap:10px;min-width:0}
+.shell .compass56-title{margin:0 0 8px;min-height:40px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.shell .compass56-title-main{font-size:clamp(19px,1.8vw,25px);font-weight:660;letter-spacing:-.035em;color:#183d35;line-height:1.12;display:block}
+.shell .compass56-title small{font-size:11px;letter-spacing:0;font-weight:450;color:#73877f;margin-top:4px;display:block}
+.shell .compass56-today .today-tasks .task-row{min-height:38px}
+.shell .compass56-today .today-tasks .work-heading .quiet-tag{font-size:11px;white-space:nowrap}
+.shell .compass56-today .calm-create{margin:5px 0}
+.shell .compass56-capture{margin-top:6px;padding-top:7px;border-top:1px solid #e4ebe7}
+.shell .compass56-capture form{display:flex;gap:6px;align-items:center;margin:0}
+.shell .compass56-capture input{min-height:34px;max-height:36px;flex:1;min-width:0;margin:0}
+.shell .compass56-capture .primary-btn{display:grid;place-items:center;width:36px;height:36px;min-width:36px;padding:0;border-radius:9px}
+.shell .compass56-calendar .work-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
+.shell .compass56-link{font-size:11px;color:#3b7667;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:5px}
+.shell .compass56-calendar-link{border:0;color:#3b7667;background:transparent;padding:7px 0;cursor:pointer;text-decoration:underline;font-size:12px}
+.shell .compass56-expand{align-self:flex-start;border:0;background:transparent;padding:5px 7px;color:#6c8179;font-size:12px;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.shell .compass56-expand:hover{color:#245d4d}
+.shell .compass56-today .today-context-rail{min-width:0;align-self:start}
+.shell .compass56-inspector-peek{border:1px solid #e4eae6;border-radius:15px;background:#fff;min-height:82px;display:flex;flex-direction:column;gap:12px;padding:13px 15px}
+.shell .compass56-peek-label{font-size:10px;font-weight:650;letter-spacing:.12em;color:#8a9c94}
+.shell .compass56-smart-button{align-self:flex-start;display:flex;gap:8px;align-items:center;border:0;background:transparent;color:#2d695b;font-size:13px;font-weight:600;padding:4px 0;cursor:pointer}
+.shell .compass56-today .date-rail .rail-footnote{display:none}
+.shell .compass56-slim-review{font-size:12px}
+/* Keep global utility row visually consistent; no text explanation in Focus. */
+.compass55-focus .utility-right .connection>span:last-child{display:none}
+.compass55-focus .sidebar-foot{display:none}
+@media(max-width:1250px){.shell .compass56-today{grid-template-columns:minmax(150px,180px) minmax(300px,1fr);gap:12px}.shell .compass56-today .today-context-rail{grid-column:2;grid-row:2}}
+@media(max-width:760px){.shell .compass56-today{grid-template-columns:minmax(0,1fr);gap:10px}.shell .compass56-today .date-rail{grid-row:2}.shell .compass56-today .today-center{grid-row:1}.shell .compass56-today .today-context-rail{grid-column:1;grid-row:3}.shell .compass56-primary,.shell .compass56-calendar{padding:12px}.compass56-mode-switch{margin:2px 10px 10px auto}.shell .compass56-title-main{font-size:21px}}
+@media(prefers-reduced-motion:reduce){.compass56-mode-switch .compass56-mode-button{transition:none}}
+
+/* On-demand recommendations: controls remain compact; no computation before click. */
+.shell .compass56-recommend-result{min-width:0;display:flex;flex-direction:column;gap:7px}
+.shell .compass56-recommend-actions{display:flex;justify-content:flex-end;gap:4px;padding:0 4px}
+.shell .compass56-recommend-actions button{display:grid;place-items:center;min-width:31px;min-height:31px;border:1px solid #dbe5df;border-radius:9px;background:transparent;color:#42685c;cursor:pointer;font-size:17px}
+.shell .compass56-recommend-actions button:hover{background:#eef5f0}
