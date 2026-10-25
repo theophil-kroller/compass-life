@@ -1,20 +1,31 @@
-# Compass Dream-Moon Quickfix (auf Basis 0.5.77.58.2)
+# Compass 0.5.77.59.3 – Insights-Reiter und Focus nach Entsperren
 
-**Voraussetzung:** Erfolgreich deployter Build #226 / alle Änderungen aus 0.5.77.58.2.
+**Basis:** Der zuletzt hochgeladene Stand mit UI-Patch 0.5.77.59.2.
 
-In GitHub im Repository `theophil-kroller/compass-life` genau diese zwei Dateien aus dem ZIP in die passenden Ordner hochladen/ersetzen:
+## GitHub-Upload
 
-1. `client/compass758-bridge.js`
-2. `tests/compass-057758-project-columns.test.mjs`
+Im Repository `theophil-kroller/compass-life` die Verzeichnisstruktur beibehalten und diese Dateien hochladen:
 
-Nicht `vite.config.js` ändern. Alle CSS-Dateien und der reine Insights-Design-Patch .59 bleiben unverändert.
+1. **`client/vite.config.js` – bestehende Datei ersetzen.** Nur die Registrierung von `compass7593UxBridge` ist neu; Vite/PWA-Einstellungen und die finalen .57/.58-Bridges bleiben unverändert.
+2. **`client/compass7593-ux-bridge.js` – neue Datei hinzufügen.** Enthält die guarded UI-Änderungen.
+3. **`tests/compass-0577593-ux.test.mjs` – neue Datei hinzufügen.** Regressionstests.
 
-## Fehlerbehebung
+Bitte die bestehende `client/public/insights-streamline-v577591.css` unverändert lassen. Keine D1-, Cloudflare-, Vault- oder Datenmigration.
 
-Der Mond-Button (`dream743-open`) wechselte auf `tab=insights` und `insightTab=dreamworld`. In Focus lenkte die allgemeine Render-Sperre *jede* Insights-Ansicht wieder auf Heute. Zusätzlich musste die Traumwelt auf sämtliche Lazy-Analytics-Module warten.
+## Verhalten
 
-Der Fix lässt ausschließlich `dreamworld` auch in Focus zu und lädt das bereits vorhandene Traumformular sofort, ohne die übrigen Insights-Chunks. Der Cursor wird beim Antippen direkt auf „Erinnerung“ gesetzt; bei verzögertem Rendern greift ein zweiter Fokusversuch.
+- `Insights → Leben & Orte → Erholung` zeigt wieder dieselben Unterreiter wie `Gefühlswelt`, `Berührung & Nähe`, `Traumwelt` und `Orte & Weltkarte`.
+- Auch die externen Routen `Aktivitäten` und `Fortschritt` zeigen ihre jeweilige Insights-Untertab-Navigation.
+- Nach erfolgreichem Entsperren setzt Compass den Ansichtsmodus auf **Focus** und öffnet standardmäßig **Heute**. Die bisherige Sitzungsauswahl `Extended` wird damit zurückgesetzt.
+- Explizite Deep Links wie `?view=projects` und die Schnellaufnahme `?capture=1` bleiben erhalten.
+- Während der entsperrten Sitzung kann weiter auf `Extended` gewechselt werden.
+- Nach fehlgeschlagenem Entsperren wird der Modus nicht zurückgesetzt.
 
-Keine Änderung an Tresor, Verschlüsselung, Traumdaten, Journal-Synchronisation oder den anderen Insights-Routen.
+## Qualität
 
-**Qualität:** ergänzte Verhaltens- und Regressionstests; der vollständige Produktionsbuild wird durch GitHub Actions nach dem Upload geprüft.
+- 5 lokale Node-Regressionstests bestanden.
+- Vite-Konfigurationsänderung gegen den GitHub-Original-Blob verifiziert: keine unbeabsichtigten Änderungen.
+- Die beiden externen Ansichten wurden zusätzlich zur gemeldeten Erholungsroute mit korrigiert.
+- Der vollständige Vite-Produktionsbuild und der visuelle Browser-Test müssen nach Upload in GitHub Actions / der deployten App überprüft werden.
+
+**Versionsanzeige:** Weiterhin `0.5.77.58.2` – die Änderung wird ohne Versionsanker-Änderung in die bestehende Transformationskette eingefügt.

@@ -1,0 +1,84 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {execFileSync} from 'node:child_process';
+import vm from 'node:vm';
+import {compass7593UxBridge} from '../client/compass7593-ux-bridge.js';
+
+const fixture=String.raw`
+function recoveryScreen(){return chrome(\`\${discoveryPanel()}<section class="work-card recovery-idea-hub"></section>\`);}
+function activityScreen(){return chrome(\`<div class="activity-summary-insights"></div>\`);}
+function progressScreen(){return chrome(\`<div class="progress-view"></div>\`);}
+async function handleVault(){
+  if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
+}
+`;
+const src=fixture.replaceAll('\\`','`').replaceAll('\\${','${');
+const bridge=compass7593UxBridge();
+const code=bridge.transform(src,'/test/client/src/main.js').code;
+
+test('external Insights screens render correct existing subsection navigation',()=>{
+ assert.match(code,/insights750Subtabs\('recovery',insightTab\)/);
+ assert.match(code,/insights750Subtabs\('activity',insightTab\)/);
+ assert.match(code,/insights750Subtabs\('progress',insightTab\)/);
+ assert.equal((code.match(/insights750Subtabs\(/g)||[]).length,3);
+ assert.match(code,/\$\{discoveryPanel\(\)\}/);
+ assert.match(code,/class="progress-view"/);
+});
+test('successful unlock sets Focus/Today but preserves deferred capture',()=>{
+ const reset=code.indexOf("compass55Mode='focus'");
+ const existingCapture=code.indexOf('if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}');
+ assert.ok(reset>=0&&reset<existingCapture);
+ assert.match(code,/if\(!captureAfterUnlock&&!bootView\)\{tab='today';todayInspectorOpen=false;calmNavGroup='';\}/);
+ assert.match(code,/localStorage\.setItem\(COMPASS55_MODE_KEY,'focus'\)/);
+ // Capture shortcut is handled after the Focus reset and remains available.
+ assert.match(code,/if\(captureAfterUnlock\)\{captureOverlayOpen=true;captureAfterUnlock=false;\}/);
+});
+test('Focus reinitialization follows successful unlock; capture shortcut wins',async()=>{
+ const make=(capture,view=null)=>{
+  const storage=[];
+  const ctx={captureAfterUnlock:capture,bootView:view,captureOverlayOpen:false,compass55Mode:'extended',
+   COMPASS55_MODE_KEY:'compass.ui.focus.v57755',localStorage:{setItem(...args){storage.push(args);}},
+   tab:capture?'inbox':'insights',todayInspectorOpen:true,calmNavGroup:'insights',
+   recoveryMessage:'',toast:()=>{}};
+  vm.createContext(ctx);
+  vm.runInContext(code,ctx);
+  return {ctx,storage};
+ };
+ let {ctx,storage}=make(false);
+ await vm.runInContext('handleVault()',ctx);
+ assert.equal(ctx.compass55Mode,'focus');
+ assert.equal(ctx.tab,'today');
+ assert.equal(ctx.todayInspectorOpen,false);
+ assert.equal(ctx.calmNavGroup,'');
+ assert.equal(ctx.captureOverlayOpen,false);
+ assert.deepEqual(storage,[['compass.ui.focus.v57755','focus']]);
+ ({ctx,storage}=make(true));
+ await vm.runInContext('handleVault()',ctx);
+ assert.equal(ctx.tab,'inbox');
+ assert.equal(ctx.compass55Mode,'focus');
+ assert.equal(ctx.captureOverlayOpen,true);
+ assert.equal(ctx.captureAfterUnlock,false);
+ ({ctx,storage}=make(false,'projects'));
+ ctx.tab='projects';ctx.calmNavGroup='plan';
+ await vm.runInContext('handleVault()',ctx);
+ assert.equal(ctx.compass55Mode,'focus');
+ assert.equal(ctx.tab,'projects');
+ assert.equal(ctx.calmNavGroup,'plan');
+});
+
+test('transformed HTML and JS parse; non-main modules are unchanged',()=>{
+ assert.equal(bridge.transform('return 42;', '/test/client/src/not-main.js'),null);
+ const dir=mkdtempSync(join(tmpdir(),'compass593-'));
+ try{
+  const file=join(dir,'compiled.mjs');writeFileSync(file,code);
+  execFileSync(process.execPath,['--check',file],{stdio:'pipe'});
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+test('production Vite keeps .57.1 and .58 final, with .59.3 UX before them',()=>{
+ const config=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
+ assert.match(config,/import \{ compass7593UxBridge \} from '\.\/compass7593-ux-bridge\.js';/);
+ assert.match(config,/compass756Bridge\(\), compass7593UxBridge\(\), compass757Bridge\(\), compass758Bridge\(\)\]/);
+});
