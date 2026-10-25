@@ -1,41 +1,50 @@
-# Compass 0.5.77.59.19 – Intelligent Workout Planner
+# Compass 0.5.77.59.20 — Strength Coach · Guided Workout
 
-## Worum geht es?
+## GitHub: Dateien an dieselben Pfade hochladen
 
-Der bereits vorhandene **✦ Trainingscoach** wird zum konkreten **nächsten Workout**:
+Die ZIP-Datei **entpacken** und die Ordnerstruktur beibehalten.
 
-- Ziel: V-Taper, Bauch/Abs, Kraft oder ausgeglichene Muskelbalance
-- Training: Zuhause (Kurzhanteln, Verbindungsstange/Ab Wheel) oder Gym (Kabelzug/Langhantel)
-- Zeitbudget: 25, 45, 65 Minuten
-- Vorschläge: Übung, Satzanzahl, Wiederholungen, Satzpause und grobe Gesamtzeit
-- StrongLifts **5×5 A/B** im Gym, sofern letzte eindeutig zugeordnete Einheit eine Unterscheidung zulässt. B: Kreuzheben 1×5.
-- Vorsichtshinweis bei sehr jungem, tatsächlich zugeordnetem Trainingsdatum
-- Dokumentierte Beteiligungen über 7 Tage inkl. Nebenbeteiligung, mit Transparenz zu nicht zugeordneten Garmin-Sätzen
-- Benutzerpräferenzen (Ziel, Equipment, Zeit) bleiben auf demselben Browser/Gerät erhalten
-- Der Plan kann als Text kopiert werden. Es werden keine Aufgaben, Gewichte oder Termine ohne Einwilligung erstellt.
+### Ersetzen (3 Dateien)
 
-## GitHub-Upload
+- `client/compass5910-strength-habits-bridge.js`
+- `client/src/strength-coach-v5775910.js`
+- `client/src/strength-coach-v5775910.css`
 
-In deinem Repository **theophil-kroller/compass-life** genau diese Dateien hochladen / ersetzen:
+### Neu hinzufügen (9 Dateien)
 
-1. `client/src/strength-coach-v5775910.js` **ersetzen**
-2. `client/src/strength-coach-v5775910.css` **ersetzen**
-3. `tests/compass-05775919-workout-planner.test.mjs` **neu hinzufügen**
+- `client/src/strength-guided-v5775920.js`
+- `client/src/strength-guided-v5775920.css`
+- `client/public/strength-visuals-v5775920/dumbbell-row.webp`
+- `client/public/strength-visuals-v5775920/dumbbell-lateral-raise.webp`
+- `client/public/strength-visuals-v5775920/ab-wheel-kneeling.webp`
+- `client/public/strength-visuals-v5775920/goblet-squat.webp`
+- `client/public/strength-visuals-v5775920/lat-pulldown.webp`
+- `client/public/strength-visuals-v5775920/deadlift.webp`
+- `tests/compass-05775920-guided-workout.test.mjs`
 
-Bitte die Struktur im ZIP beibehalten. **Keine** Änderungen an `vite.config.js`, `main.js`, Worker, Vault oder Makko-Ho.
+## Was ändert sich?
 
-## Deployment und Qualität
+- **Direkt oben in Krafttraining:** `▶ Workout starten` und `✦ Trainingscoach · Plan wählen`.
+- **Über das Checklisten-Symbol:** `▶ Heutiges Workout`, ohne zuerst zum Krafttraining zu scrollen.
+- Geführter Workout-Player mit Start-/Zielposition, Satz- und Pausensteuerung und optionalen Angaben zu tatsächlichen Wdh./kg.
+- Nur mit `✓ Satz erledigt` bestätigte Sätze werden dokumentiert.
+- Die bestätigten Sätze liegen im **lokalen verschlüsselten Vault** unter `strengthGuidedSessions` – niemals als automatische Garmin/FIT-Daten.
+- Beim Bearbeiten einer Garmin-Einheit erscheint **nur bei zeitlicher Übereinstimmung** (und ohne mehrdeutige Mehrfachtreffer) ein Vorschlag, der explizit übernommen, geprüft und gespeichert werden muss.
+- Vorhandene Garmin-Wdh. und -Gewichte werden bei leeren geführten Feldern beibehalten.
+- Keine neue Vite-Bridge, keine Datenbankmigration und keine Änderung an Makko-Ho.
 
-- Lokale Node-Syntaxprüfung erfolgreich.
-- 45 Tests der lokalen Projekt-/Test-Fixture bestanden: alte Makko-/Strength-Tests plus neuer Workout-Planner-Test.
-- Chromium-Sichtprüfung bei 360 px, 390 px und 1440 px, ohne horizontalen Überlauf. Die Auswahlwerte überleben erneutes Öffnen auf demselben Gerät.
-- Der vollständige GitHub-Actions-Check ist erst nach deinem Upload verfügbar. Das lokale Test-Fixture enthält nicht alle ~1.300 Tests des Repositorys.
+## Sicherheit / Grenzen
 
-## Wichtige Grenzen
+- Eine vorgeschlagene Übung bedeutet **nicht**, dass die Uhr diese Bewegung erkannt hat.
+- Die Bilder zeigen Start- und Zielhaltungen; die gezeichneten Bewegungshinweise für noch nicht illustrierte Übungen sind schematisch. Die Bilder ersetzen keine persönliche Technikbegleitung.
+- Bei vorzeitigem Verlassen werden bereits bestätigte Sätze erhalten. Eine nicht gestartete Einheit wird nicht gespeichert.
+- Detailsessions werden lokal im Vault gespeichert. Geräteübergreifende Synchronisation dieser neuen Details ist noch nicht implementiert.
+- Das normale Gemini/StrongLifts-/Garmin-Importverhalten bleibt unverändert, bis die Nutzerin oder der Nutzer ausdrücklich eine Zuordnung bestätigt.
 
-- Der Coach ist **regelbasiert**, keine medizinische Regenerationsmessung und keine generative KI.
-- Unbekannte Garmin-Übungen werden nicht als untrainierte Muskelgruppen gewertet.
-- Ohne ausreichende Übungszuordnung entstehen ziel-/equipmentbasierte Vorschläge, aber keine verlässliche Muskelbalance-Auswertung.
-- RPE, Verletzungen, Bewegungsqualität, Schlaf-/HRV-Erholung und persönliches Gewicht werden noch nicht als harte Entscheidungskriterien verwendet.
-- Die Trainingsvorschläge ändern noch keine Garmin- oder Compass-Aufgaben/Trainingstage.
+## Qualitätssicherung
 
+- 53/53 lokale gezielte Regressionstests (`tests` aus dem vorherigen Validierungs-Fixture plus neuer Test)
+- Browserprüfung in Chromium bei 360, 390 und 1440 px: keine horizontale Überbreite; Start, Set-Bestätigung und Pause funktionieren.
+- Das ist **kein** erfolgreicher GitHub-Produktions-Deploy; diesen liefert erst GitHub Actions nach dem Upload.
+
+Bei einem roten GitHub-Workflow bitte den Text des ersten fehlschlagenden Schritts prüfen; den Patch erst dann weiterentwickeln.

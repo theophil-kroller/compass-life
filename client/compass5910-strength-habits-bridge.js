@@ -32,6 +32,17 @@ export function compass5910StrengthHabitsBridge(){
    s=change(s,"const reversed=[...sessions].reverse(),pending=", "const coach610='<button type=\"button\" class=\"secondary-btn str610-open-coach\" data-action=\"strength-coach-open\">✦ Trainingscoach · Ziele &amp; Muskelbalance</button>';\n const reversed=[...sessions].reverse(),pending=",'coach control');
    s=change(s,"${prompt}<details><summary>Trainingseinheit zum Bearbeiten auswählen", "${prompt}<div class=\"str610-toolbar\">${coach610}</div><details><summary>Trainingseinheit zum Bearbeiten auswählen", 'coach entry');
    s=change(s,'<div class="str732-rows">','<div class="str610-presets" role="group" aria-label="StrongLifts 5×5"><span>Vorlage:</span><button type="button" data-action="str610-preset" data-id="A">StrongLifts A · 5×5</button><button type="button" data-action="str610-preset" data-id="B">StrongLifts B · 5×5</button></div><div class="str732-rows">','stronglifts controls');
+   // The full strength editor (not the tiny historical test mock) gets a guarded
+   // suggestion for a guided session at the same start time. No automatic mutation.
+   if(s.includes('const current=reversed.find(s=>s.id===editingId);')){
+    s=change(s,'const current=reversed.find(s=>s.id===editingId);',`const current=reversed.find(s=>s.id===editingId);
+ const guidedCandidates=(Array.isArray(state?.strengthGuidedSessions)?state.strengthGuidedSessions:[])
+   .filter(x=>x?.source==='compass-guided-v5920'&&x.exercises?.some(e=>e.confirmedSets?.length)&&Number.isFinite(Date.parse(x.startedAt))&&current?.start&&Math.abs(Date.parse(x.startedAt)-Date.parse(current.start))<=120*60000)
+   .sort((a,b)=>Math.abs(Date.parse(a.startedAt)-Date.parse(current.start))-Math.abs(Date.parse(b.startedAt)-Date.parse(current.start)));
+ const guidedChoice=guidedCandidates.length===1||guidedCandidates.length>1&&Math.abs(Date.parse(guidedCandidates[0].startedAt)-Date.parse(current.start))+15*60000<Math.abs(Date.parse(guidedCandidates[1].startedAt)-Date.parse(current.start))?guidedCandidates[0]:null;
+ const guidedMarkup=guidedChoice?'<div class="str732-pending"><strong>✦ Compass-Workout erkannt</strong><p>Zeitlich passende geführte Trainingseinheit ('+esc(guidedChoice.startedAt.slice(11,16))+'). Du kannst die dort bestätigten Übungen übernehmen und anschließend Garmin-Wiederholungen und Gewichte prüfen.</p><button type="button" class="secondary-btn" data-action="str620-prefill">Vorschlag in Garmin-Sätze übernehmen →</button></div>':'';`,'guided Garmin candidate');
+    s=change(s,'<form id="str732-form"','${guidedMarkup}<form id="str732-form"','guided Garmin suggestion entry');
+   }
    return {code:s,map:null};
   }
   if(name.endsWith('/client/src/strength-anatomy-v57737.js')){
@@ -120,6 +131,57 @@ export function compass5910StrengthHabitsBridge(){
     const insightAnchor="${journalSyncPanel()}<section class=\"work-card\"><div class=\"work-heading\"><span>${ico('checkSquare',18)} Habit Tracker";
     s=change(s,insightAnchor,insightAnchor.replace('$'+'{journalSyncPanel()}','$'+'{journalSyncPanel()}$'+'{makkoTimeInsights(state)}'),'Makko stats in habit insights');
    }
+   if(s.includes('function habitQuickOverlay(){')){
+    s=change(s,'function habitQuickOverlay(){',`async function storeStrengthGuidedSession(session){
+ if(!state||!session?.id||session.source!=='compass-guided-v5920')return;
+ await mutate(st=>{
+   const previous=Array.isArray(st.strengthGuidedSessions)?st.strengthGuidedSessions:[];
+   const at=previous.findIndex(item=>item.id===session.id);
+   const updated={...session};
+   if(at<0)st.strengthGuidedSessions=[...previous,updated].slice(-150);
+   else {const next=previous.slice();next[at]=updated;st.strengthGuidedSessions=next;}
+ },null,true);
+}
+function habitQuickOverlay(){`,'encrypted guided session storage');
+    s=change(s,'<div class="habit569-list">','<div style="display:flex;gap:8px;margin:12px 0"><button type="button" class="primary-btn" data-action="str620-guided-start">▶ Heutiges Workout</button></div><div class="habit569-list">','checklist quick guided entry');
+    s=change(s,"if(action==='strength-coach-open'){",`if(action==='str620-guided-start'){
+ if(!state)return toast('Bitte zuerst den Tresor entsperren.',true);
+ habitQuickOpen=false;render();
+ const coach=await import('./strength-coach-v5775910.js');
+ const guide=await import('./strength-guided-v5775920.js');
+ const plan=coach.planNextWorkout(state,{...coach.readStrengthCoachPreferences(),today:localDate()});
+ guide.openGuidedWorkout({plan,onSession:storeStrengthGuidedSession});return;
+ }
+ if(action==='str620-prefill'){
+ if(!state)return;
+ const form=app.querySelector('#str732-form'),rows=form?.querySelector('.str732-rows');
+ if(!form||!rows)return;
+ const coach=await import('./strength-guided-v5775920.js');
+ const candidates=coach.matchingGuidedSessions(state,form.dataset.start||'');
+ const chosen=candidates[0];
+ if(!chosen||candidates.length>1&&candidates[1].offsetMinutes-candidates[0].offsetMinutes<15)return toast('Mehrere Workouts möglich: bitte manuell zuordnen.',true);
+ const sets=coach.confirmedGuidedSets(chosen);
+ if(!sets.length)return toast('Noch keine bestätigten Sätze vorhanden.',true);
+ if(!window.confirm('Bestätigte Compass-Übungen in dieses Garmin-Formular übernehmen? Vorhandene Eingaben werden ersetzt. Bitte Wdh. und kg danach prüfen.'))return;
+ const editor=await import('./strength-editor-v57732.js');
+ // Keep already known Garmin repetitions/weights when the guided log has blanks.
+ const existing=[...rows.querySelectorAll('.str732-set')].map(node=>{
+   const reps=node.querySelector('input[name^="reps-"]')?.value||'';
+   const kg=node.querySelector('input[name^="weight-"]')?.value||'';
+   return {reps:reps!==''?Number(reps):null,weightKg:kg!==''?Number(kg):null};
+ });
+ rows.innerHTML=sets.slice(0,80).map((set,i)=>editor.strengthSetRow(i,{...set,reps:set.reps??existing[i]?.reps??null,weightKg:set.weightKg??existing[i]?.weightKg??null})).join('');
+ form.scrollIntoView({behavior:'smooth',block:'start'});
+ toast('Compass-Vorschlag eingetragen. Bitte prüfen und speichern.');return;
+ }
+ if(action==='strength-coach-open'){`,'guided controls and explicit Garmin prefill');
+    s=change(s,'mod.openStrengthCoach({state,today:localDate()});return;', 'mod.openStrengthCoach({state,today:localDate(),onSession:storeStrengthGuidedSession});return;','coach session callback');
+   }
+   return {code:s,map:null};
+  }
+  if(name.endsWith('/client/src/strength-insights-v57728.js')){
+   const heading='<section class="work-card"><div class="work-heading"><span>💪 Krafttraining · Muscle Map';
+   s=change(s,heading,`<div class="str620-top-entry" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px"><button type="button" class="primary-btn" data-action="str620-guided-start">▶ Workout starten</button><button type="button" class="secondary-btn" data-action="strength-coach-open">✦ Trainingscoach · Plan wählen</button></div>${heading}`,'top-of-strength guided controls');
    return {code:s,map:null};
   }
   return null;

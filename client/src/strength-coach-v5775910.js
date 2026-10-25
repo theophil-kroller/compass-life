@@ -226,7 +226,8 @@ function coachCopyText(plan){
   plan.recoveryNote,'Trainingsempfehlung, keine automatische Trainingsfreigabe.'].join('\n');
 }
 
-export function openStrengthCoach({state,today}){
+export function readStrengthCoachPreferences(){return coachPrefs();}
+export function openStrengthCoach({state,today,onSession=async()=>{}}){
  let prefs=coachPrefs();
  const host=document.createElement('div');host.className='str610-backdrop';
  host.innerHTML='<section class="str610-dialog str619-dialog" role="dialog" aria-modal="true" aria-label="Compass Workout Planner"></section>';
@@ -243,7 +244,7 @@ export function openStrengthCoach({state,today}){
    <label>Wo trainierst du?<select class="str610-equipment"><option value="home" ${prefs.equipment==='home'?'selected':''}>🏠 Zuhause · Kurzhanteln & Ab Wheel</option><option value="gym" ${prefs.equipment==='gym'?'selected':''}>🏋️ Gym · StrongLifts & Kabelzug</option></select></label>
    <label>Verfügbare Zeit<select class="str619-minutes"><option value="25" ${prefs.minutes===25?'selected':''}>25 Minuten</option><option value="45" ${prefs.minutes===45?'selected':''}>45 Minuten</option><option value="65" ${prefs.minutes===65?'selected':''}>65 Minuten</option></select></label>
   </div>
-  <section class="str619-plan-head" aria-label="Vorgeschlagener Trainingsplan"><div><small>${plan.cautious?'FÜR DEN NÄCHSTEN TRAININGSTAG':'DEIN VORSCHLAG'}</small><h3>${safe(plan.title)}</h3><p>${plan.exercises.length} Übungen · ca. ${plan.estimatedMinutes} Min. · ${plan.equipment==='home'?'Zuhause':'Gym'}</p></div><button type="button" class="str619-copy">Plan kopieren</button></section>
+  <section class="str619-plan-head" aria-label="Vorgeschlagener Trainingsplan"><div><small>${plan.cautious?'FÜR DEN NÄCHSTEN TRAININGSTAG':'DEIN VORSCHLAG'}</small><h3>${safe(plan.title)}</h3><p>${plan.exercises.length} Übungen · ca. ${plan.estimatedMinutes} Min. · ${plan.equipment==='home'?'Zuhause':'Gym'}</p></div><div class="str620-cta-stack"><button type="button" class="str620-launch" aria-label="Geführtes Workout starten">▶ Workout starten</button><button type="button" class="str619-copy">Plan kopieren</button></div></section>
   ${plan.timeFit==='longer'?`<p class="str619-alert">Dieser Plan benötigt voraussichtlich mehr als die gewählten ${plan.budget} Minuten. Die Sätze werden nicht künstlich verkürzt.</p>`:''}
   <p class="str619-recovery">${safe(plan.recoveryNote)}</p>
   <div class="str619-coverage"><span>Datengrundlage: ${plan.known} zugeordnete Sätze · ${plan.missing} nicht zugeordnet</span><span>${plan.evidence==='none'?'Noch keine Muskelhistorie':plan.evidence==='limited'?'Nur eingeschränkte Historie':plan.evidence==='partial'?'Viele Trainingsdetails fehlen':'Dokumentierte Muskelhistorie'}</span></div>
@@ -255,6 +256,10 @@ export function openStrengthCoach({state,today}){
   dialog.querySelector('.str610-goal').onchange=e=>update('goal',e.target.value);
   dialog.querySelector('.str610-equipment').onchange=e=>update('equipment',e.target.value);
   dialog.querySelector('.str619-minutes').onchange=e=>update('minutes',Number(e.target.value));
+  dialog.querySelector('.str620-launch').onclick=async()=>{
+   const guide=await import('./strength-guided-v5775920.js');
+   close();guide.openGuidedWorkout({plan,onSession});
+  };
   dialog.querySelector('.str619-copy').onclick=async()=>{
    try{await navigator.clipboard.writeText(coachCopyText(plan));dialog.querySelector('.str619-copy').textContent='Kopiert ✓';}
    catch{dialog.querySelector('.str619-copy').textContent='Kopieren nicht verfügbar';}

@@ -25,3 +25,8 @@
 .str619-description summary{cursor:pointer;list-style:none}.str619-description summary::before{content:'ⓘ ';color:#468465}.str619-description details p{font-size:11px;line-height:1.5;color:#5e7465;margin:6px 0 0}
 @media(max-width:700px){.str619-dialog{max-height:96dvh;padding:17px;border-radius:20px 20px 0 0}.str619-options{grid-template-columns:1fr 1fr}.str619-options label:last-child{grid-column:1/-1}.str619-workout{grid-template-columns:1fr}.str619-plan-head h3{font-size:18px}.str619-balance{flex-direction:column}}
 @media(max-width:390px){.str619-plan-head{padding:13px}.str619-copy{padding:8px}.str619-options{grid-template-columns:1fr}.str619-options label:last-child{grid-column:auto}}
+
+/* .59.20 guided entry – visible immediately, no scrolling. */
+.str620-cta-stack{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.str620-launch{cursor:pointer;background:#287753;color:#fff;border:0;border-radius:11px;padding:12px 16px;font-size:14px;font-weight:700;white-space:nowrap}
+@media(max-width:700px){.str619-plan-head{align-items:flex-start;flex-direction:column}.str620-cta-stack{width:100%}.str620-launch{flex:1}}
