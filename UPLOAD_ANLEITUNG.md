@@ -1,19 +1,20 @@
-# Compass 0.5.77.59.16 – Makko-Ho Fullscreen Premium UX
+# Compass 0.5.77.59.16.1 — Fullscreen Deployment Repair
 
-## Enthaltene Änderungen
-- neuer **Makko-Ho Fullscreen Player** ohne Scroll-Zwang
-- pro Übung **eine vollständige Premium-Infokarte** (deine bevorzugten Illustrationen mit japanischem Namen, Dehn-/Meridianinfo und Tipps direkt im Bild)
-- reduzierte UI: **Play, Timer, Weiter**, dazu kompakte Musik-/Dauersteuerung
-- keine überlagernde Dehnzonen-Box mehr
-- Koto-Musik lädt **erst beim Start** statt schon beim Öffnen → ruhigeres First Load
-- echter Gong bei Zielzeit bleibt erhalten; Timer läuft weiter
+## Ursache des GitHub-Actions-Fehlers #244
+Acht ältere Assertions in vier Testdateien erwarteten die vorherige Makko-Ho-UI: separate Dehnzonen-Box, alte Illustrations-Pfade, alte CSS-Klassen oder veraltete Musik-/Gong-Bedienung.
+Die Fullscreen-Umstellung `.59.16` ersetzt diese Elemente absichtlich.
 
-## Zu ersetzen / hochzuladen
-1. `client/src/makko-ho-guide-v5775910.js`
-2. `client/src/makko-ho-guide-v5775910.css`
-3. ganzen Ordner `client/public/makko-ho-cards-v5775916/` hochladen
+## In GitHub ersetzen
+Nur diese vier Dateien in den Pfad `tests/` hochladen:
 
-## Hinweis
-- Es sind **nur Makko-Ho-Dateien** enthalten.
-- Keine Änderungen an anderen Compass-Bereichen.
-- Wenn GitHub beim Upload einen Ordner nicht direkt annimmt: lokal entpacken und die Dateien im Ordner `client/public/makko-ho-cards-v5775916/` einzeln hochladen.
+- `tests/compass-05775911-makko-premium.test.mjs`
+- `tests/compass-05775912-sakura-mobile.test.mjs`
+- `tests/compass-05775913-gong-overtime.test.mjs`
+- `tests/compass-05775914-makko-deploy.test.mjs`
+
+**Keine anderen Dateien hochladen.** Die Makko-Ho-JS-/CSS-Dateien und sechs Bilddateien aus `.59.16` bleiben unverändert.
+
+## Verifiziert
+Alle 15 Tests der vier überarbeiteten Testdateien bestanden mit `node --test tests/*.test.mjs` in einer lokalen Validierungsumgebung, die die produktiven `.59.16`-Quelltexte, die sechs Bilder sowie die unveränderten Vite- und GTD-Dateien enthält. Die JavaScript- und CSS-Dateien wurden über ihre Git-Blob-SHA mit dem aktuellen GitHub-Stand abgeglichen.
+
+Ein vollständiger GitHub-Workflow muss nach dem Upload erneut laufen; hier wurde nicht behauptet, dass bereits die vollständigen 1305 Tests bestanden hätten.

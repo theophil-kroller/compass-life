@@ -1,41 +1,40 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,statSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-test('legacy Sakura file remains optional, real Koto now defaults on demand',()=>{
- const file=new URL('../client/public/makko-ho-music-v5775912/sakura-sakura-compass.mp3',import.meta.url);
- const mp3=readFileSync(file);
- assert.ok(mp3.length>120_000&&mp3.length<500_000,'MP3 size bounded');
- assert.ok(mp3.subarray(0,3).toString()==='ID3'||mp3[0]===255,'MP3 file header');
- const guide=read('client/src/makko-ho-guide-v5775910.js');
- assert.match(guide,/const MUSIC_ROOT=/);
- assert.match(guide,/sakura-sakura-compass\.mp3/);
- assert.match(guide,/let musicEnabled=true/);
- assert.match(guide,/cdn\.pixabay\.com/);
- assert.match(guide,/if\(musicEnabled\)void ensureMusic\(\)/);
- assert.match(guide,/const cached|await cache\.match\(MUSIC_URL\)/);
- assert.match(guide,/await cache\.put\(MUSIC_URL,/);
- assert.match(guide,/musicPlayer\.loop=true/);
- assert.match(guide,/stopMusic\(\);gongPlayer/);
- assert.match(guide,/duckMusic\(\);/);
- assert.match(guide,/data-go="music"/);
- assert.match(guide,/data-go="volume"/);
+
+test('Recorded Koto is optional and fetched only after Play, never the legacy synth loop',()=>{
+ const s=read('client/src/makko-ho-guide-v5775910.js');
+ assert.match(s,/let musicEnabled=true/);
+ assert.match(s,/cdn\.pixabay\.com/);
+ assert.match(s,/const MUSIC_CACHE=/);
+ assert.match(s,/await cache\.match\(MUSIC_URL\)/);
+ assert.match(s,/await cache\.put\(MUSIC_URL,/);
+ assert.match(s,/musicPlayer\.loop=true/);
+ assert.match(s,/stopMusic\(\);gongPlayer/);
+ assert.match(s,/duckMusic\(\);/);
+ assert.match(s,/data-go="music"/);
+ assert.match(s,/data-go="volume"/);
+ const startHandler=s.split("panel.querySelector('[data-go=\"start\"]').onclick=")[1];
+ assert.ok(startHandler,'play handler exists');
+ assert.match(startHandler.slice(0,320),/if\(musicEnabled\)void ensureMusic\(\)/);
+ assert.doesNotMatch(s,/sakura-sakura-compass\.mp3|createOscillator\(/);
 });
-test('New personalized poses preserve 6 variants and invalidate old CacheFirst',()=>{
- const guide=read('client/src/makko-ho-guide-v5775910.js');
- assert.match(guide,/webp\?v=5914/);
- assert.match(guide,/Kopf berührt sanft die Matte/);
- let total=0;
- for(const pose of ['metal','earth','fire','water','innerfire','wood']){
-  const f=new URL('../client/public/makko-ho-illustrations-v5775911/'+pose+'.webp',import.meta.url);
-  const bytes=readFileSync(f);
-  assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(bytes.toString('ascii',8,12),'WEBP');
-  assert.ok(bytes.length>5000&&bytes.length<50000);
-  total+=bytes.length;
+
+test('Six newer complete cards and cache-busting version 5916',()=>{
+ const s=read('client/src/makko-ho-guide-v5775910.js');
+ assert.match(s,/makko-ho-cards-v5775916/);
+ assert.match(s,/webp\?v=5916/);
+ let bytes=0;
+ for(const name of ['metal','earth','fire','water','innerfire','wood']){
+  const b=readFileSync(new URL('../client/public/makko-ho-cards-v5775916/'+name+'.webp',import.meta.url));
+  assert.equal(b.toString('ascii',0,4),'RIFF'); assert.equal(b.toString('ascii',8,12),'WEBP');
+  bytes+=b.length;
  }
- assert.ok(total<120000);
+ assert.ok(bytes<1_000_000);
 });
-test('Project/folder chooser only intercepts mobile and delegates existing actions',()=>{
+
+test('Mobile project/folder chooser remains intact',()=>{
  const js=read('client/public/gtd-workspace-premium-v577599.js');
  const css=read('client/public/gtd-workspace-premium-v577599.css');
  assert.match(js,/max-width: 800px/);
@@ -46,7 +45,8 @@ test('Project/folder chooser only intercepts mobile and delegates existing actio
  assert.match(css,/\.gtd612-create-backdrop/);
  assert.match(css,/env\(safe-area-inset-bottom\)/);
 });
-test('Vite historical bridge chain unaffected',()=>{
+
+test('Vite historical bridges remain in correct order',()=>{
  const cfg=read('client/vite.config.js');
  assert.match(cfg,/compass7593UxBridge\(\),\s*compass750Bridge\(\)/);
  assert.match(cfg,/compass757Bridge\(\), compass758Bridge\(\)\]/);
