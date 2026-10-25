@@ -67,3 +67,17 @@
  .mk610-ring{width:92px;height:92px;min-width:92px}.mk610-ring strong{font-size:19px}
 }
 @media(prefers-reduced-motion:reduce){.mk616-next.is-ready,.mk616-start{transition:none}}
+
+/* Compass .59.17 – icon-only playback, meaningful touch target, discreet Wake Lock status */
+.mk616-start.mk617-media{display:grid;place-items:center;min-width:0;padding:0;touch-action:manipulation}
+.mk616-start.mk617-media svg{width:26px;height:26px;display:block}
+.mk616-start.mk617-media[aria-pressed="true"]{background:#f0f6f1;color:#27694e;border-color:#b6d5c2}
+.mk616-foot [data-wake-status]:empty{display:none}
+.mk616-foot [data-wake-status]{color:#357759;font-weight:650}
+@media(max-width:720px){.mk616-start.mk617-media{min-height:50px}.mk616-start.mk617-media svg{width:25px;height:25px}}
+
+/* .59.17 · unobtrusive bilateral cue, never overlay the actual illustration */
+.mk616-hero{position:relative;flex-direction:column;gap:6px;min-height:0}
+.mk617-side-label{display:inline-flex;flex:none;border:1px solid #d9e7dc;background:#f5faf6;color:#2c7256;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:720;white-space:nowrap}
+.mk616-foot:empty{display:none}
+@media(max-width:520px){.mk617-side-label{font-size:11px;padding:4px 10px}.mk616-hero{gap:4px}}

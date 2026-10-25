@@ -23,11 +23,11 @@ test('Recorded Koto is optional and fetched only after Play, never the legacy sy
 
 test('Six newer complete cards and cache-busting version 5916',()=>{
  const s=read('client/src/makko-ho-guide-v5775910.js');
- assert.match(s,/makko-ho-cards-v5775916/);
- assert.match(s,/webp\?v=5916/);
+ assert.match(s,/makko-ho-cards-v5775917/);
+ assert.match(s,/webp\?v=5917/);
  let bytes=0;
  for(const name of ['metal','earth','fire','water','innerfire','wood']){
-  const b=readFileSync(new URL('../client/public/makko-ho-cards-v5775916/'+name+'.webp',import.meta.url));
+  const b=readFileSync(new URL('../client/public/makko-ho-cards-v5775917/'+name+'.webp',import.meta.url));
   assert.equal(b.toString('ascii',0,4),'RIFF'); assert.equal(b.toString('ascii',8,12),'WEBP');
   bytes+=b.length;
  }

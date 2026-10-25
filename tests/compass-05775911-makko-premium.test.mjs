@@ -13,14 +13,14 @@ test('Makko guide stays dynamic and Vite plugin ordering remains unchanged',()=>
  const guide=read('client/src/makko-ho-guide-v5775910.js');
  assert.match(guide,/export function openMakkoGuide/);
  assert.match(guide,/import\.meta\.env\?\.BASE_URL/);
- assert.match(guide,/makko-ho-cards-v5775916/);
- assert.doesNotMatch(read('client/index.html'),/makko-ho-cards-v5775916|makko-ho-guide-v5775910\.js/);
+ assert.match(guide,/makko-ho-cards-v5775917/);
+ assert.doesNotMatch(read('client/index.html'),/makko-ho-cards-v5775917|makko-ho-guide-v5775910\.js/);
 });
 
 test('Six complete illustrated information cards exist as local WebP assets',()=>{
  let total=0;
  for(const pose of poses){
-  const path=`client/public/makko-ho-cards-v5775916/${pose}.webp`;
+  const path=`client/public/makko-ho-cards-v5775917/${pose}.webp`;
   const b=readFileSync(new URL('../'+path,import.meta.url));
   assert.equal(b.toString('ascii',0,4),'RIFF',path);
   assert.equal(b.toString('ascii',8,12),'WEBP',path);

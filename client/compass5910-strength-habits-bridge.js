@@ -86,7 +86,18 @@ export function compass5910StrengthHabitsBridge(){
        `data-action="'+(item.id==='hakka-5'?'makko-guide-start':'habit-toggle')+'" data-id="'+h(item.id)+'">'+(item.id==='hakka-5'?'▶ Übungen starten':doneToday?'Heute erledigt ✓':'Heute abhaken')+'</button>`,'habit analytics launch');
    s=change(s,"if(action==='habit-toggle'){",`if(action==='makko-guide-start'){
    const mod=await import('./makko-ho-guide-v5775910.js');
-   mod.openMakkoGuide({onFinish:async()=>{if(!habitIsDone(state,'hakka-5'))await runAction('habit-toggle','hakka-5');}});
+   mod.openMakkoGuide({
+    onSession:async session=>{
+      if(!state||!session||!session.totalSeconds)return;
+      // Sessions are persisted inside the already encrypted Vault, never in public localStorage.
+      await mutate(st=>{
+       const prior=Array.isArray(st.makkoHoSessions)?st.makkoHoSessions:[];
+       if(prior.some(row=>row.id===session.id))return;
+       st.makkoHoSessions=[...prior,{...session,day:localDate()}].slice(-400);
+      });
+    },
+    onFinish:async()=>{if(!habitIsDone(state,'hakka-5'))await runAction('habit-toggle','hakka-5');}
+   });
    return;
  }
  if(action==='strength-coach-open'){
@@ -104,6 +115,11 @@ export function compass5910StrengthHabitsBridge(){
    rows.querySelector('select')?.focus({preventScroll:true});return;
  }
  if(action==='habit-toggle'){`,'on-demand guides and preset');
+   if(s.includes("function habitInsightsView(){")){
+    s=change(s,"function habitInsightsView(){","function makkoTimeInsights(st){\n const rows=(Array.isArray(st?.makkoHoSessions)?st.makkoHoSessions:[]).filter(x=>x&&Number(x.totalSeconds)>0&&Array.isArray(x.holds));\n if(!rows.length)return '<section class=\"work-card\"><div class=\"work-heading\"><span>🌸 Makko-Ho · Übungszeit</span></div><p class=\"muted-line\">Nach deiner ersten Übung erscheinen hier die tatsächlich gehaltenen Zeiten und dein Verlauf.</p></section>';\n const sorted=[...rows].sort((a,b)=>String(a.finishedAt||'').localeCompare(String(b.finishedAt||'')));\n const complete=sorted.filter(x=>x.completed);\n const latest=sorted[sorted.length-1];\n const today=new Date();today.setHours(12,0,0,0);\n const dates=Array.from({length:14},(_,i)=>{const d=new Date(today);d.setDate(d.getDate()-(13-i));return localDateString(d);});\n const values=dates.map(day=>sorted.filter(x=>x.day===day).reduce((n,x)=>n+Math.round(Number(x.totalSeconds)||0),0));\n const recent=values.slice(-7).reduce((a,b)=>a+b,0);\n const earlier=values.slice(0,7).reduce((a,b)=>a+b,0);\n const max=Math.max(60,...values);\n const mins=n=>Math.round(n/60*10)/10;\n const dots=dates.map((d,i)=>'<div title=\"'+h(d)+' · '+values[i]+' Sekunden\" style=\"display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0\"><div style=\"height:48px;display:flex;align-items:flex-end\"><span style=\"display:block;width:10px;height:'+Math.max(3,Math.round(values[i]/max*46))+'px;border-radius:8px;background:'+(values[i]?'#40846b':'#dce7de')+'\"></span></div><small style=\"font-size:9px;color:#6f8076\">'+d.slice(8)+'</small></div>').join('');\n const parts=latest.holds.map(row=>'<div style=\"display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid #e6eee8\"><span>'+h(({metal:'ZENKUTSU',earth:'KOKYŪ',fire:'KOKAN',water:'ASHI',innerfire:'KOSA',wood:'SOKUHO'})[row.pose]||row.pose)+(row.side?' · '+(row.side==='left'?'links':'rechts'):'')+'</span><strong>'+Math.max(0,Math.round(row.seconds))+' s</strong></div>').join('');\n return '<section class=\"work-card\" aria-label=\"Makko-Ho Fortschritt\"><div class=\"work-heading\"><span>🌸 Makko-Ho · Übungszeit</span><small>'+complete.length+' vollständig · '+sorted.length+' erfasst</small></div><div class=\"habit569-kpis\"><div><small>Letzte Session</small><strong>'+mins(latest.totalSeconds)+' min</strong></div><div><small>Letzte 7 Tage</small><strong>'+mins(recent)+' min</strong></div><div><small>Vorige 7 Tage</small><strong>'+mins(earlier)+' min</strong></div></div><div style=\"margin:14px 0;display:flex;align-items:end;gap:5px;min-height:68px\" aria-label=\"14 Tage Haltezeit in Sekunden\">'+dots+'</div><details><summary>Letzte Session · Zeiten pro Haltung</summary><div style=\"margin-top:10px;font-size:13px\">'+parts+'</div></details><p class=\"muted-line\" style=\"margin-top:8px\">Nur aktive Haltezeit; Pausen zählen nicht. Vorzeitig beendete Sessions sind gesondert erfasst.</p></section>';\n}\nfunction habitInsightsView(){",'Makko session statistics helper');
+    const insightAnchor="${journalSyncPanel()}<section class=\"work-card\"><div class=\"work-heading\"><span>${ico('checkSquare',18)} Habit Tracker";
+    s=change(s,insightAnchor,insightAnchor.replace('$'+'{journalSyncPanel()}','$'+'{journalSyncPanel()}$'+'{makkoTimeInsights(state)}'),'Makko stats in habit insights');
+   }
    return {code:s,map:null};
   }
   return null;
