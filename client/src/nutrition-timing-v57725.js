@@ -4,6 +4,7 @@
  */
 import {nutritionFoods,nutritionKcalEstimate} from './personal-journal-v5692.js';
 import {nutrientEntry} from './nutrition-intelligence-v57712.js';
+import './nutrition-cup-plate-v577593.css';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ISO=/^\d{4}-\d{2}-\d{2}$/;
 const localDay=x=>{const d=x instanceof Date?x:new Date(x);return Number.isFinite(+d)?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'';};
@@ -53,7 +54,7 @@ export function nutritionTimingIndex(state){
  const journal=state?.nutritionJournal||{},raw=Array.isArray(journal.entries)?journal.entries:[];
  const foods=nutritionFoods(state),foodById=new Map(foods.map(f=>[f.id,f]));
  // Changes to product reference calories are reflected without user migrations.
- const foodSignature=foods.map(f=>`${f.id}|${f.updatedAt||''}|${f.kcalLow}|${f.kcalHigh}|${f.nutrientBasis||''}|${JSON.stringify(f.nutrients||{})}`).join(';');
+ const foodSignature=foods.map(f=>`${f.id}|${f.updatedAt||''}|${f.kcalLow}|${f.kcalHigh}|${f.nutrientBasis||''}|${f.group||''}|${f.emoji||''}|${f.title||''}|${JSON.stringify(f.nutrients||{})}`).join(';');
  let index=cache.get(state);
  if(!index||index.foodSignature!==foodSignature){index={foodSignature,rows:new Map(),days:new Map()};cache.set(state,index);}
  const present=new Set(),dirty=new Set();
@@ -73,7 +74,7 @@ export function nutritionTimingIndex(state){
   // as a meal in fasting windows. This does not assert that it has 0 kcal.
   const caloric=kcal!==null?kcal>0:Boolean(food&&food.group!=='Nahrungsergänzung'&&!/^(water|tea|sparkling-water)$/i.test(entry.foodId));
   const item={id,ms:+dt,day,title:food?.title||'Unbekanntes Lebensmittel',emoji:food?.emoji||'🍽️',amount:entry.amount||'',kcal,
-   kcalLow:approx?.low??kcal,kcalHigh:approx?.high??kcal,caloric,estimated:(!nutrients.knownKeys.has('kcal'))||!!food?.uncertain};
+   kcalLow:approx?.low??kcal,kcalHigh:approx?.high??kcal,caloric,consumptionKind:nutritionConsumptionKind(food),estimated:(!nutrients.knownKeys.has('kcal'))||!!food?.uncertain};
   index.rows.set(id,{sig,...item});
   if(!index.days.has(day))index.days.set(day,newBucket());
   index.days.get(day).events.set(id,item);dirty.add(day);
@@ -116,6 +117,33 @@ export const FOOD_DAYPARTS=Object.freeze([
 export const colorForHour=h=>FOOD_DAYPARTS.find(p=>h>=p.from&&h<p.to)?.color||'#355C9F';
 function hourFraction(ms){const d=new Date(ms);return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600;}
 function clock(m){if(!Number.isFinite(m))return '–';const min=Math.round(m)%(24*60);return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;}
+/** Chart semantics: drinks and food are independent of the calorie estimate.
+ * Prefer the existing food-group metadata. Personal foods may not have a group,
+ * so fall back to curated beverage pictograms and names; never use kcal alone. */
+export function nutritionConsumptionKind(food){
+ const group=String(food?.group||'').toLocaleLowerCase('de-AT');
+ if(/^(getränke|getraenke|drinks|beverages)$/.test(group))return 'drink';
+ const emoji=String(food?.emoji||'');
+ if(/[☕🍵🫖🥤🥛🧃🍹🍷🥂🍺🍻🥃🍶🍼]/u.test(emoji))return 'drink';
+ const title=String(food?.title||'').toLocaleLowerCase('de-AT');
+ return /(?:^|[\s,;(/-])(?:kaffee|espresso|cappuccino|latte|latella|lattella|matcha|kakao|tee|chai|saft|smoothie|shake|proteinshake|milchshake|drink|limonade|limo|cola|wasser|wein|bier|spritz|whisky|whiskey)(?:$|[\s,;)/])/u.test(title)?'drink':'food';
+}
+/** Four deliberately bounded size classes; no size derived from an invented kcal. */
+export function nutritionEnergyTier(kcal){
+ if(!Number.isFinite(kcal)||kcal<0)return null;
+ return kcal<=120?1:kcal<=350?2:kcal<=700?3:4;
+}
+/** Same accessible semantics for SVG and the concise legend; no emoji glyph drift. */
+const PLATE_PATH='<circle cx="0" cy="0" r="6.4"/><circle cx="0" cy="0" r="3.8"/><path d="M-9 -7v7m-2 -7v7m2 -1v9m-3 -9h3M10 -7v15"/>';
+const CUP_PATH='<path d="M-8 -6H5v9c0 4-3 6-6.5 6S-8 7-8 3V-6Z"/><path d="M5 -4h3c5 0 5 7 0 7H5M-10 10H9"/>';
+function nutritionEnergySymbol(kind,tier,selected=false){
+ return `<circle class="ni725-symbol-disc" r="10" fill="currentColor" fill-opacity="${tier===null?'0':'0.10'}" stroke="currentColor" stroke-opacity="${tier===null?'0.75':'0.32'}" stroke-width="${selected?1.8:1}" ${tier===null?'stroke-dasharray="2.5 2"':''}/><g class="ni725-symbol-shape" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${kind==='drink'?CUP_PATH:PLATE_PATH}</g>`;
+}
+function nutritionSymbolLegend(){
+ const cup=nutritionEnergySymbol('drink',2),plate=nutritionEnergySymbol('food',2);
+ const swatch=(svg,label)=>`<span><svg viewBox="-14 -14 28 28" aria-hidden="true" focusable="false">${svg}</svg>${label}</span>`;
+ return `<div class="ni725-energy-legend" aria-label="Symbollegende: Tasse bedeutet Getränk, Teller bedeutet Nahrung; Größe bezeichnet geschätzte Kilokalorien. Ein gestrichelter Umriss bedeutet, dass der Kalorienwert unbekannt ist.">${swatch(cup,'Getränk')}${swatch(plate,'Nahrung')}<span class="ni725-energy-legend-text">Größe nach kcal: ≤120 · 121–350 · 351–700 · &gt;700</span>${swatch(nutritionEnergySymbol('food',null),'kcal unbekannt')}</div>`;
+}
 function timingDotPlot(series,selectedId){
  const {period,rows}=series;
  // All-time retains exact events, grouped by year/month only to keep the SVG navigable.
@@ -130,17 +158,27 @@ function timingDotPlot(series,selectedId){
  return `<text x="76" y="${y+3}" text-anchor="end" class="ni725-y-label">${esc(label)}</text><line x1="${x0}" x2="${x1}" y1="${y}" y2="${y}" stroke="currentColor" opacity=".09"/>`;}).join('');
  const dots=groups.map((g,i)=>{
   const events=byGroup.get(g)||[];
+  const multiplier=period.mode==='week'?1:period.mode==='month'?.68:.72;
+  // Do not move a timestamp horizontally. Small deterministic vertical offsets
+  // and toned-down symbols help nearby entries remain distinguishable.
   return events.map((e,k)=>{
-   const f=hourFraction(e.ms),y=top+i*rowH+rowH/2;
-   // In all-time display dots jitter vertically to reveal overlapping days,
-   // never horizontally: the x coordinate remains the real clock time.
+   const f=hourFraction(e.ms),x=xHour(f),rowY=top+i*rowH+rowH/2;
    const jitter=period.mode==='all'?((dayDate(e.day).getDate()%9)-4)*Math.min(1.35,(rowH-10)/8):0;
-   const title=`${e.day} · ${fmtHour(e.ms)} · ${e.emoji} ${e.title}${e.kcal!==null?` · ca. ${num(e.kcal)} kcal`:' · kcal unbekannt'}`;
-   return `<circle class="ni725-dot ${selectedId===e.id?'is-selected':''}" data-action="ni725-event" data-id="${esc(e.id)}" cx="${xHour(f).toFixed(2)}" cy="${(y+jitter).toFixed(2)}" r="${period.mode==='week'?5.7:period.mode==='month'?4.2:3.75}" fill="${colorForHour(f)}" tabindex="0" role="button" aria-label="${esc(title)}"><title>${esc(title)}</title></circle>`;
+   const neighbors=events.filter(v=>Math.abs(xHour(hourFraction(v.ms))-x)<17);
+   const lane=neighbors.findIndex(v=>v.id===e.id);
+   const crowded=neighbors.length>1;
+   const tier=nutritionEnergyTier(e.kcal);
+   const scale=(tier===null?.72:[0,.62,.78,.94,1.09][tier])*multiplier*(crowded?.77:1);
+   // Alternate above/below the correct horizontal timestamp, never change X.
+   const shiftY=crowded?((lane%3===0?-1:lane%3===1?1:0)*Math.min(6,rowH*.23)):0;
+   const y=rowY+jitter+shiftY;
+   const color=colorForHour(f),kind=e.consumptionKind||'food';
+   const title=`${e.day} · ${fmtHour(e.ms)} · ${kind==='drink'?'Getränk':'Nahrung'}: ${e.title} · ${tier===null?'kcal unbekannt':`ca. ${num(e.kcal)} kcal${e.estimated?' (geschätzt)':''}`}`;
+   return `<g class="ni725-dot ni725-energy-symbol ${tier===null?'ni725-unknown-kcal':''} ${selectedId===e.id?'is-selected':''}" data-action="ni725-event" data-id="${esc(e.id)}" data-kind="${kind}" data-tier="${tier??'unknown'}" data-hour="${f.toFixed(4)}" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})" style="color:${color}" tabindex="0" role="button" aria-label="${esc(title)}"><title>${esc(title)}</title><g class="ni725-mark" transform="scale(${scale.toFixed(3)})">${nutritionEnergySymbol(kind,tier,selectedId===e.id)}</g><circle class="ni725-symbol-hit" r="${Math.max(11,12*scale).toFixed(2)}" fill="transparent" stroke="none"/></g>`;
   }).join('');}).join('');
  const height=baseY+69;
  const footer=FOOD_DAYPARTS.filter(p=>p.from>=5).map(p=>`<text x="${xHour((p.from+p.to)/2)}" y="${baseY+36}" text-anchor="middle" class="ni725-zone-icon">${p.icon}</text><text x="${xHour((p.from+p.to)/2)}" y="${baseY+51}" text-anchor="middle" class="ni725-zone-label">${p.label==='Frühmorgen'?'Früh':p.label==='Nachmittag'?'Nachm.':p.label==='Spätabend'?'Spät':p.label}</text>`).join('');
- return `<div class="ni725-dot-scroller"><svg class="ni725-dots" viewBox="0 0 934 ${height}" role="group" aria-label="Exakte Uhrzeiten aller protokollierten Kalorienaufnahmen nach Tagen; Punkte sind auswählbar">${zones}${ticks}${labels}${dots}${footer}</svg></div>`;
+ return `<div class="ni725-dot-scroller"><svg class="ni725-dots" viewBox="0 0 934 ${height}" role="group" aria-label="Exakte Uhrzeiten aller protokollierten Kalorienaufnahmen nach Tagen; Tassen und Teller mit vier Kaloriengrößen sind auswählbar">${zones}${ticks}${labels}${dots}${footer}</svg></div>`;
 }
 function eatingFastingChart(series){
  const rows=series.rows,visible=series.period.mode==='all'?rows.slice(-31):rows;
@@ -191,7 +229,7 @@ export function nutritionTimingView(state,{mode='week',anchor=localDay(new Date(
  const kpi=(icon,label,value,sub='')=>`<div class="ni725-kpi"><span>${icon} ${esc(label)}</span><strong>${esc(value)}</strong>${sub?`<small>${esc(sub)}</small>`:''}</div>`;
  const selectedWeek=p.mode==='week'?'dieser ausgewählten Woche':'dieser Kalenderwoche';
  return `<div class="ni725-insights"><section class="work-card"><div class="work-heading"><span>🕒 Essensrhythmus &amp; Trends</span><small>${s.logged} protokollierte Tage</small></div><div class="ni725-controls"><div class="ni725-range">${[['week','Woche'],['month','Monat'],['all','Gesamt']].map(([id,title])=>`<button type="button" data-action="ni725-mode" data-id="${id}" class="${p.mode===id?'selected':''}" aria-pressed="${p.mode===id}">${title}</button>`).join('')}</div><div class="ni725-pager"><button type="button" aria-label="Vorheriger Zeitraum" title="Vorheriger Zeitraum" data-action="ni725-shift" data-id="prev" ${p.mode==='all'?'disabled':''}>‹</button><strong>${esc(p.label)}</strong><button type="button" aria-label="Nächster Zeitraum" title="Nächster Zeitraum" data-action="ni725-shift" data-id="next" ${!p.canNext?'disabled':''}>›</button></div></div><div class="ni725-kpis">${kpi('🌅','Ø erste Kalorie',clock(s.avgFirst))}${kpi('🌙','Ø letzte Kalorie',clock(s.avgLast))}${kpi('🍽️','Ø Essfenster',fmtMin(s.avgEating))}${kpi('⏳','Ø protokollierte Nachtpause',fmtMin(s.avgFasting),`${s.fastingPairs} auswertbare Nächte`)}${kpi('🏆','Längste Pause der Woche',fmtMin(m.longest?.minutes),m.longest?`${fmtDay(m.longest.day)} · ${selectedWeek}`:'Noch keine aufeinanderfolgenden Tage')}${kpi('⚡','Ø protokollierte kcal / Tag',s.avgKcal===null?'–':`≈ ${num(s.avgKcal)}`,`${s.logged} erfasste Tage`)}</div><p class="ni725-disclaimer">Alle Kennzahlen beziehen sich <strong>nur auf dokumentierte Aufnahmen</strong>. Lange Pausen sind keine bestätigten Fastenintervalle; Lücken im Tagebuch können sie künstlich verlängern. Einträge mit unbekannter Kalorienmenge können die Zeitangaben zusätzlich unsicher machen. Nicht erfasste Tage zählen nicht als Fastentage.</p></section>
- <section class="work-card"><div class="work-heading"><span>🌅 Essenszeiten · jeder Punkt ein Eintrag</span><small>${s.entries} Kalorienereignisse</small></div><p class="muted-line">Horizontal die genaue Uhrzeit (00–24 Uhr), vertikal ${p.mode==='all'?'Monate mit allen Originalpunkten':p.mode==='week'?'Wochentage':'Kalendertage'}. Farbe = Tageszeit: morgens Orange, mittags Rot, abends Blau. Tippe auf einen Punkt für Details.</p>${m.events.length?timingDotPlot(m,selectedId):'<p class="muted-line">Für diesen Zeitraum sind noch keine Kalorienaufnahmen dokumentiert.</p>'}<div id="ni725-selection">${selected?nutritionTimingSelectedMarkup(state,selectedId):''}</div></section>
+ <section class="work-card"><div class="work-heading"><span>🌅 Essenszeiten · Tasse &amp; Teller</span><small>${s.entries} Kalorienereignisse</small></div><p class="muted-line">Horizontal die genaue Uhrzeit (00–24 Uhr), vertikal ${p.mode==='all'?'Monate mit allen Originalpunkten':p.mode==='week'?'Wochentage':'Kalendertage'}. Farbe = Tageszeit; Tasse = Getränk, Teller = Nahrung. Die Symbolgröße zeigt die geschätzten kcal. Tippe auf ein Symbol für Details.</p>${m.events.length?timingDotPlot(m,selectedId):'<p class="muted-line">Für diesen Zeitraum sind noch keine Kalorienaufnahmen dokumentiert.</p>'}${nutritionSymbolLegend()}<div id="ni725-selection">${selected?nutritionTimingSelectedMarkup(state,selectedId):''}</div></section>
  <section class="work-card"><div class="work-heading"><span>⏳ Essfenster &amp; protokollierte Fastenpausen</span><small>24-Stunden-Achse</small></div><p class="muted-line">Die farbige Strecke verbindet erste und letzte erfasste Kalorienaufnahme. Die Pause davor reicht vom letzten Eintrag des <em>unmittelbaren Vortags</em> bis zur ersten Aufnahme dieses Tages.</p>${eatingFastingChart(m)}<p class="ni725-disclaimer">*Protokollierte Esspause, nicht als tatsächlich eingehaltenes Fasten verifiziert. Bei nur einem Eintrag ist das Essfenster nicht zuverlässig bestimmbar.</p></section>
  <section class="work-card"><div class="work-heading"><span>📈 Kalorien · Verlauf</span><small>Trend statt Tagesbewertung</small></div><p class="muted-line">Punkte sind geschätzte Kalorien aus <strong>erfassten</strong> Lebensmitteln. Fehlende Mahlzeiten sind nicht enthalten; leere Tage werden nicht als 0 kcal dargestellt.${s.unknownKcal?` ${s.unknownKcal} Einträge ohne kcal-Wert.`:''}</p>${kcalTrend(m)}</section></div>`;
 }
