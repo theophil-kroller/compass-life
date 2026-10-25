@@ -1,26 +1,30 @@
-# Compass 0.5.77.59.8 – Freizeitplanung & Life-Balance-Start
+# Compass Life 0.5.77.59.9 — GTD Workspace Premium
 
-**Basis:** GitHub `theophil-kroller/compass-life`, commit `d49aa2bcc97987044c91a22041b718eb7e057728` (25.10.2026).
+Basis: GitHub `theophil-kroller/compass-life`, main, Commit `1eec006f78c05227ff377d6bad0ef81cbe8c1569` (25.10.2026).
 
-## Dateien hochladen (Pfade ab Repository-Hauptverzeichnis)
+## GitHub-Upload
 
-1. `client/src/insights-navigation-v57750.js` – vorhandene Datei ersetzen.
-2. `client/compass7593-ux-bridge.js` – vorhandene Datei ersetzen.
-3. `tests/compass-0577593-ux.test.mjs` – vorhandene Datei ersetzen.
-4. `tests/compass-0577598-navigation.test.mjs` – neue Datei hinzufügen.
+Die Dateien relativ zum Repository-Hauptverzeichnis hochladen:
 
-**Nicht ersetzen:** `client/vite.config.js`, `client/src/main.js` oder Vault-/Datenbankdateien. Vite-Bridge-Reihenfolge und gespeicherte Daten bleiben unverändert.
+1. **Ersetzen:** `client/index.html`
+2. **Neu:** `client/public/gtd-workspace-premium-v577599.css`
+3. **Neu:** `client/public/gtd-workspace-premium-v577599.js`
+4. **Neu (Regressionstest):** `tests/compass-0577599-gtd-workspace.test.mjs`
 
-## Funktion
+`tests/test_ux_0599.py` ist nur ein lokaler visueller Prüfhelfer und **nicht** Teil des Upload-ZIPs.
 
-- **Planen → Freizeit & Erholung:** Die bestehende Freizeitideen-/Veranstaltungsseite ist aus der Insights-Navigation entfernt und im Planen-Untermenü erreichbar. Alte Einträge und Buttons werden nicht geändert.
-- **Insights → Übersicht & Intelligence:** Standardmäßig **Life Balance** mit vorhandenem Radar und Drill-downs. Der redundante Cockpit-Untertab wird nicht mehr angeboten. Wochenkompass, Kapazität, Zusammenhänge und Explore bleiben sichtbar.
-- **Insights-Kategorie direkt anklicken:** Öffnet jetzt ebenfalls Life Balance, statt das alte Cockpit zu aktivieren.
-- **Focus/Extended:** Compass startet nach Entsperren weiterhin in Focus. Wer ausdrücklich die umfassendere Freizeitplanungsseite öffnet, wechselt für die Sitzung automatisch in Extended; beim nächsten regulären Entsperren beginnt Compass wieder in Focus.
-- Historische interne Recovery-Kennungen bleiben zur Rückwärtskompatibilität akzeptiert.
+## Änderungen
 
-## Verifikation
+- Projektansicht: kompakte Sidebar/Outline, klarer Fokus und selektierbare Zeilen, Inspector optional; auf schmalen Displays als Overlay bzw. unter 760 px als mobil bedienbares Bottom Sheet.
+- Heute und Inbox: harmonisierte Abstände, Ränder, Eingabefelder und Fokusindikatoren.
+- Tastatur: Auf/Ab in Projekt-, Task-, Inbox- und Heute-Listen; Rechts/Links für auf-/zuklappbare Ordner; Alt+Shift+I (Inspector) und Alt+Shift+N (neue Projektaufgabe) bei aktivem Projekt-Workspace. Enter/Click verwenden vorhandene Aktionen.
+- Accessibility: Fokus sichtbar, Eingabefelder von Tastaturkürzeln ausgenommen, reduzierte Bewegung respektiert.
 
-- 10 lokale Node-Tests bestanden, inklusive Syntax-Checks der neuen Navigations- und Bridge-Dateien.
-- Ein vollständiger `npm run check` und `npm run build` des Repositorys ist hier nicht gelaufen, weil nicht alle Repository-Dateien im lokalen Container vorliegen. Bitte nach Upload den Actions-Job `Deploy Compass Web` abwarten und bei einer Fehlermeldung die Logs prüfen.
-- Sichtbare Versionsanzeige ist weiterhin `0.5.77.58.2`, weil deren historische Transformation nicht verändert wird.
+Keine Änderungen an `client/vite.config.js`, Vault, Datenmigration, Sync oder Berechnungen. Die bestehenden Ansichten und ihre Aktionen bleiben maßgeblich.
+
+## Tests
+
+- `node --test tests/compass-0577599-gtd-workspace.test.mjs` — 4/4 lokal bestanden
+- `python tests/test_ux_0599.py` mit Chromium — lokal bestanden bei 1900, 1200 und 390 px; zusätzliche Tasten- und Inspector-Prüfungen
+
+Die gesamte GitHub-Actions-Suite und der Produktions-Build laufen nach dem Upload; sie konnten in der lokalen Teilkopie nicht vollständig ausgeführt werden.

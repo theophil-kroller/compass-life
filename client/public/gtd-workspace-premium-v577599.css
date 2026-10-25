@@ -1,0 +1,92 @@
+/* Compass 0.5.77.59.9 — GTD Workspace Premium.
+   Progressive visual polish. No hiding functional controls or new menu bars.
+   Loaded after the existing Insights density sheet. */
+.shell.premium751 {
+  --gtd59-border:#e0e8e2;
+  --gtd59-accent:#2c735d;
+  --gtd59-tint:#edf5ef;
+  --gtd59-radius:13px;
+}
+/* Projects: reserve width for the actual outline; inspector is deliberately optional. */
+@media(min-width:1401px){
+ .shell.premium751 .content .compass58-workspace:not(.has-inspector){
+  grid-template-columns:clamp(165px,16%,215px) minmax(0,1fr);
+ }
+ .shell.premium751 .content .compass58-workspace.has-inspector{
+  grid-template-columns:clamp(165px,15%,205px) minmax(0,1fr) clamp(255px,23%,315px);
+ }
+}
+.shell.premium751 .content .compass58-workspace{gap:10px;align-items:start;min-width:0;max-width:100%}
+.shell.premium751 .content .compass58-center{min-width:0;max-width:100%;box-sizing:border-box;border-radius:var(--gtd59-radius)}
+.shell.premium751 .content .compass58-sidebar,
+.shell.premium751 .content .compass58-inspector{box-sizing:border-box;border-radius:var(--gtd59-radius)}
+.shell.premium751 .content .compass58-sidebar{scrollbar-gutter:stable}
+.shell.premium751 .content .compass58-heading{align-items:center;margin-bottom:8px;padding-bottom:9px}
+.shell.premium751 .content .compass58-heading h2{font-size:clamp(17px,1.4vw,20px);line-height:1.25;letter-spacing:-.02em}
+.shell.premium751 .content .compass58-nav-item{line-height:1.3;font-size:12px;min-height:33px}
+.shell.premium751 .content .compass58-nav-row{border-radius:8px}
+.shell.premium751 .content .compass58-outline .tree-line{border-bottom:1px solid #edf1ee;border-radius:7px;min-height:36px;align-items:center}
+.shell.premium751 .content .compass58-outline .tree-line:last-child{border-bottom-color:transparent}
+.shell.premium751 .content .compass58-outline .tree-line:hover:not(.selected){background:#f5f8f6}
+.shell.premium751 .content .compass58-outline .tree-line.selected,
+.shell.premium751 .content .compass58-nav-row.selected{background:var(--gtd59-tint);color:#235947}
+.shell.premium751 .content .compass58-inspector{overflow-wrap:anywhere;box-sizing:border-box}
+.shell.premium751 .content .compass58-inspector :is(input,select,textarea,button){max-width:100%;min-width:0;box-sizing:border-box}
+.shell.premium751 .content .compass58-inspector label{min-width:0;overflow-wrap:anywhere}
+.shell.premium751 .content .compass58-inspector .tree-inspector-header{position:sticky;top:-10px;background:#fff;z-index:1;padding:8px 0;margin-top:-8px;border-bottom:1px solid var(--gtd59-border)}
+.shell.premium751 .content .compass58-heading-actions button{min-height:35px;min-width:35px}
+.shell.premium751 .content .compass58-workspace :is(button,summary,a):focus-visible{outline:2px solid var(--gtd59-accent);outline-offset:2px}
+/* Today: tasks take precedence, inspector stays calm until selected. */
+.shell.premium751 .content .compass56-today{gap:11px;min-width:0}
+.shell.premium751 .content .compass56-today .today-tasks{min-width:0}
+.shell.premium751 .content .today-tasks .task-row{min-height:39px;border-radius:8px}
+.shell.premium751 .content .today-tasks .task-row:hover{background:#f5f8f6}
+.shell.premium751 .content .today-tasks .task-row.is-selected{background:var(--gtd59-tint)}
+.shell.premium751 .content .today-context-rail{min-width:0;overflow-wrap:anywhere}
+.shell.premium751 .content .today-context-rail :is(input,select,textarea){min-width:0;max-width:100%;box-sizing:border-box}
+/* Inbox: information-first list, with clarifying controls still visible. */
+.shell.premium751 .content .inbox-mvp-layout{min-width:0;max-width:100%;gap:11px}
+.shell.premium751 .content .inbox-mvp-card,
+.shell.premium751 .content .inbox-mvp-detail{min-width:0;border-radius:var(--gtd59-radius)}
+.shell.premium751 .content .inbox-row-wrap{min-width:0;border-bottom:1px solid #edf1ee}
+.shell.premium751 .content .inbox-mvp-row{min-width:0;border-radius:8px}
+.shell.premium751 .content .inbox-mvp-row.is-current{background:var(--gtd59-tint)}
+.shell.premium751 .content .inbox-list-copy{min-width:0}
+.shell.premium751 .content .inbox-list-copy strong{overflow-wrap:anywhere}
+.shell.premium751 .content .inbox-quiet-inspector{min-width:0;overflow-wrap:anywhere}
+.shell.premium751 .content .inbox-quiet-inspector :is(textarea,input,select){max-width:100%;min-width:0;box-sizing:border-box}
+.shell.premium751 .content .inbox-mvp-layout :is(button,input,textarea,summary):focus-visible,
+.shell.premium751 .content .today-tasks :is(button,a):focus-visible{outline:2px solid var(--gtd59-accent);outline-offset:2px}
+/* The navigation remains in the existing sidebar; no duplicate toolbars. */
+@media(min-width:761px) and (max-width:1400px){
+ .shell.premium751 .content .compass58-workspace.has-inspector{
+  display:grid;grid-template-columns:minmax(155px,205px) minmax(0,1fr);gap:10px;
+ }
+ .shell.premium751 .content .compass58-workspace.has-inspector>.compass58-inspector{
+  position:fixed;top:86px;right:14px;left:auto;grid-column:auto;
+  width:min(350px,calc(100vw - 28px));max-height:calc(100dvh - 103px);
+  overflow-y:auto;z-index:35;box-shadow:0 18px 55px rgba(20,49,35,.15);
+ }
+ .shell.premium751 .content .compass58-workspace:not(.has-inspector){grid-template-columns:minmax(155px,205px) minmax(0,1fr)}
+}
+@media(max-width:760px){
+ .shell.premium751 .content .compass58-workspace,
+ .shell.premium751 .content .compass58-workspace.has-inspector{display:flex;flex-direction:column}
+ .shell.premium751 .content .compass58-center{width:100%;max-width:100%;position:static;max-height:none}
+ /* On touch screens, the requested inspector appears immediately as a dismissible sheet. */
+ .shell.premium751 .content .compass58-workspace.has-inspector>.compass58-inspector{
+  position:fixed;left:0;right:0;bottom:0;top:auto;z-index:55;
+  width:100%;max-width:100%;max-height:min(78dvh,680px);overflow-y:auto;
+  border-radius:17px 17px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  background:#fff;box-shadow:0 -12px 42px rgba(20,49,35,.18);
+ }
+ .shell.premium751 .content .compass58-heading-actions button{min-width:42px;min-height:42px}
+ .shell.premium751 .content .compass58-mobile-explorer>summary{min-height:44px}
+ .shell.premium751 .content .compass58-nav-item{min-height:40px}
+ .shell.premium751 .content .inbox-mvp-row{min-height:43px}
+ .shell.premium751 .content .inbox-mvp-layout{max-width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ .shell.premium751 .content .compass58-workspace *,
+ .shell.premium751 .content .inbox-mvp-layout *{scroll-behavior:auto;transition:none}
+}
