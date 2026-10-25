@@ -1,25 +1,32 @@
-# Compass 0.5.77.58 — CI-Hotfix 58.1
+# Compass Life 0.5.77.58.2 – Einkauf & Projekt-Inspector
 
-**Nur 5 bestehende Testdateien ersetzen. Keine anderen Dateien hochladen oder löschen.**
+**Basis:** GitHub Actions #224 erfolgreich, Version 0.5.77.58 mit CI-Testkorrektur .58.1.
 
-In GitHub im Repository `theophil-kroller/compass-life` die Dateien unter `tests/` mit denselben Pfaden ersetzen:
+Ersetze in `theophil-kroller/compass-life` **nur diese drei Dateien** mit den Dateien aus dieser ZIP:
 
-- `tests/compass-057750-insights-nav.test.mjs`
-- `tests/compass-057751-premium-ui.test.mjs`
-- `tests/compass-057752-chart-first.test.mjs`
-- `tests/compass-057753-finance-performance.test.mjs`
-- `tests/compass-057754-on-demand.test.mjs`
+- `client/compass758-bridge.js`
+- `tests/compass-057758-project-columns.test.mjs`
+- `tests/compass-057757-full-transform-chain.test.mjs`
 
-Die Dateien `client/compass758-bridge.js`, `client/vite.config.js` und `client/src/project-workspace-v57758.css` **unverändert lassen**. Die App-Version bleibt `0.5.77.58`.
+Andere Dateien (vor allem `client/vite.config.js`, `client/src/main.js`, CSS, Cloudflare Worker und verschlüsselte Daten) **nicht verändern**. Nach Upload GitHub Actions prüfen: `npm run check` sowie `npm run build` müssen erfolgreich sein. Das automatische Pages-Deployment darf erst danach als erfolgreich gelten.
 
-## Ursache und Korrektur
+## Inhalt
 
-GitHub Actions #223 stoppte bei `npm run check` nach 1.251 Tests mit 5 Fehlern. Alle fünf hatten denselben Fehler: Der Test verlangte, dass die Plugin-Liste nach `.57` endet (`...compass757Bridge()]`). Mit der neuen `.58`-Bridge ist das falsch. Nun prüfen die historischen Tests weiterhin die richtige Reihenfolge aller `.50–.57`-Plugins, **ohne das Ende der Liste festzuschreiben**. Der bereits bestehende aktuelle Test `compass-057757-full-transform-chain.test.mjs` sichert die gesamte Produktionskette einschließlich `.58` und deren abschließender Syntaxprüfung ab; genau dieser Test war in GitHub Actions #223 bereits erfolgreich.
+### Einkaufen
+- **Einkaufsliste** ist der Standardtab und rendert ausschließlich die Liste mit den vorhandenen Checkboxes.
+- Die aus Version .43 stammende Kassenbonanalyse, Monatsgrafik, GPT-Prompt, JSON-Eingabe, gespeicherten Bons und Importoptionen sind jetzt **ausschließlich** im Tab **Statistik & Rechnungsimport**.
+- Die bisherigen Bon- und Finanzdaten werden nicht geändert; bestehende Aktionen funktionieren weiter.
+- Beim Zurückwechseln zur Einkaufsliste wird der Bonbereich weder berechnet noch angezeigt.
 
-## Teststatus
+### Projekte
+- Ordner anklicken: Ordnernavigation bleibt links, Projekte erscheinen in der Mitte, Inspector geschlossen.
+- Projekt anklicken: dessen Aufgaben nutzen die gesamte verfügbare mittlere Spalte; Inspector **standardmäßig geschlossen**.
+- Der Inspector wird über das rechte Inspector-Symbol in der Projektüberschrift explizit geöffnet oder wieder geschlossen.
+- Aufgabe auswählen öffnet weiterhin den Aufgaben-Inspector, weil dies eine ausdrücklich gewählte Bearbeitungsaktion ist.
+- Beim Schließen des Inspectors bleibt die aktuelle Projekt- bzw. Aufgabenauswahl erhalten.
+- Teure Projekteinstellungen werden nicht aufgebaut, solange der Projekt-Inspector geschlossen ist.
 
-- Lokal 58/58 Tests in der verfügbaren 0.5.77.50–.58-Sandbox erfolgreich, darunter alle fünf betroffenen historischen Testdateien.
-- GitHub Actions #223: Die echte vollständige Transformationskette bestand bereits; fünf historische Endanker-Tests scheiterten.
-- Der **vollständige `npm run check`- und `npm run build`-Lauf** ist **nach diesem Hotfix noch nicht bestätigt**. Nach dem Upload in GitHub Actions kontrollieren.
-
-**Keine Datenmigration, kein Vault-Eingriff, keine Änderung am produktiven Anwendungscode.**
+## Prüfungen
+- **60 von 60** lokalen Tests der verfügbaren Bridge-/Navigationssuite bestanden; neu: Einkaufsliste ohne Kassenbon und Projekt-Inspector standardmäßig geschlossen.
+- Die zwei Versionsprüfungen in den Testdateien erwarten korrekt `0.5.77.58.2`.
+- Der echte vollständige Produktionsbuild mit allen Workspace-Dateien war in der lokalen Umgebung **nicht ausführbar**, weil die vollständige Repository-Arbeitskopie und npm-Abhängigkeiten nicht verfügbar sind. GitHub Actions #224 hat die vorherige .58-Codebasis erfolgreich gebaut; dieser Patch ersetzt nur die bestehende .58-Bridge und ihre zwei Tests.

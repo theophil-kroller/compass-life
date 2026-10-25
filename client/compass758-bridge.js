@@ -11,8 +11,18 @@ export function compass758Bridge(){
   if(!id.replace(/\\/g,'/').split('?')[0].endsWith('/client/src/main.js'))return null;
   let s=source;
   const ch=(from,to,label)=>{s=replaceExactly(s,from,to,label);};
-  ch("const COMPASS_CLIENT_VERSION='0.5.77.57.1';","const COMPASS_CLIENT_VERSION='0.5.77.58';",'version');
+  ch("const COMPASS_CLIENT_VERSION='0.5.77.57.1';","const COMPASS_CLIENT_VERSION='0.5.77.58.2';",'version');
   ch("import './mobile-workflow-v57757.css';","import './mobile-workflow-v57757.css';\nimport './project-workspace-v57758.css';",'styles');
+
+  // The original .43 receipt UI was injected unconditionally before Shopping's list.
+  // Move it to the explicitly requested statistics/receipt tab. Keep all original
+  // receipt bindings/actions: no second receipt importer or data migration.
+  ch('<div class="shopping713-shell">${receiptInboxView(state,{draft:receiptDraft743})}<section class="work-card shopping713-overview">',
+     '<div class="shopping713-shell"><section class="work-card shopping713-overview">',
+     'no receipt statistics in shopping checklist');
+  ch("return '<section class=\"work-card compass57-shopping-stats\">",
+     "return receiptInboxView(state,{draft:receiptDraft743})+'<section class=\"work-card compass57-shopping-stats\">",
+     'receipt panel only in statistics and import tab');
 
   // Only Projects changes; Templates stays on the existing, fully functional view.
   ch('function projectScreen(){',project58Source+'\nfunction projectScreen(){','three-pane helpers');
@@ -21,9 +31,14 @@ export function compass758Bridge(){
      ' if(!templates)return compass58ProjectLayout({treeIndex,selection,selectedTask,settings,active});\n'+legacy,
      'Projects-only dispatch');
 
+  // Do not construct the full project settings form for every project selection.
+  ch('const settings=selection?`<details class="project-properties"',
+     'const settings=(selection&&(templates||!compass58InspectorHidden))?`<details class="project-properties"',
+     'lazy project inspector settings');
+
   // Keep the original title click and drag-and-drop handlers, just reveal parent folders.
   ch('projectCollapsed.delete(id);selectedProjectId=id;selectedTaskId=null;',
-     'projectCollapsed.delete(id);selectedProjectId=id;selectedTaskId=null;compass58InspectorHidden=false;if(p.kind===\'folder\')compass58Expanded.add(id);',
+     'projectCollapsed.delete(id);selectedProjectId=id;selectedTaskId=null;compass58InspectorHidden=true;if(p.kind===\'folder\')compass58Expanded.add(id);',
      'project selection');
   ch("if(action==='tree-inspector-close'){selectedTaskId=null;selectedProjectId=null;render();return;}",
      "if(action==='tree-inspector-close'){if(tab==='projects'){compass58InspectorHidden=true;render();return;}selectedTaskId=null;selectedProjectId=null;render();return;}",
@@ -60,7 +75,7 @@ const project58Source=String.raw`
 // A project outline is never the left navigation: folders/projects are separate from tasks.
 const compass58Expanded=new Set();
 const compass58Collapsed=new Set();
-let compass58InspectorHidden=false;
+let compass58InspectorHidden=true;
 let compass58ToolsOpen=false;
 function compass58VisibleChildren(index,parent=null){
  const items=parent===null?[...index.projectChildren(null),...index.orphans]:index.projectChildren(parent);
@@ -111,7 +126,7 @@ function compass58ProjectLayout({treeIndex,selection,selectedTask,settings,activ
  const content=selection?.kind==='project'? 
    '<div class="compass58-outline tree-work-card unified-tree" role="tree" aria-label="Aufgaben von '+h(name)+'">'+(tasks||'<p class="compass58-empty">Noch keine Aufgaben</p>')+'</div>':
    '<div class="compass58-collection">'+(children.map(p=>'<button type="button" class="compass58-project-tile" data-action="project-select" data-id="'+h(p.id)+'">'+ico(p.kind==='folder'?folderIcon(p):'list',18)+'<span>'+h(p.title)+'</span>'+ico('arrow',15)+'</button>').join('')||'<p class="compass58-empty">Noch keine Projekte in diesem Ordner</p>')+'</div>';
- const inspector=(ownTask?'<div class="compass58-inspector-fields">'+taskEditor()+'<form id="tree-move-task-form" class="tree-move-form" data-id="'+h(ownTask.id)+'"><label>Verschieben nach<select name="target" required>'+treeTaskDestinationOptions(ownTask)+'</select></label><button type="submit" class="secondary-btn">Verschieben</button></form></div>':settings);
+ const inspector=compass58InspectorHidden?'':(ownTask?'<div class="compass58-inspector-fields">'+taskEditor()+'<form id="tree-move-task-form" class="tree-move-form" data-id="'+h(ownTask.id)+'"><label>Verschieben nach<select name="target" required>'+treeTaskDestinationOptions(ownTask)+'</select></label><button type="submit" class="secondary-btn">Verschieben</button></form></div>':settings);
  const selectedDetails=!!(selection||ownTask)&&!compass58InspectorHidden;
  const inspectorMarkup=selectedDetails?'<aside class="compass58-inspector work-card tree-inspector" aria-label="'+(ownTask?'Aufgaben-Inspector':'Projekt-Inspector')+'">'+
   '<div class="tree-inspector-header"><strong>'+h(ownTask?'Aufgabendetails':selection?.title||'Details')+'</strong><button type="button" class="tree-close" data-action="tree-inspector-close" aria-label="Inspector schließen" title="Inspector schließen">×</button></div>'+inspector+'</aside>':'';

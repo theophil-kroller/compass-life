@@ -12,9 +12,12 @@ const scaffold=String.raw`
 const COMPASS_CLIENT_VERSION='0.5.77.57.1';
 import './mobile-workflow-v57757.css';
 function projectScreen(){
- const templates=false,treeIndex={},selection=null,selectedTask=null,settings='',active=0;
+ const templates=false,treeIndex={},selection=null,selectedTask=null,active=0;
+ const settings=selection?\`<details class="project-properties">Settings</details>\`:'';
  return chrome(\`<div class="tree-workspace \${selectedTask||selection?'has-inspector':''}"></div>\`);
 }
+function compass57ShopStatistics(){return '<section class="work-card compass57-shopping-stats">';}
+function shoppingScreen(){return chrome(\`<div class="shopping713-shell">\${receiptInboxView(state,{draft:receiptDraft743})}<section class="work-card shopping713-overview">Checklist</section></div>\`);}
 function inboxScreen(){return \`<form><div class="inbox-detail-actions"><button type="submit" name="intent" value="promote">Aufgabe</button></div></form>\`;}
 async function actions(action,id,form,editForm){
  if(action==='tree-inspector-close'){selectedTaskId=null;selectedProjectId=null;render();return;}
@@ -32,7 +35,7 @@ const source=scaffold.replaceAll('\\`','`').replaceAll('\\${','${');
 const transformed=compass758Bridge().transform(source,'/repo/client/src/main.js').code;
 
 test('.58 transforms a realistic post-.57.1 source and parses',()=>{
- assert.match(transformed,/COMPASS_CLIENT_VERSION='0\.5\.77\.58'/);
+ assert.match(transformed,/COMPASS_CLIENT_VERSION='0\.5\.77\.58\.2'/);
  const tmp=mkdtempSync(join(tmpdir(),'compass58-'));
  try{const file=join(tmp,'check.mjs');writeFileSync(file,transformed);execFileSync(process.execPath,['--check',file],{stdio:'pipe'});}finally{rmSync(tmp,{recursive:true,force:true})}
 });
@@ -98,10 +101,25 @@ test('nested folders open only on selection/expansion and inspector reflects tas
  vm.runInContext("compass58Collapsed.delete('folder')",ctx);
  ctx.selectedProjectId='project';
  const projectView=vm.runInContext('compass58ProjectLayout({treeIndex:index,selection:project,selectedTask:null,settings:"PROJECT-EDIT-FORM",active:1})',ctx);
- assert.match(projectView,/id="task-row"/);assert.match(projectView,/PROJECT-EDIT-FORM/);
+ assert.match(projectView,/id="task-row"/);assert.doesNotMatch(projectView,/PROJECT-EDIT-FORM/);
+ vm.runInContext('compass58InspectorHidden=false',ctx);
+ assert.match(vm.runInContext('compass58ProjectLayout({treeIndex:index,selection:project,selectedTask:null,settings:"PROJECT-EDIT-FORM",active:1})',ctx),/PROJECT-EDIT-FORM/);
  const taskView=vm.runInContext('compass58ProjectLayout({treeIndex:index,selection:project,selectedTask:task,settings:"PROJECT-EDIT-FORM",active:1})',ctx);
  assert.match(taskView,/id="task-editor"/);assert.doesNotMatch(taskView,/PROJECT-EDIT-FORM/);
  vm.runInContext('compass58InspectorHidden=true',ctx);
  const withoutInspector=vm.runInContext('compass58ProjectLayout({treeIndex:index,selection:project,selectedTask:task,settings:"PROJECT-EDIT-FORM",active:1})',ctx);
  assert.match(withoutInspector,/id="task-row"/);assert.doesNotMatch(withoutInspector,/class="compass58-inspector work-card/);
+});
+
+test('Kassenbon receipt data is never built in list view, only on statistics tab',()=>{
+ const list=transformed.slice(transformed.indexOf('function shoppingScreen(){'),transformed.indexOf('function inboxScreen(){'));
+ const stats=transformed.slice(transformed.indexOf('function compass57ShopStatistics(){'),transformed.indexOf('function shoppingScreen(){'));
+ assert.doesNotMatch(list,/receiptInboxView\(state,/);
+ assert.match(stats,/return receiptInboxView\(state,\{draft:receiptDraft743\}\)/);
+ assert.match(list,/class="work-card shopping713-overview"/);
+});
+test('Project inspector is collapsed by default and collapses after folder or project selection',()=>{
+ assert.match(transformed,/let compass58InspectorHidden=true;/);
+ assert.match(transformed,/selectedTaskId=null;compass58InspectorHidden=true;if\(p.kind/);
+ assert.match(transformed,/settings=\(selection&&\(templates\|\|!compass58InspectorHidden\)\)\?/);
 });

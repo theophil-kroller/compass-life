@@ -29,7 +29,7 @@ test('full production bridge chain transforms real main.js, and output parses', 
    catch(error){throw new Error(`Actual transform chain failed in ${filename}: ${error.message}`,{cause:error})}
    if(result?.code)source=result.code;
  }
- assert.match(source,/const COMPASS_CLIENT_VERSION='0\.5\.77\.58'/);
+ assert.match(source,/const COMPASS_CLIENT_VERSION='0\.5\.77\.58\.2'/);
  assert.match(source,/if\(tab==='shopping'\)content=compass57ShopTabs\(\)\+content/);
  assert.match(source,/function compass56TodayWorkspace\(\)/);
  assert.match(source,/function compass58ProjectLayout\(/);
