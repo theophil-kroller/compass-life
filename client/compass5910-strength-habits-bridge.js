@@ -89,13 +89,20 @@ export function compass5910StrengthHabitsBridge(){
  </details>`.replaceAll('\u00024','$');
    s=change(s,planOld,planNew,'compact Planning navigation');
    const habitTarget=`return '<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle"`;
-   const habitReplace=`return item.id==='hakka-5'?'<button type="button" class="habit569-item makko610-trigger '+(done?'is-done':'')+'" data-action="makko-guide-start" aria-label="Makko-Ho Übungsfolge starten"><span><strong>▶ Makko-Ho · Meridian-Stretches</strong><small>6 geführte Übungen mit Timer</small></span><span class="habit569-check">'+(done?'✓':'▶')+'</span></button>':'<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle"`;
+   const habitReplace=`return item.id==='wim-hof'?'<button type="button" class="habit569-item wh621-trigger '+(done?'is-done':'')+'" data-action="wim-hof-start" aria-label="Wim-Hof-Player öffnen"><span><strong>▶ Wim-Hof · Atemroutine</strong><small>Morgen oder Abend · Audio-Player</small></span><span class="habit569-check">'+(done?'✓':'▶')+'</span></button>':item.id==='hakka-5'?'<button type="button" class="habit569-item makko610-trigger '+(done?'is-done':'')+'" data-action="makko-guide-start" aria-label="Makko-Ho Übungsfolge starten"><span><strong>▶ Makko-Ho · Meridian-Stretches</strong><small>6 geführte Übungen mit Timer</small></span><span class="habit569-check">'+(done?'✓':'▶')+'</span></button>':'<button type="button" class="habit569-item '+(done?'is-done':'')+'" data-action="habit-toggle"`;
    s=change(s,habitTarget,habitReplace,'play instead of checklist');
    s=change(s,"'<article class=\"habit569-card\"><div class=\"habit569-card-head\"><div><strong>'+h(item.title)+'",
      "'<article class=\"habit569-card\"><div class=\"habit569-card-head\"><div><strong>'+h(item.id==='hakka-5'?'Makko-Ho · 6 Meridian-Stretches':item.title)+'",'habit display name');
    s=change(s,`data-action="habit-toggle" data-id="'+h(item.id)+'">'+(doneToday?'Heute erledigt ✓':'Heute abhaken')+'</button>`,
-       `data-action="'+(item.id==='hakka-5'?'makko-guide-start':'habit-toggle')+'" data-id="'+h(item.id)+'">'+(item.id==='hakka-5'?'▶ Übungen starten':doneToday?'Heute erledigt ✓':'Heute abhaken')+'</button>`,'habit analytics launch');
-   s=change(s,"if(action==='habit-toggle'){",`if(action==='makko-guide-start'){
+       `data-action="'+(item.id==='hakka-5'?'makko-guide-start':item.id==='wim-hof'?'wim-hof-start':'habit-toggle')+'" data-id="'+h(item.id)+'">'+(item.id==='hakka-5'?'▶ Übungen starten':item.id==='wim-hof'?'▶ Atemroutine starten':doneToday?'Heute erledigt ✓':'Heute abhaken')+'</button>`,'habit analytics launch');
+   s=change(s,"if(action==='habit-toggle'){",`if(action==='wim-hof-start'){
+   if(!state)return toast('Bitte zuerst den Tresor entsperren.',true);
+   habitQuickOpen=false;render();
+   const mod=await import('./wim-hof-player-v5775921.js');
+   await mod.openWimHofPlayer({onComplete:async()=>{if(state&&!habitIsDone(state,'wim-hof'))await runAction('habit-toggle','wim-hof');}});
+   return;
+ }
+ if(action==='makko-guide-start'){
    const mod=await import('./makko-ho-guide-v5775910.js');
    mod.openMakkoGuide({
     onSession:async session=>{
@@ -143,7 +150,10 @@ export function compass5910StrengthHabitsBridge(){
  },null,true);
 }
 function habitQuickOverlay(){`,'encrypted guided session storage');
-    s=change(s,'<div class="habit569-list">','<div style="display:flex;gap:8px;margin:12px 0"><button type="button" class="primary-btn" data-action="str620-guided-start">▶ Heutiges Workout</button></div><div class="habit569-list">','checklist quick guided entry');
+    // Coach and Miracle Morning share a single compact row in the Habits quick sheet.
+    s=change(s,'<div class="quick-panel-row"><button type="button" class="primary-btn" data-action="mm570-open">🌅 Miracle Morning</button><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div>',
+      '<div class="quick-panel-row" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px"><button type="button" class="primary-btn" data-action="mm570-open" style="min-width:0">🌅 Miracle Morning</button><button type="button" class="primary-btn" data-action="strength-coach-open" style="min-width:0">💪 Coach</button></div><div class="quick-panel-row"><button type="button" class="secondary-btn" data-action="habit-open-insights">Insights öffnen</button></div>',
+     'compact Coach and Miracle Morning row');
     s=change(s,"if(action==='strength-coach-open'){",`if(action==='str620-guided-start'){
  if(!state)return toast('Bitte zuerst den Tresor entsperren.',true);
  habitQuickOpen=false;render();
@@ -181,7 +191,7 @@ function habitQuickOverlay(){`,'encrypted guided session storage');
   }
   if(name.endsWith('/client/src/strength-insights-v57728.js')){
    const heading='<section class="work-card"><div class="work-heading"><span>💪 Krafttraining · Muscle Map';
-   s=change(s,heading,`<div class="str620-top-entry" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px"><button type="button" class="primary-btn" data-action="str620-guided-start">▶ Workout starten</button><button type="button" class="secondary-btn" data-action="strength-coach-open">✦ Trainingscoach · Plan wählen</button></div>${heading}`,'top-of-strength guided controls');
+   s=change(s,heading,`<div class="str620-top-entry" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px"><button type="button" class="primary-btn" data-action="strength-coach-open">💪 Coach · Training planen</button><button type="button" class="secondary-btn" data-action="str620-guided-start">▶ Direkt starten</button></div>${heading}`,'top-of-strength guided controls');
    return {code:s,map:null};
   }
   return null;

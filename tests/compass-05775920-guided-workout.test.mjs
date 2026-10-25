@@ -7,7 +7,7 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const guide=read('client/src/strength-guided-v5775920.js');
 const coach=read('client/src/strength-coach-v5775910.js');
 const bridge=read('client/compass5910-strength-habits-bridge.js');
-const source=guide.replace(/^import.*$/gm,'').replace(/export (function|const) /g,'$1 ').replace('import.meta.env?.BASE_URL',"'/'")+'\nthis.API={makeGuidedSnapshot,matchingGuidedSessions,confirmedGuidedSets,exerciseMovementSvg};';
+const source=guide.replace(/^import.*$/gm,'').replace(/export (function|const) /g,'$1 ').replace('import.meta.env?.BASE_URL',"'/'")+'\nthis.API={makeGuidedSnapshot,matchingGuidedSessions,confirmedGuidedSets,exerciseMovementSvg,validPlateWeight,targetCircleLabel};';
 const API=runInNewContext(source,{crypto:{randomUUID:()=> 'guided-1'},Date,Number,String,Math,RegExp});
 
 test('workout player is dynamic-only and retains workout plan prescription',()=>{
@@ -40,8 +40,8 @@ test('Garmin association is a timestamp suggestion only, requiring manual confir
  assert.doesNotMatch(guide,/putStrengthAnnotation\(/);
 });
 test('checklist and strength top provide explicit direct-start buttons',()=>{
- assert.match(bridge,/▶ Heutiges Workout/);
- assert.match(bridge,/▶ Workout starten/);
+ assert.match(bridge,/Coach/);
+ assert.match(bridge,/str620-guided-start/);
  assert.match(bridge,/str620-guided-start/);
  assert.match(bridge,/function habitQuickOverlay/);
  assert.match(bridge,/client\/src\/strength-insights-v57728\.js/);
@@ -61,7 +61,7 @@ test('schematic movement drawings have accessible descriptions and two phases',(
  assert.match(guide,/role="img"/);
 });
 test('no activity is counted unless user clicks set confirmed',()=>{
- assert.match(guide,/\.confirmedSets\.push\(\{confirmed:true/);
+ assert.match(guide,/sets\.push\(\{confirmed:true/);
  assert.match(guide,/started=true;active=true/);
  assert.match(guide,/if\(started\)void persist\(finish\)/);
  assert.match(guide,/\(\!plan\?\.exercises\?\.length\)/);
@@ -71,4 +71,26 @@ test('strength-insights plugin inserts CTAs above Muscle Map without new Vite pl
  const out=compass5910StrengthHabitsBridge().transform(snippet,'/repo/client/src/strength-insights-v57728.js').code;
  assert.ok(out.indexOf('str620-guided-start')<out.indexOf('💪 Krafttraining · Muscle Map'));
  assert.ok(out.includes('strength-coach-open'));
+});
+
+test('v59.21 Coach treats StrongLifts as opt-in gym-only and home plates as shared inventory',()=>{
+ assert.match(coach,/mode==='stronglifts'/);
+ assert.match(coach,/location==='gym'&&mode==='stronglifts'/);
+ assert.match(coach,/HOME_EQUIPMENT=\{dumbbells:2,connectorWeightKg:0,availablePlateKg:28/);
+ assert.ok(coach.includes('28 kg Scheiben insgesamt'));
+ assert.match(coach,/data-place="home"/);
+ assert.match(coach,/data-place="gym"/);
+ assert.match(bridge,/💪 Coach/);
+});
+test('v59.21 set circles mark explicitly confirmed reps, and enforce home total plate limit',()=>{
+ assert.match(guide,/data-act="set-circle"/);
+ assert.match(guide,/confirmedSets/);
+ assert.match(guide,/setNumber:index/);
+ assert.match(guide,/HOME_PLATES_KG=28/);
+ assert.match(guide,/validPlateWeight/);
+ assert.match(guide,/navigator\.wakeLock/);
+ assert.equal(API.validPlateWeight(28,'home'),true);
+ assert.equal(API.validPlateWeight(30,'home'),false);
+ assert.equal(API.validPlateWeight(35,'gym'),true);
+ assert.equal(API.targetCircleLabel('8–12 \/ Seite'),'8');
 });

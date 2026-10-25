@@ -5,6 +5,13 @@ import './strength-guided-v5775920.css';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=s=>`${String(Math.floor(Math.max(0,s)/60)).padStart(2,'0')}:${String(Math.floor(Math.max(0,s)%60)).padStart(2,'0')}`;
 const numericReps=s=>{const m=String(s??'').match(/\d+/);return m?Number(m[0]):null;};
+export const HOME_PLATES_KG=28;
+export const HOME_PLATE_INVENTORY=Object.freeze([{kg:2.5,count:4},{kg:2,count:4},{kg:1.5,count:4},{kg:1,count:4}]);
+export const maxHomeWeight=(exerciseId)=>HOME_PLATES_KG; // Available inventory total; exact physical loading depends on grips and clamps.
+export function targetCircleLabel(reps){return /sek\.|sec|s\b/i.test(String(reps))?`${numericReps(reps)||'–'}s`:String(numericReps(reps)??'✓');}
+// Plate weight represents plates fitted to the selected implement, not 30 kg per dumbbell.
+export function validPlateWeight(value,place,exerciseId=''){const n=Number(value);return Number.isFinite(n)&&n>=0&&n<=(place==='home'?maxHomeWeight(exerciseId):500);}
+
 export function makeGuidedSnapshot(plan,startedAt=new Date().toISOString(),id=(globalThis.crypto?.randomUUID?.()||`guided-${Date.now()}-${Math.random().toString(36).slice(2)}`)){
  return {id,source:'compass-guided-v5920',startedAt,finishedAt:null,completed:false,goal:plan.goal,equipment:plan.equipment,planTitle:plan.title,
   exercises:plan.exercises.map(e=>({exerciseId:e.id,title:e.title,plannedSets:e.sets,plannedReps:e.reps,restSeconds:e.restSeconds,confirmedSets:[]})),
@@ -71,10 +78,14 @@ export function exerciseMovementSvg(exerciseId){
 /** Exercise-by-exercise player. Confirming a set is required; viewing alone never counts. */
 export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
  if(!plan?.exercises?.length)throw Error('Kein Workout-Plan vorhanden.');
- let ex=0,started=false,resting=false,restSeconds=0,restUntil=0,restTimer=null,closed=false,completed=false,active=false,wakeLock=null;
+ let ex=0,started=false,resting=false,restSeconds=0,restUntil=0,restTimer=null,closed=false,completed=false,active=false,wakeLock=null,plateKg=null;
  let snapshot=makeGuidedSnapshot(plan),before=document.activeElement,saveChain=Promise.resolve();
  const host=document.createElement('div');host.className='str620-overlay';host.innerHTML='<section class="str620-panel" role="dialog" aria-modal="true" aria-label="Geführtes Krafttraining"></section>';document.body.append(host);
  const el=host.firstElementChild;
+ const place=plan.equipment==='gym'?'gym':'home';
+ const proposedReps=idx=>numericReps(plan.exercises[idx].reps);
+ const numericValue=()=>plateKg===null?'':String(plateKg);
+ const timeBased=idx=>/sek\.|sec|s\b/i.test(String(plan.exercises[idx].reps));
  function persist(finished=false){snapshot.updatedAt=new Date().toISOString();if(finished){snapshot.completed=completed;snapshot.finishedAt=snapshot.updatedAt;}
   const data=structuredClone(snapshot);saveChain=saveChain.catch(()=>{}).then(()=>onSession(data));return saveChain;}
  function releaseWake(){try{void wakeLock?.release?.();}catch{}wakeLock=null;}
@@ -88,27 +99,63 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
  function setRest(seconds){resting=seconds>0;restSeconds=seconds;restUntil=performance.now()+seconds*1000;clearInterval(restTimer);if(resting)restTimer=setInterval(timerTick,250);}
  function render(){
   const curr=plan.exercises[ex],record=snapshot.exercises[ex],done=record.confirmedSets.length,allDone=done>=curr.sets;
+  const circles=Array.from({length:curr.sets},(_,i)=>{
+    const old=record.confirmedSets.find(r=>r.setNumber===i+1&&r.confirmed);
+    const label=old?(timeBased(ex)?targetCircleLabel(curr.reps):String(old.reps??'✓')):targetCircleLabel(curr.reps);
+    return `<button type="button" class="str621-rep-circle ${old?'is-confirmed':''}" data-act="set-circle" data-set="${i+1}" aria-pressed="${Boolean(old)}" aria-label="Satz ${i+1}: ${old?'erledigt, '+label+' Wiederholungen. Tippen zum Korrigieren':'noch offen. Tippen zum Bestätigen'}" ${started?'':'disabled'}><strong>${esc(label)}</strong><small>${i+1}</small></button>`;
+   }).join('');
   el.innerHTML=`<header class="str620-head"><div><small>COMPASS · HEUTIGER WORKOUT</small><h2>${esc(plan.title)}</h2><p>${ex+1} / ${plan.exercises.length} Übungen · ${esc(curr.primary||'')}</p></div><button type="button" data-act="close" class="str620-close" aria-label="Schließen">×</button></header>
    <div class="str620-progress" aria-label="Übungsfortschritt">${plan.exercises.map((_,i)=>`<span class="${i<ex?'is-done':i===ex?'is-active':''}"></span>`).join('')}</div>
+   <div class="str621-load-block"><div class="str621-load-title"><strong>${place==='home'?'Scheiben am Trainingsgerät':'Trainingsgewicht'}</strong><small>${place==='home'?`${maxHomeWeight(curr.id)} kg Scheiben insgesamt vorhanden · Griffgewicht separat`:'kg · inklusive Stange/Gerät falls zutreffend'}</small></div><div class="str621-load-controls"><button type="button" data-act="minus-plates" aria-label="Gewicht um 1 kg verringern">−</button><label><input inputmode="decimal" type="number" data-plates min="0" max="${place==='home'?maxHomeWeight(curr.id):500}" step="0.5" placeholder="–" value="${numericValue()}" aria-label="Gewicht in Kilogramm"/> kg</label><button type="button" data-act="plus-plates" aria-label="Gewicht um 1 kg erhöhen">+</button></div></div>
    <div class="str620-stage"><div class="str620-art">${PREMIUM_VISUALS.has(curr.id)?`<figure class="str620-premium-figure"><img src="${VISUAL_ROOT}${curr.id}.webp" width="506" height="504" alt="${esc(curr.title)}: Start- und Endposition als Übungsbild" loading="eager" decoding="async"/><figcaption>Start <span aria-hidden="true">→</span> Ziel</figcaption></figure><p class="str620-cue">${esc((descriptions[curr.id]||[])[1]||'Kontrolliert bewegen.')}</p>`:exerciseMovementSvg(curr.id)}</div><div class="str620-metadata"><small>ÜBUNG ${ex+1}</small><h3>${esc(curr.title)}</h3><div class="str620-setcount">${done} / ${curr.sets} Sätze</div><div class="str620-plan">${esc(curr.reps)} Wdh. empfohlen · ${curr.restSeconds}s Pause</div>
-   ${!started?'<p>Drücke ▶, um die Trainingseinheit zu beginnen.</p>':resting?`<div class="str620-rest">Pause · <strong data-rest-clock>${clock(restSeconds)}</strong><button type="button" data-act="skip-rest">Überspringen</button></div>`:allDone?'<p class="str620-success">✓ Übung abgeschlossen. Weiter zur nächsten Übung.</p>':`<div class="str620-inputs"><label>Wdh. (optional)<input data-reps type="number" inputmode="numeric" min="0" max="500" placeholder="${esc(curr.reps)}"/></label><label>kg (optional)<input data-weight type="number" inputmode="decimal" min="0" max="500" step="0.25" placeholder="–"/></label></div>`}
+
+   <div class="str621-sets-head"><strong>Sätze</strong><span>${done} / ${curr.sets} bestätigt</span></div><div class="str621-reps" role="group" aria-label="Sätze und Wiederholungen">${circles}</div><p class="str621-set-hint">${!started?'▶ starten, dann jeden absolvierten Satz antippen.':'Kreis antippen = Satz bestätigen; erneut tippen = Wiederholungen korrigieren.'}</p>
+   ${resting?`<div class="str620-rest">Satzpause · <strong data-rest-clock>${clock(restSeconds)}</strong><button type="button" data-act="skip-rest">Überspringen</button></div>`:allDone?'<p class="str620-success">✓ Übung abgeschlossen.</p>':''}
    </div></div>
-   <footer class="str620-bottom"><button class="str620-secondary" type="button" data-act="prev" ${ex===0?'disabled':''}>← Zurück</button><div class="str620-actions">${!started?'<button type="button" class="str620-primary" data-act="start">▶ Starten</button>':resting?'<button type="button" class="str620-primary" data-act="skip-rest">⏭ Weiter</button>':allDone?`<button type="button" class="str620-primary" data-act="next">${ex===plan.exercises.length-1?'✓ Training beenden':'Nächste Übung →'}</button>`:'<button type="button" class="str620-primary" data-act="confirm">✓ Satz erledigt</button>'}</div></footer>
+   <footer class="str620-bottom"><button class="str620-secondary" type="button" data-act="prev" ${ex===0?'disabled':''}>← Zurück</button><div class="str620-actions">${!started?'<button type="button" class="str620-primary" data-act="start">▶ Starten</button>':resting?'<button type="button" class="str620-primary" data-act="skip-rest">⏭ Weiter</button>':allDone?`<button type="button" class="str620-primary" data-act="next">${ex===plan.exercises.length-1?'✓ Training beenden':'Nächste Übung →'}</button>`:`<button type="button" class="str620-primary" data-act="confirm">✓ Satz ${done+1} bestätigen</button>`}</div></footer>
    <small class="str620-disclaimer">Nur bestätigte Sätze werden als durchgeführt gespeichert. Garmin-Daten bleiben unverändert.</small>`;
   el.querySelector('[data-act="close"]').onclick=()=>close();
-  el.querySelector('[data-act="prev"]').onclick=()=>{if(ex===0)return;stopRest();ex--;render();};
+  el.querySelector('[data-act="prev"]').onclick=()=>{if(ex===0)return;stopRest();ex--;plateKg=null;render();};
   el.querySelector('[data-act="start"]')?.addEventListener('click',()=>{started=true;active=true;void wake();void persist().catch(console.warn);render();});
   el.querySelector('[data-act="skip-rest"]')?.addEventListener('click',()=>{stopRest();render();});
+  const weightBox=el.querySelector('[data-plates]');
+  const setWeight=value=>{
+    if(value===''||value===null){plateKg=null;return true;}
+    const raw=String(value).replace(',','.');
+    if(!validPlateWeight(raw,place,curr.id)){if(weightBox)weightBox.setCustomValidity(place==='home'?`Maximal ${maxHomeWeight(curr.id)} kg Scheiben für diese Übung.`:'Gewicht überprüfen.');return false;}
+    plateKg=Number(raw);if(weightBox)weightBox.setCustomValidity('');return true;
+  };
+  weightBox?.addEventListener('change',e=>{if(!setWeight(e.target.value))e.target.reportValidity();});
+  ['plus','minus'].forEach(sign=>el.querySelector(`[data-act="${sign}-plates"]`)?.addEventListener('click',()=>{
+    const current=Number.isFinite(plateKg)?plateKg:0;
+    setWeight(Math.min(place==='home'?maxHomeWeight(curr.id):500,Math.max(0,current+(sign==='plus'?1:-1))));
+    if(weightBox)weightBox.value=numericValue();
+  }));
+  function confirmSet(index){
+    if(!started||index<1||index>curr.sets)return;
+    if(weightBox&&!setWeight(weightBox.value)){weightBox.reportValidity();return;}
+    const sets=snapshot.exercises[ex].confirmedSets;
+    const prior=sets.find(r=>r.setNumber===index&&r.confirmed);
+    if(prior){
+      // Once confirmed, each tap adjusts the achieved repetition count down by one,
+      // wrapping to the plan target. Never guesses a set merely from opening a picture.
+      if(timeBased(ex))return;
+      const target=proposedReps(ex)||1;
+      prior.reps=(prior.reps??target)<=0?target:Math.max(0,(prior.reps??target)-1);
+      prior.updatedAt=new Date().toISOString();
+    }else{
+      sets.push({confirmed:true,setNumber:index,reps:timeBased(ex)?null:proposedReps(ex),weightKg:plateKg,completedAt:new Date().toISOString()});
+      if(sets.length<curr.sets)setRest(curr.restSeconds);
+    }
+    void persist().catch(console.warn);render();
+  }
+  el.querySelectorAll('[data-act="set-circle"]').forEach(button=>button.onclick=()=>confirmSet(Number(button.dataset.set)));
   el.querySelector('[data-act="confirm"]')?.addEventListener('click',()=>{
-    const repsRaw=el.querySelector('[data-reps]')?.value,weightRaw=el.querySelector('[data-weight]')?.value;
-    const reps=repsRaw===''?null:Number(repsRaw),weightKg=weightRaw===''?null:Number(weightRaw);
-    if((reps!==null&&(!Number.isInteger(reps)||reps<0||reps>500))||(weightKg!==null&&(!Number.isFinite(weightKg)||weightKg<0||weightKg>500))){return;}
-    snapshot.exercises[ex].confirmedSets.push({confirmed:true,setNumber:done+1,reps,weightKg,completedAt:new Date().toISOString()});
-    void persist().catch(console.warn);
-    if(done+1<curr.sets)setRest(curr.restSeconds);render();
+    const next=Array.from({length:curr.sets},(_,i)=>i+1).find(i=>!record.confirmedSets.some(r=>r.setNumber===i));
+    if(next)confirmSet(next);
   });
   el.querySelector('[data-act="next"]')?.addEventListener('click',()=>{
-    stopRest();if(ex===plan.exercises.length-1){completed=true;close(true);return;}ex++;render();
+    stopRest();if(ex===plan.exercises.length-1){completed=true;close(true);return;}ex++;plateKg=null;render();
   });
  }
  render();return {close,save:()=>persist()};

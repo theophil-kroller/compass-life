@@ -85,7 +85,9 @@ export function proposeStrengthTraining(state,{goal='balance',equipment='home',t
  * Exercises are only classified when a known exercise ID and reps are present.
  * This does not infer true recovery, hypertrophy, RPE or readiness from Garmin.
  */
+export const HOME_PLATE_INVENTORY=Object.freeze([{kg:2.5,count:4},{kg:2,count:4},{kg:1.5,count:4},{kg:1,count:4}]);
 const WORKOUT_PREF_KEY='compass:strength-coach:preferences-v5919';
+export const HOME_EQUIPMENT={dumbbells:2,connectorWeightKg:0,availablePlateKg:28,abWheel:true};
 const WORKOUT_GROUP_ORDER=['back','shoulders','chest','core','quads','posterior','glutes','biceps','triceps'];
 const DAY_MS=86400000;
 const WORKOUT_SETS={
@@ -110,7 +112,7 @@ const WORKOUT_POOLS={
   gym:['cable-crunch','cable-woodchop','squat','lat-pulldown','deadlift']},
  strength:{
   home:['goblet-squat','dumbbell-floor-press','dumbbell-row','dumbbell-romanian-deadlift','dumbbell-shoulder-press'],
-  gym:['squat','bench','barbell-row']},
+  gym:['squat','bench','barbell-row','deadlift','military-press','lat-pulldown','cable-row']},
  balance:{
   home:['dumbbell-row','goblet-squat','dumbbell-romanian-deadlift','dumbbell-floor-press','dumbbell-lateral-raise','ab-wheel-kneeling','dumbbell-shoulder-press'],
   gym:['lat-pulldown','squat','deadlift','bench','cable-lateral-raise','cable-rear-delt-fly','cable-crunch']}
@@ -157,7 +159,7 @@ function nextStrongLiftsVariant(history){
 /** Proposed plan: deterministic, equipment-filtered, with honest uncertainty.
  * It never prescribes load increases or treats missing data as a zero load.
  */
-export function planNextWorkout(state,{goal='balance',equipment='home',minutes=45,today}={}){
+export function planNextWorkout(state,{goal='balance',equipment='home',minutes=45,today,mode='smart'}={}){
  const todayValue=/^\d{4}-\d{2}-\d{2}$/.test(String(today||''))?today:new Date().toISOString().slice(0,10);
  const selectedGoal=GOALS[goal]?goal:'balance';
  const location=equipment==='gym'?'gym':'home';
@@ -165,19 +167,24 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  const profile=GOALS[selectedGoal];
  const period=strengthPeriod(state,{range:'28',today:todayValue});
  const history=annotatedHistory(period,todayValue);
- const strongLifts=selectedGoal==='strength'&&location==='gym';
+ const strongLifts=selectedGoal==='strength'&&location==='gym'&&mode==='stronglifts'; // never prescribe StrongLifts at home
  const variant=strongLifts?nextStrongLiftsVariant(history):null;
  let ids=strongLifts?STRONG_LIFTS[variant].map(x=>x[0]):[...WORKOUT_POOLS[selectedGoal][location]];
  ids=ids.filter(id=>catalog.has(id));
- if(selectedGoal==='balance'&&history.usable){
+ // A gym session is NOT automatically StrongLifts. Smart planning ranks every
+ // goal's available exercise pool by recent recorded load, keeping goal order
+ // as the tie breaker. Unknown Garmin sets never count as zero.
+ if(!strongLifts&&history.usable){
    const original=new Map(ids.map((id,i)=>[id,i]));
-   ids.sort((a,b)=>{
-    const score=id=>{
-      const muscle=catalog.get(id)?.primary;
-      return (history.counts7[muscle]||0)*2+(ageDays(history.last[muscle],todayValue)===0?6:ageDays(history.last[muscle],todayValue)===1?3:0);
-    };
-    return score(a)-score(b)||(original.get(a)-original.get(b));
-   });
+   const pressure=id=>{
+    const item=catalog.get(id);const primary=item?.primary;
+    const age=ageDays(history.last[primary],todayValue);
+    const recent=history.counts7[primary]||0;
+    const accessory=(item?.secondary||[]).reduce((n,g)=>n+(history.counts7[g]||0)*.25,0);
+    // This is a scheduling heuristic, not a physiologic recovery score.
+    return recent+accessory+(age===0?7:age===1?4:age===2?1:0);
+   };
+   ids.sort((a,b)=>pressure(a)-pressure(b)||(original.get(a)-original.get(b)));
  }
  // Limit a short session by exercise count, not by pretending 5x5 fits 25 min.
  const limit=strongLifts?3:budget===25?3:budget===45?5:6;
@@ -208,16 +215,16 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   {name:'Ziehen / Drücken',one:history.counts7.back||0,two:history.counts7.chest||0},
   {name:'Vorder- / Rückseite Beine',one:history.counts7.quads||0,two:history.counts7.posterior||0}
  ]:[];
- return {goal:selectedGoal,equipment:location,budget,profile,variant,exercises,estimatedMinutes,timeFit,
+ return {goal:selectedGoal,equipment:location,budget,mode:strongLifts?'stronglifts':'smart',trainingFocus:strongLifts?'Kraft · schweres 5×5':selectedGoal==='vtaper'?'Hypertrophie · kontrollierte 8–15+ Wiederholungen':'Zielorientiertes Training',homeEquipment:location==='home'?{...HOME_EQUIPMENT}:null,profile,variant,exercises,estimatedMinutes,timeFit,
   cautious,recentlyTrained,latestAge,evidence,known,missing,history,balances,
-  title:strongLifts?`StrongLifts 5×5 · Workout ${variant}`:selectedGoal==='vtaper'?'V-Taper · Rücken & Schultern':selectedGoal==='abs'?'Core & Ganzkörper':selectedGoal==='strength'?'Kraft · Home Workout':'Muskelbalance · Ganzkörper',
+  title:strongLifts?`StrongLifts 5×5 · Workout ${variant}`:selectedGoal==='vtaper'?'V-Taper · Rücken & Schultern':selectedGoal==='abs'?'Core & Ganzkörper':selectedGoal==='strength'?`Kraft · ${location==='gym'?'Gym':'Zuhause'}`:'Muskelbalance · Ganzkörper',
   recoveryNote:cautious?'Letztes zugeordnetes Krafttraining heute/gestern. Dieser Plan ist für den nächsten geeigneten Trainingstag, nicht automatisch für sofort. Erholung und individuelle Belastung prüfen.':
    evidence==='none'?'Keine zugeordneten Übungssätze vorhanden: Es gibt keine belastbare Aussage zur Regeneration.':
    evidence==='limited'?'Für die Erholungsbeurteilung liegen noch zu wenige zugeordnete Trainingstage vor.':'Übungsauswahl basiert auf dokumentierter Belastung, nicht auf gemessener Muskelregeneration.'};
 }
 function coachPrefs(){
- try{const o=JSON.parse(localStorage.getItem(WORKOUT_PREF_KEY)||'{}');return {goal:GOALS[o.goal]?o.goal:'balance',equipment:o.equipment==='gym'?'gym':'home',minutes:[25,45,65].includes(Number(o.minutes))?Number(o.minutes):45};}
- catch{return {goal:'balance',equipment:'home',minutes:45};}
+ try{const o=JSON.parse(localStorage.getItem(WORKOUT_PREF_KEY)||'{}');return {goal:GOALS[o.goal]?o.goal:'balance',equipment:o.equipment==='gym'?'gym':'home',minutes:[25,45,65].includes(Number(o.minutes))?Number(o.minutes):45,mode:o.mode==='stronglifts'?'stronglifts':'smart'};}
+ catch{return {goal:'balance',equipment:'home',minutes:45,mode:'smart'};}
 }
 function saveCoachPrefs(p){try{localStorage.setItem(WORKOUT_PREF_KEY,JSON.stringify(p));}catch{}}
 function coachCopyText(plan){
@@ -230,7 +237,7 @@ export function readStrengthCoachPreferences(){return coachPrefs();}
 export function openStrengthCoach({state,today,onSession=async()=>{}}){
  let prefs=coachPrefs();
  const host=document.createElement('div');host.className='str610-backdrop';
- host.innerHTML='<section class="str610-dialog str619-dialog" role="dialog" aria-modal="true" aria-label="Compass Workout Planner"></section>';
+ host.innerHTML='<section class="str610-dialog str619-dialog" role="dialog" aria-modal="true" aria-label="Compass Coach"></section>';
  document.body.append(host);
  const dialog=host.firstElementChild;const before=document.activeElement;let closed=false;
  const close=()=>{if(closed)return;closed=true;host.remove();document.removeEventListener('keydown',onKey);before?.focus?.({preventScroll:true});};
@@ -238,13 +245,17 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
  host.addEventListener('click',e=>{if(e.target===host)close();});
  function draw(){
   const plan=planNextWorkout(state,{...prefs,today});
-  dialog.innerHTML=`<div class="str610-title"><div><small>COMPASS · INTELLIGENTER WORKOUT PLANNER</small><h2>Dein nächster Workout</h2></div><button class="str610-close" aria-label="Schließen" type="button">×</button></div>
-  <div class="str610-options str619-options">
-   <label>Ziel<select class="str610-goal">${Object.entries(GOALS).map(([id,x])=>`<option value="${id}" ${prefs.goal===id?'selected':''}>${safe(x.label)}</option>`).join('')}</select></label>
-   <label>Wo trainierst du?<select class="str610-equipment"><option value="home" ${prefs.equipment==='home'?'selected':''}>🏠 Zuhause · Kurzhanteln & Ab Wheel</option><option value="gym" ${prefs.equipment==='gym'?'selected':''}>🏋️ Gym · StrongLifts & Kabelzug</option></select></label>
-   <label>Verfügbare Zeit<select class="str619-minutes"><option value="25" ${prefs.minutes===25?'selected':''}>25 Minuten</option><option value="45" ${prefs.minutes===45?'selected':''}>45 Minuten</option><option value="65" ${prefs.minutes===65?'selected':''}>65 Minuten</option></select></label>
+  dialog.innerHTML=`<div class="str610-title"><div><small>COMPASS · DEIN PERSÖNLICHER COACH</small><h2>Dein nächstes Training</h2></div><button class="str610-close" aria-label="Schließen" type="button">×</button></div>
+  <div class="str621-location" role="group" aria-label="Trainingsort umschalten">
+   <span>Trainingsort</span><div class="str621-location-switch"><button type="button" data-place="home" aria-pressed="${prefs.equipment==='home'}" class="${prefs.equipment==='home'?'active':''}">⌂ Zuhause</button><button type="button" data-place="gym" aria-pressed="${prefs.equipment==='gym'}" class="${prefs.equipment==='gym'?'active':''}">▤ Gym</button></div>
   </div>
-  <section class="str619-plan-head" aria-label="Vorgeschlagener Trainingsplan"><div><small>${plan.cautious?'FÜR DEN NÄCHSTEN TRAININGSTAG':'DEIN VORSCHLAG'}</small><h3>${safe(plan.title)}</h3><p>${plan.exercises.length} Übungen · ca. ${plan.estimatedMinutes} Min. · ${plan.equipment==='home'?'Zuhause':'Gym'}</p></div><div class="str620-cta-stack"><button type="button" class="str620-launch" aria-label="Geführtes Workout starten">▶ Workout starten</button><button type="button" class="str619-copy">Plan kopieren</button></div></section>
+  <div class="str610-options str619-options str621-options">
+   <label>Trainingsziel<select class="str610-goal">${Object.entries(GOALS).map(([id,x])=>`<option value="${id}" ${prefs.goal===id?'selected':''}>${safe(x.label)}</option>`).join('')}</select></label>
+   <label>Zeitbudget<select class="str619-minutes"><option value="25" ${prefs.minutes===25?'selected':''}>25 Minuten</option><option value="45" ${prefs.minutes===45?'selected':''}>45 Minuten</option><option value="65" ${prefs.minutes===65?'selected':''}>65 Minuten</option></select></label>
+  </div>
+  ${prefs.goal==='strength'&&prefs.equipment==='gym'?`<div class="str621-method" role="group" aria-label="Trainingsmethode"><span>Trainingsmethode</span><button type="button" data-mode="smart" aria-pressed="${prefs.mode!=='stronglifts'}" class="${prefs.mode!=='stronglifts'?'active':''}">Intelligenter Mix</button><button type="button" data-mode="stronglifts" aria-pressed="${prefs.mode==='stronglifts'}" class="${prefs.mode==='stronglifts'?'active':''}">StrongLifts 5×5</button></div>`:''}
+  <div class="str621-equipment-note">${prefs.equipment==='home'?'Zuhause: zwei verstellbare Kurzhanteln, nahezu gewichtslose Verbindungsstange, Ab Wheel · vier Scheiben je 2,5 / 2 / 1,5 / 1 kg = 28 kg Scheiben insgesamt; Bei zwei symmetrisch beladenen Kurzhanteln wären das je höchstens 14 kg Scheiben; für eine einzelne Hantel können mehr Scheiben verwendet werden. Griffgewichte separat erfassen.':'Gym: schwere Langhanteln, Maschinen und Kabelzug · StrongLifts nur auf Wunsch.'}</div>
+  <section class="str619-plan-head" aria-label="Vorgeschlagener Trainingsplan"><div><small>${plan.cautious?'FÜR DEN NÄCHSTEN TRAININGSTAG':'DEIN VORSCHLAG'}</small><h3>${safe(plan.title)}</h3><p>${plan.exercises.length} Übungen · ca. ${plan.estimatedMinutes} Min. · ${plan.equipment==='home'?'Zuhause':'Gym'} · ${safe(plan.trainingFocus)}</p></div><div class="str620-cta-stack"><button type="button" class="str620-launch" aria-label="Geführtes Workout starten">▶ Workout starten</button><button type="button" class="str619-copy">Plan kopieren</button></div></section>
   ${plan.timeFit==='longer'?`<p class="str619-alert">Dieser Plan benötigt voraussichtlich mehr als die gewählten ${plan.budget} Minuten. Die Sätze werden nicht künstlich verkürzt.</p>`:''}
   <p class="str619-recovery">${safe(plan.recoveryNote)}</p>
   <div class="str619-coverage"><span>Datengrundlage: ${plan.known} zugeordnete Sätze · ${plan.missing} nicht zugeordnet</span><span>${plan.evidence==='none'?'Noch keine Muskelhistorie':plan.evidence==='limited'?'Nur eingeschränkte Historie':plan.evidence==='partial'?'Viele Trainingsdetails fehlen':'Dokumentierte Muskelhistorie'}</span></div>
@@ -254,7 +265,8 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
   dialog.querySelector('.str610-close').onclick=close;
   const update=(key,val)=>{prefs={...prefs,[key]:val};saveCoachPrefs(prefs);draw();};
   dialog.querySelector('.str610-goal').onchange=e=>update('goal',e.target.value);
-  dialog.querySelector('.str610-equipment').onchange=e=>update('equipment',e.target.value);
+  dialog.querySelectorAll('[data-place]').forEach(button=>button.onclick=()=>update('equipment',button.dataset.place));
+  dialog.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>update('mode',button.dataset.mode));
   dialog.querySelector('.str619-minutes').onchange=e=>update('minutes',Number(e.target.value));
   dialog.querySelector('.str620-launch').onclick=async()=>{
    const guide=await import('./strength-guided-v5775920.js');
@@ -265,5 +277,5 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
    catch{dialog.querySelector('.str619-copy').textContent='Kopieren nicht verfügbar';}
   };
  }
- draw();dialog.querySelector('select')?.focus({preventScroll:true});return {close};
+ draw();dialog.querySelector('[data-place]')?.focus({preventScroll:true});return {close};
 }

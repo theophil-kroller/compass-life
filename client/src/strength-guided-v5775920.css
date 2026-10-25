@@ -12,3 +12,44 @@
 @media(max-width:650px){.str620-premium-figure img{max-height:min(36dvh,280px)}}
 @media(max-width:650px){.str620-panel{padding-bottom:max(15px,env(safe-area-inset-bottom))}}
 .str620-panel :focus-visible{outline:2px solid #2e7b59;outline-offset:3px}
+
+/* .59.21 — accessible StrongLifts-inspired set circles, usable for every Coach goal. */
+.str621-load-block{border:1px solid #e2e8df;border-radius:13px;padding:10px 12px;background:#f5f8f3;margin:10px 0}
+.str621-load-title{display:flex;flex-direction:column;gap:4px;color:#3c6650;font-size:13px}
+.str621-load-title small{font-size:10px;line-height:1.3;font-weight:400;color:#6f8074}
+.str621-load-controls{display:grid;grid-template-columns:38px 1fr 38px;align-items:center;gap:7px;margin-top:8px}
+.str621-load-controls button{height:38px;border-radius:11px;border:1px solid #d4e3d7;color:#36694f;background:#fff;font-size:22px;cursor:pointer}
+.str621-load-controls label{display:flex;align-items:center;justify-content:center;gap:5px;color:#597365;font-size:13px}
+.str621-load-controls input{width:min(110px,80%);min-width:0;padding:7px;border:1px solid #d2dfd4;border-radius:9px;color:#2c6347;background:#fff;text-align:center;font:700 19px/1.1 inherit}
+.str621-sets-head{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px;margin:8px 0}.str621-sets-head strong{color:#254d37}.str621-sets-head span{color:#779184;font-size:12px}
+.str621-reps{display:flex;gap:9px;flex-wrap:wrap;align-items:center;justify-content:flex-start}
+.str621-rep-circle{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;width:52px;height:52px;border-radius:50%;border:2px solid #d94d4c;background:#fff;color:#c94244;cursor:pointer;font:inherit;box-sizing:border-box;touch-action:manipulation}
+.str621-rep-circle strong{font-size:19px;line-height:1.1;font-weight:750;font-variant-numeric:tabular-nums}.str621-rep-circle small{font-size:9px;opacity:.7}
+.str621-rep-circle.is-confirmed{color:#fff;background:#d94442;border-color:#d94442}
+.str621-rep-circle:disabled{opacity:.53;cursor:default}.str621-rep-circle:focus-visible{outline:3px solid #478f70;outline-offset:2px}
+.str621-set-hint{font-size:11px!important;line-height:1.35!important;color:#789082!important;margin:8px 0 0}
+@media(max-width:650px){
+ .str620-panel{gap:0}
+ .str620-stage{grid-template-rows:minmax(0,.95fr) auto;align-items:stretch}
+ .str620-art{padding:5px}
+ .str620-metadata h3{font-size:18px;margin:3px 0}
+ .str620-setcount{display:none}.str620-plan{font-size:12px;margin:3px 0}
+ .str620-premium-figure img{max-height:min(29dvh,235px)}
+ .str620-cue{font-size:11px}
+ .str621-load-block{padding:7px 9px;margin:6px 0 5px}
+ .str621-load-title small{font-size:9px}
+ .str621-load-controls{margin-top:5px}.str621-load-controls button{height:32px}
+ .str621-load-controls input{font-size:17px;height:32px;box-sizing:border-box}
+ .str621-reps{gap:7px}.str621-rep-circle{width:46px;height:46px}
+ .str621-rep-circle strong{font-size:17px}
+ .str621-sets-head{margin:5px 0}
+ .str621-set-hint{font-size:10px!important;margin:5px 0 0}
+ .str620-bottom{margin-top:8px}.str620-disclaimer{font-size:10px;margin-top:4px}
+}
+@media(max-height:750px) and (max-width:650px){
+ .str620-head small,.str620-disclaimer,.str620-cue{display:none}
+ .str620-stage{grid-template-rows:minmax(0,1fr) auto}
+ .str620-premium-figure img{max-height:min(22dvh,155px)}
+ .str621-rep-circle{width:40px;height:40px}.str621-rep-circle strong{font-size:15px}
+ .str620-panel{padding:10px}.str620-progress{margin:6px 0}
+}

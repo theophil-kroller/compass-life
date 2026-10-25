@@ -30,3 +30,26 @@
 .str620-cta-stack{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .str620-launch{cursor:pointer;background:#287753;color:#fff;border:0;border-radius:11px;padding:12px 16px;font-size:14px;font-weight:700;white-space:nowrap}
 @media(max-width:700px){.str619-plan-head{align-items:flex-start;flex-direction:column}.str620-cta-stack{width:100%}.str620-launch{flex:1}}
+
+/* .59.21 Coach is goal-led. StrongLifts is one optional method, not the product. */
+.str621-location{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:17px 0 12px}
+.str621-location>span,.str621-method>span{color:#647d6d;font-size:12px;font-weight:700}
+.str621-location-switch{display:flex;gap:4px;padding:4px;border-radius:14px;background:#e7efe8;border:1px solid #d6e5d9;flex:1;max-width:370px}
+.str621-location-switch button{flex:1;min-width:0;padding:12px 8px;border:0;background:transparent;border-radius:11px;color:#557361;font:inherit;font-weight:650;cursor:pointer}
+.str621-location-switch button.active{background:#fff;box-shadow:0 2px 8px #203c271a;color:#1f5c42}
+.str621-method{display:flex;gap:6px;align-items:center;margin:7px 0;flex-wrap:wrap}
+.str621-method>span{margin-right:4px}.str621-method button{border:1px solid #d4e4d9;background:#f7faf6;color:#426b53;padding:7px 11px;border-radius:999px;font-size:12px;cursor:pointer}
+.str621-method button.active{background:#2e7856;color:white;border-color:#2e7856}
+.str621-options{grid-template-columns:minmax(0,1.7fr) minmax(0,.8fr)}
+@media(max-width:650px){.str621-location{align-items:stretch;flex-direction:column;margin-top:10px}.str621-location-switch{max-width:none}.str621-options{grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr)}.str621-options label:last-child{grid-column:auto}}
+@media(max-width:380px){.str621-options{grid-template-columns:1fr}}
+
+/* .59.21 — Coach switch, home plate inventory, strength modality. */
+.str621-location{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:14px 0 9px;font-size:13px;font-weight:700;color:#466451}
+.str621-location-switch,.str621-method{display:flex;gap:5px;padding:4px;border:1px solid #d9e7dc;background:#edf4ee;border-radius:15px}
+.str621-location-switch button,.str621-method button{font:inherit;font-weight:700;font-size:13px;border:0;border-radius:11px;padding:9px 15px;background:transparent;color:#607868;cursor:pointer}
+.str621-location-switch button.active,.str621-method button.active{background:#277653;color:#fff;box-shadow:0 2px 7px #1b453220}
+.str621-options{grid-template-columns:1.4fr 1fr}
+.str621-method{align-items:center;margin:10px 0;flex-wrap:wrap}.str621-method>span{color:#5e7b69;font-size:12px;padding:7px;flex:1}
+.str621-equipment-note{color:#53705e;font-size:12px;line-height:1.5;margin:10px 0;padding:10px 12px;border-radius:11px;background:#f6f8f4;border:1px solid #e1e9e1}
+@media(max-width:700px){.str621-location{align-items:flex-start;flex-direction:column}.str621-location-switch{width:100%;box-sizing:border-box}.str621-location-switch button{flex:1}.str621-method>span{flex-basis:100%}}
