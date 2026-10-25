@@ -1,0 +1,20 @@
+Compass 0.5.77.59.1 — Streamlined Insights (CSS-only layout hotfix)
+Basis: Github main / version 0.5.77.58.2, including .59 CSS and Moon hotfix.
+
+Copy ONLY these 2 repo files to their matching GitHub paths:
+  client/index.html                    (replace existing file)
+  client/public/insights-streamline-v577591.css  (new file)
+
+Do not upload UPLOAD_HINWEISE.txt to the repository.
+No changes to vite.config.js, project CSS, bridge JS, sync, vault, or persistence.
+Version shown in app remains 0.5.77.58.2, since this is a presentation hotfix.
+
+Desktop (>700px): left Insights sidebar remains primary; duplicate top
+category bar is hidden. Local subtabs remain. Cockpit hero copy and redundant
+navigation cards (cards 4-6) are visually removed. Three real data summaries
+are now compact. Routine status remains visible in a subtle one-line style,
+so success notifications are not silently swallowed. On mobile, the category
+navigation remains visible. Error notices are untouched.
+
+Build verification: check GitHub Actions after upload (cannot run complete
+npm/Vite build here without installing repository dependencies).

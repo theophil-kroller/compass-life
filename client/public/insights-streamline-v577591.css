@@ -1,0 +1,160 @@
+/* Compass 0.5.77.59.1 — Insights streamlined UI correction.
+   A scoped presentation hotfix layered over .59 without touching data,
+   navigation actions, forms, chart points or the Vite bridge chain.
+   The desktop sidebar is the one primary navigation surface. */
+
+/* Restore .50's intended desktop behavior, overridden inadvertently by .59.
+   Keep the category switcher on mobile where the sidebar is not persistent. */
+@media (min-width:701px) {
+  .shell.premium751 .insight-workspace > .calm-insight-toolbar {
+    display:none !important;
+  }
+}
+
+/* Routine status notices should never look like a second dashboard banner.
+   Deliberately retain their message and accessibility role: a successful
+   user action still has visible confirmation. Errors are never changed. */
+.shell.premium751 .content:has(.insight-workspace) > .alert.good {
+  display:block;
+  margin:0 0 7px !important;
+  padding:3px 1px !important;
+  border:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  border-radius:0 !important;
+  color:#70857a !important;
+  font:500 10px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,"Segoe UI",sans-serif !important;
+  text-align:right;
+}
+
+/* The selected Cockpit subtab already supplies the page's identity.
+   Avoid two hero headings + an explanation before any data appears. */
+.shell.premium751 .insight-workspace:has(> .ins750-hub) > .insight-view-header,
+.shell.premium751 .insight-workspace .ins750-hub-intro,
+.shell.premium751 .insight-workspace .ins750-hub-note {
+  display:none !important;
+}
+
+/* A cockpit is a fast glance at real measurements, not a link directory.
+   Life Balance / Connections / Time tracking already have functional subtabs
+   (or their primary category) and remain accessible from navigation. */
+.shell.premium751 .insight-workspace .ins750-hub-grid > .ins750-hub-card:nth-child(n+4) {
+  display:none !important;
+}
+
+.shell.premium751 .insight-workspace .ins750-hub {
+  margin:0 0 12px;
+}
+.shell.premium751 .insight-workspace .ins750-hub-grid {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.shell.premium751 .insight-workspace .ins750-hub-card {
+  position:relative;
+  min-height:108px !important;
+  padding:14px 46px 14px 15px !important;
+  gap:4px !important;
+  border:1px solid #e1e7e3 !important;
+  border-radius:13px !important;
+  box-shadow:0 1px 2px rgba(30,55,39,.025) !important;
+}
+.shell.premium751 .insight-workspace .ins750-hub-card-head {
+  align-items:center;
+  gap:7px;
+}
+.shell.premium751 .insight-workspace .ins750-hub-card-head h3 {
+  margin:0;
+  font-size:12px;
+  line-height:1.25;
+  font-weight:650;
+  color:#526e61;
+}
+.shell.premium751 .insight-workspace .ins750-hub-card > strong {
+  display:block;
+  margin:8px 0 0;
+  font-size:clamp(18px,1.35vw,23px);
+  line-height:1.2;
+  font-weight:680;
+  letter-spacing:-.45px;
+  font-variant-numeric:tabular-nums;
+  color:#203d33;
+}
+.shell.premium751 .insight-workspace .ins750-hub-card > p {
+  display:none !important;
+}
+/* Preserve the existing action; reduce its presentation to a quiet chevron. */
+.shell.premium751 .insight-workspace .ins750-hub-card > .secondary-btn {
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:29px;
+  min-width:29px;
+  height:29px;
+  min-height:29px !important;
+  margin:0 !important;
+  padding:0 !important;
+  display:grid;
+  place-items:center;
+  border:0;
+  background:#f1f5f1;
+  border-radius:8px;
+  color:#406c57;
+  font-size:0 !important;
+}
+.shell.premium751 .insight-workspace .ins750-hub-card > .secondary-btn::after {
+  content:'›';
+  font-size:22px;
+  line-height:1;
+  font-weight:400;
+}
+.shell.premium751 .insight-workspace .ins750-hub-card > .secondary-btn:hover,
+.shell.premium751 .insight-workspace .ins750-hub-card > .secondary-btn:focus-visible {
+  background:#e2eee5;
+  color:#205743;
+}
+.shell.premium751 .insight-workspace .ins750-hub-card > .secondary-btn:focus-visible {
+  outline:2px solid #287f68;
+  outline-offset:2px;
+}
+
+/* The remaining subtab row is a local view selector, not a second primary nav. */
+.shell.premium751 .insight-workspace .ins750-subtabs {
+  padding:0 0 6px;
+  margin:0 0 12px;
+  gap:3px;
+}
+.shell.premium751 .insight-workspace .ins750-subtab {
+  min-height:32px;
+  padding:5px 11px;
+  font-size:11px;
+  border-radius:8px;
+}
+
+@media (max-width:1130px) {
+  .shell.premium751 .insight-workspace .ins750-hub-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width:700px) {
+  .shell.premium751 .insight-workspace .ins750-hub-grid {
+    grid-template-columns:minmax(0,1fr);
+    gap:8px;
+  }
+  .shell.premium751 .insight-workspace .ins750-hub-card {
+    min-height:90px !important;
+    padding:11px 44px 11px 12px !important;
+  }
+  .shell.premium751 .insight-workspace .ins750-hub-card > strong {
+    font-size:18px;
+    margin:4px 0 0;
+  }
+  .shell.premium751 .content:has(.insight-workspace) > .alert.good {
+    font-size:10px !important;
+    text-align:left;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .shell.premium751 .insight-workspace .ins750-hub-card > .secondary-btn {
+    transition:none;
+  }
+}
