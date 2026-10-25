@@ -55,3 +55,8 @@
  .shopping713-list{padding:10px}
 }
 @media(prefers-reduced-motion:reduce){.compass57-shopping-tabs button{transition:none}}
+
+/* .57.1: action-first shopping — explanatory copy remains available in help, not above list. */
+.shopping713-header .muted-line,.shopping713-list .shopping713-bottom > .muted-line{display:none!important}
+.shopping713-overview{gap:12px}
+.shopping713-list-header{margin-bottom:3px}

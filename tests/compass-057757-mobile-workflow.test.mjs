@@ -41,7 +41,7 @@ test('Vite configuration orders .57 after .56',()=>{
  assert.match(cfg,/import \{ compass757Bridge \}/);
 });
 test('all seven changes transform and resulting JavaScript parses',()=>{
- assert.match(final,/COMPASS_CLIENT_VERSION='0\.5\.77\.57'/);
+ assert.match(final,/COMPASS_CLIENT_VERSION='0\.5\.77\.57\.1'/);
  const f=join(tmpdir(),`compass757-${process.pid}.mjs`);
  writeFileSync(f,final);
  try{execFileSync(process.execPath,['--check',f]);}finally{unlinkSync(f)}
@@ -60,8 +60,9 @@ test('Touch, feelings and nutrition are visible in Focus while analysis nav stay
 });
 test('Shopping list is default and statistics are explicit second tab',()=>{
  assert.match(final,/let compass57ShoppingTab='list'/);
- assert.match(final,/if\(compass57ShoppingTab==='stats'\)return chrome\(compass57ShopTabs\(\)\+compass57ShopStatistics\(\)\)/);
+ assert.match(final,/if\(compass57ShoppingTab==='stats'\)return chrome\(compass57ShopStatistics\(\)\)/);
  assert.match(final,/data-action="compass57-shop-tab"/);
+ assert.match(final, /if\(tab==='shopping'\)content=compass57ShopTabs\(\)\+content/);
  assert.match(final,/if\(action==='shopping713-select'\)/);
  assert.match(final,/data-action="smart49-open"/);
 });

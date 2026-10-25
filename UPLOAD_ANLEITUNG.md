@@ -1,13 +1,18 @@
-# Upload – Compass Life 0.5.77.57
+# Compass 0.5.77.57.1 Hotfix
 
-Voraussetzung: 0.5.77.56 ist auf `main` (Workflow #220 erfolgreich).
+Upload into `theophil-kroller/compass-life` (branch `main`) preserving paths:
 
-In dein GitHub-Repository `theophil-kroller/compass-life` alle drei Dateien aus `client/` mit identischen relativen Pfaden hochladen:
+Replace:
+- `client/compass757-bridge.js`
+- `client/src/mobile-workflow-v57757.css`
+- `tests/compass-057757-mobile-workflow.test.mjs`
 
-- **Ersetzen:** `client/vite.config.js`
-- **Neu:** `client/compass757-bridge.js`
-- **Neu:** `client/src/mobile-workflow-v57757.css`
+Add:
+- `tests/compass-057757-full-transform-chain.test.mjs`
 
-Optional: `tests/compass-057757-mobile-workflow.test.mjs` und die zwei Markdown-Dateien. Anschließend GitHub Actions › Deploy Compass Web prüfen (check und build). Erst nach einem grünen Lauf die installierte PWA neu öffnen/aktualisieren.
+Optional docs:
+- `CHANGELOG_0.5.77.57.1.md`
 
-Keine Änderungen an `client/src/main.js`, kein Vault Reset, keine Neuinstallation nötig.
+No replacement for `vite.config.js` or other modules is necessary (the failed .57 upload already contains those files).
+
+Inspect GitHub Actions › Deploy Compass Web. `npm run check` now transforms the complete real main.js before `npm run build` and will fail early on missing anchors.
