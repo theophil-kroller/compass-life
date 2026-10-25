@@ -5,7 +5,8 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('.59.5 leaves the historical .50-.58 transformer chain continuous and final',()=>{
  const config=read('client/vite.config.js');
- assert.match(config,/compass749Bridge\(\), compass7593UxBridge\(\), VitePWA\(/);
+ assert.match(config,/compass747Bridge\(\), compass748Bridge\(\), compass749Bridge\(\), VitePWA\(/);
+ assert.match(config,/compass7593UxBridge\(\),\s*compass750Bridge\(\)/);
  assert.match(config,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\), compass756Bridge\(\), compass757Bridge\(\), compass758Bridge\(\)\]/);
  assert.match(config,/VitePWA\([\s\S]*?\),\s*\/\/ Guarded 0\.5\.77\.50/);
  assert.equal((config.match(/compass7593UxBridge\(\)/g)||[]).length,1);

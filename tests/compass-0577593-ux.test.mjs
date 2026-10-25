@@ -77,9 +77,11 @@ test('transformed HTML and JS parse; non-main modules are unchanged',()=>{
   execFileSync(process.execPath,['--check',file],{stdio:'pipe'});
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
-test('production Vite keeps .57.1 and .58 final, with .59.3 UX before them',()=>{
+test('production Vite preserves .47-.49/PWA and .50-.58 adjacency; .59.3 runs before .50',()=>{
  const config=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
  assert.match(config,/import \{ compass7593UxBridge \} from '\.\/compass7593-ux-bridge\.js';/);
- assert.match(config,/compass749Bridge\(\), compass7593UxBridge\(\), VitePWA\(/);
+ assert.match(config,/compass747Bridge\(\), compass748Bridge\(\), compass749Bridge\(\), VitePWA\(/);
+ assert.match(config,/VitePWA\([\s\S]*?\),\s*\/\/ Guarded 0\.5\.77\.50/);
+ assert.match(config,/compass7593UxBridge\(\),\s*compass750Bridge\(\)/);
  assert.match(config,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\), compass756Bridge\(\), compass757Bridge\(\), compass758Bridge\(\)\]/);
 });
