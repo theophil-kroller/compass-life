@@ -1,23 +1,20 @@
-# Compass Insights · UI Build 0.5.77.59
+# Compass Dream-Moon Quickfix (auf Basis 0.5.77.58.2)
 
-## Upload in GitHub
+**Voraussetzung:** Erfolgreich deployter Build #226 / alle Änderungen aus 0.5.77.58.2.
 
-Ersetze im Repository **nur** `client/src/project-workspace-v57758.css` durch die gleichnamige Datei aus diesem ZIP (mit dem Pfad `client/src/`).
+In GitHub im Repository `theophil-kroller/compass-life` genau diese zwei Dateien aus dem ZIP in die passenden Ordner hochladen/ersetzen:
 
-- Kein Löschen oder Ändern anderer Dateien.
-- Kein `vite.config.js`-Update.
-- Kein JavaScript-Bridge-Update.
-- Kein Datenbank- oder Tresor-Eingriff.
+1. `client/compass758-bridge.js`
+2. `tests/compass-057758-project-columns.test.mjs`
 
-Die Anwendung zeigt in ihrem Footer vorerst weiter **0.5.77.58.2**. 0.5.77.59 bezeichnet den Styling-Build; die angezeigte Client-Version wird bewusst nicht nur für CSS angefasst, damit CI nicht erneut wegen fragiler Versionsanker scheitert.
+Nicht `vite.config.js` ändern. Alle CSS-Dateien und der reine Insights-Design-Patch .59 bleiben unverändert.
 
-## Enthalten
+## Fehlerbehebung
 
-- Zusammenhängende, kompakte Haupt-/Untertab-Navigation innerhalb von Insights.
-- Einheitliche Abstände, Schriftgrößen, Oberflächen, Radien und Kartenlogik für Kennzahlen, Diagramme, Ernährungs-/Gesundheitsberichte und Intelligence-Cockpit.
-- Touch-freundliche mobile Tabs ohne ausgeblendete Hauptnavigation.
-- Bestehende Charts, Datenhinweise und Interaktionen bleiben vollständig erhalten.
+Der Mond-Button (`dream743-open`) wechselte auf `tab=insights` und `insightTab=dreamworld`. In Focus lenkte die allgemeine Render-Sperre *jede* Insights-Ansicht wieder auf Heute. Zusätzlich musste die Traumwelt auf sämtliche Lazy-Analytics-Module warten.
 
-## Teststatus
+Der Fix lässt ausschließlich `dreamworld` auch in Focus zu und lädt das bereits vorhandene Traumformular sofort, ohne die übrigen Insights-Chunks. Der Cursor wird beim Antippen direkt auf „Erinnerung“ gesetzt; bei verzögertem Rendern greift ein zweiter Fokusversuch.
 
-Geprüft mit `tinycss2` auf Parsefehler und ungewollte Ausblendregeln. Die Datei ist eine reine Erweiterung der bestehenden `.58` CSS und wird durch dieselbe bereits erfolgreiche Import-Kette geladen. Vite-Produktionsbuild nicht lokal ausführbar; bitte den GitHub-Actions-Status nach dem Upload kontrollieren.
+Keine Änderung an Tresor, Verschlüsselung, Traumdaten, Journal-Synchronisation oder den anderen Insights-Routen.
+
+**Qualität:** ergänzte Verhaltens- und Regressionstests; der vollständige Produktionsbuild wird durch GitHub Actions nach dem Upload geprüft.

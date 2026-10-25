@@ -73,6 +73,34 @@ export function compass758Bridge(){
      "      catch(ex){toast(ex.message,true);}\n"+
      "      return;\n"+
      "    }\n    if(intent==='promote'){",'Inbox-to-Dreams atomic conversion');
+  // Dream logger is a capture tool, not heavy Insights. It must remain reachable
+  // from the global moon button even while the GTD Focus layout is active.
+  ch("if(state&&compass55Mode==='focus'&&['insights','finance','activity','recovery','progress'].includes(tab))",
+     "if(state&&compass55Mode==='focus'&&((tab==='insights'&&insightTab!=='dreamworld')||['finance','activity','recovery','progress'].includes(tab)))",
+     'moon quick capture bypasses Focus-only route redirect');
+  // All Insights graphs require their lazy analytics chunks; the encrypted dream
+  // input uses an already statically imported module and must open without them.
+  ch("function insightsScreen(){if(!compass54Ready('insights'))return compass54LoadingScreen('insights');",
+     "function insightsScreen(){if(insightTab!=='dreamworld'&&!compass54Ready('insights'))return compass54LoadingScreen('insights');",
+     'dream form does not wait for analytics chunks');
+  ch('function render(){',
+     `let compass59DreamFocusPending=false;
+function compass59FocusDreamField(){
+ const field=app.querySelector('#dream743-form textarea[name="body"]');
+ if(!field)return false;
+ compass59DreamFocusPending=false;
+ try{field.focus({preventScroll:true});}catch{field.focus();}
+ field.scrollIntoView?.({block:'center'});
+ return true;
+}
+function render(){`,
+     'dream focus once the form exists');
+  ch("if(action==='dream743-open'){\n  tab='insights';insightTab='dreamworld';calmNavGroup='insights';dreamEditingId743='';render();return;\n }",
+     "if(action==='dream743-open'){\n  compass59DreamFocusPending=true;\n  tab='insights';insightTab='dreamworld';calmNavGroup='insights';dreamEditingId743='';render();compass59FocusDreamField();return;\n }",
+     'moon button opens and focuses dream entry');
+  ch("const dream743Form=app.querySelector('#dream743-form');",
+     "const dream743Form=app.querySelector('#dream743-form');\n if(compass59DreamFocusPending&&dream743Form)compass59FocusDreamField();",
+     'focus after dream form binds / lazy load');
   return {code:s,map:null};
  }};
 }

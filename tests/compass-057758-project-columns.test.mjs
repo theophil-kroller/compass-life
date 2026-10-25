@@ -30,6 +30,19 @@ async function actions(action,id,form,editForm){
  const intent=ev.submitter?.value||'save';
     if(intent==='promote'){}
 }
+function insightsScreen(){if(!compass54Ready('insights'))return compass54LoadingScreen('insights');}
+function render(){
+ if(state&&compass55Mode==='focus'&&['insights','finance','activity','recovery','progress'].includes(tab)){tab='today';todayInspectorOpen=false;calmNavGroup='';}
+}
+function bind(){
+ const dream743Form=app.querySelector('#dream743-form');
+}
+function handleDreamTap(){
+ if(action==='dream743-open'){
+  tab='insights';insightTab='dreamworld';calmNavGroup='insights';dreamEditingId743='';render();return;
+ }
+}
+
 `;
 const source=scaffold.replaceAll('\\`','`').replaceAll('\\${','${');
 const transformed=compass758Bridge().transform(source,'/repo/client/src/main.js').code;
@@ -135,4 +148,31 @@ test('receipt extraction accepts real post-.45 month parameter and leaves the sh
  const stats=actual.slice(actual.indexOf('function compass57ShopStatistics(){'),actual.indexOf('function shoppingScreen(){'));
  assert.doesNotMatch(list,/receiptInboxView\(state/);
  assert.match(stats,/receiptInboxView\(state,\{draft:receiptDraft743,month:receiptMonth745\}\)/);
+});
+
+
+test('Moon shortcut works in Focus; other analytics still redirect to Today',()=>{
+ assert.match(transformed,/tab==='insights'&&insightTab!=='dreamworld'/);
+ assert.match(transformed,/if\(insightTab!=='dreamworld'&&!compass54Ready\('insights'\)\)/);
+ assert.match(transformed,/if\(action==='dream743-open'\)\{\n  compass59DreamFocusPending=true/);
+ assert.match(transformed,/compass59FocusDreamField\(\)/);
+ assert.match(transformed,/if\(compass59DreamFocusPending&&dream743Form\)compass59FocusDreamField\(\)/);
+});
+test('One tap focuses encrypted dream input when DOM is available; retries after form arrives',()=>{
+ const pos=transformed.indexOf('let compass59DreamFocusPending=false;');
+ const end=transformed.indexOf('function render(){',pos);
+ assert.ok(pos>=0&&end>pos);
+ let focused=0,scrolled=0,showForm=false;
+ const field={focus(){focused++},scrollIntoView(){scrolled++}};
+ const ctx={app:{querySelector(selector){return showForm&&selector==='#dream743-form textarea[name="body"]'?field:null}}};
+ vm.createContext(ctx);
+ vm.runInContext(transformed.slice(pos,end),ctx);
+ vm.runInContext('compass59DreamFocusPending=true',ctx);
+ assert.equal(vm.runInContext('compass59FocusDreamField()',ctx),false);
+ assert.equal(focused,0);
+ showForm=true;
+ assert.equal(vm.runInContext('compass59FocusDreamField()',ctx),true);
+ assert.equal(focused,1);
+ assert.equal(scrolled,1);
+ assert.equal(vm.runInContext('compass59DreamFocusPending',ctx),false);
 });
