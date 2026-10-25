@@ -1,32 +1,20 @@
-# Compass Life 0.5.77.58.2 – Einkauf & Projekt-Inspector
+# Compass Life 0.5.77.58.2 – CI-Hotfix nach GitHub Actions #225
 
-**Basis:** GitHub Actions #224 erfolgreich, Version 0.5.77.58 mit CI-Testkorrektur .58.1.
+Der Upload von .58.2 hatte GitHub Actions #225 bereits erreicht, aber die Transformationskette brach mit »no receipt statistics in shopping checklist: expected 1 source anchor, found 0« ab.
 
-Ersetze in `theophil-kroller/compass-life` **nur diese drei Dateien** mit den Dateien aus dieser ZIP:
+Ersetze im bestehenden Repository auf `main` exakt diese beiden Dateien aus der ZIP:
 
 - `client/compass758-bridge.js`
 - `tests/compass-057758-project-columns.test.mjs`
-- `tests/compass-057757-full-transform-chain.test.mjs`
 
-Andere Dateien (vor allem `client/vite.config.js`, `client/src/main.js`, CSS, Cloudflare Worker und verschlüsselte Daten) **nicht verändern**. Nach Upload GitHub Actions prüfen: `npm run check` sowie `npm run build` müssen erfolgreich sein. Das automatische Pages-Deployment darf erst danach als erfolgreich gelten.
+Das ist ein **Ersatz** für die gleichnamigen Dateien des fehlgeschlagenen Builds #225. **Alle anderen Dateien unverändert lassen** (besonders `client/vite.config.js`, Vault, Finanzdaten und CSS). Anschließend Commit/Upload ausführen. GitHub Actions kontrollieren.
 
-## Inhalt
+## Grund
 
-### Einkaufen
-- **Einkaufsliste** ist der Standardtab und rendert ausschließlich die Liste mit den vorhandenen Checkboxes.
-- Die aus Version .43 stammende Kassenbonanalyse, Monatsgrafik, GPT-Prompt, JSON-Eingabe, gespeicherten Bons und Importoptionen sind jetzt **ausschließlich** im Tab **Statistik & Rechnungsimport**.
-- Die bisherigen Bon- und Finanzdaten werden nicht geändert; bestehende Aktionen funktionieren weiter.
-- Beim Zurückwechseln zur Einkaufsliste wird der Bonbereich weder berechnet noch angezeigt.
+Die bestehende `.45`-Integration ruft die Kassenbon-UI mit `month:receiptMonth745` auf. Der `.58.2`-Patch erwartete noch die ursprünglichen `.43`-Argumente. Die neue Transformation erkennt und verschiebt den Aufruf aus der Shopping-Ansicht in den Statistik-/Import-Tab, ohne eine bestimmte Argumentliste zu verlangen.
 
-### Projekte
-- Ordner anklicken: Ordnernavigation bleibt links, Projekte erscheinen in der Mitte, Inspector geschlossen.
-- Projekt anklicken: dessen Aufgaben nutzen die gesamte verfügbare mittlere Spalte; Inspector **standardmäßig geschlossen**.
-- Der Inspector wird über das rechte Inspector-Symbol in der Projektüberschrift explizit geöffnet oder wieder geschlossen.
-- Aufgabe auswählen öffnet weiterhin den Aufgaben-Inspector, weil dies eine ausdrücklich gewählte Bearbeitungsaktion ist.
-- Beim Schließen des Inspectors bleibt die aktuelle Projekt- bzw. Aufgabenauswahl erhalten.
-- Teure Projekteinstellungen werden nicht aufgebaut, solange der Projekt-Inspector geschlossen ist.
+## Qualitätssicherung
 
-## Prüfungen
-- **60 von 60** lokalen Tests der verfügbaren Bridge-/Navigationssuite bestanden; neu: Einkaufsliste ohne Kassenbon und Projekt-Inspector standardmäßig geschlossen.
-- Die zwei Versionsprüfungen in den Testdateien erwarten korrekt `0.5.77.58.2`.
-- Der echte vollständige Produktionsbuild mit allen Workspace-Dateien war in der lokalen Umgebung **nicht ausführbar**, weil die vollständige Repository-Arbeitskopie und npm-Abhängigkeiten nicht verfügbar sind. GitHub Actions #224 hat die vorherige .58-Codebasis erfolgreich gebaut; dieser Patch ersetzt nur die bestehende .58-Bridge und ihre zwei Tests.
+Das neue Testcase enthält ausdrücklich die **tatsächlich eingesetzte `.45`-Parameterliste**. Der vollständige echte Bridge-Chain-Test `tests/compass-057757-full-transform-chain.test.mjs` läuft anschließend im GitHub Actions Check und prüft die echte `client/src/main.js`.
+
+Lokale Tests können einen erfolgreichen Github-Produktionsbuild nicht ersetzen; den CI-Status nicht als erfolgreich betrachten, bis er grün ist.

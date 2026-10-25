@@ -1,6 +1,7 @@
-# Compass 0.5.77.40 – CI- und Rendering-Reparatur
+# Compass 0.5.77.58.2 – Fehlerkorrektur
 
-- CI-Blocker Workflow #200 repariert: Versionsbasis zwischen Root-Paket, Client-Paket und roher `main.js` erneut konsistent (`0.5.77.26`). Deployed UI wird weiterhin durch Vite auf `0.5.77.40` aktualisiert.
-- Fehlenden Aufruf der dynamisch geladenen Anatomie-Komponente direkt nach dem DOM-Rendern ergänzt. Ohne ihn zeigte die Benutzeroberfläche nur den Ladeplatzhalter.
-- Neuer Regressionstest für Versionskonsistenz und Initialisierung.
-- Keine Änderungen an Trainingsdaten, Übungen, Muskel-Zuordnungen oder importierten FIT/CSV-Dateien.
+- Build #225: Fragile Receipt-Interpolation in `compass758-bridge.js` korrigiert.
+- Receipt-Darstellung bleibt exklusiv im Tab „Statistik & Rechnungsimport“; auf der Checkliste wird sie nicht gerendert.
+- Projekt-Inspector bleibt standardmäßig geschlossen (Verhalten aus .58.2 unverändert).
+- Zusätzlicher Regressionstest mit `month:receiptMonth745` verhindert exakt diesen Fehler.
+- Keine Änderung an Speichermodell, Daten, Vault oder anderen App-Funktionen.

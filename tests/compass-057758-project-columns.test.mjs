@@ -123,3 +123,16 @@ test('Project inspector is collapsed by default and collapses after folder or pr
  assert.match(transformed,/selectedTaskId=null;compass58InspectorHidden=true;if\(p.kind/);
  assert.match(transformed,/settings=\(selection&&\(templates\|\|!compass58InspectorHidden\)\)\?/);
 });
+
+// Real post-.45 markup has a month argument. Earlier mocked tests omitted it
+// and therefore missed the production-only CI failure in deployment #225.
+test('receipt extraction accepts real post-.45 month parameter and leaves the shopping checklist clean',()=>{
+ const actualSource=source.replace('receiptInboxView(state,{draft:receiptDraft743})',
+                                   'receiptInboxView(state,{draft:receiptDraft743,month:receiptMonth745})');
+ assert.notEqual(actualSource,source,'the post-.45 fixture includes the real receipt arguments');
+ const actual=compass758Bridge().transform(actualSource,'/repo/client/src/main.js').code;
+ const list=actual.slice(actual.indexOf('function shoppingScreen(){'),actual.indexOf('function inboxScreen(){'));
+ const stats=actual.slice(actual.indexOf('function compass57ShopStatistics(){'),actual.indexOf('function shoppingScreen(){'));
+ assert.doesNotMatch(list,/receiptInboxView\(state/);
+ assert.match(stats,/receiptInboxView\(state,\{draft:receiptDraft743,month:receiptMonth745\}\)/);
+});

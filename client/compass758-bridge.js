@@ -14,15 +14,21 @@ export function compass758Bridge(){
   ch("const COMPASS_CLIENT_VERSION='0.5.77.57.1';","const COMPASS_CLIENT_VERSION='0.5.77.58.2';",'version');
   ch("import './mobile-workflow-v57757.css';","import './mobile-workflow-v57757.css';\nimport './project-workspace-v57758.css';",'styles');
 
-  // The original .43 receipt UI was injected unconditionally before Shopping's list.
-  // Move it to the explicitly requested statistics/receipt tab. Keep all original
-  // receipt bindings/actions: no second receipt importer or data migration.
-  ch('<div class="shopping713-shell">${receiptInboxView(state,{draft:receiptDraft743})}<section class="work-card shopping713-overview">',
-     '<div class="shopping713-shell"><section class="work-card shopping713-overview">',
-     'no receipt statistics in shopping checklist');
+  // Locate the receipt call INSIDE the shopping page in the post-.45 source.
+  // .45 enriched receiptInboxView with month:receiptMonth745. A string anchored
+  // to its original .43 arguments broke CI #225. Respect the exact source call
+  // and move it as-is, rather than baking a brittle version of its arguments.
+  const shoppingFrom=s.indexOf('function shoppingScreen(){');
+  const shoppingTo=s.indexOf('\nfunction ',shoppingFrom+24);
+  if(shoppingFrom<0||shoppingTo<shoppingFrom)throw new Error('Compass .58: shopping function boundaries unavailable');
+  const shoppingBlock=s.slice(shoppingFrom,shoppingTo);
+  const matches=[...shoppingBlock.matchAll(/\$\{(receiptInboxView\(state,\{[^}]*\}\))\}/g)];
+  if(matches.length!==1)throw new Error(`Compass .58: expected one receipt UI call in shopping checklist, found ${matches.length}`);
+  const receiptExpression=matches[0][1];
+  s=s.slice(0,shoppingFrom)+shoppingBlock.replace(matches[0][0],'')+s.slice(shoppingTo);
   ch("return '<section class=\"work-card compass57-shopping-stats\">",
-     "return receiptInboxView(state,{draft:receiptDraft743})+'<section class=\"work-card compass57-shopping-stats\">",
-     'receipt panel only in statistics and import tab');
+     "return "+receiptExpression+"+'<section class=\"work-card compass57-shopping-stats\">",
+     'receipt UI only in statistics and import tab');
 
   // Only Projects changes; Templates stays on the existing, fully functional view.
   ch('function projectScreen(){',project58Source+'\nfunction projectScreen(){','three-pane helpers');
