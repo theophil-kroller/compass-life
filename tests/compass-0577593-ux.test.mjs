@@ -8,6 +8,14 @@ import vm from 'node:vm';
 import {compass7593UxBridge} from '../client/compass7593-ux-bridge.js';
 
 const fixture=String.raw`
+calmNavGroup=['shopping','templates','projects','overview','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'||tab==='recovery'?'insights':tab==='finance'?'finance':'';
+function navItem(id,label,icon){return label;}
+function chrome(content){return \`\${navItem('forecast','Kalender & Forecast','calendar')}\`+content;}
+function bind(){
+ const el={dataset:{tab:'recovery'}};
+ app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=ev=>{ev?.preventDefault?.();const target=el.dataset.tab;if(!target)return;if(target==='today')todayInspectorOpen=false;tab=target;calmNavGroup=['overview','projects','templates','shopping','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':['insights','activity','progress','recovery'].includes(tab)?'insights':'';if(tab==='finance')calmNavGroup='finance';render();});
+}
+async function runAction(action,id){if(action==='calm-finance-group'){return;}if(action==='calm-nav-group'){return;}}
 function recoveryScreen(){return chrome(\`\${discoveryPanel()}<section class="work-card recovery-idea-hub"></section>\`);}
 function activityScreen(){return chrome(\`<div class="activity-summary-insights"></div>\`);}
 function progressScreen(){return chrome(\`<div class="progress-view"></div>\`);}
@@ -19,11 +27,11 @@ const src=fixture.replaceAll('\\`','`').replaceAll('\\${','${');
 const bridge=compass7593UxBridge();
 const code=bridge.transform(src,'/test/client/src/main.js').code;
 
-test('external Insights screens render correct existing subsection navigation',()=>{
- assert.match(code,/insights750Subtabs\('recovery',insightTab\)/);
+test('Planning recovery has no Insights tabs; activity/progress retain their navigation',()=>{
+ assert.doesNotMatch(code,/insights750Subtabs\('recovery',insightTab\)/);
  assert.match(code,/insights750Subtabs\('activity',insightTab\)/);
  assert.match(code,/insights750Subtabs\('progress',insightTab\)/);
- assert.equal((code.match(/insights750Subtabs\(/g)||[]).length,3);
+ assert.equal((code.match(/insights750Subtabs\(/g)||[]).length,2);
  assert.match(code,/\$\{discoveryPanel\(\)\}/);
  assert.match(code,/class="progress-view"/);
 });
@@ -42,7 +50,7 @@ test('Focus reinitialization follows successful unlock; capture shortcut wins',a
   const ctx={captureAfterUnlock:capture,bootView:view,captureOverlayOpen:false,compass55Mode:'extended',
    COMPASS55_MODE_KEY:'compass.ui.focus.v57755',localStorage:{setItem(...args){storage.push(args);}},
    tab:capture?'inbox':'insights',todayInspectorOpen:true,calmNavGroup:'insights',
-   recoveryMessage:'',toast:()=>{}};
+   recoveryMessage:'',toast:()=>{},app:{querySelectorAll:()=>[]},render:()=>{}};
   vm.createContext(ctx);
   vm.runInContext(code,ctx);
   return {ctx,storage};
@@ -84,4 +92,13 @@ test('production Vite preserves .47-.49/PWA and .50-.58 adjacency; .59.3 runs be
  assert.match(config,/VitePWA\([\s\S]*?\),\s*\/\/ Guarded 0\.5\.77\.50/);
  assert.match(config,/compass7593UxBridge\(\),\s*compass750Bridge\(\)/);
  assert.match(config,/compass750Bridge\(\), compass751Bridge\(\), compass752Bridge\(\), compass753Bridge\(\), compass754Bridge\(\), compass755Bridge\(\), compass756Bridge\(\), compass757Bridge\(\), compass758Bridge\(\)\]/);
+});
+
+
+test('.59.8 routes leisure into Planen and Life Balance from Insights header',()=>{
+ assert.match(code,/navItem\('recovery','Freizeit & Erholung','heart'\)/);
+ assert.match(code,/someday','recovery'\]\.includes\(tab\)\?'plan'/);
+ assert.match(code,/if\(target==='recovery'\)\{compass55Mode='extended'/);
+ assert.match(code,/if\(action==='calm-nav-group'&&id==='insights'\)\{tab='insights';insightTab='balance'/);
+ assert.doesNotMatch(code,/insights750Subtabs\('recovery'/);
 });

@@ -1,21 +1,25 @@
 /** Compass 0.5.77.50 — single taxonomy for desktop and mobile Insights.
+ * Updated in .59.8: Life Balance is the overview, leisure discovery is Planning.
  * Navigation only: existing sections and their persisted data remain unchanged.
  */
 export const INSIGHTS750_GROUPS=Object.freeze([
- {id:'intelligence',title:'Übersicht & Intelligence',icon:'layers',default:'intelligence',tabs:[
-  ['intelligence','Cockpit'],['weekly','Wochenkompass'],['capacity','Fristen & Kapazität'],['balance','Life Balance'],['connections','Zusammenhänge'],['explore','Explore']]},
+ {id:'intelligence',title:'Übersicht & Intelligence',icon:'layers',default:'balance',tabs:[
+  ['balance','Life Balance'],['weekly','Wochenkompass'],['capacity','Fristen & Kapazität'],['connections','Zusammenhänge'],['explore','Explore']]},
  {id:'health',title:'Gesundheit & Körper',icon:'heart',default:'sleep',tabs:[
   ['sleep','Schlaf'],['energy','Body Battery'],['stress','Stress'],['body','Körperanalyse'],['strength','Krafttraining'],['nutrition','Ernährung'],['activity','Aktivitäten']]},
  {id:'life',title:'Leben & Orte',icon:'compass',default:'feelings',tabs:[
-  ['feelings','Gefühlswelt'],['touch','Berührung & Nähe'],['dreamworld','Traumwelt'],['places','Orte & Weltkarte'],['recovery','Erholung']]},
+  ['feelings','Gefühlswelt'],['touch','Berührung & Nähe'],['dreamworld','Traumwelt'],['places','Orte & Weltkarte']]},
  {id:'time',title:'Zeit & Produktivität',icon:'clock',default:'worktime',tabs:[
   ['worktime','Arbeitszeit'],['timejournal','Zeitjournal'],['focus','Produktivität'],['habits','Habits'],['progress','Fortschritt']]},
  {id:'sources',title:'Datenquellen',icon:'settings',default:'sources',tabs:[['sources','Datenquellen']]}
 ]);
+// Preserve the existing external-route API for old integrations. Recovery no longer
+// appears as an Insights tab, but historic links still resolve to the same route.
 export const INSIGHTS750_EXTERNAL=new Set(['activity','recovery','progress']);
-export const INSIGHTS750_TABS=new Set(INSIGHTS750_GROUPS.flatMap(g=>g.tabs.map(([id])=>id)));
+export const INSIGHTS750_TABS=new Set([...INSIGHTS750_GROUPS.flatMap(g=>g.tabs.map(([id])=>id)),'recovery']);
 export const insights750Group=id=>INSIGHTS750_GROUPS.find(g=>g.id===id)||null;
 export const insights750GroupFor=(activeTab,insightTab)=>
+ activeTab==='recovery'?insights750Group('life'):
  INSIGHTS750_GROUPS.find(g=>g.tabs.some(([id])=>id===(INSIGHTS750_EXTERNAL.has(activeTab)?activeTab:insightTab)))||INSIGHTS750_GROUPS[0];
 export const insights750Allowed=id=>INSIGHTS750_TABS.has(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -36,7 +40,8 @@ export function insights750Subtabs(tab,insightTab){
  const selected=INSIGHTS750_EXTERNAL.has(tab)?tab:insightTab;
  return `<nav class="ins750-subtabs" role="navigation" aria-label="${esc(group.title)} – Unterbereiche">${group.tabs.map(([id,label])=>`<button type="button" data-action="ins750-open" data-id="${esc(id)}" class="ins750-subtab${id===selected?' is-active':''}" aria-current="${id===selected?'page':'false'}" aria-pressed="${id===selected}">${esc(label)}</button>`).join('')}</nav>`;
 }
-/** Compact read-only overview: no additional data source or assumed zero days. */
+/** Legacy read-only Cockpit renderer retained for preexisting test/route compatibility.
+ * The redesigned .59.8 UI never links to it: Life Balance is the first overview. */
 export function insights750Cockpit(state,{today=new Date().toLocaleDateString('sv-SE')}={}){
  const day=/^\d{4}-\d{2}-\d{2}$/.test(today)?today:new Date().toLocaleDateString('sv-SE');
  const date=v=>new Date(`${v}T12:00:00Z`).toLocaleDateString('de-AT',{day:'numeric',month:'short'});

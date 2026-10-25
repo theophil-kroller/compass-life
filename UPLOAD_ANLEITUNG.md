@@ -1,29 +1,26 @@
-# Compass 0.5.77.59.7 – MatchaTherapy als Getränk
+# Compass 0.5.77.59.8 – Freizeitplanung & Life-Balance-Start
 
-Dieser gezielte Hotfix korrigiert ausschließlich die Cup-&-Plate-Klassifikation in der Ernährungsgrafik.
+**Basis:** GitHub `theophil-kroller/compass-life`, commit `d49aa2bcc97987044c91a22041b718eb7e057728` (25.10.2026).
 
-## In GitHub hochladen
+## Dateien hochladen (Pfade ab Repository-Hauptverzeichnis)
 
-Die beiden Dateien im ZIP unter Beibehaltung ihrer Ordnerstruktur ersetzen:
+1. `client/src/insights-navigation-v57750.js` – vorhandene Datei ersetzen.
+2. `client/compass7593-ux-bridge.js` – vorhandene Datei ersetzen.
+3. `tests/compass-0577593-ux.test.mjs` – vorhandene Datei ersetzen.
+4. `tests/compass-0577598-navigation.test.mjs` – neue Datei hinzufügen.
 
-1. `client/src/nutrition-timing-v57725.js`
-2. `tests/compass-nutrition-cup-plate.test.mjs`
+**Nicht ersetzen:** `client/vite.config.js`, `client/src/main.js` oder Vault-/Datenbankdateien. Vite-Bridge-Reihenfolge und gespeicherte Daten bleiben unverändert.
 
-Bei GitHub **Add file → Upload files** im jeweiligen Ordner hochladen oder die jeweiligen Dateien ersetzen. Keine anderen Dateien aus älteren ZIPs erneut hochladen.
+## Funktion
 
-## Behebung
+- **Planen → Freizeit & Erholung:** Die bestehende Freizeitideen-/Veranstaltungsseite ist aus der Insights-Navigation entfernt und im Planen-Untermenü erreichbar. Alte Einträge und Buttons werden nicht geändert.
+- **Insights → Übersicht & Intelligence:** Standardmäßig **Life Balance** mit vorhandenem Radar und Drill-downs. Der redundante Cockpit-Untertab wird nicht mehr angeboten. Wochenkompass, Kapazität, Zusammenhänge und Explore bleiben sichtbar.
+- **Insights-Kategorie direkt anklicken:** Öffnet jetzt ebenfalls Life Balance, statt das alte Cockpit zu aktivieren.
+- **Focus/Extended:** Compass startet nach Entsperren weiterhin in Focus. Wer ausdrücklich die umfassendere Freizeitplanungsseite öffnet, wechselt für die Sitzung automatisch in Extended; beim nächsten regulären Entsperren beginnt Compass wieder in Focus.
+- Historische interne Recovery-Kennungen bleiben zur Rückwärtskompatibilität akzeptiert.
 
-- `matcha` (MatchaTherapy mit Hafermilch & Honig) wird unabhängig von `Frühstück` und `🍯` als Getränk erkannt.
-- `matcha-oat-plain` (ohne Honig) wird ebenfalls als Getränk erkannt.
-- Zusätzliche Erkennung von `MatchaTherapy`/`Matcha Therapy` bei eigenen Lebensmitteln.
-- Kalorien, Portionen, Lebensmittelgruppe, Timing und gespeicherte Daten bleiben unverändert.
-- Die Größe der Tasse bleibt von der kcal-Schätzung abhängig.
-- Nur JavaScript und Testdatei geändert; **kein** `vite.config.js`-Eingriff, keine neue Bridge, keine Migration.
+## Verifikation
 
-## Prüfungen
-
-`node --test tests/compass-nutrition-cup-plate.test.mjs`
-
-9/9 gezielte Tests erfolgreich mit unverändertem Index/CSS aus dem vorausgehenden Build. Ein gesamter CI-/Produktionsbuild lässt sich nach dem GitHub-Upload über Actions prüfen; lokal wurde die gesamte Repo-Suite hier nicht ausgeführt.
-
-Basis: GitHub `main`, Originaldatei `client/src/nutrition-timing-v57725.js` mit Git-Blob-SHA `3b28f844ab4e1334985d4823a03fbc0f9f57ac15`.
+- 10 lokale Node-Tests bestanden, inklusive Syntax-Checks der neuen Navigations- und Bridge-Dateien.
+- Ein vollständiger `npm run check` und `npm run build` des Repositorys ist hier nicht gelaufen, weil nicht alle Repository-Dateien im lokalen Container vorliegen. Bitte nach Upload den Actions-Job `Deploy Compass Web` abwarten und bei einer Fehlermeldung die Logs prüfen.
+- Sichtbare Versionsanzeige ist weiterhin `0.5.77.58.2`, weil deren historische Transformation nicht verändert wird.
