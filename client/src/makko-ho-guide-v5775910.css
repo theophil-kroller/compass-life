@@ -1,3 +1,43 @@
 .mk610-backdrop{position:fixed;inset:0;z-index:99995;background:#1a312a88;backdrop-filter:blur(5px);display:grid;place-items:center;padding:15px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .mk610-dialog{width:min(760px,100%);max-height:94dvh;overflow-y:auto;box-sizing:border-box;background:#fffefa;color:#29483a;border-radius:21px;padding:19px 23px;box-shadow:0 23px 70px #15292055}.mk610-head{display:flex;justify-content:space-between;gap:8px;align-items:start}.mk610-head small{font-size:10px;letter-spacing:.1em;color:#668576}.mk610-head h2{font-size:22px;margin:4px 0 14px;letter-spacing:-.025em}.mk610-exit{font-size:25px;border:0;border-radius:10px;background:#edf4ed;width:38px;height:38px;color:inherit;cursor:pointer}.mk610-stages{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:16px}.mk610-stages span{height:4px;border-radius:4px;background:#e5ebe4}.mk610-stages span.done{background:#76aa8e}.mk610-stages span.active{background:#287557}.mk610-main{display:grid;grid-template-columns:minmax(200px,1fr) minmax(230px,1fr);gap:20px;align-items:center}.mk610-figure svg{width:100%;height:auto;max-height:310px}.mk610-figure>small{font-size:10px;color:#88a092}.mk610-content{min-width:0}.mk610-element{font-size:11px;color:#54826d;font-weight:700;letter-spacing:.03em}.mk610-content>p{font-size:14px;line-height:1.57;margin:8px 0 10px}.mk610-tip{font-size:12px;border-left:3px solid #73ad8b;background:#eff6ef;padding:9px 11px;border-radius:0 8px 8px 0;line-height:1.5}.mk610-clock{display:flex;align-items:center;gap:15px;margin-top:18px}.mk610-ring{width:105px;height:105px;min-width:105px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#347b61 calc(var(--progress)*1turn),#e9f0e8 0);position:relative}.mk610-ring:before{content:"";position:absolute;inset:8px;border-radius:50%;background:#fffefa}.mk610-ring strong{position:relative;font-size:22px;font-variant-numeric:tabular-nums}.mk610-timer-actions{display:grid;gap:5px}.mk610-timer-actions button{border:1px solid #d5e6d8;border-radius:10px;padding:7px 11px;font:inherit;background:#f4faf4;color:#245b45;cursor:pointer}.mk610-timer-actions label{font-size:11px;display:flex;align-items:center;gap:5px}.mk610-timer-actions select{border:1px solid #d3e3d9;border-radius:7px;padding:5px;max-width:110px;background:white}.mk610-bottom{border-top:1px solid #e7eee6;margin-top:19px;padding-top:11px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:13px}.mk610-bottom>span{font-size:11px;color:#698675}.mk610-nav{display:flex;gap:7px}.mk610-nav button{border:1px solid #d5e7d7;border-radius:10px;background:#f3f8f4;color:#2b6751;padding:9px 14px;cursor:pointer;font:inherit}.mk610-nav button.primary{background:#2f8061;border-color:#2f8061;color:white;font-weight:650}.mk610-nav button:disabled{opacity:.45;cursor:default}.mk610-dialog :focus-visible{outline:2px solid #2c8968;outline-offset:2px}
 @media(max-width:640px){.mk610-backdrop{padding:0;align-items:end}.mk610-dialog{max-height:95dvh;border-radius:20px 20px 0 0;padding:16px}.mk610-main{grid-template-columns:1fr;gap:6px}.mk610-figure svg{max-height:190px}.mk610-clock{margin-top:10px}.mk610-tip{padding:6px 10px}.mk610-content>p{font-size:12px}.mk610-head h2{font-size:19px}.mk610-bottom{margin-top:10px}}
+
+
+/* Compass 0.5.77.59.11 · Makko-Ho editorial illustration system.
+   The six WebP artworks are local and requested only after the guide opens. */
+.mk610-dialog{width:min(955px,100%);padding:22px 25px;background:#fdfdfa;border-radius:24px}
+.mk610-main{grid-template-columns:minmax(300px,1.08fr) minmax(275px,.92fr);gap:23px;align-items:center}
+.mk610-head h2{font-size:clamp(20px,2vw,25px);letter-spacing:-.035em}
+.mk610-stages{gap:6px;margin-bottom:17px}
+.mk610-stages span{height:5px}
+.mk610-figure{min-width:0;display:grid;gap:8px}
+.mk610-figure>small{display:block;padding:0 4px;font-size:11px;line-height:1.45;color:#6f8176}
+.mk611-artwork{position:relative;isolation:isolate;width:100%;border:1px solid #dce7df;box-shadow:0 10px 32px rgba(28,65,45,.075);border-radius:21px;overflow:hidden;background:#f8f3e9}
+.mk611-pose-image{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain}
+.mk611-step-number,.mk611-art-kind{position:absolute;z-index:1;background:rgba(255,255,252,.94);border:1px solid rgba(48,86,66,.10);color:#3a6b55;box-shadow:0 1px 8px rgba(20,40,28,.055);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.mk611-step-number{right:12px;top:12px;font-size:11px;font-weight:730;font-variant-numeric:tabular-nums;letter-spacing:.075em;padding:7px 10px;border-radius:999px}
+.mk611-art-kind{left:12px;bottom:12px;font-size:11px;font-weight:670;padding:6px 10px;border-radius:999px}
+.mk610-element{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:#5a836b}
+.mk610-content>p{font-size:14px;line-height:1.65}
+.mk610-tip{background:#f0f6ed;border-left-color:#6f9d82;color:#315d47;font-size:12px}
+.mk610-ring{box-shadow:0 0 0 1px rgba(36,101,68,.09)}
+.mk610-dialog button:focus-visible,.mk610-dialog select:focus-visible{outline:3px solid #5b9875;outline-offset:2px}
+@media(max-width:680px){
+ .mk610-backdrop{align-items:end;padding:0}
+ .mk610-dialog{max-height:97dvh;border-radius:21px 21px 0 0;padding:14px 16px 18px}
+ .mk610-main{grid-template-columns:minmax(0,1fr);gap:10px}
+ .mk610-figure{justify-items:center;gap:5px}
+ .mk611-artwork{width:min(100%,315px);border-radius:17px}
+ .mk610-figure>small{font-size:10px;text-align:center}
+ .mk610-content>p{font-size:13px;line-height:1.5;margin:7px 0}
+ .mk610-tip{font-size:11px;line-height:1.4}
+ .mk610-clock{margin-top:11px}
+ .mk610-bottom{margin-top:11px}
+}
+@media(max-width:370px){
+ .mk611-artwork{width:min(100%,260px)}
+ .mk610-head h2{font-size:18px}
+ .mk610-ring{width:87px;height:87px;min-width:87px}
+ .mk610-timer-actions button{padding:6px 9px}
+}
+@media(prefers-reduced-motion:reduce){.mk611-artwork{transition:none}}

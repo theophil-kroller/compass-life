@@ -68,6 +68,12 @@ export default defineConfig({
         urlPattern: /(?:makko-ho-guide|strength-coach)-v5775910[^/]*\.(?:js|css)$/,
         handler: 'CacheFirst',
         options: {cacheName:'compass-guides-on-demand-v1',cacheableResponse:{statuses:[0,200]}}
+      },{
+        // Versioned Makko-Ho WebP poses are cached ONLY when a step displays.
+        // WebP is excluded from globPatterns above, so no initial precache.
+        urlPattern: /\/makko-ho-illustrations-v5775911\/(?:metal|earth|fire|water|innerfire|wood)\.webp$/,
+        handler: 'CacheFirst',
+        options: {cacheName:'compass-makko-art-on-demand-v5775911',cacheableResponse:{statuses:[0,200]},expiration:{maxEntries:6,maxAgeSeconds:31536000}}
       }],
       cleanupOutdatedCaches: true
     }

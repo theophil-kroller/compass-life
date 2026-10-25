@@ -1,52 +1,51 @@
-# Compass 0.5.77.59.10 — Strength Coach + Makko-Ho + kompakte Planung
+# Compass 0.5.77.59.11 – Makko-Ho Premium Illustrationen
 
-Basis: aktuelles GitHub `main` nach erfolgreichem .59.9 Deployment.
+**Basis:** erfolgreich deploytes Compass 0.5.77.59.10 im GitHub-Repository `theophil-kroller/compass-life`.
 
-## Upload (Pfadstruktur beibehalten)
+## GitHub-Upload (Pfadstruktur exakt beibehalten)
 
-**Vorhandene Dateien ersetzen**
+### Drei bestehende Dateien ersetzen
 
-- `client/vite.config.js`
-- `client/index.html`
-
-**Neue Dateien anlegen**
-
-- `client/compass5910-strength-habits-bridge.js`
-- `client/public/compact-plan-v5775910.css`
-- `client/src/strength-coach-v5775910.js`
-- `client/src/strength-coach-v5775910.css`
 - `client/src/makko-ho-guide-v5775910.js`
 - `client/src/makko-ho-guide-v5775910.css`
-- `tests/compass-05775910-strength-habits.test.mjs`
+- `client/vite.config.js`
 
-Kein direktes Überschreiben von `main.js`, `strength-editor-v57732.js` oder `strength-anatomy-v57737.js`: der neue, *guarded* Vite-Transform ergänzt diese Dateien beim Build. Die historische `.50`–`.58`-Brückenkette bleibt in ihrer bisherigen Reihenfolge erhalten.
+### Sieben Dateien neu hinzufügen
 
-## Was funktioniert
+- `client/public/makko-ho-illustrations-v5775911/metal.webp`
+- `client/public/makko-ho-illustrations-v5775911/earth.webp`
+- `client/public/makko-ho-illustrations-v5775911/fire.webp`
+- `client/public/makko-ho-illustrations-v5775911/water.webp`
+- `client/public/makko-ho-illustrations-v5775911/innerfire.webp`
+- `client/public/makko-ho-illustrations-v5775911/wood.webp`
+- `tests/compass-05775911-makko-premium.test.mjs`
 
-1. Planen: Next Actions, Projekte, Kalender, Einkaufen und Freizeit/Erholung sichtbar; zusätzliche Perspektiven über „Weitere Planung“.
-2. Strength: Kneeling Ab Wheel, Kurzhantel-/Verbindungsstangen- und Kabelzugübungen im Dropdown; feine anatomische Muskelzuordnung für neu erfasste Sätze.
-3. StrongLifts 5×5 A/B: optionale Trainingsvorlage im bestehenden Editor, nur nach Bestätigung werden bestehende Formularwerte ersetzt. Bestehende Garmin-Einträge bleiben unverändert.
-4. Lokaler Trainingscoach: Ziele Muskelbalance, V-Taper, Bauchmuskeln, allgemeine Kraft; Zuhause/Gym; kompakte, schematische Bewegungsillustrationen. Vorschläge basieren auf manuell zugeordneten Übungssätzen der letzten 28 Tage. Bei fehlenden Daten keine erfundene Muskelhistorie.
-5. Makko-Ho: Play statt Checkbox im Habit-Schnellmenü sowie aus Habits Insights. Sechs Positionen mit schematischen Zeichnungen, Text, variabler Zeit (30/45/60/90 s), Start/Pause, Signalton und manuellem Weiter. Abschluss verwendet den vorhandenen Habit-Speicherweg.
-6. Lazy Loading: Coach und Makko-Modul inklusive ihrer CSS-Dateien werden erst beim jeweiligen Klick über `import()` geladen. Workbox schließt die lazy Chunks aus dem Installations-Precache aus und cached sie nach dem ersten Abruf zur Offline-Wiederverwendung.
+**Wichtig:** Die sechs Bilder müssen in genau diesem Unterordner landen. Nicht ins Repo-Hauptverzeichnis legen und nicht unter `client/src/` verschieben.
 
-## Test- und Qualitätsstatus
+## Änderungen
 
-- `node --test tests/compass-05775910-strength-habits.test.mjs`: 7/7 lokal bestanden.
-- `node --check`: alle neuen JS-Dateien sowie Vite-Konfiguration erfolgreich.
-- Eingriffsanker anhand der aktuellen GitHub-Quellen einmalig geprüft.
-- Browser-Smoke-Test: Makko Desktop (Timer, Pause, Weiter); Coach Desktop (Ziel/Equipment); Makko Mobile ohne horizontales Überlaufen.
-- **Nicht** durchgeführt: komplette Repository-Tests und finaler Vite-Produktionsbuild. Dafür ist nach dem Upload GitHub Actions maßgeblich.
+1. Sechs eigenständige, hochwertige Ganzkörperillustrationen ersetzen schematische SVG-Strichfiguren. Die traditionelle sechsteilige Makko-Ho-Folge und ihre Reihenfolge bleiben erhalten.
+2. Jede Illustration zeigt die Zielhaltung mit sichtbaren Armen, Knien und Beinen; größere Grafik auf Desktop und Mobile, ruhiges Apple-inspiriertes Layout.
+3. Barrierefreiheit: sinnvolle deutsche Alt-Texte pro Übung; Beschriftung 'Zielhaltung'.
+4. Der Timer, Audio-Signal, Pause, Dauerwahl, Schrittwechsel und Habit-Abschluss bleiben unverändert.
+5. **On-demand:** Makko-Player wird weiterhin erst auf Play per `import()` geladen; danach wird jeweils nur die aktuell angezeigte WebP-Datei angefordert. Insgesamt 93,772 Byte für alle sechs Bilder (~91.6 KiB).
+6. Service-Worker cached die WebPs via `CacheFirst` erst nach dem tatsächlichen Aufruf (der vorhandene Install-Precache enthält kein WebP), danach sind die jeweils gesehenen Bilder offline verfügbar.
+7. Keine neue Bridge, keine DB-Migration, keine Eingriffe in andere Habits oder Strength-Coach-Funktionen.
 
-## Grenzen
+## Teststatus
 
-- Die Bewegungsabbildungen sind **schematische Orientierung**, kein detailliertes Technikvideo. Sie zeigen Bewegungsrichtung, ersetzen keine fachliche Einweisung.
-- Makko-Ho ist eine Shiatsu-Dehnfolge; traditionelle Meridianzuordnungen sind keine medizinisch gemessenen Effekte.
-- Sichtbare Bauchmuskeln hängen auch vom Körperfettanteil ab; Bauchübungen allein bewirken keinen gezielten Fettverlust am Bauch.
-- Kein automatischer Trainingsplan im Kalender, keine Lastvorgaben, keine neuen Cloud-Schnittstellen, keine Datenbankmigration.
-- Gespeicherter Habit-ID `hakka-5` bleibt aus Kompatibilitätsgründen unverändert; in den neuen Oberflächen wird die sechsteilige Makko-Ho-Folge angezeigt.
-- Die sichtbare App-Version im Sidebar-Branding kann weiterhin `0.5.77.58.2` anzeigen (historische Vite-Transformationsverträge werden nicht angefasst).
+- `node --check` für JS und Vite-Konfiguration: PASS.
+- Neue Tests: 4/4 PASS.
+- Bisherige `.59.10`-Tests gegen identische .59.10-Vite-Bridge/Testumgebung: 7/7 PASS.
+- Chromium-UI-Smoke: sechs Bilder pro Gerät laden, keine vorherigen Bildrequests, Timer läuft, Weiter bis Abschluss, kein horizontaler Überlauf bei 1320 px und 390 px: PASS.
+- Vollständiger produktiver Build und die gesamte GitHub-CI-Suite werden erst nach GitHub-Upload geprüft.
 
-## Bei CI-Problemen
+## Inhaltliche Grenzen
 
-Im GitHub-Actions-Log die erste fehlgeschlagene Testzeile bzw. `Compass .59.10: ... source anchor` prüfen. Die neuen Source-Transforms schlagen absichtlich fehl, falls ältere Dateien inzwischen anders aussehen. **Nicht** auf Verdacht weitere Bridges umsortieren.
+- Die Originalillustrationen sind visueller Haltungskompass, keine überprüfte therapeutische Übungsanleitung. Besonders die kniende Rücköffnung zeigt die **tiefere** Variante; langsam und nur innerhalb des schmerzfreien Bereichs ausführen, alternativ aufrecht bleiben.
+- Bei Perikard/Dreifacherwärmer und Holz zur Halbzeit Seite wechseln (die bestehenden Tipps bleiben erhalten).
+- Die traditionelle Zuordnung zu Meridianen ist ein Shiatsu-Konzept, keine gemessene physiologische Wirkung.
+
+## Rollback
+
+Im Problemfall nur `client/src/makko-ho-guide-v5775910.js`, `.css` und `client/vite.config.js` aus der vorherigen erfolgreich deployten Version `.59.10` wiederherstellen. Die sechs neu hinzugefügten WebP-Dateien können zunächst im Repo bleiben, da sie nicht automatisch geladen werden.

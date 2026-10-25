@@ -3,24 +3,36 @@
  * Illustrations are original schematic poses, not anatomical technique teaching.
  */
 import './makko-ho-guide-v5775910.css';
-const ink='stroke="#356f5b" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"';
-const poses={
- metal:`<circle cx="147" cy="93" r="15"/><path d="M133 103 L101 150 L70 179 M101 150 L94 208 M102 151 L126 206 M104 131 L152 141 L187 117 M152 141 L191 159"/>`,
- earth:`<circle cx="145" cy="44" r="15"/><path d="M142 59 L152 125 L171 169 M151 125 L106 166 L74 174 M151 125 L183 166 L201 168 M146 67 L118 119 M156 65 L184 120"/>`,
- fire:`<circle cx="150" cy="100" r="15"/><path d="M142 115 L126 151 L143 183 M127 151 L98 189 L62 187 M130 151 L171 190 L214 187 M132 138 L93 169 M144 140 L193 167"/>`,
- water:`<circle cx="185" cy="99" r="15"/><path d="M174 108 L127 151 L87 167 M127 151 L65 189 L29 190 M128 153 L199 190 L237 191 M130 130 L226 185 M127 130 L70 182"/>`,
- innerfire:`<circle cx="147" cy="93" r="15"/><path d="M136 105 L120 149 L134 184 M120 149 L80 196 L49 189 M120 149 L168 196 L208 188 M133 122 L167 137 L105 160 M166 125 L117 138 L186 155"/>`,
- wood:`<circle cx="167" cy="73" r="15"/><path d="M158 86 L120 135 L127 177 M120 135 L82 189 L39 188 M126 176 L217 190 L255 188 M121 110 L67 65 M121 111 L86 54"/>`
-};
+// Private, local assets: none of the six images is requested before the user
+// explicitly opens the Makko-Ho guide (its parent is dynamically imported).
+// The public/WebP path deliberately bypasses the service-worker install precache.
+const ART_ROOT=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/, '/')+'makko-ho-illustrations-v5775911/';
+const ART_LABELS=Object.freeze({
+ metal:'Stehende Vorbeuge: Hände sind hinter dem Rücken verschränkt und die Arme sanft angehoben.',
+ earth:'Kniende Rücköffnung: Oberkörper vorsichtig zurückgelehnt, Hände stützen am Boden.',
+ fire:'Schmetterlingssitz: Fußsohlen berühren sich, Knie öffnen sich zu den Seiten.',
+ water:'Sitzende Vorbeuge: Beide Beine nach vorne gestreckt, Oberkörper neigt sich aus der Hüfte.',
+ innerfire:'Schneidersitz: Arme überkreuzen sich, der Oberkörper neigt sich sanft nach vorn.',
+ wood:'Grätschsitz: Oberkörper seitlich über ein Bein gebeugt, beide Arme über dem Kopf.'
+});
 const STAGES=[
  {element:'Metall',name:'Lunge & Dickdarm',pose:'metal',desc:'Stehe bequem, Daumen hinter dem Rücken ineinanderhaken und aus der Hüfte sanft nach vorne neigen. Arme nur so weit anheben, wie angenehm.',tip:'Knie weich lassen, Nacken entspannt.'},
- {element:'Erde',name:'Magen & Milz',pose:'earth',desc:'Aufrecht knien und – nur soweit Knie und Rücken es zulassen – den Oberkörper sanft nach hinten öffnen. Als leichtere Variante aufrecht bleiben und Hüftvorderseite dehnen.',tip:'Keinen Druck auf Knie oder unteren Rücken erzwingen.'},
+ {element:'Erde',name:'Magen & Milz',pose:'earth',desc:'Aufrecht knien und – nur soweit Knie und Rücken es zulassen – den Oberkörper sanft nach hinten öffnen. Als leichtere Variante aufrecht bleiben und Hüftvorderseite dehnen.',tip:'Die Illustration zeigt eine tiefere Variante. Beginne aufrecht; keinen Druck auf Knie oder unteren Rücken erzwingen.'},
  {element:'Feuer',name:'Herz & Dünndarm',pose:'fire',desc:'Setze dich, Fußsohlen aneinander (Schmetterlingssitz). Lehne den Oberkörper langsam nach vorne und atme gleichmäßig.',tip:'Knie nicht nach unten drücken.'},
  {element:'Wasser',name:'Blase & Niere',pose:'water',desc:'Setze dich mit ausgestreckten Beinen hin. Oberkörper aus der Hüfte nach vorne neigen, Hände nur soweit zu den Füßen führen wie angenehm.',tip:'Bei Bedarf die Knie leicht beugen.'},
  {element:'Feuer II',name:'Perikard & Dreifacherwärmer',pose:'innerfire',desc:'Sitze locker im Schneidersitz, kreuze die Arme vor dem Oberkörper und neige dich sanft nach vorne. Danach Arm- und Beinstellung wechseln.',tip:'Zur Halbzeit Seitenwechsel.'},
  {element:'Holz',name:'Leber & Gallenblase',pose:'wood',desc:'Setze dich mit angenehm gegrätschten Beinen hin, strecke die Arme über den Kopf und neige den Oberkörper erst zu einer, dann zur anderen Seite.',tip:'Zur Halbzeit Seitenwechsel. Nicht ruckartig ziehen.'}
 ];
-function drawing(stage){return `<svg viewBox="0 0 295 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vereinfachte Zeichnung: ${stage.name}"><rect x="0" y="0" width="295" height="230" rx="24" fill="#f2f7f2"/><path d="M25 210 H270" stroke="#c8dbcb" stroke-width="2"/><g ${ink}>${poses[stage.pose]}</g><circle cx="245" cy="36" r="16" fill="#dfeae0"/><text x="245" y="41" font-size="12" text-anchor="middle" font-weight="700" fill="#36735d">${STAGES.indexOf(stage)+1}</text></svg>`;}
+function drawing(stage){
+ const number=STAGES.indexOf(stage)+1;
+ // The visible panel renders exactly one image. The next six-step graphic is
+ // fetched only when a user advances, then CacheFirst makes it available offline.
+ return `<div class="mk611-artwork" role="group" aria-label="Illustration ${number} von 6">
+  <img class="mk611-pose-image" alt="${ART_LABELS[stage.pose]}" src="${ART_ROOT}${stage.pose}.webp" width="502" height="502" decoding="async" loading="eager" />
+  <span class="mk611-step-number" aria-hidden="true">${String(number).padStart(2,'0')} / 06</span>
+  <span class="mk611-art-kind">Zielhaltung</span>
+ </div>`;
+}
 export function openMakkoGuide({onFinish=()=>{}}={}){
  let step=0,duration=45,remaining=45,running=false,completed=false,ticker=null,target=0,sound=true,closed=false;
  let audio=null;const previous=document.activeElement;const wrap=document.createElement('div');wrap.className='mk610-backdrop';
@@ -39,7 +51,7 @@ export function openMakkoGuide({onFinish=()=>{}}={}){
  function render(){const st=STAGES[step];const finished=remaining===0||completed;
   panel.innerHTML=`<div class="mk610-head"><div><small>BEWEGUNG · MAKKO-HO</small><h2>${step+1}/6 · ${st.name}</h2></div><button class="mk610-exit" aria-label="Schließen">×</button></div>
   <div class="mk610-stages" aria-label="Fortschritt">${STAGES.map((x,i)=>`<span class="${i<step?'done':i===step?'active':''}" title="${x.name}"></span>`).join('')}</div>
-  <div class="mk610-main"><div class="mk610-figure">${drawing(st)}<small>Schematische Bewegung · keine Technikdiagnose</small></div><div class="mk610-content"><small class="mk610-element">${st.element}</small><p>${st.desc}</p><div class="mk610-tip">${st.tip}</div><div class="mk610-clock"><div class="mk610-ring mk610-progress" style="--progress:${(duration-remaining)/duration}"><strong class="mk610-time">${fmt(remaining)}</strong></div><div class="mk610-timer-actions"><button type="button" data-go="start">${running?'Pause':remaining===0?'Erneut':'▶ Start'}</button><button type="button" data-go="reset">↺ Zurücksetzen</button><label>Dauer<select data-go="duration"><option value="30" ${duration===30?'selected':''}>30 Sek.</option><option value="45" ${duration===45?'selected':''}>45 Sek.</option><option value="60" ${duration===60?'selected':''}>1 Minute</option><option value="90" ${duration===90?'selected':''}>1½ Minuten</option></select></label></div></div></div></div>
+  <div class="mk610-main"><div class="mk610-figure">${drawing(st)}<small>Illustration der Zielhaltung · nur so weit dehnen, wie es angenehm ist</small></div><div class="mk610-content"><small class="mk610-element">${st.element}</small><p>${st.desc}</p><div class="mk610-tip">${st.tip}</div><div class="mk610-clock"><div class="mk610-ring mk610-progress" style="--progress:${(duration-remaining)/duration}"><strong class="mk610-time">${fmt(remaining)}</strong></div><div class="mk610-timer-actions"><button type="button" data-go="start">${running?'Pause':remaining===0?'Erneut':'▶ Start'}</button><button type="button" data-go="reset">↺ Zurücksetzen</button><label>Dauer<select data-go="duration"><option value="30" ${duration===30?'selected':''}>30 Sek.</option><option value="45" ${duration===45?'selected':''}>45 Sek.</option><option value="60" ${duration===60?'selected':''}>1 Minute</option><option value="90" ${duration===90?'selected':''}>1½ Minuten</option></select></label></div></div></div></div>
   <div class="mk610-bottom"><span><label><input type="checkbox" data-go="sound" ${sound?'checked':''}/> Signalton</label> · ruhig atmen, keine Schmerzen provozieren</span><div class="mk610-nav"><button data-go="prev" ${step===0?'disabled':''}>Zurück</button><button class="primary" data-go="next">${step===5?'Abschließen ✓':'Weiter →'}</button></div></div>`;
   panel.querySelector('.mk610-exit').onclick=cleanup;
   panel.querySelector('[data-go="start"]').onclick=()=>{if(running){remaining=Math.max(0,Math.ceil((target-performance.now())/1000));stop();render();return;}if(remaining===0)remaining=duration;if(sound&&!audio){try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio=new Audio();void audio.resume();}}catch{}}running=true;target=performance.now()+remaining*1000;ticker=setInterval(tick,200);render();};
