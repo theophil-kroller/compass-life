@@ -82,7 +82,9 @@ test('nutrition timing calculations and fasting source data remain unchanged',()
 });
 test('does not alter Vite plugin chain or Vault',()=>{
  assert.doesNotMatch(source,/compass7593UxBridge|localStorage|vault\.unlock|createOnDemandRouteLoader/);
- assert.match(source,/import '\.\/nutrition-cup-plate-v577593\.css'/);
+ assert.doesNotMatch(source,/import '\.\/nutrition-cup-plate-v577593\.css'/);
+ const html=readFileSync(root+'/client/index.html','utf8');
+ assert.match(html,/href="\/src\/nutrition-cup-plate-v577593\.css"/);
  const css=readFileSync(root+'/client/src/nutrition-cup-plate-v577593.css','utf8');
  assert.match(css,/ni725-energy-symbol/);
  assert.match(css,/focus-visible/);

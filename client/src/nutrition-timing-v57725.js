@@ -4,7 +4,6 @@
  */
 import {nutritionFoods,nutritionKcalEstimate} from './personal-journal-v5692.js';
 import {nutrientEntry} from './nutrition-intelligence-v57712.js';
-import './nutrition-cup-plate-v577593.css';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ISO=/^\d{4}-\d{2}-\d{2}$/;
 const localDay=x=>{const d=x instanceof Date?x:new Date(x);return Number.isFinite(+d)?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'';};

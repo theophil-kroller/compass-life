@@ -1,35 +1,30 @@
-# Compass · Nutrition Timing 2 – Cup & Plate Energy Timeline
+# Compass 0.5.77.59.5 — Deployment Repair (#231 / #232)
 
-**Basis:** aktueller GitHub-Stand `theophil-kroller/compass-life`, abgerufen am 25.10.2026 (main, Commit `7d058f9c0d1c759e64f61d15c1d83c267a669e7a`).
+Stand: GitHub `main` Commit `c4e496fb654dcb019cecb38f1f8ff496fdea4e06` (25.10.2026).
 
-## Upload in GitHub
+GitHub Actions Fehlerdiagnose:
+- Run #231: 8 Tests prüfen die historische, durch `.59.3` unterbrochene Vite-Bridge-Reihenfolge.
+- Run #232: dieselben 8 Fehler, außerdem 3 Node-Tests mit ERR_UNKNOWN_FILE_EXTENSION für den direkten Import der CSS-Datei im Nutrition-Modul.
 
-Die ZIP-Datei enthält genau drei Repository-Dateien mit korrekten Pfaden:
+## Dateien in diesem ZIP (relativ zum Repository-Hauptverzeichnis)
 
-1. **Ersetzen**: `client/src/nutrition-timing-v57725.js`
-2. **Neu hinzufügen**: `client/src/nutrition-cup-plate-v577593.css`
-3. **Neu hinzufügen (Regressionstests)**: `tests/compass-nutrition-cup-plate.test.mjs`
+Ersetzen:
+1. `client/vite.config.js`
+2. `client/index.html`
+3. `client/src/nutrition-timing-v57725.js`
+4. `tests/compass-0577593-ux.test.mjs`
+5. `tests/compass-nutrition-cup-plate.test.mjs`
 
-**Nicht ändern:** `client/vite.config.js`, `client/src/main.js`, Vault, Worker, D1, Import-Dateien oder Datenbank.
+Neu anlegen:
+6. `tests/compass-0595-deployment-regression.test.mjs`
 
-## Änderung
+**Nicht** löschen oder ersetzen: `client/compass7593-ux-bridge.js` sowie `client/src/nutrition-cup-plate-v577593.css`; diese Dateien sind seit den Builds `.59.3` und `.59.4` vorhanden und werden weiterhin benötigt.
 
-- Inline-SVG-Tasse bei Getränken, Inline-SVG-Teller bei Nahrung.
-- Klassifikation: bevorzugt vorhandene Lebensmittel-Gruppe `Getränke`, ergänzt um Getränke-Piktogramme und eng gefasste Namensmuster für eigene Lebensmittel.
-- Vier kcal-Größenstufen je Eintrag: ≤120, 121–350, 351–700, >700 kcal.
-- Unbekannte Kalorien: kleine, **gestrichelte** Symbolkontur statt fälschlichem Niedrigkalorien-Symbol.
-- Zeitachse wird **nicht** verändert; bei eng benachbarten Ereignissen leicht vertikal versetzte Symbole auf derselben Tageszeile.
-- Tageszeitfarben, Tooltip mit Originalinformationen, Klick-/Keyboard-Auswahl und Bearbeitungsschaltfläche bleiben erhalten.
-- Neue kleine Legende zeigt Form, Kaloriengrößen und unbekannte Werte.
-- Berechnungen für Fastenpausen, Kalorienwerte und Trendgrafiken unverändert; keine Änderung am Datenschema oder der Speicherung.
+Korrekturen:
+- `compass7593UxBridge()` wird vor den bisherigen `.50–.58`-Bridges ausgeführt, sodass die bestehende Reihenfolge und zugehörige Tests erhalten bleiben.
+- Die Nutrition-CSS-Datei wird nun in der Vite-HTML-Einstiegsdatei eingebunden, statt per ESM-Import in einer Node-getesteten JS-Datei.
+- Erwartungstests und neue Deployment-Regressionstests an die korrigierte Struktur angepasst.
 
-**Abgrenzung:** Die bestehende Nutrition-Timing-Grafik zeigt *Kalorienereignisse*, keine vollständige Getränkeliste. Bei 0 kcal klassifizierte Getränke bleiben daher wie zuvor außerhalb dieses Plots; sie dürfen die Fastenfenster nicht unterbrechen.
+Tests in dieser Umgebung: 15/15 bestanden (`node --test` in der isolierten, repräsentativen Patch-Struktur), `node --check` für geänderte JS-Dateien bestanden. Der vollständige 1.248-Testlauf und der Vite-Produktionsbuild konnten ohne ein lokal installiertes vollständiges Repository und dessen Node-Abhängigkeiten nicht erneut ausgeführt werden. Bitte GitHub Actions nach dem Upload kontrollieren.
 
-## Qualität
-
-`node --test tests/compass-nutrition-cup-plate.test.mjs`: 8/8 bestanden.
-`node --check client/src/nutrition-timing-v57725.js`: bestanden.
-CSS mit tinycss2 geparst, keine Syntaxfehler.
-Visueller SVG-Test in Chromium, Symbol anklickbar und per Tastatur fokussierbar.
-
-**Wichtig:** Dieser Nutrition-Build ist bewusst unabhängig vom vorherigen UX-Build `.59.3`. Er behebt **nicht** dessen gemeldetes Deploymentproblem. Nach dem Upload bitte den GitHub-Actions-Produktionsbuild prüfen; lokaler vollständiger Vite-Build mit dem kompletten Repository war in dieser Umgebung nicht möglich.
+Diese Korrektur ändert keine Tresor-/GTD-/Nutrition-Datenmodelle. Die geplante Verschiebung von Erholung unter Planen ist in diesem reinen Deployment-Reparatur-Build **noch nicht** enthalten.

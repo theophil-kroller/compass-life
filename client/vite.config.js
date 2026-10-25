@@ -36,7 +36,7 @@ import { compass758Bridge } from './compass758-bridge.js';
 const base = process.env.VITE_BASE_PATH || '/';
 export default defineConfig({
   base,
-  plugins: [nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), nutritionStrength733Bridge(), nutritionLongevity734Bridge(), strengthTouch735Bridge(), nutrition736Bridge(), anatomyRecipes737Bridge(), nutritionPill577371Bridge(), strengthPremium738Bridge(), compass741Bridge(), strengthSync742Bridge(), compass743Bridge(), compass744Bridge(), compass745Bridge(), compass746Bridge(), compass747Bridge(), compass748Bridge(), compass749Bridge(), VitePWA({
+  plugins: [nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), nutritionStrength733Bridge(), nutritionLongevity734Bridge(), strengthTouch735Bridge(), nutrition736Bridge(), anatomyRecipes737Bridge(), nutritionPill577371Bridge(), strengthPremium738Bridge(), compass741Bridge(), strengthSync742Bridge(), compass743Bridge(), compass744Bridge(), compass745Bridge(), compass746Bridge(), compass747Bridge(), compass748Bridge(), compass749Bridge(), compass7593UxBridge(), VitePWA({
     registerType: 'autoUpdate',
     base,
     includeAssets: ['compass-icon.svg','icon-192.png','icon-512.png','runtime-config.json'],
@@ -63,7 +63,7 @@ export default defineConfig({
       cleanupOutdatedCaches: true
     }
   }),
-  // .59.3 UX transforms after .56, before .57/.58: keep historical bridge gates intact.
-  compass750Bridge(), compass751Bridge(), compass752Bridge(), compass753Bridge(), compass754Bridge(), compass755Bridge(), compass756Bridge(), compass7593UxBridge(), compass757Bridge(), compass758Bridge()],
+  // Guarded 0.5.77.50 transform executes before VitePWA because enforce='pre'.
+  compass750Bridge(), compass751Bridge(), compass752Bridge(), compass753Bridge(), compass754Bridge(), compass755Bridge(), compass756Bridge(), compass757Bridge(), compass758Bridge()],
   server: {port: 5173, strictPort:true}
 });
