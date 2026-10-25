@@ -1,44 +1,31 @@
-# Compass 0.5.77.59.12 — Sakura Sakura & Makko-Ho Identity
+# Compass 0.5.77.59.13 — Makko-Ho Gong & freie Haltezeit
 
-Basis: erfolgreich deployte Compass 0.5.77.59.11. Upload durch Ersetzen/Hinzufügen der Dateien **an exakt denselben Pfaden**.
+## GitHub-Upload
 
-## Ersetzen
+Bitte die Verzeichnisstruktur im ZIP beibehalten und **nur** folgende Dateien nach GitHub `theophil-kroller/compass-life` übertragen:
 
-- `client/src/makko-ho-guide-v5775910.js`
-- `client/src/makko-ho-guide-v5775910.css`
-- `client/public/gtd-workspace-premium-v577599.js`
-- `client/public/gtd-workspace-premium-v577599.css`
-- `client/public/makko-ho-illustrations-v5775911/metal.webp`
-- `client/public/makko-ho-illustrations-v5775911/earth.webp`
-- `client/public/makko-ho-illustrations-v5775911/fire.webp`
-- `client/public/makko-ho-illustrations-v5775911/water.webp`
-- `client/public/makko-ho-illustrations-v5775911/innerfire.webp`
-- `client/public/makko-ho-illustrations-v5775911/wood.webp`
+- **ERSETZEN** `client/src/makko-ho-guide-v5775910.js`
+- **ERSETZEN** `client/src/makko-ho-guide-v5775910.css`
+- **NEU** `tests/compass-05775913-gong-overtime.test.mjs`
 
-## Hinzufügen
+Die frühere `client/vite.config.js`, Musikdatei, sechs WebP-Bilder, Vault und gespeicherte Daten bleiben unverändert.
 
-- `client/public/makko-ho-music-v5775912/sakura-sakura-compass.mp3`
-- `tests/compass-05775912-sakura-mobile.test.mjs`
+## Verhalten
 
-**Keine** `client/vite.config.js` ersetzen: Die Bridge-Reihenfolge bleibt identisch.
+- Zeit startet wie bisher rückwärts ab 30/45/60/90 Sekunden.
+- Bei Erreichen der Zielzeit wird **genau einmal** ein sanft ausklingender, lokal synthetisierter Gong angestoßen (nur bei aktiviertem Signalton).
+- Der Zähler zeigt danach `+00:00`, `+00:01`, ... und läuft weiter, ohne automatisch anzuhalten oder zu wechseln.
+- Pause friert die Überzeit ein, `▶ Weiterlaufen` setzt sie fort; `↺ Zurücksetzen` beginnt neu; `Weiter →` startet den nächsten Stretch mit unveränderter Zielzeit.
+- `Sakura Sakura` läuft dabei weiter; die Lautstärke wird für den Gong kurz abgesenkt.
+- Die Musikdatei sowie die Illustration werden weiterhin erst beim Öffnen des Players nachgeladen.
 
-## Was geändert ist
+## Illustrationen
 
-1. Sechs neue KI-generierte, einheitliche Makko-Ho-Illustrationen: schwarzer Gi, Grüngürtel, langer Haarstil / Haarknoten. Die zweite Position zeigt die tiefe Rücklage **mit Kopf am Boden**. Diese tiefere Pose ist nur für entsprechend geübte Personen geeignet; alternative Ausführung bleibt im Hinweis beschrieben.
-2. Musik: eigens erstellte instrumentale Koto-inspirierte Aufnahme der traditionellen, gemeinfreien Melodie *Sakura Sakura*. Eine Aufnahme aus fremden Quellen wird **nicht** verwendet.
-3. Musik standardmäßig an (sofern nicht individuell ausgeschaltet). Nach Klick auf Makko-Ho Play wird die Audiodatei bei Bedarf geladen, lokal im Browser Cache Storage gespeichert und leise wiedergegeben. Signalton kurzzeitig priorisiert. Auf Geräten mit restriktiver Autoplay-Regel kann nach dem Laden ein Tippen auf „▶ Start“ nötig sein; dies wird im Player angezeigt.
-4. Projekt-Plus auf Mobile: Auswahl „Neuer Ordner / Neues Projekt“. Bestehende `tree-add-folder`/`tree-add-project`-Aktionen werden unverändert verwendet.
-5. Bilder sind mit `?v=5912` adressiert, damit bereits gecachte alte WebP-Dateien nicht angezeigt werden. Die originalen Bildpfade bleiben unverändert.
-
-## Urheberrecht / Musik
-
-Die Melodie *Sakura Sakura* ist traditionell/gemeinfrei, u.a. 1888 veröffentlicht: https://ja.wikisource.org/wiki/さくらさくら. Die hier beigefügte WAV-/MP3-Einspielung wurde **neu programmiert und selbst synthetisiert**, ohne Nutzung einer fremden Tonaufnahme. Es handelt sich um eine schlichte, ruhige Interpretation; das verwendete timbrale Klangbild ist nur Koto-inspiriert, keine authentische Koto-Einspielung.
+Die vorhandenen sechs personalisierten Illustrationen bleiben bewusst unverändert, weil die zuletzt neu generierten Entwürfe noch zu viele Beschriftungen und grafische Artefakte enthielten. Die sechs neuen Referenzfotos der Nutzerperson bleiben lokal im Chat und werden **nicht** in das öffentliche GitHub-Repository hochgeladen. Sie dienen als Vorlage für eine spätere, eigenständige Bildverfeinerung.
 
 ## Tests
 
-- JS-Syntax für Guide und GTD-UX geprüft.
-- 8 lokale Node-Regressionstests inkl. bestehender .59.11-Fälle bestanden.
-- Browser-Smoketests Chromium: Desktop 1300px und Smartphone 390px, alle sechs Übungsbilder, Audio nur nach Player-Aufruf, Timer, Mute/Unmute, Navigation, keine JS-Ausnahme.
-- Mobiles Action Sheet: Projekt- und Folder-Erstellung rufen unveränderte Datenaktionen auf.
-
-Der vollständige GitHub-Actions-Workflow ist **nicht** lokal ausgeführt und muss beim Upload bestehen.
+- `node --check client/src/makko-ho-guide-v5775910.js` OK
+- 12 von 12 Node-Regressionstests (4 neue + 8 bestehende) OK in lokal rekonstruierter Fixture.
+- Chromium: Desktop 1260px, Smartphone 390px; Gong-Schwelle mit verkürzter Testdauer, Overtime, Pause, Resume, `Weiter`, Lazy Loading, kein horizontaler Überlauf.
+- **Wichtig:** Noch kein vollständiger GitHub-Actions-Produktionslauf für diesen Patch. Nach Upload prüfen.

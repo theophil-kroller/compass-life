@@ -50,3 +50,10 @@
 .mk612-music input{width:76px;accent-color:#3e8060}
 .mk612-music small{font-size:10px;color:#6b8574}
 @media(max-width:640px){.mk612-music{gap:5px;padding:6px 9px;margin-bottom:8px}.mk612-music button{font-size:11px;padding:7px 9px}.mk612-music label{font-size:10px}.mk612-music input{width:60px}}
+
+/* Compass .59.13 — continuous hold timer and single synthesized gong. */
+.mk613-timer-display{display:flex;align-items:center;flex-direction:column;gap:6px;flex-shrink:0;max-width:132px}
+.mk613-timer-display .mk610-ring{width:112px;height:112px;min-width:112px}
+.mk613-timer-display .mk610-time{position:relative;font-size:21px;line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mk613-clock-state{font-size:11px;line-height:1.3;min-height:29px;color:#597969;text-align:center;max-width:132px;font-weight:500}
+@media(max-width:640px){.mk613-timer-display .mk610-ring{width:105px;height:105px;min-width:105px}.mk613-clock-state{font-size:10px}}

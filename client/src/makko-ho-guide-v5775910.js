@@ -37,7 +37,7 @@ function drawing(stage){
  </div>`;
 }
 export function openMakkoGuide({onFinish=()=>{}}={}){
- let step=0,duration=45,remaining=45,running=false,completed=false,ticker=null,target=0,sound=true,closed=false;
+ let step=0,duration=45,remaining=45,overtime=0,running=false,completed=false,ticker=null,target=0,sound=true,closed=false;
  let audio=null;let musicEnabled=true,musicVolume=.22,musicPlayer=null,musicBlobUrl='',musicPending=null,musicStatus='bereit';
  try{const v=localStorage.getItem('compass:makko:sakura-music');if(v==='off')musicEnabled=false;}catch{}
  const previous=document.activeElement;const wrap=document.createElement('div');wrap.className='mk610-backdrop';
@@ -70,23 +70,55 @@ export function openMakkoGuide({onFinish=()=>{}}={}){
   const status=panel.querySelector('[data-music-status]');if(status)status.textContent=musicEnabled?musicStatus:'aus';
  }
  function stopMusic(){if(musicPlayer){musicPlayer.pause();musicPlayer.src='';musicPlayer.load();musicPlayer=null;}if(musicBlobUrl){URL.revokeObjectURL(musicBlobUrl);musicBlobUrl='';}}
- const duckMusic=()=>{if(!musicPlayer)return;musicPlayer.volume=Math.min(.05,musicVolume*.3);setTimeout(()=>{if(musicPlayer&&!closed)musicPlayer.volume=musicEnabled?musicVolume:0;},650);};
+ const duckMusic=()=>{if(!musicPlayer)return;musicPlayer.volume=Math.min(.05,musicVolume*.3);setTimeout(()=>{if(musicPlayer&&!closed)musicPlayer.volume=musicEnabled?musicVolume:0;},2800);};
 
- const beep=(freq=880)=>{if(!sound)return;duckMusic();try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audio ||=new Audio();if(audio.state==='suspended')void audio.resume();const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.value=freq;gain.gain.value=.0001;osc.connect(gain);gain.connect(audio.destination);gain.gain.exponentialRampToValueAtTime(.10,audio.currentTime+.02);gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.20);osc.start();osc.stop(audio.currentTime+.21);}catch{ /* silent fallback: visible timer remains authoritative */ }};
+ // Single soft gong per exercise: a locally synthesized decaying bell, not a remote audio file.
+ // Music keeps playing, briefly ducked so that the gong remains perceptible.
+ const gong=()=>{
+  if(!sound)return;duckMusic();
+  try{
+   const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;
+   audio ||=new Audio();if(audio.state==='suspended')void audio.resume();
+   const start=audio.currentTime+.012;
+   for(const [frequency,level,decay] of [[196,.052,3.0],[294,.026,2.3],[393,.015,1.9],[493,.009,1.3]]){
+    const osc=audio.createOscillator(),gain=audio.createGain();
+    osc.type='sine';osc.frequency.setValueAtTime(frequency,start);
+    osc.frequency.exponentialRampToValueAtTime(frequency*.993,start+decay);
+    gain.gain.setValueAtTime(.0001,start);
+    gain.gain.exponentialRampToValueAtTime(level,start+.02);
+    gain.gain.exponentialRampToValueAtTime(.0001,start+decay);
+    osc.connect(gain);gain.connect(audio.destination);
+    osc.start(start);osc.stop(start+decay+.02);
+   }
+  }catch{/* Visual indication remains if audio is blocked. */}
+ };
  const cleanup=()=>{if(closed)return;closed=true;stop();stopMusic();wrap.remove();document.removeEventListener('keydown',key);document.removeEventListener('visibilitychange',visibility);if(audio){void audio.close().catch(()=>{});audio=null;}previous?.focus?.({preventScroll:true});};
  const key=e=>{if(e.key==='Escape')cleanup();};
- const visibility=()=>{if(document.hidden&&musicPlayer){musicPlayer.pause();musicStatus='pausiert';updateMusicStatus();}if(document.hidden&&running){remaining=Math.max(0,Math.ceil((target-performance.now())/1000));stop();render();}};
+ const snapshotTime=()=>{const delta=target-performance.now();remaining=Math.max(0,Math.ceil(delta/1000));overtime=completed?Math.max(0,Math.floor(-delta/1000)):0;};
+ const visibility=()=>{if(document.hidden&&musicPlayer){musicPlayer.pause();musicStatus='pausiert';updateMusicStatus();}if(document.hidden&&running){snapshotTime();stop();render();}};
  document.addEventListener('keydown',key);document.addEventListener('visibilitychange',visibility);
  wrap.onclick=e=>{if(e.target===wrap)cleanup();};
  const fmt=n=>`${Math.floor(n/60).toString().padStart(2,'0')}:${Math.max(0,n%60).toString().padStart(2,'0')}`;
- const refreshTime=()=>{const t=panel.querySelector('.mk610-time'),ring=panel.querySelector('.mk610-progress');if(t)t.textContent=fmt(remaining);if(ring)ring.style.setProperty('--progress',String(Math.max(0,Math.min(1,(duration-remaining)/duration))));};
- function tick(){if(!running)return;const old=remaining;remaining=Math.max(0,Math.ceil((target-performance.now())/1000));if(old!==remaining)refreshTime();if(remaining===0){stop();completed=true;beep();setTimeout(()=>beep(660),230);render();}}
- function render(){const st=STAGES[step];const finished=remaining===0||completed;
+ const refreshTime=()=>{
+  const t=panel.querySelector('.mk610-time'),ring=panel.querySelector('.mk610-progress'),status=panel.querySelector('.mk613-clock-state');
+  if(t)t.textContent=completed?'+'+fmt(overtime):fmt(remaining);
+  if(status)status.textContent=completed?'Zielzeit erreicht · weiter in deinem Tempo':'Verbleibende Zeit';
+  if(ring)ring.style.setProperty('--progress',String(Math.max(0,Math.min(1,(duration-remaining)/duration))));
+ };
+ function tick(){
+  if(!running)return;
+  const oldRemaining=remaining,oldOvertime=overtime,delta=target-performance.now();
+  remaining=Math.max(0,Math.ceil(delta/1000));
+  if(remaining===0&&!completed){completed=true;overtime=0;gong();render();}
+  if(completed)overtime=Math.max(0,Math.floor(-delta/1000));
+  if(oldRemaining!==remaining||oldOvertime!==overtime)refreshTime();
+ }
+ function render(){const st=STAGES[step];
   panel.innerHTML=`<div class="mk610-head"><div><small>BEWEGUNG · MAKKO-HO</small><h2>${step+1}/6 · ${st.name}</h2></div><button class="mk610-exit" aria-label="Schließen">×</button></div>
   <div class="mk612-music" aria-label="Hintergrundmusik"><button type="button" data-go="music" aria-pressed="${musicEnabled}">${musicEnabled?'♫ Sakura Sakura · An':'♪ Sakura Sakura · Aus'}</button><label>Lautstärke <input data-go="volume" type="range" min="0" max="60" step="2" value="${Math.round(musicVolume*100)}" aria-label="Musiklautstärke" ${musicEnabled?'':'disabled'}/></label><small data-music-status>${musicEnabled?musicStatus:'aus'}</small></div>
   <div class="mk610-stages" aria-label="Fortschritt">${STAGES.map((x,i)=>`<span class="${i<step?'done':i===step?'active':''}" title="${x.name}"></span>`).join('')}</div>
-  <div class="mk610-main"><div class="mk610-figure">${drawing(st)}<small>Illustration der Zielhaltung · nur so weit dehnen, wie es angenehm ist</small></div><div class="mk610-content"><small class="mk610-element">${st.element}</small><p>${st.desc}</p><div class="mk610-tip">${st.tip}</div><div class="mk610-clock"><div class="mk610-ring mk610-progress" style="--progress:${(duration-remaining)/duration}"><strong class="mk610-time">${fmt(remaining)}</strong></div><div class="mk610-timer-actions"><button type="button" data-go="start">${running?'Pause':remaining===0?'Erneut':'▶ Start'}</button><button type="button" data-go="reset">↺ Zurücksetzen</button><label>Dauer<select data-go="duration"><option value="30" ${duration===30?'selected':''}>30 Sek.</option><option value="45" ${duration===45?'selected':''}>45 Sek.</option><option value="60" ${duration===60?'selected':''}>1 Minute</option><option value="90" ${duration===90?'selected':''}>1½ Minuten</option></select></label></div></div></div></div>
-  <div class="mk610-bottom"><span><label><input type="checkbox" data-go="sound" ${sound?'checked':''}/> Signalton</label> · ruhig atmen, keine Schmerzen provozieren</span><div class="mk610-nav"><button data-go="prev" ${step===0?'disabled':''}>Zurück</button><button class="primary" data-go="next">${step===5?'Abschließen ✓':'Weiter →'}</button></div></div>`;
+  <div class="mk610-main"><div class="mk610-figure">${drawing(st)}<small>Illustration der Zielhaltung · nur so weit dehnen, wie es angenehm ist</small></div><div class="mk610-content"><small class="mk610-element">${st.element}</small><p>${st.desc}</p><div class="mk610-tip">${st.tip}</div><div class="mk610-clock"><div class="mk613-timer-display"><div class="mk610-ring mk610-progress" style="--progress:${(duration-remaining)/duration}"><strong class="mk610-time" aria-live="off">${completed?'+'+fmt(overtime):fmt(remaining)}</strong></div><small class="mk613-clock-state">${completed?'Zielzeit erreicht · weiter in deinem Tempo':'Verbleibende Zeit'}</small></div><div class="mk610-timer-actions"><button type="button" data-go="start">${running?'Pause':completed?'▶ Weiterlaufen':'▶ Start'}</button><button type="button" data-go="reset">↺ Zurücksetzen</button><label>Dauer<select data-go="duration"><option value="30" ${duration===30?'selected':''}>30 Sek.</option><option value="45" ${duration===45?'selected':''}>45 Sek.</option><option value="60" ${duration===60?'selected':''}>1 Minute</option><option value="90" ${duration===90?'selected':''}>1½ Minuten</option></select></label></div></div></div></div>
+  <div class="mk610-bottom"><span><label><input type="checkbox" data-go="sound" ${sound?'checked':''}/> Signalton</label> · sanfter Gong bei Zielzeit; Timer läuft weiter</span><div class="mk610-nav"><button data-go="prev" ${step===0?'disabled':''}>Zurück</button><button class="primary" data-go="next">${step===5?'Abschließen ✓':'Weiter →'}</button></div></div>`;
   panel.querySelector('.mk610-exit').onclick=cleanup;
   panel.querySelector('[data-go="music"]').onclick=()=>{
    musicEnabled=!musicEnabled;musicStatus=musicEnabled?'bereit':'aus';
@@ -95,12 +127,18 @@ export function openMakkoGuide({onFinish=()=>{}}={}){
   };
   panel.querySelector('[data-go="volume"]').oninput=e=>{musicVolume=Number(e.target.value)/100;if(musicPlayer)musicPlayer.volume=musicVolume;};
 
-  panel.querySelector('[data-go="start"]').onclick=()=>{if(running){remaining=Math.max(0,Math.ceil((target-performance.now())/1000));stop();render();return;}if(remaining===0)remaining=duration;if(sound&&!audio){try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio=new Audio();void audio.resume();}}catch{}}if(musicEnabled)void ensureMusic();running=true;target=performance.now()+remaining*1000;ticker=setInterval(tick,200);render();};
-  panel.querySelector('[data-go="reset"]').onclick=()=>{stop();remaining=duration;completed=false;render();};
-  panel.querySelector('[data-go="duration"]').onchange=e=>{stop();duration=Number(e.target.value)||45;remaining=duration;completed=false;render();};
+  panel.querySelector('[data-go="start"]').onclick=()=>{
+   if(running){snapshotTime();stop();render();return;}
+   if(sound&&!audio){try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio=new Audio();void audio.resume();}}catch{}}
+   if(musicEnabled)void ensureMusic();
+   running=true;target=performance.now()+(completed?-overtime:remaining)*1000;
+   ticker=setInterval(tick,200);render();
+  };
+  panel.querySelector('[data-go="reset"]').onclick=()=>{stop();remaining=duration;overtime=0;completed=false;render();};
+  panel.querySelector('[data-go="duration"]').onchange=e=>{stop();duration=Number(e.target.value)||45;remaining=duration;overtime=0;completed=false;render();};
   panel.querySelector('[data-go="sound"]').onchange=e=>{sound=e.target.checked;};
-  panel.querySelector('[data-go="prev"]').onclick=()=>{if(step===0)return;stop();step--;remaining=duration;completed=false;render();};
-  panel.querySelector('[data-go="next"]').onclick=async()=>{stop();if(step===5){cleanup();try{await onFinish();}catch(error){console.warn('Makko-Ho Abschluss konnte nicht vorgemerkt werden',error);}return;}step++;remaining=duration;completed=false;render();};
+  panel.querySelector('[data-go="prev"]').onclick=()=>{if(step===0)return;stop();step--;remaining=duration;overtime=0;completed=false;render();};
+  panel.querySelector('[data-go="next"]').onclick=async()=>{stop();if(step===5){cleanup();try{await onFinish();}catch(error){console.warn('Makko-Ho Abschluss konnte nicht vorgemerkt werden',error);}return;}step++;remaining=duration;overtime=0;completed=false;render();};
  }
  render();panel.querySelector('[data-go="start"]')?.focus({preventScroll:true});if(musicEnabled)void ensureMusic();return {close:cleanup};
 }
