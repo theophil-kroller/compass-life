@@ -23,7 +23,7 @@ const finalCode=compass756Bridge().transform(after55,'/repo/client/src/main.js')
 
 test('the chain uses .55.2 and the new bridge is last',()=>{
  const vite=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
- assert.match(vite,/compass755Bridge\(\), compass756Bridge\(\), compass757Bridge\(\)\]/);
+ assert.match(vite,/compass755Bridge\(\), compass756Bridge\(\), compass757Bridge\(\), compass758Bridge\(\)\]/);
  assert.match(finalCode,/COMPASS_CLIENT_VERSION='0\.5\.77\.56'/);
 });
 test('all transformed JavaScript parses as an ECMAScript module',()=>{

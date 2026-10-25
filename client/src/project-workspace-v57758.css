@@ -1,0 +1,78 @@
+/* Compass .58 – One consistent GTD workstation: navigation / outline / inspector. */
+.shell .compass58-workspace{--p58-ink:#203d34;--p58-line:#e3eae6;--p58-accent:#287f68;display:grid;grid-template-columns:minmax(184px,230px) minmax(315px,1fr);gap:12px;align-items:start;width:100%;min-width:0;max-width:none;color:var(--p58-ink)}
+.shell .compass58-workspace.has-inspector{grid-template-columns:minmax(180px,225px) minmax(300px,1fr) minmax(235px,305px)}
+.shell .compass58-sidebar,.shell .compass58-center,.shell .compass58-inspector{min-width:0;background:#fff;border:1px solid var(--p58-line);border-radius:15px;box-shadow:0 1px 4px rgba(20,53,41,.035)}
+.shell .compass58-sidebar{padding:12px 6px;position:sticky;top:10px;max-height:calc(100dvh - 110px);overflow-y:auto;scrollbar-width:thin}
+.shell .compass58-sidebar-heading{display:flex;align-items:center;justify-content:space-between;padding:4px 8px 12px;gap:6px;font-size:12px;letter-spacing:.01em;color:#526f63}
+.shell .compass58-sidebar-heading button,.shell .compass58-heading-actions button{border:0;background:transparent;display:grid;place-items:center;min-width:32px;min-height:32px;border-radius:9px;color:#567669;cursor:pointer}
+.shell .compass58-sidebar-heading button:hover,.shell .compass58-heading-actions button:hover{background:#edf5ef;color:var(--p58-accent)}
+.shell .compass58-sidebar-list{display:flex;flex-direction:column;gap:1px}
+.shell .compass58-nav-row{display:flex;align-items:center;min-width:0;padding:2px 4px 2px calc(2px + var(--level,0)*13px);border-radius:9px}
+.shell .compass58-nav-row.selected{background:#eaf4ee;color:#185c49}
+.shell .compass58-nav-row:hover:not(.selected){background:#f3f7f4}
+.shell .compass58-nav-row .compass58-caret{display:grid;place-items:center;flex:none;width:22px;height:30px;padding:0;border:0;background:transparent;color:#798b82;cursor:pointer;font-size:16px}
+.shell .compass58-caret-spacer{flex:none;width:22px}
+.shell .compass58-nav-item{min-width:0;flex:1;display:flex;align-items:center;gap:8px;text-align:left;border:0;padding:7px 2px;background:transparent;color:inherit;cursor:pointer;font-size:12px;line-height:1.25}
+.shell .compass58-nav-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shell .compass58-nav-item svg{flex:none;width:16px;height:16px;color:#729785}
+.shell .compass58-nav-item small{margin-left:auto;font-size:9px;color:#a87651}
+.shell .compass58-center{padding:15px 16px 16px;min-height:265px}
+.shell .compass58-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--p58-line)}
+.shell .compass58-heading h2{margin:0;font-size:21px;font-family:inherit;line-height:1.2;letter-spacing:-.035em;font-weight:670;overflow-wrap:anywhere}
+.shell .compass58-heading span{font-size:11px;color:#85988e}
+.shell .compass58-heading-actions{display:flex;gap:3px;align-items:center;flex:none}
+.shell .compass58-outline{padding:0;border:0;box-shadow:none;background:transparent}
+.shell .compass58-outline .tree-entry{min-width:0}
+.shell .compass58-outline .tree-line{min-width:0;border-radius:9px;padding-top:5px;padding-bottom:5px}
+.shell .compass58-outline .tree-line.selected{background:#eaf4ee}
+.shell .compass58-outline .tree-line .tree-label{min-width:0;overflow-wrap:anywhere}
+.shell .compass58-project-tile{display:flex;align-items:center;gap:10px;min-height:43px;padding:8px 10px;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--p58-line);color:var(--p58-ink);cursor:pointer;font-size:13px}
+.shell .compass58-project-tile:hover{background:#f4f8f5}
+.shell .compass58-project-tile span{flex:1;min-width:0;overflow-wrap:anywhere}
+.shell .compass58-project-tile>svg:first-child{color:#6d957d}
+.shell .compass58-project-tile>svg:last-child{color:#a8b7af;width:14px}
+.shell .compass58-empty,.shell .compass58-muted{margin:14px 6px;color:#83988d;font-size:12px}
+.shell .compass58-inspector{position:sticky;top:10px;padding:10px 12px;max-height:calc(100dvh - 110px);overflow:auto;scrollbar-width:thin}
+.shell .compass58-inspector .tree-inspector-header{margin-bottom:10px}
+.shell .compass58-inspector .tree-inspector-header strong{font-size:13px}
+.shell .compass58-inspector .task-edit-form,.shell .compass58-inspector .project-properties{min-width:0;max-width:100%}
+.shell .compass58-inspector input,.shell .compass58-inspector textarea,.shell .compass58-inspector select{box-sizing:border-box;max-width:100%;min-width:0}
+.shell .compass58-inspector .v559-project-metadata,.shell .compass58-inspector .project-edit-actions{max-width:100%}
+.shell .compass58-create{padding:12px;margin-bottom:12px}
+.shell .compass58-create-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;font-size:13px}
+.shell .compass58-create-head button{border:0;background:transparent;font-size:19px;cursor:pointer}
+.shell .compass58-create input,.shell .compass58-create select{box-sizing:border-box;max-width:100%}
+.shell .compass58-tools-button{margin-top:16px;display:inline-flex;align-items:center;gap:6px;padding:7px 4px;border:0;background:transparent;color:#749083;cursor:pointer;font-size:11px}
+.shell .compass58-tools-button:hover{color:var(--p58-accent)}
+.shell .compass58-extra{margin-top:7px;border-top:1px solid var(--p58-line);padding-top:8px}
+.shell .compass58-mobile-explorer{display:none}
+/* An actual GTD classification: Inbox record becomes a Dream, without task creation. */
+.shell .compass58-dream-route{margin:12px 0 8px;padding:10px 11px;background:#f6f8f5;border-radius:11px;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.shell .compass58-dream-route label{display:grid;gap:5px;flex:1;min-width:135px;color:#5b776b;font-size:11px}
+.shell .compass58-dream-route select{min-height:37px;max-width:100%;box-sizing:border-box}
+.shell .compass58-dream-route button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:37px;white-space:nowrap}
+@media(max-width:1240px){
+ .shell .compass58-workspace.has-inspector{grid-template-columns:minmax(175px,210px) minmax(270px,1fr)}
+ .shell .compass58-workspace.has-inspector>.compass58-inspector{position:static;grid-column:2;max-height:none}
+}
+@media(max-width:760px){
+ .shell .compass58-workspace,.shell .compass58-workspace.has-inspector{display:flex;flex-direction:column;gap:9px}
+ .shell .compass58-sidebar{display:none}
+ .shell .compass58-center,.shell .compass58-inspector{width:100%;box-sizing:border-box;position:static;max-height:none}
+ .shell .compass58-center{padding:12px}
+ .shell .compass58-heading{margin-bottom:7px;padding-bottom:8px}
+ .shell .compass58-heading h2{font-size:19px}
+ .shell .compass58-mobile-explorer{display:block;margin-bottom:10px;background:#f6f9f7;border:1px solid #e0e9e3;border-radius:10px}
+ .shell .compass58-mobile-explorer>summary{list-style:none;display:flex;align-items:center;gap:8px;padding:9px 11px;font-size:12px;color:#487365;cursor:pointer}
+ .shell .compass58-mobile-explorer>summary::-webkit-details-marker{display:none}
+ .shell .compass58-mobile-tree{max-height:45dvh;overflow-y:auto;padding:4px 7px 9px;background:white;border-top:1px solid var(--p58-line)}
+ .shell .compass58-nav-row{min-height:35px}
+ .shell .compass58-inspector{order:3;padding:12px;overflow:visible}
+ .shell .compass58-outline .tree-inline-add,.shell .compass58-outline .tree-drag-handle{opacity:1}
+ .shell .compass58-dream-route{padding:9px}
+}
+@media(prefers-reduced-motion:reduce){.shell .compass58-project-tile,.shell .compass58-nav-item{transition:none}}
+
+.shell .compass58-grip{flex:none;min-width:13px;margin-right:3px;font-size:12px;opacity:0;color:#789389;cursor:grab;user-select:none}
+.shell .compass58-nav-row:hover .compass58-grip,.shell .compass58-grip:focus-visible{opacity:.75}
+@media(max-width:760px){.shell .compass58-grip{opacity:.6}}

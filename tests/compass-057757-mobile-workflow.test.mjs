@@ -37,7 +37,7 @@ const final=compass757Bridge().transform(after56,'/repo/client/src/main.js').cod
 
 test('Vite configuration orders .57 after .56',()=>{
  const cfg=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
- assert.match(cfg,/compass756Bridge\(\), compass757Bridge\(\)\]/);
+ assert.match(cfg,/compass756Bridge\(\), compass757Bridge\(\), compass758Bridge\(\)\]/);
  assert.match(cfg,/import \{ compass757Bridge \}/);
 });
 test('all seven changes transform and resulting JavaScript parses',()=>{
