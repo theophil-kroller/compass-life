@@ -32,6 +32,15 @@ test('uses actual food groups, pictograms, and name fallback for kind',()=>{
  assert.equal(nutritionConsumptionKind({group:'Snacks',title:'Pringles',emoji:'🍟'}),'food');
  assert.equal(nutritionConsumptionKind({group:'Eigene',title:'Kurkuma-Latte',emoji:'🟡'}),'drink');
  assert.equal(nutritionConsumptionKind({group:'Eigene',title:'Kaffee-Kuchen',emoji:'🍰'}),'food');
+
+ // The two original MatchaTherapy breakfast presets are drinks despite the
+ // honey pictogram/group: they must show a cup with a kcal-sized glyph.
+ assert.equal(nutritionConsumptionKind({id:'matcha',group:'Frühstück',title:'MatchaTherapy mit Hafermilch & Honig',emoji:'🍯'}),'drink');
+ assert.equal(nutritionConsumptionKind({id:'matcha-oat-plain',group:'Frühstück',title:'MatchaTherapy mit Hafermilch (ohne Honig)',emoji:'🍵'}),'drink');
+ assert.equal(nutritionConsumptionKind({group:'Eigene',title:'Matcha Therapy mit Honig',emoji:'🍯'}),'drink');
+ assert.equal(nutritionConsumptionKind({group:'Eigene',title:'MatchaTherapy mit Hafermilch',emoji:'🍯'}),'drink');
+ assert.equal(nutritionConsumptionKind({group:'Frühstück',title:'Matcha-Kuchen',emoji:'🍰'}),'food');
+
  assert.equal(nutritionConsumptionKind(null),'food');
 });
 test('energy tier cutoffs are bounded and unknown is not low-calorie',()=>{
@@ -100,4 +109,24 @@ test('coincident events keep the exact same time/X, with different vertical offs
   assert.equal(a[0],b[0]);assert.equal(a[1],b[1]);assert.notEqual(a[2],b[2]);
   assert.equal((html.match(/data-action="ni725-event"/g)||[]).length,6);
  }finally{state.nutritionJournal.entries.pop();}
+});
+
+
+test('legacy breakfast MatchaTherapy with honey renders a cup, keeping kcal and classification separate',()=>{
+ const preset={id:'matcha',group:'Frühstück',title:'MatchaTherapy mit Hafermilch & Honig',emoji:'🍯',kcalLow:62,kcalHigh:67};
+ const noHoney={id:'matcha-oat-plain',group:'Frühstück',title:'MatchaTherapy mit Hafermilch (ohne Honig)',emoji:'🍵',kcalLow:41,kcalHigh:45};
+ const a=entry('honey-matcha',8,'matcha');
+ const b=entry('plain-matcha',9,'matcha-oat-plain');
+ foods.push(preset,noHoney);state.nutritionJournal.entries.push(a,b);
+ try{
+  const html=render('week');
+  for(const id of ['honey-matcha','plain-matcha']){
+   const re=new RegExp('<g class="ni725-dot[^>]*data-id="'+id+'"[^>]*data-kind="drink"[^>]*data-tier="1"');
+   assert.match(html,re,`not a small cup: ${id}`);
+  }
+  const events=nutritionTimingSeries(state,{mode:'week',anchor:date,now}).events;
+  assert.equal(events.find(e=>e.id==='honey-matcha').consumptionKind,'drink');
+  assert.equal(events.find(e=>e.id==='plain-matcha').consumptionKind,'drink');
+  assert.equal(preset.group,'Frühstück');
+ }finally{state.nutritionJournal.entries.splice(-2);foods.splice(-2);}
 });

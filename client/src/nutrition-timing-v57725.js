@@ -120,11 +120,19 @@ function clock(m){if(!Number.isFinite(m))return '–';const min=Math.round(m)%(2
  * Prefer the existing food-group metadata. Personal foods may not have a group,
  * so fall back to curated beverage pictograms and names; never use kcal alone. */
 export function nutritionConsumptionKind(food){
+ // MatchaTherapy belongs to the breakfast group, and its honey emoji is not
+ // a beverage emoji. Stable preset IDs must therefore take precedence over
+ // the presentation group. Keep the original breakfast grouping unchanged.
+ const id=String(food?.id||'').toLocaleLowerCase('de-AT');
+ if(id==='matcha'||id==='matcha-oat-plain')return 'drink';
  const group=String(food?.group||'').toLocaleLowerCase('de-AT');
  if(/^(getränke|getraenke|drinks|beverages)$/.test(group))return 'drink';
  const emoji=String(food?.emoji||'');
  if(/[☕🍵🫖🥤🥛🧃🍹🍷🥂🍺🍻🥃🍶🍼]/u.test(emoji))return 'drink';
  const title=String(food?.title||'').toLocaleLowerCase('de-AT');
+ // MatchaTherapy (also spelled Matcha Therapy) is one product name, not a
+ // standalone "matcha" token; support custom copies of the same drink.
+ if(/(?:^|[\s,;(/-])matcha[\s-]?therapy(?=$|[\s,;)/-])/u.test(title))return 'drink';
  return /(?:^|[\s,;(/-])(?:kaffee|espresso|cappuccino|latte|latella|lattella|matcha|kakao|tee|chai|saft|smoothie|shake|proteinshake|milchshake|drink|limonade|limo|cola|wasser|wein|bier|spritz|whisky|whiskey)(?:$|[\s,;)/])/u.test(title)?'drink':'food';
 }
 /** Four deliberately bounded size classes; no size derived from an invented kcal. */

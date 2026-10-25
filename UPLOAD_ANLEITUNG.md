@@ -1,26 +1,29 @@
-# Compass 0.5.77.59.6 — Deployment Repair 2
+# Compass 0.5.77.59.7 – MatchaTherapy als Getränk
 
-**Basis:** GitHub `main`, Commit `c53a5aab4399607e249aab189546a0fe47e24732` (#233 fehlgeschlagen).
+Dieser gezielte Hotfix korrigiert ausschließlich die Cup-&-Plate-Klassifikation in der Ernährungsgrafik.
 
-## Dateien in GitHub hochladen
+## In GitHub hochladen
 
-- `client/vite.config.js` — ersetzen
-- `tests/compass-0577593-ux.test.mjs` — ersetzen
-- `tests/compass-0595-deployment-regression.test.mjs` — ersetzen
-- `tests/compass-0596-all-historical-vite-gates.test.mjs` — neu
+Die beiden Dateien im ZIP unter Beibehaltung ihrer Ordnerstruktur ersetzen:
 
-**Nur die vier Dateien im ZIP hochladen.** Keine Datenmigration.
+1. `client/src/nutrition-timing-v57725.js`
+2. `tests/compass-nutrition-cup-plate.test.mjs`
 
-## Ursache
+Bei GitHub **Add file → Upload files** im jeweiligen Ordner hochladen oder die jeweiligen Dateien ersetzen. Keine anderen Dateien aus älteren ZIPs erneut hochladen.
 
-Die `.59.5`-Reparatur hat das neue UX-Plugin zwischen `compass749Bridge` und `VitePWA` geschoben. Dadurch scheiterten sechs ältere Regressionstests, die diese drei Vite-Plugins direkt nebeneinander erwarten.
+## Behebung
 
-Jetzt bleibt diese alte Reihenfolge unverändert. `compass7593UxBridge()` steht nach `VitePWA(...)` und direkt vor `compass750Bridge()`. Da die UX-Bridge `enforce:'pre'` setzt, bleibt der gewünschte Transformationszeitpunkt erhalten. Die vollständige `.50`–`.58`-Kette ist wieder direkt aneinander gereiht.
+- `matcha` (MatchaTherapy mit Hafermilch & Honig) wird unabhängig von `Frühstück` und `🍯` als Getränk erkannt.
+- `matcha-oat-plain` (ohne Honig) wird ebenfalls als Getränk erkannt.
+- Zusätzliche Erkennung von `MatchaTherapy`/`Matcha Therapy` bei eigenen Lebensmitteln.
+- Kalorien, Portionen, Lebensmittelgruppe, Timing und gespeicherte Daten bleiben unverändert.
+- Die Größe der Tasse bleibt von der kcal-Schätzung abhängig.
+- Nur JavaScript und Testdatei geändert; **kein** `vite.config.js`-Eingriff, keine neue Bridge, keine Migration.
 
-Der Nutrition-2-Fix aus `.59.5` (CSS nicht direkt über das JS-Modul importieren) bleibt unverändert.
+## Prüfungen
 
-## Validierung
+`node --test tests/compass-nutrition-cup-plate.test.mjs`
 
-`node --test tests/compass-0577593-ux.test.mjs tests/compass-0595-deployment-regression.test.mjs tests/compass-0596-all-historical-vite-gates.test.mjs`
+9/9 gezielte Tests erfolgreich mit unverändertem Index/CSS aus dem vorausgehenden Build. Ein gesamter CI-/Produktionsbuild lässt sich nach dem GitHub-Upload über Actions prüfen; lokal wurde die gesamte Repo-Suite hier nicht ausgeführt.
 
-Der vollständige Repository-Test `npm run check` und der Produktionsbuild werden erst durch das neue GitHub-Deployment endgültig bestätigt.
+Basis: GitHub `main`, Originaldatei `client/src/nutrition-timing-v57725.js` mit Git-Blob-SHA `3b28f844ab4e1334985d4823a03fbc0f9f57ac15`.
