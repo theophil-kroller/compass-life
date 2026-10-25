@@ -1,24 +1,25 @@
-# Compass Life 0.5.77.58 — GitHub-Upload
+# Compass 0.5.77.58 — CI-Hotfix 58.1
 
-**Ausgangsbasis:** erfolgreich deployte Version **0.5.77.57.1** (GitHub Actions #222).
+**Nur 5 bestehende Testdateien ersetzen. Keine anderen Dateien hochladen oder löschen.**
 
-ZIP entpacken und die im ZIP enthaltenen Ordner `client/` und `tests/` **mit denselben Pfaden** in die Wurzel des GitHub-Repositories `theophil-kroller/compass-life` hochladen. Alle vorhandenen gleichnamigen Dateien ersetzen; neu hinzugefügte Dateien ebenfalls hochladen. Keine anderen Dateien löschen.
+In GitHub im Repository `theophil-kroller/compass-life` die Dateien unter `tests/` mit denselben Pfaden ersetzen:
 
-## Dateien
+- `tests/compass-057750-insights-nav.test.mjs`
+- `tests/compass-057751-premium-ui.test.mjs`
+- `tests/compass-057752-chart-first.test.mjs`
+- `tests/compass-057753-finance-performance.test.mjs`
+- `tests/compass-057754-on-demand.test.mjs`
 
-- `client/compass758-bridge.js` **NEU** — Projektdrei-Spalten-Ansicht, Inbox → Dreams
-- `client/src/project-workspace-v57758.css` **NEU** — einheitliche kompakte Projekt-UX, responsiv
-- `client/vite.config.js` **ERSETZEN** — neue Bridge an der letzten Stelle integrieren
-- `tests/compass-057758-project-columns.test.mjs` **NEU** — UI-/Daten-/Navigationstests
-- `tests/compass-057755-lightning-fast.test.mjs` **ERSETZEN** — aktualisierte Bridge-Reihenfolge
-- `tests/compass-057756-workspace.test.mjs` **ERSETZEN** — aktualisierte Bridge-Reihenfolge
-- `tests/compass-057757-mobile-workflow.test.mjs` **ERSETZEN** — aktualisierte Bridge-Reihenfolge
-- `tests/compass-057757-full-transform-chain.test.mjs` **ERSETZEN** — komplette Produktions-Transformation am echten `client/src/main.js` inklusive .58 und Syntaxcheck
+Die Dateien `client/compass758-bridge.js`, `client/vite.config.js` und `client/src/project-workspace-v57758.css` **unverändert lassen**. Die App-Version bleibt `0.5.77.58`.
 
-## Nach dem Upload
+## Ursache und Korrektur
 
-Unter GitHub → Actions kontrollieren, dass `npm run check` **und** `npm run build` erfolgreich sind. Den grünen Status nicht allein aus lokalen Unit-Tests ableiten. Erst danach die PWA neu laden.
+GitHub Actions #223 stoppte bei `npm run check` nach 1.251 Tests mit 5 Fehlern. Alle fünf hatten denselben Fehler: Der Test verlangte, dass die Plugin-Liste nach `.57` endet (`...compass757Bridge()]`). Mit der neuen `.58`-Bridge ist das falsch. Nun prüfen die historischen Tests weiterhin die richtige Reihenfolge aller `.50–.57`-Plugins, **ohne das Ende der Liste festzuschreiben**. Der bereits bestehende aktuelle Test `compass-057757-full-transform-chain.test.mjs` sichert die gesamte Produktionskette einschließlich `.58` und deren abschließender Syntaxprüfung ab; genau dieser Test war in GitHub Actions #223 bereits erfolgreich.
 
-Funktionsprüfung: Projekte → Ordner öffnen → Projekt auswählen → Aufgabe öffnen → Inspector schließen und neu öffnen. Danach Inbox → Eintrag öffnen → Dreams-Kategorie wählen → `Zu Dreams`; der Eintrag darf keine Aufgabe erzeugen und muss aus der Inbox verschwinden. Unter Dreams kontrollieren, dass Titel und Notiz erhalten sind.
+## Teststatus
 
-**Hinweis:** Kein Vault-Migrationsschritt. Projekt-/Aufgaben-/Dreams-Daten werden weiterhin von der bestehenden Speicherung und Synchronisation verwaltet. Bei bestehendem Cloud/Vault vor Änderungen am Repository wie gewohnt eine verschlüsselte Sicherung aufbewahren.
+- Lokal 58/58 Tests in der verfügbaren 0.5.77.50–.58-Sandbox erfolgreich, darunter alle fünf betroffenen historischen Testdateien.
+- GitHub Actions #223: Die echte vollständige Transformationskette bestand bereits; fünf historische Endanker-Tests scheiterten.
+- Der **vollständige `npm run check`- und `npm run build`-Lauf** ist **nach diesem Hotfix noch nicht bestätigt**. Nach dem Upload in GitHub Actions kontrollieren.
+
+**Keine Datenmigration, kein Vault-Eingriff, keine Änderung am produktiven Anwendungscode.**
