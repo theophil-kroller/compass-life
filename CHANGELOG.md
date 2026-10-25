@@ -1,7 +1,7 @@
-# Compass 0.5.77.58.2 – Fehlerkorrektur
+# 0.5.77.59 – Insights visual consolidation
 
-- Build #225: Fragile Receipt-Interpolation in `compass758-bridge.js` korrigiert.
-- Receipt-Darstellung bleibt exklusiv im Tab „Statistik & Rechnungsimport“; auf der Checkliste wird sie nicht gerendert.
-- Projekt-Inspector bleibt standardmäßig geschlossen (Verhalten aus .58.2 unverändert).
-- Zusätzlicher Regressionstest mit `month:receiptMonth745` verhindert exakt diesen Fehler.
-- Keine Änderung an Speichermodell, Daten, Vault oder anderen App-Funktionen.
+Pure CSS. A single calm, Apple-inspired interface language across the already established 5 Insights groups. No new data source, no change to user actions, chart points, tooltips, source legends, vault, or sync.
+
+### Why this uses the existing last stylesheet
+
+Recent Vite-bridge transforms failed because of brittle text anchors. This patch adds only scoped CSS to the last already imported stylesheet; it changes no JS execution, version tests, or Vite plugin ordering. Its source comments clearly delimit the new Insights rules for eventual architectural consolidation.

@@ -1,20 +1,23 @@
-# Compass Life 0.5.77.58.2 – CI-Hotfix nach GitHub Actions #225
+# Compass Insights · UI Build 0.5.77.59
 
-Der Upload von .58.2 hatte GitHub Actions #225 bereits erreicht, aber die Transformationskette brach mit »no receipt statistics in shopping checklist: expected 1 source anchor, found 0« ab.
+## Upload in GitHub
 
-Ersetze im bestehenden Repository auf `main` exakt diese beiden Dateien aus der ZIP:
+Ersetze im Repository **nur** `client/src/project-workspace-v57758.css` durch die gleichnamige Datei aus diesem ZIP (mit dem Pfad `client/src/`).
 
-- `client/compass758-bridge.js`
-- `tests/compass-057758-project-columns.test.mjs`
+- Kein Löschen oder Ändern anderer Dateien.
+- Kein `vite.config.js`-Update.
+- Kein JavaScript-Bridge-Update.
+- Kein Datenbank- oder Tresor-Eingriff.
 
-Das ist ein **Ersatz** für die gleichnamigen Dateien des fehlgeschlagenen Builds #225. **Alle anderen Dateien unverändert lassen** (besonders `client/vite.config.js`, Vault, Finanzdaten und CSS). Anschließend Commit/Upload ausführen. GitHub Actions kontrollieren.
+Die Anwendung zeigt in ihrem Footer vorerst weiter **0.5.77.58.2**. 0.5.77.59 bezeichnet den Styling-Build; die angezeigte Client-Version wird bewusst nicht nur für CSS angefasst, damit CI nicht erneut wegen fragiler Versionsanker scheitert.
 
-## Grund
+## Enthalten
 
-Die bestehende `.45`-Integration ruft die Kassenbon-UI mit `month:receiptMonth745` auf. Der `.58.2`-Patch erwartete noch die ursprünglichen `.43`-Argumente. Die neue Transformation erkennt und verschiebt den Aufruf aus der Shopping-Ansicht in den Statistik-/Import-Tab, ohne eine bestimmte Argumentliste zu verlangen.
+- Zusammenhängende, kompakte Haupt-/Untertab-Navigation innerhalb von Insights.
+- Einheitliche Abstände, Schriftgrößen, Oberflächen, Radien und Kartenlogik für Kennzahlen, Diagramme, Ernährungs-/Gesundheitsberichte und Intelligence-Cockpit.
+- Touch-freundliche mobile Tabs ohne ausgeblendete Hauptnavigation.
+- Bestehende Charts, Datenhinweise und Interaktionen bleiben vollständig erhalten.
 
-## Qualitätssicherung
+## Teststatus
 
-Das neue Testcase enthält ausdrücklich die **tatsächlich eingesetzte `.45`-Parameterliste**. Der vollständige echte Bridge-Chain-Test `tests/compass-057757-full-transform-chain.test.mjs` läuft anschließend im GitHub Actions Check und prüft die echte `client/src/main.js`.
-
-Lokale Tests können einen erfolgreichen Github-Produktionsbuild nicht ersetzen; den CI-Status nicht als erfolgreich betrachten, bis er grün ist.
+Geprüft mit `tinycss2` auf Parsefehler und ungewollte Ausblendregeln. Die Datei ist eine reine Erweiterung der bestehenden `.58` CSS und wird durch dieselbe bereits erfolgreiche Import-Kette geladen. Vite-Produktionsbuild nicht lokal ausführbar; bitte den GitHub-Actions-Status nach dem Upload kontrollieren.

@@ -76,3 +76,242 @@
 .shell .compass58-grip{flex:none;min-width:13px;margin-right:3px;font-size:12px;opacity:0;color:#789389;cursor:grab;user-select:none}
 .shell .compass58-nav-row:hover .compass58-grip,.shell .compass58-grip:focus-visible{opacity:.75}
 @media(max-width:760px){.shell .compass58-grip{opacity:.6}}
+
+/* Compass 0.5.77.59 — Unified Insights UI / pure presentation.
+   One visual grammar for existing, real-data modules. No analytics, storage,
+   routing, DOM or chart plotting changes. Loaded last via the existing .58 CSS. */
+.premium751 .insight-workspace {
+  --ins59-surface:#fff;
+  --ins59-canvas:#f6f8f6;
+  --ins59-ink:#203e35;
+  --ins59-muted:#6c8177;
+  --ins59-accent:#2b725c;
+  --ins59-accent-soft:#eaf3ee;
+  --ins59-line:#e1e9e3;
+  --ins59-radius:14px;
+  --ins59-shadow:0 1px 3px rgba(22,54,37,.035);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,"Segoe UI",sans-serif;
+  color:var(--ins59-ink);
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  max-width:100%;
+  min-width:0;
+}
+.premium751 .insight-workspace *,
+.premium751 .insight-workspace *::before,
+.premium751 .insight-workspace *::after {box-sizing:border-box}
+
+/* Horizontal nav: compact segmented feeling; text remains visible and scrollable. */
+.premium751 .insight-workspace .calm-insight-toolbar {
+  display:flex;align-items:center;gap:8px;
+  width:100%;min-width:0;max-width:100%;
+  padding:6px 7px;margin:0 0 7px;
+  border:1px solid var(--ins59-line);
+  border-radius:13px;background:var(--ins59-surface);
+  box-shadow:var(--ins59-shadow);
+}
+.premium751 .insight-workspace .calm-insights-nav {
+  display:flex;align-items:center;gap:4px;
+  flex:1 1 auto;min-width:0;max-width:100%;
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;
+  overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+  padding:0 0 2px;margin:0;
+}
+.premium751 .insight-workspace .calm-insight-tab.ins750-primary {
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  white-space:nowrap;flex:0 0 auto;
+  font-size:12px;font-weight:610;line-height:1.2;
+  letter-spacing:-.1px;min-height:36px;
+  padding:8px 11px;border:1px solid transparent;
+  background:transparent;color:#62776d;
+  border-radius:9px;box-shadow:none;
+  transition:background-color .13s ease,color .13s ease;
+}
+.premium751 .insight-workspace .calm-insight-tab.ins750-primary svg{width:16px;height:16px;flex:none}
+.premium751 .insight-workspace .calm-insight-tab.ins750-primary:hover{background:#f1f6f2;color:var(--ins59-ink)}
+.premium751 .insight-workspace .calm-insight-tab.ins750-primary.is-active {
+  background:var(--ins59-accent-soft);color:#235a45;
+  border-color:#d4e5d9;font-weight:700;
+}
+.premium751 .insight-workspace .calm-source-action {
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--ins59-line);background:#fff;
+  color:#698074;min-height:35px;border-radius:9px;
+  font-size:11px;padding:6px 9px;
+}
+.premium751 .insight-workspace .calm-source-action:hover{background:#f6f9f6;color:var(--ins59-accent)}
+
+/* Secondary nav is visibly subordinate; never inflate category switching. */
+.premium751 .insight-workspace .ins750-subtabs {
+  display:flex;align-items:center;gap:4px;min-width:0;
+  padding:2px 0 8px;margin:0 0 9px;
+  border-bottom:1px solid var(--ins59-line);
+  overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:thin;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.premium751 .insight-workspace .ins750-subtab {
+  display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;white-space:nowrap;
+  min-height:33px;padding:6px 10px;
+  font-size:11px;font-weight:570;color:var(--ins59-muted);
+  background:transparent;border:1px solid transparent;
+  border-radius:9px;box-shadow:none;
+}
+.premium751 .insight-workspace .ins750-subtab:hover{color:var(--ins59-ink);background:#f0f5f1}
+.premium751 .insight-workspace .ins750-subtab.is-active{
+  font-weight:710;color:var(--ins59-accent);background:var(--ins59-accent-soft);
+  border-color:#dbe9df;
+}
+
+/* Headings / filter controls: a single readable hierarchy across Health, Life, Time. */
+.premium751 .insight-workspace>.insight-view-header {
+  display:flex;flex-wrap:wrap;justify-content:space-between;
+  align-items:flex-start;gap:8px 14px;
+  margin:3px 0 12px;padding:0 2px;
+  min-width:0;border:0;background:transparent;
+}
+.premium751 .insight-workspace .insight-heading-main{min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.premium751 .insight-workspace>.insight-view-header .insight-kicker{
+  font-size:9px;font-weight:700;letter-spacing:.085em;
+  line-height:1.35;color:#6b9380;
+}
+.premium751 .insight-workspace>.insight-view-header h2 {
+  font-family:inherit;font-weight:680;letter-spacing:-.5px;
+  font-size:clamp(18px,1.6vw,23px);line-height:1.25;
+  margin:3px 0 0;color:var(--ins59-ink);
+}
+.premium751 .insight-workspace .insight-periods,
+.premium751 .insight-workspace .fw65-periods,
+.premium751 .insight-workspace .ni712-tabs {
+  display:flex;align-items:center;gap:3px;
+  width:max-content;max-width:100%;overflow-x:auto;
+  border:1px solid var(--ins59-line);border-radius:10px;
+  background:#f2f5f2;padding:3px;
+  margin:0;box-shadow:none;
+}
+.premium751 .insight-workspace :is(.insight-periods,.fw65-periods,.ni712-tabs)>button {
+  flex:0 0 auto;white-space:nowrap;
+  font-family:inherit;font-size:11px;font-weight:600;
+  min-height:30px;padding:6px 10px;
+  background:transparent;border:1px solid transparent;
+  border-radius:8px;color:#667b70;box-shadow:none;
+}
+.premium751 .insight-workspace :is(.insight-periods,.fw65-periods,.ni712-tabs)>button.selected,
+.premium751 .insight-workspace :is(.insight-periods,.fw65-periods,.ni712-tabs)>button.is-active{
+  background:#fff;border-color:#e0e8e2;color:#245c49;
+  box-shadow:0 1px 3px rgba(29,67,46,.06);font-weight:700;
+}
+.premium751 .insight-workspace .ni712-tabs{margin:3px 0 11px}
+.premium751 .insight-workspace .calm-health-icons{gap:5px}
+.premium751 .insight-workspace .calm-health-icon{min-width:35px;min-height:35px;border-radius:9px}
+
+/* Cards: the same radius, density and titles everywhere; plots remain untouched. */
+.premium751 .insight-workspace :is(
+  .work-card,.ins750-hub-card,.insight-chart-card,.insight-kpi,
+  .health-report-card,.health-report-metric,.health-composition-card,
+  .health-visual-card,.ni712-kpi,.ni725-kpi,.ni726-kpi,
+  .bt749-metric,.cf52-provenance
+){
+  border:1px solid var(--ins59-line);
+  border-radius:var(--ins59-radius);
+  background:var(--ins59-surface);
+  box-shadow:var(--ins59-shadow);
+  min-width:0;max-width:100%;
+}
+.premium751 .insight-workspace :is(.work-card,.insight-chart-card,.health-report-card,.bt749-metric){padding:13px 15px}
+.premium751 .insight-workspace :is(.insight-chart-grid,.insight-kpi-grid,.ins750-hub-grid,.ni712-kpis,.ni725-kpis){gap:10px}
+.premium751 .insight-workspace .insight-chart-grid>*{min-width:0}
+.premium751 .insight-workspace .insight-kpi{min-height:0;padding:12px 14px;gap:4px}
+.premium751 .insight-workspace :is(.insight-kpi,.ins750-hub-card,.ni712-kpi,.ni725-kpi)>strong,
+.premium751 .insight-workspace .health-report-metric>strong{
+  font-family:inherit;color:var(--ins59-ink);font-weight:720;
+  font-variant-numeric:tabular-nums;letter-spacing:-.035em;
+}
+.premium751 .insight-workspace .insight-kpi strong{font-size:clamp(19px,1.6vw,25px)}
+.premium751 .insight-workspace :is(
+  .work-heading>span:first-child,.insight-figure-title h3,.health-report-title h4,
+  .ins750-hub-card h3,.ni712-header h2,.ni725-insights h3
+){
+  font-family:inherit;font-size:13px;font-weight:680;
+  letter-spacing:-.15px;line-height:1.32;color:var(--ins59-ink);
+}
+.premium751 .insight-workspace :is(
+  .insight-data-note,.insight-footnote,.insight-figure-note,
+  .health-card-sub,.ins750-hub-note,.ni725-disclaimer
+){font-size:10.5px;color:var(--ins59-muted);line-height:1.45}
+.premium751 .insight-workspace .quiet-tag{
+  padding:4px 8px;color:#657c70;background:#eff4ef;
+  border:0;border-radius:8px;font-size:10px;
+}
+
+/* The Intelligence cockpit should scan like small Apple summary widgets. */
+.premium751 .insight-workspace .ins750-hub {margin:0 0 12px;min-width:0}
+.premium751 .insight-workspace .ins750-hub-intro {margin:0 0 12px;padding:0 2px}
+.premium751 .insight-workspace .ins750-eyebrow{font-size:9px;letter-spacing:.075em;font-weight:720}
+.premium751 .insight-workspace .ins750-hub-intro h2{
+  font-family:inherit;font-size:clamp(18px,1.65vw,23px);
+  font-weight:700;letter-spacing:-.55px;margin:4px 0;
+}
+.premium751 .insight-workspace .ins750-hub-intro p{font-size:11px;line-height:1.4;max-width:75ch;margin:4px 0 6px;color:var(--ins59-muted)}
+.premium751 .insight-workspace .ins750-hub-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;
+}
+.premium751 .insight-workspace .ins750-hub-card{
+  padding:13px 14px;gap:5px;min-height:137px;
+  display:flex;flex-direction:column;align-items:flex-start;
+}
+.premium751 .insight-workspace .ins750-hub-card-head{gap:7px}
+.premium751 .insight-workspace .ins750-hub-card h3{font-size:12px}
+.premium751 .insight-workspace .ins750-hub-card strong{font-size:17px;line-height:1.2;margin:3px 0}
+.premium751 .insight-workspace .ins750-hub-card p{font-size:10.5px;line-height:1.4;margin:0 0 auto}
+.premium751 .insight-workspace .ins750-hub-card .secondary-btn{
+  min-height:29px;padding:5px 9px;font-size:10px;
+  border-radius:8px;margin-top:7px;
+}
+
+/* Forms & details: visually quiet yet fully functional. No hidden source data. */
+.premium751 .insight-workspace :is(.work-card,.insight-chart-card,.health-report-card) :is(input,select,textarea){
+  max-width:100%;min-width:0;border-radius:9px;
+}
+.premium751 .insight-workspace :is(.insight-data-note,.cf52-provenance,.ni725-disclaimer){overflow-wrap:anywhere}
+.premium751 .insight-workspace :is(.insight-svg-scroller,.ni725-dot-scroller,.ni725-trend-scroller){
+  max-width:100%;overflow-x:auto;min-width:0;scrollbar-width:thin;
+}
+.premium751 .insight-workspace .insight-chart-card svg,
+.premium751 .insight-workspace .bt749-metric svg{max-width:100%}
+.premium751 .insight-workspace :is(.ins750-subtab,.calm-insight-tab,.calm-source-action,.insight-period,.ni712-tabs button):focus-visible{
+  outline:2px solid #348a70;outline-offset:2px;
+}
+
+/* Mobile: no oversized chart cards, keep tabs and data accessible to touch. */
+@media(max-width:1130px){
+  .premium751 .insight-workspace .ins750-hub-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  .premium751 .insight-workspace{width:100%;min-width:0}
+  .premium751 .insight-workspace .calm-insight-toolbar{padding:4px;gap:4px;border-radius:10px;margin-bottom:6px}
+  .premium751 .insight-workspace .calm-insight-tab.ins750-primary{min-height:40px;padding:8px 10px;font-size:11px}
+  .premium751 .insight-workspace .calm-source-action{min-width:40px;min-height:40px;justify-content:center;padding:7px}
+  .premium751 .insight-workspace .calm-source-action>span{display:none}
+  .premium751 .insight-workspace .ins750-subtabs{margin:0 0 7px;padding:2px 0 6px;gap:3px}
+  .premium751 .insight-workspace .ins750-subtab{min-height:38px;font-size:11px;padding:8px 10px}
+  .premium751 .insight-workspace>.insight-view-header{margin:3px 0 9px;gap:7px}
+  .premium751 .insight-workspace>.insight-view-header h2{font-size:18px}
+  .premium751 .insight-workspace .insight-periods{max-width:100%;overflow-x:auto}
+  .premium751 .insight-workspace :is(.work-card,.insight-chart-card,.health-report-card,.bt749-metric){padding:11px 12px}
+  .premium751 .insight-workspace .ins750-hub-grid{grid-template-columns:minmax(0,1fr);gap:8px}
+  .premium751 .insight-workspace .ins750-hub-card{min-height:0;padding:12px}
+  .premium751 .insight-workspace .ins750-hub-card strong{font-size:16px}
+  .premium751 .insight-workspace .ins750-hub-card p{font-size:11px}
+  .premium751 .insight-workspace .insight-chart-grid{grid-template-columns:minmax(0,1fr)}
+  .premium751 .insight-workspace :is(.insight-kpi-grid,.ni712-kpis,.ni725-kpis){gap:7px}
+}
+@media(max-width:380px){
+  .premium751 .insight-workspace .ins750-subtab{padding:7px 9px}
+  .premium751 .insight-workspace .ins750-hub-card{padding:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .premium751 .insight-workspace .calm-insight-tab.ins750-primary{transition:none}
+}
