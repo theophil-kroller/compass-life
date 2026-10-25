@@ -3,8 +3,8 @@
  */
 import './wim-hof-player-v5775921.css';
 export const WIM_TRACKS=Object.freeze({
- morning:{label:'Morgen',icon:'☀',file:'AUD-20240504-WA0004.m4a'},
- evening:{label:'Abend',icon:'☾',file:'AUD-20240504-WA0005.m4a'}
+ morning:{label:'Morgen',icon:'☀',file:'AUD-20240504-WA0004.mp3'},
+ evening:{label:'Abend',icon:'☾',file:'AUD-20240504-WA0005.mp3'}
 });
 const DB='compass-wimhof-recordings-v1',STORE='recordings';
 const ROOT=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/,'/')+'wim-hof-audio/';
@@ -31,7 +31,7 @@ export async function openWimHofPlayer({onComplete=async()=>{}}={}){
  const setButtons=()=>{const btn=view.querySelector('[data-control="play"]');if(btn){btn.textContent=playing?'⏸':'▶';btn.setAttribute('aria-label',playing?'Pausieren':'Abspielen');}};
  function resetAudio(){audio.pause();audio.removeAttribute('src');audio.load();playing=false;loaded=false;loading=false;release();if(url){URL.revokeObjectURL(url);url='';}audio=new Audio();audio.preload='metadata';audio.ontimeupdate=tick;audio.onloadedmetadata=tick;audio.onended=async()=>{if(closed)return;playing=false;release();setButtons();status('Aufnahme vollständig – als Habit gespeichert.');try{await onComplete({track,finishedAt:new Date().toISOString(),durationSeconds:Math.round(audio.duration||0)});}catch(e){status('Aufnahme beendet, aber Speichern fehlgeschlagen: '+e.message);}};}
  async function ensureLoaded(){if(loaded)return true;if(loading)return false;loading=true;const current=++loadId;status('Aufnahme wird geladen …');
-  try{let blob=await wimStoredRecording(track).catch(()=>null);if(!blob){const response=await fetch(wimTrackSource(track),{cache:'force-cache'});if(!response.ok)throw Error('Datei ist noch nicht verfügbar. Importiere die M4A einmal über „Datei wählen“.');blob=await response.blob();if(blob.size<100)throw Error('Audiodatei ist leer.');try{await wimSaveRecording(track,blob);}catch(error){status('Wiedergabe möglich, aber lokales Speichern fehlgeschlagen: '+error.message);}}
+  try{let blob=await wimStoredRecording(track).catch(()=>null);if(!blob){const response=await fetch(wimTrackSource(track),{cache:'force-cache'});if(!response.ok)throw Error('Datei ist noch nicht verfügbar. Importiere eine MP3 oder M4A einmal über „Datei wählen“.');blob=await response.blob();if(blob.size<100)throw Error('Audiodatei ist leer.');try{await wimSaveRecording(track,blob);}catch(error){status('Wiedergabe möglich, aber lokales Speichern fehlgeschlagen: '+error.message);}}
    if(closed||loadId!==current)return false;url=URL.createObjectURL(blob);audio.src=url;loaded=true;status('Lokal bereit · '+WIM_TRACKS[track].file);return true;
   }catch(e){if(!closed&&current===loadId)status(e.message);return false;}finally{loading=false;}
  }
@@ -46,10 +46,10 @@ export async function openWimHofPlayer({onComplete=async()=>{}}={}){
  <div class="wh621-center"><div class="wh621-symbol">${WIM_TRACKS[track].icon}</div><strong>${WIM_TRACKS[track].label} · Atemroutine</strong><p>Atme entspannt und nur in sicherer Umgebung. Niemals im Wasser, beim Fahren oder in Situationen, in denen Ohnmacht gefährlich wäre.</p></div>
  <div class="wh621-transport"><button type="button" data-control="stop" aria-label="Stoppen">⏹</button><button type="button" class="primary" data-control="play" aria-label="Abspielen">▶</button><button type="button" data-control="pause" aria-label="Pausieren">⏸</button></div>
  <div class="wh621-progress"><progress max="1" value="0" aria-label="Wiedergabefortschritt"></progress><span data-clock>00:00 / --:--</span></div><p class="wh621-status" data-status role="status">Bereit · ${WIM_TRACKS[track].file}</p>
- <label class="wh621-upload">Aufnahme einmal lokal speichern <input type="file" accept=".m4a,audio/mp4,audio/x-m4a" data-control="import"/></label><small class="wh621-footnote">Nach dem ersten Import oder Download bleibt die M4A im lokalen Gerätespeicher verfügbar, solange Browser-/App-Daten erhalten bleiben. Erst nach vollständigem Abspielen wird die Habit abgehakt.</small>`;
+ <label class="wh621-upload">Aufnahme einmal lokal speichern <input type="file" accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/x-m4a" data-control="import"/></label><small class="wh621-footnote">Nach dem ersten Import oder Download bleibt die Aufnahme im lokalen Gerätespeicher verfügbar, solange Browser-/App-Daten erhalten bleiben. Erst nach vollständigem Abspielen wird die Habit abgehakt.</small>`;
  view.querySelector('[data-control="close"]').onclick=close;view.querySelector('[data-control="play"]').onclick=()=>{void play();};view.querySelector('[data-control="pause"]').onclick=()=>{if(playing){audio.pause();playing=false;release();setButtons();status('Pausiert');}};view.querySelector('[data-control="stop"]').onclick=stop;
  view.querySelectorAll('[data-track]').forEach(b=>b.onclick=()=>changeTrack(b.dataset.track));
- view.querySelector('[data-control="import"]').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;if(!/\.m4a$/i.test(file.name)){status('Bitte eine M4A-Datei auswählen.');return;}if(file.name!==WIM_TRACKS[track].file){status('Für '+WIM_TRACKS[track].label+' bitte '+WIM_TRACKS[track].file+' auswählen.');return;}try{await wimSaveRecording(track,file);await navigator.storage?.persist?.().catch(()=>{});++loadId;resetAudio();status('Lokal gespeichert. Jetzt ▶ drücken.');}catch(err){status('Speichern fehlgeschlagen: '+err.message);}};
+ view.querySelector('[data-control="import"]').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;if(!/\.(mp3|m4a)$/i.test(file.name)){status('Bitte eine MP3- oder M4A-Datei auswählen.');return;}if(file.name.replace(/\.(mp3|m4a)$/i,'')!==WIM_TRACKS[track].file.replace(/\.mp3$/i,'')){status('Für '+WIM_TRACKS[track].label+' bitte '+WIM_TRACKS[track].file+' oder die gleichnamige M4A auswählen.');return;}try{await wimSaveRecording(track,file);await navigator.storage?.persist?.().catch(()=>{});++loadId;resetAudio();status('Lokal gespeichert. Jetzt ▶ drücken.');}catch(err){status('Speichern fehlgeschlagen: '+err.message);}};
  }
  resetAudio();render();view.querySelector('[data-control="play"]')?.focus({preventScroll:true});return {close};
 }

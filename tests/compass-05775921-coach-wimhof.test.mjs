@@ -9,13 +9,13 @@ const guide=read('client/src/strength-guided-v5775920.js');
 const wim=read('client/src/wim-hof-player-v5775921.js');
 const coach=read('client/src/strength-coach-v5775910.js');
 
-test('Morgen und Abend verwenden exakt die gelieferten M4A-Dateinamen',()=>{
- for(const [filename,key] of [['AUD-20240504-WA0004.m4a','morning'],['AUD-20240504-WA0005.m4a','evening']]){
+test('Morgen und Abend verwenden die kompakten MP3-Ausgaben der gelieferten M4A-Aufnahmen',()=>{
+ for(const [filename,key] of [['AUD-20240504-WA0004.mp3','morning'],['AUD-20240504-WA0005.mp3','evening']]){
   assert.ok(wim.includes(key+':{'));
   assert.ok(wim.includes(filename));
   const file=readFileSync(rel('client/public/wim-hof-audio/'+filename));
   assert.ok(file.byteLength>1000000);
-  assert.equal(file.toString('ascii',4,8),'ftyp');
+  assert.ok(file.subarray(0,3).toString('ascii')==='ID3'||file[0]===0xff,'valid MP3 signature');
  }
 });
 test('Wim Hof wird erst nach vollständiger Wiedergabe abgehakt, nicht nach Stop/Pause',()=>{
@@ -33,9 +33,11 @@ test('Wim Hof wird erst nach vollständiger Wiedergabe abgehakt, nicht nach Stop
 test('Wim Hof audios are loaded on demand; not in Vite pre-cache',()=>{
  const vite=read('client/vite.config.js');
  assert.match(vite,/globPatterns:/);
- assert.doesNotMatch(vite,/\.m4a[,}'"]|\*\.m4a/);
+ assert.doesNotMatch(vite,/\.(?:mp3|m4a)[,}'"]|\*\.(?:mp3|m4a)/);
  assert.match(wim,/async function ensureLoaded\(\)/);
  assert.match(wim,/fetch\(wimTrackSource\(track\)/);
+ assert.match(wim,/accept="\.mp3,\.m4a/);
+ assert.match(wim,/\(mp3\|m4a\)/);
 });
 test('The coach is goal-and-location-aware and StrongLifts is gym-only',()=>{
  assert.match(coach,/mode==='stronglifts'/);
