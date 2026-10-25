@@ -1,31 +1,31 @@
-# Compass 0.5.77.59.13 — Makko-Ho Gong & freie Haltezeit
+# Compass 0.5.77.59.14 – Deploy Repair & Makko-Ho Premium
 
-## GitHub-Upload
+**Abgleich:** GitHub main Commit `1c16708` (#241 fehlgeschlagen).
 
-Bitte die Verzeichnisstruktur im ZIP beibehalten und **nur** folgende Dateien nach GitHub `theophil-kroller/compass-life` übertragen:
+## Upload: Pfade exakt beibehalten
 
-- **ERSETZEN** `client/src/makko-ho-guide-v5775910.js`
-- **ERSETZEN** `client/src/makko-ho-guide-v5775910.css`
-- **NEU** `tests/compass-05775913-gong-overtime.test.mjs`
+1. ERSETZEN `client/public/gtd-workspace-premium-v577599.js` (Fix #240/#241: nur ein globaler Keydown-Listener).
+2. ERSETZEN `client/src/makko-ho-guide-v5775910.js` (Dehnzonen, Koto und aufgenommener Gong).
+3. ERSETZEN `client/src/makko-ho-guide-v5775910.css` (Overlay).
+4. ERSETZEN `client/public/makko-ho-illustrations-v5775911/metal.webp` (Hände/Finger in Pose 1).
+5. NEU `tests/compass-05775914-makko-deploy.test.mjs`.
 
-Die frühere `client/vite.config.js`, Musikdatei, sechs WebP-Bilder, Vault und gespeicherte Daten bleiben unverändert.
+Keine Änderungen an Vite-Plugins, D1, Vault oder Synchronisierung.
 
-## Verhalten
+## Wichtige Audio-Details
 
-- Zeit startet wie bisher rückwärts ab 30/45/60/90 Sekunden.
-- Bei Erreichen der Zielzeit wird **genau einmal** ein sanft ausklingender, lokal synthetisierter Gong angestoßen (nur bei aktiviertem Signalton).
-- Der Zähler zeigt danach `+00:00`, `+00:01`, ... und läuft weiter, ohne automatisch anzuhalten oder zu wechseln.
-- Pause friert die Überzeit ein, `▶ Weiterlaufen` setzt sie fort; `↺ Zurücksetzen` beginnt neu; `Weiter →` startet den nächsten Stretch mit unveränderter Zielzeit.
-- `Sakura Sakura` läuft dabei weiter; die Lautstärke wird für den Gong kurz abgesenkt.
-- Die Musikdatei sowie die Illustration werden weiterhin erst beim Öffnen des Players nachgeladen.
+Die bisherige synthetische Sakura MP3 wird **nicht** mehr abgespielt. Neue Standardmusik: "Koto Traditional Japanese Music" von Prettysleepy (Pixabay), abgespielt vom originalen CDN erst nach dem Öffnen des Players. Browser benötigt für den ersten Aufruf Internet, anschließend ist Cache möglich (je nach CORS-/Browser-Verhalten). Die Aufnahme ist nicht in diesem ZIP, sie ist extern gehostet.
 
-## Illustrationen
+Quelle: https://pixabay.com/music/world-koto-traditional-japanese-music-264711/
+Direkte offizielle CDN-Audiodatei: https://cdn.pixabay.com/download/audio/2024/11/15/audio_157298f798.mp3?filename=koto-traditional-japanese-music-264711.mp3
+Lizenz: https://pixabay.com/service/license-summary/ – bitte aktuelle Nutzungsbedingungen prüfen.
 
-Die vorhandenen sechs personalisierten Illustrationen bleiben bewusst unverändert, weil die zuletzt neu generierten Entwürfe noch zu viele Beschriftungen und grafische Artefakte enthielten. Die sechs neuen Referenzfotos der Nutzerperson bleiben lokal im Chat und werden **nicht** in das öffentliche GitHub-Repository hochgeladen. Sie dienen als Vorlage für eine spätere, eigenständige Bildverfeinerung.
+**Echter Gong standardmäßig online**: Aufgenommene Gong-MP3 (Alexander / Orange Free Sounds, CC BY 4.0), Quelle https://orangefreesounds.com/large-gong-struck-once/ – die Aufnahme wird erst nach Player-Start lazy geladen und nach Möglichkeit lokal zwischengespeichert; der Urheber ist im Player genannt. Bei fehlendem Internet und noch leerem Cache ist der Gong möglicherweise stumm. Du kannst alternativ über `Gong-Aufnahme` eine eigene lizenzierte MP3/WAV/OGG auswählen; sie wird nur lokal im Browser-Cache gespeichert. **Keine synthetischen Sinustöne mehr.**
+
+Die beiden echten Aufnahmen sind externe Assets. Sie sind **nicht im ZIP gebündelt**, weil die Binärdateien in dieser Umgebung nicht heruntergeladen werden konnten. Die App lädt sie im Player direkt von den Anbieter-URLs; bei Online-Ausfall kann das Audio daher stumm bleiben.
 
 ## Tests
 
-- `node --check client/src/makko-ho-guide-v5775910.js` OK
-- 12 von 12 Node-Regressionstests (4 neue + 8 bestehende) OK in lokal rekonstruierter Fixture.
-- Chromium: Desktop 1260px, Smartphone 390px; Gong-Schwelle mit verkürzter Testdauer, Overtime, Pause, Resume, `Weiter`, Lazy Loading, kein horizontaler Überlauf.
-- **Wichtig:** Noch kein vollständiger GitHub-Actions-Produktionslauf für diesen Patch. Nach Upload prüfen.
+`node --test tests/compass-0577599-gtd-workspace.test.mjs tests/compass-05775914-makko-deploy.test.mjs`
+
+Das ZIP enthält nur Änderungen; bestehende Bilder der anderen fünf Posen unverändert lassen.

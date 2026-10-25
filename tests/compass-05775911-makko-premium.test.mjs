@@ -39,7 +39,7 @@ test('Guide offers exact six positions, meaningful alt text and retains timer/fi
  for(const label of ['Lunge & Dickdarm','Magen & Milz','Herz & Dünndarm','Blase & Niere','Perikard & Dreifacherwärmer','Leber & Gallenblase'])assert.ok(guide.includes(label));
  for(const pose of positions)assert.match(guide,new RegExp(` ${pose}:['\"]`));
  assert.match(guide,/alt=\\?"\$\{ART_LABELS\[stage\.pose\]\}/);
- for(const event of ['setInterval(tick,200)','data-go="next"','AudioContext','visibilitychange','onFinish','function drawing(stage)'])assert.ok(guide.includes(event),event);
+ for(const event of ['setInterval(tick,200)','data-go="next"','getGong','visibilitychange','onFinish','function drawing(stage)'])assert.ok(guide.includes(event),event);
  assert.match(guide,/render\(\);panel\.querySelector/);
 });
 

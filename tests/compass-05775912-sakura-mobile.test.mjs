@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,statSync} from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-test('Sakura Sakura is a real, small, local MP3, loaded on demand',()=>{
+test('legacy Sakura file remains optional, real Koto now defaults on demand',()=>{
  const file=new URL('../client/public/makko-ho-music-v5775912/sakura-sakura-compass.mp3',import.meta.url);
  const mp3=readFileSync(file);
  assert.ok(mp3.length>120_000&&mp3.length<500_000,'MP3 size bounded');
@@ -10,19 +10,20 @@ test('Sakura Sakura is a real, small, local MP3, loaded on demand',()=>{
  const guide=read('client/src/makko-ho-guide-v5775910.js');
  assert.match(guide,/const MUSIC_ROOT=/);
  assert.match(guide,/sakura-sakura-compass\.mp3/);
- assert.match(guide,/let audio=null;let musicEnabled=true/);
+ assert.match(guide,/let musicEnabled=true/);
+ assert.match(guide,/cdn\.pixabay\.com/);
  assert.match(guide,/if\(musicEnabled\)void ensureMusic\(\)/);
  assert.match(guide,/const cached|await cache\.match\(MUSIC_URL\)/);
  assert.match(guide,/await cache\.put\(MUSIC_URL,/);
  assert.match(guide,/musicPlayer\.loop=true/);
- assert.match(guide,/stopMusic\(\);wrap\.remove\(\)/);
+ assert.match(guide,/stopMusic\(\);gongPlayer/);
  assert.match(guide,/duckMusic\(\);/);
  assert.match(guide,/data-go="music"/);
  assert.match(guide,/data-go="volume"/);
 });
 test('New personalized poses preserve 6 variants and invalidate old CacheFirst',()=>{
  const guide=read('client/src/makko-ho-guide-v5775910.js');
- assert.match(guide,/webp\?v=5912/);
+ assert.match(guide,/webp\?v=5914/);
  assert.match(guide,/Kopf berührt sanft die Matte/);
  let total=0;
  for(const pose of ['metal','earth','fire','water','innerfire','wood']){

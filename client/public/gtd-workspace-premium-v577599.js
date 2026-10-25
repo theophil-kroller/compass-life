@@ -95,6 +95,15 @@
   dialog=document.createElement('div');dialog.className='gtd612-create-backdrop';
   dialog.innerHTML='<section class="gtd612-create-panel" role="dialog" aria-modal="true" aria-labelledby="gtd612-create-title"><div class="gtd612-create-head"><h2 id="gtd612-create-title">Was möchtest du anlegen?</h2><button type="button" data-create="close" aria-label="Schließen">×</button></div><button type="button" class="gtd612-create-option" data-create="folder"><span aria-hidden="true">📁</span><span><strong>Neuer Ordner</strong><small>Projekte thematisch gruppieren</small></span></button><button type="button" class="gtd612-create-option" data-create="project"><span aria-hidden="true">＋</span><span><strong>Neues Projekt</strong><small>Ein Ergebnis mit Aufgaben planen</small></span></button></section>';
   document.body.append(dialog);dialog.querySelector('[data-create="folder"]').focus({preventScroll:true});
+  // Only listen while the action sheet exists. A second global keydown listener
+  // previously masked the GTD ArrowDown listener (Actions #240/#241).
+  dialog.addEventListener('keydown',e=>{
+   if(e.key==='Escape'){e.preventDefault();close();return;}
+   if(e.key!=='Tab')return;
+   const controls=[...dialog.querySelectorAll('button')],first=controls[0],last=controls.at(-1);
+   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+   else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  });
  },true);
  document.addEventListener('click',e=>{
   if(!dialog)return;
@@ -108,9 +117,4 @@
   if(!trigger)return;
   bypass=true;try{trigger.click();}finally{bypass=false;}
  });
- document.addEventListener('keydown',e=>{if(!dialog)return;if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Tab'){
-  const controls=[...dialog.querySelectorAll('button')],first=controls[0],last=controls.at(-1);
-  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
-  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
- }});
 })();

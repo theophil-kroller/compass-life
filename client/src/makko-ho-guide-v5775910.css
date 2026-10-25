@@ -57,3 +57,19 @@
 .mk613-timer-display .mk610-time{position:relative;font-size:21px;line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums}
 .mk613-clock-state{font-size:11px;line-height:1.3;min-height:29px;color:#597969;text-align:center;max-width:132px;font-weight:500}
 @media(max-width:640px){.mk613-timer-display .mk610-ring{width:105px;height:105px;min-width:105px}.mk613-clock-state{font-size:10px}}
+
+/* .59.14: compact illustrated stretch-zone inset and recorded gong control */
+.mk611-artwork{position:relative;overflow:hidden}
+.mk614-zones{position:absolute;right:12px;bottom:13px;z-index:3;width:min(41%,178px);max-width:178px;background:rgba(255,252,245,.95);border:1px solid rgba(133,117,94,.28);border-radius:14px;padding:9px 10px;box-shadow:0 5px 16px rgba(39,46,32,.11);backdrop-filter:blur(4px);box-sizing:border-box}
+.mk614-zone-head{display:flex;justify-content:space-between;gap:3px;align-items:center;color:#496a58}
+.mk614-zonetitle{font-size:10px;font-weight:800;letter-spacing:.075em}
+.mk614-zonesub{font-size:9px;color:#896d58}
+.mk614-zone-body{display:flex;align-items:center;gap:6px}
+.mk614-zone-body svg{width:57px;height:100px;flex-shrink:0}
+.mk614-zone-label{font-size:11px;line-height:1.35;font-weight:650;color:#425146}
+.mk614-zone-note{display:block;font-size:8px;line-height:1.25;color:#817e74;margin-top:3px}
+.mk614-gong-import{font-size:10px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.mk614-gong-import input{max-width:135px;width:135px;font-size:10px}
+.mk612-music{flex-wrap:wrap}
+[data-gong-status]{font-size:10px;color:#507a60}
+@media(max-width:640px){.mk614-zones{width:122px;max-width:42%;padding:6px;right:6px;bottom:6px;border-radius:10px}.mk614-zone-head{display:block}.mk614-zonetitle{font-size:8px}.mk614-zonesub{display:none}.mk614-zone-body svg{width:39px;height:65px}.mk614-zone-label{font-size:9px}.mk614-zone-note{font-size:7px}.mk614-gong-import input{max-width:95px;width:95px}}

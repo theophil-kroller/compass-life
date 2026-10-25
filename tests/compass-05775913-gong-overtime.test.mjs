@@ -8,7 +8,8 @@ test('one gong at threshold, no automatic stop or navigation',()=>{
  assert.match(timer,/if\(remaining===0&&!completed\)/);
  assert.match(timer,/completed=true;overtime=0;gong\(\);render\(\)/);
  assert.doesNotMatch(timer,/stop\(\)|step\+\+|beep\(/);
- assert.match(text,/for\(const \[frequency,level,decay\] of/);
+ assert.match(text,/getGong\(\)/);
+ assert.doesNotMatch(text,/createOscillator\(/);
 });
 test('overtime continues to increase, and paused time does not accrue',()=>{
  const text=guide();
