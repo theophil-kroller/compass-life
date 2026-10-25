@@ -1,25 +1,30 @@
-# Compass 0.5.77.59.23 – Strength Coach UX / Pause 90+90
+# Compass 0.5.77.59.24 — Coach History Intelligence
 
-## GitHub Upload (Dateipfade beibehalten)
+## Worum geht es?
 
-1. `client/src/strength-guided-v5775920.js` (ersetzen)
-2. `client/src/strength-guided-v5775920.css` (ersetzen)
-3. `client/src/strength-coach-v5775910.js` (ersetzen)
-4. `client/src/strength-coach-v5775910.css` (ersetzen)
-5. `client/public/strength-visuals-v5775920/dumbbell-pullover.webp` (NEU)
-6. `tests/compass-05775923-coach-rest-ux.test.mjs` (NEU)
+Die im geführten Coach-Player bestätigten Sätze werden bereits im **verschlüsselten lokalen Vault** unter `strengthGuidedSessions` gespeichert. Die alte Planungslogik hat diese Daten bisher nicht für die muskuläre Belastung genutzt, sondern nur zugeordnete Garmin-Sätze aus `strengthPeriod`.
 
-## Änderungen
+**Neu:** Beide Quellen werden für die 28-Tage-Trainingsplanung zusammengeführt. Bereits eine aktuelle Coach-only-Einheit verändert die Trainingsvorschläge und Regenerationshinweise. Nicht zugeordnete Garmin-Sätze bleiben als unbekannte Daten erkennbar; es werden keine Trainingsleistungen geschätzt.
 
-- 3-Minuten-Ruhepause: erste 90 Sekunden und zweite 90 Sekunden; einmaliger kurzer Vibrationsimpuls nach 90 Sekunden, sofern Android/Browser Vibration API erlauben.
-- Countdown läuft bis 0 und wechselt nie automatisch zur nächsten Übung.
-- Größeres Bild im geführten Workout, weniger Leerraum.
-- Pullover als Foto/Einzelphase statt Strichmännchen; hier noch **kein** überprüftes Start-End-Bewegungspaar.
-- Coach-Einstieg deutlich gekürzt; Equipmentdetails und Datenlage bei Bedarf aufklappen.
-- Garmin-FIT, Vault, Makko-Ho, Wim-Hof und Lockscreen unverändert.
+### Doppelte Workouts vermeiden
 
-## Hinweise
+Wenn Garmin später eine zeitlich passende Einheit liefert (maximal 120 Minuten Abweichung), werden als identisch belegbare Sätze nach Übung, Wiederholungen und ggf. Gewicht genau einmal berücksichtigt. Unklare Abweichungen werden **nicht** automatisch zusammengelegt. Dabei können bei unvollständigen FIT-Daten weiterhin nicht auflösbare Überlappungen auftreten.
 
-- Die Aufnahme des Pullovers ist eine beispielhafte Illustration, keine vollständige Technikschulung; der sichere Bewegungsumfang ist individuell.
-- iOS/Safari und manche Energiesparmodi erlauben `navigator.vibrate` nicht. Die Pause funktioniert ohne Vibration identisch.
-- Vor Veröffentlichung GitHub Actions kontrollieren: lokale Checks ersetzen nicht den vollständigen Repo-Build.
+Wichtig: Der Garmin/FIT-Import und das bestehende Speicherungssystem werden **nicht verändert**. Die neu erfassten Coach-Sätze werden ausschließlich über die bereits vorhandene, verschlüsselte `strengthGuidedSessions`-Struktur gelesen. Es werden weder neue Datenbanktabellen noch Migrationsschritte benötigt.
+
+### Noch offen: vollständige Übungsfoto-Bibliothek
+
+Die geplante Ersetzung sämtlicher Strichfiguren durch echte, fachlich korrekt geprüfte Start- und Endfotos ist in diesem Patch **nicht** enthalten. Eine im Test entstandene Zeichnungsserie war nicht zuverlässig genug. Die bestehenden sieben Premium-Fotosequenzen bleiben erhalten, die übrigen alten Illustrationen bleiben vorerst unverändert. Es wurden bewusst keine privaten Portraits in das öffentliche Repository übernommen.
+
+## GitHub Web-Upload
+
+Bitte ZIP entpacken und diese **zwei Dateien** in GitHub hochladen:
+
+1. `client/src/strength-coach-v5775910.js` — bestehende Datei ersetzen.
+2. `tests/compass-05775924-coach-history.test.mjs` — neu hinzufügen.
+
+Alle übrigen Dateien auf GitHub bleiben unverändert. Kein Eingriff in `vite.config.js`, `main.js`, Vault-Code, Garmin-Import, Wim-Hof, Makko-Ho oder den Ars-Vivendi-Lockscreen.
+
+## Qualitätssicherung
+
+30/30 gezielte Tests lokal grün: bisherige Workout- und Player-Verträge + acht neue Fälle (Coach-only, abgebrochene Einheiten, Garmin-Überschneidungen, StrongLifts A/B). Der vollständige GitHub-Actions-Lauf muss nach Upload separat erfolgreich durchlaufen.
