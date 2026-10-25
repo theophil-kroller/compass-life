@@ -90,3 +90,16 @@
  .shell.premium751 .content .compass58-workspace *,
  .shell.premium751 .content .inbox-mvp-layout *{scroll-behavior:auto;transition:none}
 }
+
+/* Compass .59.12 mobile GTD create action sheet. */
+.gtd612-create-backdrop{position:fixed;inset:0;z-index:99998;display:grid;align-items:end;justify-items:center;background:rgba(22,40,31,.42);backdrop-filter:blur(3px)}
+.gtd612-create-panel{box-sizing:border-box;width:min(500px,100%);background:var(--surface,#fff);color:var(--ink,#254334);border-radius:22px 22px 0 0;padding:18px 18px calc(25px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px #172f2926;display:grid;gap:8px}
+.gtd612-create-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.gtd612-create-head h2{font-size:1.03rem;margin:0}
+.gtd612-create-head button{width:34px;height:34px;border-radius:10px;border:0;background:var(--surface-soft,#eef3ed);color:inherit;font-size:23px}
+.gtd612-create-option{display:flex;align-items:center;gap:14px;width:100%;text-align:left;min-height:66px;border:1px solid var(--border,#dae5dc);border-radius:14px;background:transparent;color:inherit;padding:11px 14px;font:inherit;cursor:pointer}
+.gtd612-create-option>span:first-child{font-size:25px;width:34px;text-align:center}
+.gtd612-create-option>span:last-child{display:grid;gap:3px}
+.gtd612-create-option strong{font-size:.94rem}
+.gtd612-create-option small{font-size:.77rem;color:var(--muted,#617368)}
+.gtd612-create-panel :focus-visible{outline:3px solid #458369;outline-offset:2px}

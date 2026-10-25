@@ -77,3 +77,40 @@
     }
   });
 })();
+
+/* Compass .59.12: lightweight mobile project-vs-folder creation chooser.
+ * Existing data-action handlers perform the real mutations, no vault access here.
+ */
+(()=>{
+ 'use strict';
+ if(typeof document==='undefined')return;
+ let bypass=false,dialog=null,source=null;
+ const mobile=()=>window.matchMedia('(max-width: 800px)').matches;
+ function close(){if(!dialog)return;dialog.remove();dialog=null;source?.focus?.({preventScroll:true});source=null;}
+ document.addEventListener('click',e=>{
+  if(bypass||!mobile()||dialog)return;
+  const target=e.target?.closest?.('[data-action="tree-add-project"]');
+  if(!target||!target.closest('.compass58-outline,.compass58-sidebar,.compass58-workspace,.tree-workspace'))return;
+  e.preventDefault();e.stopImmediatePropagation();source=target;
+  dialog=document.createElement('div');dialog.className='gtd612-create-backdrop';
+  dialog.innerHTML='<section class="gtd612-create-panel" role="dialog" aria-modal="true" aria-labelledby="gtd612-create-title"><div class="gtd612-create-head"><h2 id="gtd612-create-title">Was möchtest du anlegen?</h2><button type="button" data-create="close" aria-label="Schließen">×</button></div><button type="button" class="gtd612-create-option" data-create="folder"><span aria-hidden="true">📁</span><span><strong>Neuer Ordner</strong><small>Projekte thematisch gruppieren</small></span></button><button type="button" class="gtd612-create-option" data-create="project"><span aria-hidden="true">＋</span><span><strong>Neues Projekt</strong><small>Ein Ergebnis mit Aufgaben planen</small></span></button></section>';
+  document.body.append(dialog);dialog.querySelector('[data-create="folder"]').focus({preventScroll:true});
+ },true);
+ document.addEventListener('click',e=>{
+  if(!dialog)return;
+  const action=e.target?.closest?.('[data-create]')?.dataset.create;
+  if(e.target===dialog||action==='close'){close();return;}
+  if(action!=='project'&&action!=='folder')return;
+  const original=source;
+  const folder=document.querySelector('.compass58-sidebar-heading [data-action="tree-add-folder"],.tree-toolbar-actions [data-action="tree-add-folder"]');
+  close();
+  const trigger=action==='folder'?folder:original;
+  if(!trigger)return;
+  bypass=true;try{trigger.click();}finally{bypass=false;}
+ });
+ document.addEventListener('keydown',e=>{if(!dialog)return;if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Tab'){
+  const controls=[...dialog.querySelectorAll('button')],first=controls[0],last=controls.at(-1);
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+ }});
+})();

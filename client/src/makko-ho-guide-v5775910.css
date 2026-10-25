@@ -41,3 +41,12 @@
  .mk610-timer-actions button{padding:6px 9px}
 }
 @media(prefers-reduced-motion:reduce){.mk611-artwork{transition:none}}
+
+/* Compass .59.12 — optional low-volume Sakura Sakura ambient score; default on. */
+.mk612-music{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 12px;padding:9px 12px;border-radius:13px;background:#f0f5ed;border:1px solid #e0eadf}
+.mk612-music button{background:#fffefa;border:1px solid #cbded0;border-radius:9px;padding:8px 13px;color:#2f654d;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.mk612-music button[aria-pressed="false"]{background:transparent;color:#768579}
+.mk612-music label{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:#566c60}
+.mk612-music input{width:76px;accent-color:#3e8060}
+.mk612-music small{font-size:10px;color:#6b8574}
+@media(max-width:640px){.mk612-music{gap:5px;padding:6px 9px;margin-bottom:8px}.mk612-music button{font-size:11px;padding:7px 9px}.mk612-music label{font-size:10px}.mk612-music input{width:60px}}

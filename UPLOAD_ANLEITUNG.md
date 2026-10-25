@@ -1,51 +1,44 @@
-# Compass 0.5.77.59.11 – Makko-Ho Premium Illustrationen
+# Compass 0.5.77.59.12 — Sakura Sakura & Makko-Ho Identity
 
-**Basis:** erfolgreich deploytes Compass 0.5.77.59.10 im GitHub-Repository `theophil-kroller/compass-life`.
+Basis: erfolgreich deployte Compass 0.5.77.59.11. Upload durch Ersetzen/Hinzufügen der Dateien **an exakt denselben Pfaden**.
 
-## GitHub-Upload (Pfadstruktur exakt beibehalten)
-
-### Drei bestehende Dateien ersetzen
+## Ersetzen
 
 - `client/src/makko-ho-guide-v5775910.js`
 - `client/src/makko-ho-guide-v5775910.css`
-- `client/vite.config.js`
-
-### Sieben Dateien neu hinzufügen
-
+- `client/public/gtd-workspace-premium-v577599.js`
+- `client/public/gtd-workspace-premium-v577599.css`
 - `client/public/makko-ho-illustrations-v5775911/metal.webp`
 - `client/public/makko-ho-illustrations-v5775911/earth.webp`
 - `client/public/makko-ho-illustrations-v5775911/fire.webp`
 - `client/public/makko-ho-illustrations-v5775911/water.webp`
 - `client/public/makko-ho-illustrations-v5775911/innerfire.webp`
 - `client/public/makko-ho-illustrations-v5775911/wood.webp`
-- `tests/compass-05775911-makko-premium.test.mjs`
 
-**Wichtig:** Die sechs Bilder müssen in genau diesem Unterordner landen. Nicht ins Repo-Hauptverzeichnis legen und nicht unter `client/src/` verschieben.
+## Hinzufügen
 
-## Änderungen
+- `client/public/makko-ho-music-v5775912/sakura-sakura-compass.mp3`
+- `tests/compass-05775912-sakura-mobile.test.mjs`
 
-1. Sechs eigenständige, hochwertige Ganzkörperillustrationen ersetzen schematische SVG-Strichfiguren. Die traditionelle sechsteilige Makko-Ho-Folge und ihre Reihenfolge bleiben erhalten.
-2. Jede Illustration zeigt die Zielhaltung mit sichtbaren Armen, Knien und Beinen; größere Grafik auf Desktop und Mobile, ruhiges Apple-inspiriertes Layout.
-3. Barrierefreiheit: sinnvolle deutsche Alt-Texte pro Übung; Beschriftung 'Zielhaltung'.
-4. Der Timer, Audio-Signal, Pause, Dauerwahl, Schrittwechsel und Habit-Abschluss bleiben unverändert.
-5. **On-demand:** Makko-Player wird weiterhin erst auf Play per `import()` geladen; danach wird jeweils nur die aktuell angezeigte WebP-Datei angefordert. Insgesamt 93,772 Byte für alle sechs Bilder (~91.6 KiB).
-6. Service-Worker cached die WebPs via `CacheFirst` erst nach dem tatsächlichen Aufruf (der vorhandene Install-Precache enthält kein WebP), danach sind die jeweils gesehenen Bilder offline verfügbar.
-7. Keine neue Bridge, keine DB-Migration, keine Eingriffe in andere Habits oder Strength-Coach-Funktionen.
+**Keine** `client/vite.config.js` ersetzen: Die Bridge-Reihenfolge bleibt identisch.
 
-## Teststatus
+## Was geändert ist
 
-- `node --check` für JS und Vite-Konfiguration: PASS.
-- Neue Tests: 4/4 PASS.
-- Bisherige `.59.10`-Tests gegen identische .59.10-Vite-Bridge/Testumgebung: 7/7 PASS.
-- Chromium-UI-Smoke: sechs Bilder pro Gerät laden, keine vorherigen Bildrequests, Timer läuft, Weiter bis Abschluss, kein horizontaler Überlauf bei 1320 px und 390 px: PASS.
-- Vollständiger produktiver Build und die gesamte GitHub-CI-Suite werden erst nach GitHub-Upload geprüft.
+1. Sechs neue KI-generierte, einheitliche Makko-Ho-Illustrationen: schwarzer Gi, Grüngürtel, langer Haarstil / Haarknoten. Die zweite Position zeigt die tiefe Rücklage **mit Kopf am Boden**. Diese tiefere Pose ist nur für entsprechend geübte Personen geeignet; alternative Ausführung bleibt im Hinweis beschrieben.
+2. Musik: eigens erstellte instrumentale Koto-inspirierte Aufnahme der traditionellen, gemeinfreien Melodie *Sakura Sakura*. Eine Aufnahme aus fremden Quellen wird **nicht** verwendet.
+3. Musik standardmäßig an (sofern nicht individuell ausgeschaltet). Nach Klick auf Makko-Ho Play wird die Audiodatei bei Bedarf geladen, lokal im Browser Cache Storage gespeichert und leise wiedergegeben. Signalton kurzzeitig priorisiert. Auf Geräten mit restriktiver Autoplay-Regel kann nach dem Laden ein Tippen auf „▶ Start“ nötig sein; dies wird im Player angezeigt.
+4. Projekt-Plus auf Mobile: Auswahl „Neuer Ordner / Neues Projekt“. Bestehende `tree-add-folder`/`tree-add-project`-Aktionen werden unverändert verwendet.
+5. Bilder sind mit `?v=5912` adressiert, damit bereits gecachte alte WebP-Dateien nicht angezeigt werden. Die originalen Bildpfade bleiben unverändert.
 
-## Inhaltliche Grenzen
+## Urheberrecht / Musik
 
-- Die Originalillustrationen sind visueller Haltungskompass, keine überprüfte therapeutische Übungsanleitung. Besonders die kniende Rücköffnung zeigt die **tiefere** Variante; langsam und nur innerhalb des schmerzfreien Bereichs ausführen, alternativ aufrecht bleiben.
-- Bei Perikard/Dreifacherwärmer und Holz zur Halbzeit Seite wechseln (die bestehenden Tipps bleiben erhalten).
-- Die traditionelle Zuordnung zu Meridianen ist ein Shiatsu-Konzept, keine gemessene physiologische Wirkung.
+Die Melodie *Sakura Sakura* ist traditionell/gemeinfrei, u.a. 1888 veröffentlicht: https://ja.wikisource.org/wiki/さくらさくら. Die hier beigefügte WAV-/MP3-Einspielung wurde **neu programmiert und selbst synthetisiert**, ohne Nutzung einer fremden Tonaufnahme. Es handelt sich um eine schlichte, ruhige Interpretation; das verwendete timbrale Klangbild ist nur Koto-inspiriert, keine authentische Koto-Einspielung.
 
-## Rollback
+## Tests
 
-Im Problemfall nur `client/src/makko-ho-guide-v5775910.js`, `.css` und `client/vite.config.js` aus der vorherigen erfolgreich deployten Version `.59.10` wiederherstellen. Die sechs neu hinzugefügten WebP-Dateien können zunächst im Repo bleiben, da sie nicht automatisch geladen werden.
+- JS-Syntax für Guide und GTD-UX geprüft.
+- 8 lokale Node-Regressionstests inkl. bestehender .59.11-Fälle bestanden.
+- Browser-Smoketests Chromium: Desktop 1300px und Smartphone 390px, alle sechs Übungsbilder, Audio nur nach Player-Aufruf, Timer, Mute/Unmute, Navigation, keine JS-Ausnahme.
+- Mobiles Action Sheet: Projekt- und Folder-Erstellung rufen unveränderte Datenaktionen auf.
+
+Der vollständige GitHub-Actions-Workflow ist **nicht** lokal ausgeführt und muss beim Upload bestehen.
