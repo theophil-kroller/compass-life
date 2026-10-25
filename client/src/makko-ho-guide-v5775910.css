@@ -81,3 +81,19 @@
 .mk617-side-label{display:inline-flex;flex:none;border:1px solid #d9e7dc;background:#f5faf6;color:#2c7256;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:720;white-space:nowrap}
 .mk616-foot:empty{display:none}
 @media(max-width:520px){.mk617-side-label{font-size:11px;padding:4px 10px}.mk616-hero{gap:4px}}
+
+/* Compass .59.18 · discreet music selector; popover opens only on explicit user action. */
+.mk616-subbar{position:relative;grid-template-columns:auto auto minmax(48px,1fr) auto auto;}
+.mk618-gear{width:42px;height:42px;display:grid;place-items:center;flex-shrink:0;border:1px solid #d3e1d7;border-radius:14px;background:#fffdf8;color:#326b51;cursor:pointer;font-size:22px;line-height:1}
+.mk618-gear[aria-expanded="true"]{background:#e1eee5;border-color:#90b9a1}
+.mk618-settings{position:absolute;bottom:calc(100% + 10px);right:0;width:min(365px,calc(100vw - 32px));z-index:20;padding:13px;border:1px solid #d4e2d7;border-radius:18px;background:#fffefb;color:#284c3a;box-shadow:0 14px 42px rgba(17,47,29,.2);box-sizing:border-box}
+.mk618-settings-head{display:flex;align-items:baseline;justify-content:space-between;gap:7px;padding:1px 2px 11px;border-bottom:1px solid #e8eee6}
+.mk618-settings-head strong{font-size:14px}.mk618-settings-head small{font-size:10px;color:#7a8c7c}
+.mk618-tracks{display:grid;gap:4px;padding-top:8px}
+.mk618-track{width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:1px solid transparent;background:transparent;border-radius:12px;color:inherit;padding:9px 10px;cursor:pointer;font:inherit}
+.mk618-track:hover,.mk618-track:focus-visible{background:#eff5ef}.mk618-track.selected{background:#e9f3eb;border-color:#cbded0}
+.mk618-radio{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;border:1px solid #cbdfcf;border-radius:50%;font-weight:700;color:#37785a;font-size:14px}
+.mk618-track-info{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.mk618-track-info strong{font-size:13px;font-weight:650}.mk618-track-info small{font-size:10px;color:#778d7c}
+.mk618-track-duration{font-size:12px;color:#829287;font-variant-numeric:tabular-nums}
+@media(max-width:720px){.mk616-subbar{grid-template-columns:auto auto minmax(38px,1fr) auto auto}}
+@media(max-width:520px){.mk616-subbar{grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:'music gear volume reset' 'duration duration duration duration'} .mk618-gear{grid-area:gear;width:38px;height:38px;font-size:20px} .mk618-settings{width:min(370px,calc(100vw - 28px));right:0;max-height:60dvh;overflow-y:auto}}

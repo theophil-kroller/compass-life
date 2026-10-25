@@ -6,6 +6,16 @@ const ART_ROOT=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/, '/')+'makk
 // A real prerecorded instrumental track, not the old computer-generated Sakura loop.
 const MUSIC_URL='https://cdn.pixabay.com/download/audio/2024/11/15/audio_157298f798.mp3?filename=koto-traditional-japanese-music-264711.mp3';
 const MUSIC_CACHE='compass-makko-recorded-koto-v1';
+const MUSIC_ROOT=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/, '/')+'makko-ho-music-v5775918/';
+const MUSIC_TRACKS=Object.freeze([
+ {id:'sakura-dance',name:'Sakura Dance',by:'38534292',length:'4:26',file:'sakura-dance.mp3'},
+ {id:'henshin',name:'Henshin · Japanese Koto',by:'Music_Unlimited',length:'2:18',file:'henshin-koto.mp3'},
+ {id:'japan-koto',name:'Japan Koto Folk',by:'Music_Unlimited',length:'2:26',file:'japan-koto-folk.mp3'},
+ {id:'classic',name:'Koto · bisherige Musik',by:'Prettysleepy',length:'0:56',url:MUSIC_URL}
+]);
+const MUSIC_SELECTED_KEY='compass:makko:music-selected-v1';
+const MUSIC_VOLUME_KEY='compass:makko:music-volume-v1';
+
 const GONG_STORAGE_URL=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/, '/')+'makko-custom-gong-v1';
 // Recorded acoustic gong (Alexander / Orange Free Sounds, CC BY 4.0).
 const GONG_DEFAULT_URL='https://www.orangefreesounds.com/wp-content/uploads/2016/08/Large-gong-struck-once.mp3';
@@ -37,6 +47,7 @@ function drawing(stage){
 export function openMakkoGuide({onFinish=()=>{},onSession=()=>{}}={}){
  let step=0,duration=45,remaining=45,overtime=0,running=false,completed=false,ticker=null,target=0,closed=false;
  let musicEnabled=true,musicVolume=.22,musicPlayer=null,musicBlobUrl='',musicPending=null,musicStatus='bereit';
+ let selectedMusic='sakura-dance',musicSettingsOpen=false,musicEpoch=0;
  let gongPlayer=null,gongObjectUrl='',gongLoading=null;
  let wakeSentinel=null,wakeRequest=null,wakeGeneration=0,wakeState='idle',wakeRetry=0;
  let activeSince=null,activeMs=0,stageHolds=[],side='left',sessionLogged=false;
@@ -51,7 +62,13 @@ export function openMakkoGuide({onFinish=()=>{},onSession=()=>{}}={}){
  };
  const sessionData=(finished)=>({id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`,startedAt:sessionStart,finishedAt:new Date().toISOString(),completed:finished===true,holds:stageHolds.map(x=>({...x})),totalSeconds:stageHolds.reduce((sum,x)=>sum+x.seconds,0)});
  
- try{const v=localStorage.getItem('compass:makko:sakura-music');if(v==='off')musicEnabled=false;}catch{}
+ try{
+  const v=localStorage.getItem('compass:makko:sakura-music');if(v==='off')musicEnabled=false;
+  const stored=localStorage.getItem(MUSIC_SELECTED_KEY);
+  if(MUSIC_TRACKS.some(track=>track.id===stored))selectedMusic=stored;
+  const level=Number(localStorage.getItem(MUSIC_VOLUME_KEY));
+  if(localStorage.getItem(MUSIC_VOLUME_KEY)!==null&&Number.isFinite(level))musicVolume=Math.max(0,Math.min(.6,level));
+ }catch{}
 
  const previous=document.activeElement;
  const wrap=document.createElement('div');
@@ -108,7 +125,32 @@ export function openMakkoGuide({onFinish=()=>{},onSession=()=>{}}={}){
  }
  const stop=()=>{stopActive();running=false;if(ticker!==null){clearInterval(ticker);ticker=null;}releaseWakeLock();};
 
+ async function ensureLocalMusic(){
+  if(closed||!musicEnabled)return;
+  const selection=MUSIC_TRACKS.find(track=>track.id===selectedMusic);
+  if(!selection?.file)return;
+  if(musicPlayer){
+   musicPlayer.volume=musicVolume;
+   try{await musicPlayer.play();musicStatus='läuft';}catch{musicStatus='Wiedergabe nicht verfügbar';}
+   updateMusicStatus();return;
+  }
+  // Native audio streams the selected local MP3 progressively. Never fetch other tracks.
+  const player=new Audio(MUSIC_ROOT+selection.file);
+  player.preload='none';player.loop=true;player.volume=musicVolume;
+  const epoch=musicEpoch;
+  musicPlayer=player;musicStatus='lädt';updateMusicStatus();
+  try{
+   await player.play();
+   if(closed||!musicEnabled||selectedMusic!==selection.id||musicEpoch!==epoch){player.pause();return;}
+   musicStatus='läuft';
+  }catch(error){
+   if(musicPlayer===player){musicPlayer=null;musicStatus='Musik nicht verfügbar';}
+   console.info('Makko-Ho Musik konnte nicht abgespielt werden',error);
+  }finally{updateMusicStatus();}
+ }
  async function ensureMusic(){
+  if(selectedMusic!=='classic')return ensureLocalMusic();
+  const startingEpoch=musicEpoch;
   if(closed||!musicEnabled)return;
   if(musicPlayer){musicPlayer.volume=musicVolume;try{await musicPlayer.play();musicStatus='läuft';}catch{musicStatus='tippe auf Play';}updateMusicStatus();return;}
   if(musicPending)return musicPending;
@@ -130,7 +172,7 @@ export function openMakkoGuide({onFinish=()=>{},onSession=()=>{}}={}){
     }else response=await fetch(MUSIC_URL);
     if(!response?.ok)throw Error('Audio nicht verfügbar');
     const blob=await response.blob();
-    if(closed||!musicEnabled)return;
+    if(closed||!musicEnabled||startingEpoch!==musicEpoch||selectedMusic!=='classic')return;
     musicBlobUrl=URL.createObjectURL(blob);
     musicPlayer=new Audio(musicBlobUrl);
     musicPlayer.loop=true;
@@ -138,6 +180,7 @@ export function openMakkoGuide({onFinish=()=>{},onSession=()=>{}}={}){
     musicPlayer.volume=musicVolume;
     try{await musicPlayer.play();musicStatus='läuft';}catch{musicStatus='tippe auf Play';}
    }catch(error){
+    if(startingEpoch!==musicEpoch||closed||selectedMusic!=='classic')return;
     try{
       musicPlayer=new Audio(MUSIC_URL);
       musicPlayer.loop=true;
@@ -154,7 +197,7 @@ export function openMakkoGuide({onFinish=()=>{},onSession=()=>{}}={}){
   })();
   return musicPending;
  }
- function stopMusic(){if(musicPlayer){musicPlayer.pause();musicPlayer.src='';musicPlayer.load();musicPlayer=null;}if(musicBlobUrl){URL.revokeObjectURL(musicBlobUrl);musicBlobUrl='';}}
+ function stopMusic(){musicEpoch++;musicPending=null;if(musicPlayer){musicPlayer.pause();musicPlayer.src='';musicPlayer.load();musicPlayer=null;}if(musicBlobUrl){URL.revokeObjectURL(musicBlobUrl);musicBlobUrl='';}}
  function updateMusicStatus(){const n=panel.querySelector('[data-music-status]');if(n)n.textContent=musicEnabled?musicStatus:'aus';}
  const duckMusic=()=>{if(!musicPlayer)return;musicPlayer.volume=Math.min(.05,musicVolume*.3);setTimeout(()=>{if(musicPlayer&&!closed)musicPlayer.volume=musicEnabled?musicVolume:0;},2800);};
 
@@ -220,16 +263,33 @@ export function openMakkoGuide({onFinish=()=>{},onSession=()=>{}}={}){
         <button class="mk616-icon mk616-next ${completed?'is-ready':''}" data-go="next" aria-label="Nächste Übung">${step===5&&side==='right'?'✓':'→'}</button>
       </div>
       <div class="mk616-subbar">
-        <button type="button" class="mk616-music-toggle" data-go="music" aria-pressed="${musicEnabled}">${musicEnabled?'♫ Koto':'♪ Aus'}</button>
+        <button type="button" class="mk616-music-toggle" data-go="music" aria-pressed="${musicEnabled}">${musicEnabled?'♫ Musik':'♪ Aus'}</button>
+        <button class="mk618-gear" type="button" data-go="music-settings" aria-label="Musik auswählen" title="Musik auswählen" aria-expanded="${musicSettingsOpen}" aria-controls="mk618-settings">⚙</button>
         <label class="mk616-volume" aria-label="Musiklautstärke"><input data-go="volume" type="range" min="0" max="60" step="2" value="${Math.round(musicVolume*100)}" ${musicEnabled?'':'disabled'} /></label>
         <label class="mk616-duration">Dauer <select data-go="duration"><option value="45" ${duration===45?'selected':''}>45s</option><option value="60" ${duration===60?'selected':''}>60s</option><option value="90" ${duration===90?'selected':''}>90s</option></select></label>
         <button class="mk616-reset" type="button" data-go="reset" aria-label="Timer zurücksetzen">↺</button>
+        ${musicSettingsOpen?`<section id="mk618-settings" class="mk618-settings" role="group" aria-label="Hintergrundmusik auswählen"><div class="mk618-settings-head"><strong>Hintergrundmusik</strong><small>Auswahl wird gespeichert</small></div><div class="mk618-tracks">${MUSIC_TRACKS.map(track=>`<button type="button" data-go="track" data-track="${track.id}" class="mk618-track ${selectedMusic===track.id?'selected':''}" aria-pressed="${selectedMusic===track.id}"><span aria-hidden="true" class="mk618-radio">${selectedMusic===track.id?'✓':'♫'}</span><span class="mk618-track-info"><strong>${track.name}</strong><small>${track.by}</small></span><span class="mk618-track-duration">${track.length}</span></button>`).join('')}</div></section>`:''}
       </div>
       <div class="mk616-foot"><small data-music-status>${musicEnabled?musicStatus:'aus'}</small><small data-wake-status aria-live="polite"></small></div>
     </div>
   </div>`;
 
   panel.querySelector('.mk610-exit').onclick=cleanup;
+  panel.querySelector('[data-go="music-settings"]').onclick=()=>{
+    musicSettingsOpen=!musicSettingsOpen;
+    render();
+    panel.querySelector('[data-go="music-settings"]')?.focus({preventScroll:true});
+  };
+  panel.querySelectorAll('[data-go="track"]').forEach(button=>button.onclick=()=>{
+    const next=button.dataset.track;
+    if(!MUSIC_TRACKS.some(track=>track.id===next))return;
+    if(next!==selectedMusic){stopMusic();selectedMusic=next;try{localStorage.setItem(MUSIC_SELECTED_KEY,selectedMusic);}catch{}
+      musicStatus='bereit';
+      if(running&&musicEnabled)void ensureMusic();
+    }
+    musicSettingsOpen=false;render();
+    panel.querySelector('[data-go="music-settings"]')?.focus({preventScroll:true});
+  });
   panel.querySelector('[data-go="music"]').onclick=()=>{
     musicEnabled=!musicEnabled;
     musicStatus=musicEnabled?'bereit':'aus';
@@ -238,7 +298,7 @@ export function openMakkoGuide({onFinish=()=>{},onSession=()=>{}}={}){
     else if(running)void ensureMusic();
     render();
   };
-  panel.querySelector('[data-go="volume"]').oninput=e=>{musicVolume=Number(e.target.value)/100;if(musicPlayer)musicPlayer.volume=musicVolume;};
+  panel.querySelector('[data-go="volume"]').oninput=e=>{musicVolume=Number(e.target.value)/100;if(musicPlayer)musicPlayer.volume=musicVolume;try{localStorage.setItem(MUSIC_VOLUME_KEY,String(musicVolume));}catch{}};
   panel.querySelector('[data-go="start"]').onclick=()=>{
     if(running){snapshotTime();stop();render();return;}
     running=true;
