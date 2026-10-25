@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { compass5910StrengthHabitsBridge } from './compass5910-strength-habits-bridge.js';
 import { nutrition3Bridge } from './nutrition3-bridge.js';
 import { strength728Bridge } from './strength728-bridge.js';
 import { strength729Bridge } from './strength729-bridge.js';
@@ -36,7 +37,7 @@ import { compass758Bridge } from './compass758-bridge.js';
 const base = process.env.VITE_BASE_PATH || '/';
 export default defineConfig({
   base,
-  plugins: [nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), nutritionStrength733Bridge(), nutritionLongevity734Bridge(), strengthTouch735Bridge(), nutrition736Bridge(), anatomyRecipes737Bridge(), nutritionPill577371Bridge(), strengthPremium738Bridge(), compass741Bridge(), strengthSync742Bridge(), compass743Bridge(), compass744Bridge(), compass745Bridge(), compass746Bridge(), compass747Bridge(), compass748Bridge(), compass749Bridge(), VitePWA({
+  plugins: [compass5910StrengthHabitsBridge(), nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), nutritionStrength733Bridge(), nutritionLongevity734Bridge(), strengthTouch735Bridge(), nutrition736Bridge(), anatomyRecipes737Bridge(), nutritionPill577371Bridge(), strengthPremium738Bridge(), compass741Bridge(), strengthSync742Bridge(), compass743Bridge(), compass744Bridge(), compass745Bridge(), compass746Bridge(), compass747Bridge(), compass748Bridge(), compass749Bridge(), VitePWA({
     registerType: 'autoUpdate',
     base,
     includeAssets: ['compass-icon.svg','icon-192.png','icon-512.png','runtime-config.json'],
@@ -59,7 +60,15 @@ export default defineConfig({
     workbox: {
       navigateFallback: `${base}index.html`,
       globPatterns: ['**/*.{js,css,html,svg,png,json,webmanifest}'],
-      runtimeCaching: [],
+      // The opt-in exercise guides must NOT preload during install/update.
+      globIgnores: ['**/*makko-ho-guide-v5775910*','**/*strength-coach-v5775910*'],
+      // Cache guide chunks only AFTER the user first clicks Play / Coach.
+      // Subsequent use is offline-capable once those chunks have been opened.
+      runtimeCaching: [{
+        urlPattern: /(?:makko-ho-guide|strength-coach)-v5775910[^/]*\.(?:js|css)$/,
+        handler: 'CacheFirst',
+        options: {cacheName:'compass-guides-on-demand-v1',cacheableResponse:{statuses:[0,200]}}
+      }],
       cleanupOutdatedCaches: true
     }
   }),
