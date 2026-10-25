@@ -1,31 +1,37 @@
-# Compass 0.5.77.59.14 – Deploy Repair & Makko-Ho Premium
+# Compass 0.5.77.59.15 – Deployment Test Repair
 
-**Abgleich:** GitHub main Commit `1c16708` (#241 fehlgeschlagen).
+## Diagnose
+GitHub Actions Deploy Compass Web #242 (commit `375045f`) stoppt bei `npm run check`.
+1 von 1305 Tests schlägt fehl: `Makko guide has six named positions and a paused, adjustable timer`
+(`tests/compass-05775910-strength-habits.test.mjs`, Zeile 70).
 
-## Upload: Pfade exakt beibehalten
+Die alte Testfassung verlangte `AudioContext` für einen synthetischen Signalton. In
+0.5.77.59.14 ist der Gong absichtlich auf eine echte Audioaufnahme (`new Audio(GONG_DEFAULT_URL)`)
+umgestellt worden. Es ist ein veralteter Testvertrag, kein Grund, einen synthetischen Gong wieder
+in die App einzubauen.
 
-1. ERSETZEN `client/public/gtd-workspace-premium-v577599.js` (Fix #240/#241: nur ein globaler Keydown-Listener).
-2. ERSETZEN `client/src/makko-ho-guide-v5775910.js` (Dehnzonen, Koto und aufgenommener Gong).
-3. ERSETZEN `client/src/makko-ho-guide-v5775910.css` (Overlay).
-4. ERSETZEN `client/public/makko-ho-illustrations-v5775911/metal.webp` (Hände/Finger in Pose 1).
-5. NEU `tests/compass-05775914-makko-deploy.test.mjs`.
+## GitHub-Upload
+Nur diese Datei ersetzen:
+`tests/compass-05775910-strength-habits.test.mjs`
 
-Keine Änderungen an Vite-Plugins, D1, Vault oder Synchronisierung.
+**Nicht** `package.json`, `client/vite.config.js` oder den Makko-Ho-Player ändern.
+Im ZIP sind ausschließlich die korrigierte Testdatei und diese Anleitung enthalten.
 
-## Wichtige Audio-Details
+## Prüfung
+Die Originalversion des Tests ist mit identischem Git-Blob-Hash
+`92803994baf145511638150e45f34c5533d744d5` aus dem Repository übernommen worden.
+Die aktuelle Player-Datei mit Hash `cb9cb6209358f5310f900537bd201b2c19d3a786`
+ist in der lokalen Testumgebung unverändert.
 
-Die bisherige synthetische Sakura MP3 wird **nicht** mehr abgespielt. Neue Standardmusik: "Koto Traditional Japanese Music" von Prettysleepy (Pixabay), abgespielt vom originalen CDN erst nach dem Öffnen des Players. Browser benötigt für den ersten Aufruf Internet, anschließend ist Cache möglich (je nach CORS-/Browser-Verhalten). Die Aufnahme ist nicht in diesem ZIP, sie ist extern gehostet.
+- Reproduktion vor Patch: 6/7 bestanden; 1 Fehler bei `AudioContext`.
+- Nach Patch: 7/7 bestanden.
+- `node --check` erfolgreich.
+- GitHub #242: 1304/1305 Tests bestanden; **vollständiger erneuter Actions-Lauf nach Upload erforderlich**.
 
-Quelle: https://pixabay.com/music/world-koto-traditional-japanese-music-264711/
-Direkte offizielle CDN-Audiodatei: https://cdn.pixabay.com/download/audio/2024/11/15/audio_157298f798.mp3?filename=koto-traditional-japanese-music-264711.mp3
-Lizenz: https://pixabay.com/service/license-summary/ – bitte aktuelle Nutzungsbedingungen prüfen.
+## Inhaltliche Teständerung
+- Alte, überholte Erwartung an `AudioContext` entfernt.
+- Prüfung für aufgenommene Gongquelle, einmaliges Auslösen bei Zielzeit,
+  Weiterzählen und Abwesenheit von Oszillator-/Synthesizer-Fallback ergänzt.
+- Sechs Übungen, Timer, Pause, nächste Übung und Abschluss bleiben geprüft.
 
-**Echter Gong standardmäßig online**: Aufgenommene Gong-MP3 (Alexander / Orange Free Sounds, CC BY 4.0), Quelle https://orangefreesounds.com/large-gong-struck-once/ – die Aufnahme wird erst nach Player-Start lazy geladen und nach Möglichkeit lokal zwischengespeichert; der Urheber ist im Player genannt. Bei fehlendem Internet und noch leerem Cache ist der Gong möglicherweise stumm. Du kannst alternativ über `Gong-Aufnahme` eine eigene lizenzierte MP3/WAV/OGG auswählen; sie wird nur lokal im Browser-Cache gespeichert. **Keine synthetischen Sinustöne mehr.**
-
-Die beiden echten Aufnahmen sind externe Assets. Sie sind **nicht im ZIP gebündelt**, weil die Binärdateien in dieser Umgebung nicht heruntergeladen werden konnten. Die App lädt sie im Player direkt von den Anbieter-URLs; bei Online-Ausfall kann das Audio daher stumm bleiben.
-
-## Tests
-
-`node --test tests/compass-0577599-gtd-workspace.test.mjs tests/compass-05775914-makko-deploy.test.mjs`
-
-Das ZIP enthält nur Änderungen; bestehende Bilder der anderen fünf Posen unverändert lassen.
+Die Änderungen beeinflussen nur den Test, nicht die produktive App.

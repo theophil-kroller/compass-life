@@ -67,7 +67,12 @@ test('Fail closed for missing transformation anchors; never silently ship stale 
 test('Makko guide has six named positions and a paused, adjustable timer',()=>{
  const src=read('client/src/makko-ho-guide-v5775910.js');
  for(const x of ['Lunge & Dickdarm','Magen & Milz','Herz & Dünndarm','Blase & Niere','Perikard & Dreifacherwärmer','Leber & Gallenblase'])assert.ok(src.includes(x));
- for(const x of ['duration=45','setInterval(tick,200)','AudioContext','visibilitychange','data-go="next"','onFinish'])assert.ok(src.includes(x));
+ // v59.14 deliberately replaced the synthetic AudioContext gong with a licensed
+ // acoustic recording. Do not require a removed oscillator in legacy tests.
+ for(const x of ['duration=45','setInterval(tick,200)','visibilitychange','data-go="next"','onFinish','GONG_DEFAULT_URL','overtime'])assert.ok(src.includes(x),`missing: ${x}`);
+ assert.match(src,/new Audio\(GONG_DEFAULT_URL\)/,'acoustic gong recording must be used');
+ assert.match(src,/remaining===0&&!completed/,'gong should fire once when target time is reached');
+ assert.doesNotMatch(src,/new\s+AudioContext\s*\(|createOscillator\s*\(/,'no synthesized beep or oscillator fallback');
 });
 test('Coach exposes goals, equipment filter, and no-data disclosure',()=>{
  let src=read('client/src/strength-coach-v5775910.js');
