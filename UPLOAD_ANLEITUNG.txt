@@ -1,0 +1,44 @@
+COMPASS LIFE — BUILD 0.5.77.59.2
+Layout & Information Density / UX redesign phase 2
+Basis: GitHub main, 25.10.2026, after uploaded .59.1 patch
+
+UPLOAD TO GITHUB
+Replace exactly ONE existing file (preserve directory path):
+  client/public/insights-streamline-v577591.css
+
+Do NOT upload this instruction file or the QA fixture.
+No changes to client/index.html: it already loads this stylesheet since .59.1.
+No changes to vite.config.js, JavaScript bridges, vault, data or sync.
+
+INCLUDED CHANGES
+- Shared page geometry: use available screen width, compact headings/margins
+- Desktop sidebar: 224 px (205 px on narrower desktop); shorter rows
+- Utility bar: 56 px instead of 64 px (mobile bar remains unchanged)
+- Success notices: compact, but still visible and accessible; errors unchanged
+- Today: compact cards/spacing, no rearrangement or hidden Inspector
+- Inbox: tighter record list, unchanged editing and promotion
+- Projects: more outline area, denser project navigation and inspector
+- Insights: preserve .59.1's single desktop nav; tighter card/chart spacing
+- Finance: compact summary and transaction spacing, charts untouched
+- People: consistent agenda spacing
+- Mobile: controls and tabs remain touch-sized (40–44 px where adjusted)
+
+EXPLICIT NON-CHANGES
+- No hiding or fabrication of charts/metrics, no feature removal beyond .59.1
+- No change to navigation actions, keyboard shortcuts or task mutations
+- No change to privacy, encryption, Cloudflare, PWA or import
+- Visible app version remains 0.5.77.58.2 (CSS-only UX iteration)
+
+TEST STATUS
+- CSS parsed (tinycss2): PASS
+- Headless Chromium responsive *layout fixture*: PASS at 1900, 1180, 800, 390 px
+- Verified desktop Insights duplicate top navigation remains hidden
+- Verified mobile Insights navigation visible and tabs >= 40 px high
+- Verified 3 real-data Cockpit cards preserved from .59.1, no horizontal overflow
+- Not a full application runtime/CI test; check GitHub Actions after upload.
+
+RECOMMENDED DEPLOY CHECK
+1. Replace the file in GitHub.
+2. Wait for the commit's GitHub Actions result (normal workflow).
+3. Reload Compass / close-reopen the installed PWA if stale CSS persists.
+4. Spot-check Today, Inbox, Projects, Insights, Finances and mobile.

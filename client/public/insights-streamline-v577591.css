@@ -158,3 +158,254 @@
     transition:none;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Compass 0.5.77.59.2 — Layout & Information Density
+   One stylesheet, continuing the shipped .59.1 correction (not another bridge).
+   Presentation only. Do not hide measurements, charts, controls or form fields.
+   -------------------------------------------------------------------------- */
+
+/* Align the existing surfaces to one restrained macOS-like design language. */
+.shell.premium751 {
+  --density592-ink:#223a32;
+  --density592-muted:#667c70;
+  --density592-border:#e2e9e4;
+  --density592-focus:#2f8169;
+  --density592-radius:12px;
+}
+.shell.premium751 .content,
+.shell.premium751 .content.content-work,
+.shell.premium751 .content.content-finance {
+  width:100%;
+  max-width:none !important;
+  min-width:0;
+  padding:10px clamp(12px,1.4vw,27px) 14px !important;
+}
+.shell.premium751 .content > .page-intro.page-intro-compact {
+  min-height:25px;
+  margin:0 0 9px !important;
+  gap:8px;
+}
+.shell.premium751 .content > .page-intro.page-intro-compact h1 {
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Inter,system-ui,sans-serif;
+  font-size:clamp(19px,1.45vw,24px) !important;
+  line-height:1.22;
+  letter-spacing:-.045em;
+  font-weight:690;
+}
+.shell.premium751 .content > .page-intro .page-compact-info {
+  font-size:10px;
+  color:#819488;
+}
+.shell.premium751 .content > footer {padding:19px 0 9px;}
+
+/* Successful routine messages must be readable but not a second hero panel.
+   Error messages, warnings, and unsaved-edit indicators are untouched. */
+.shell.premium751 .content > .alert.good {
+  margin:0 0 8px !important;
+  padding:6px 10px !important;
+  min-height:0;
+  border-radius:8px !important;
+  background:#eff5f0 !important;
+  border:1px solid #e3ebe5 !important;
+  color:#507766 !important;
+  box-shadow:none !important;
+  font-size:11px !important;
+  line-height:1.35 !important;
+}
+/* .59.1 intentionally renders Insights acknowledgements as a quiet status. */
+.shell.premium751 .content:has(.insight-workspace) > .alert.good {
+  padding:4px 1px !important;
+  border:0 !important;
+  background:transparent !important;
+  text-align:right;
+}
+
+@media (min-width:701px) {
+  /* The sidebar is the only persistent desktop primary navigation. */
+  .shell.premium751 .sidebar {
+    width:224px !important;
+    flex:0 0 224px !important;
+    padding:13px 10px 13px !important;
+    height:100dvh;
+  }
+  .shell.premium751 .workspace {
+    width:calc(100% - 224px) !important;
+    flex:1 1 0;
+    min-width:0;
+  }
+  .shell.premium751 .brand {
+    padding:5px 6px 15px !important;
+    gap:10px;
+  }
+  .shell.premium751 .brand-name {font-size:19px;letter-spacing:-.7px;}
+  .shell.premium751 .brand-name small {font-size:10px;line-height:1.3;margin-top:4px;}
+  .shell.premium751 .side-nav {gap:2px;}
+  .shell.premium751 .side-nav > .nav-item,
+  .shell.premium751 .side-nav > .calm-nav-group > .calm-group-toggle {
+    min-height:37px !important;
+    padding:0 11px;
+    border-radius:9px;
+    gap:10px;
+  }
+  .shell.premium751 .calm-subitems {margin-left:16px;padding-left:8px;gap:1px;}
+  .shell.premium751 .calm-subitems .nav-item {
+    min-height:33px !important;
+    padding:6px 8px;
+    font-size:11.5px;
+    border-radius:8px;
+  }
+  .shell.premium751 .sidebar-foot {padding:11px 7px 0;}
+  .shell.premium751 .nav-separator {margin:9px 9px;}
+
+  /* Reclaim vertical space without removing the quick-capture tools. */
+  .shell.premium751 .utility-bar {
+    height:56px !important;
+    min-height:56px !important;
+    gap:12px;
+    padding-inline:clamp(12px,1.4vw,27px) !important;
+  }
+  .shell.premium751 .utility-bar .search-shell {
+    width:clamp(175px,21vw,295px);
+    max-width:36%;
+    min-height:39px;
+    padding:7px 12px;
+    border-radius:10px;
+    flex:0 1 auto;
+  }
+  .shell.premium751 .utility-bar .utility-right {gap:9px;min-width:0;}
+  .shell.premium751 .utility-bar .connection {gap:6px;}
+}
+@media (min-width:701px) and (max-width:1080px) {
+  .shell.premium751 .sidebar {width:205px !important;flex-basis:205px !important;}
+  .shell.premium751 .workspace {width:calc(100% - 205px) !important;}
+  .shell.premium751 .utility-bar .utility-right {gap:6px;}
+  .shell.premium751 .utility-bar .search-shell {min-width:150px;width:18vw;}
+}
+
+/* A compact, repeatable card rhythm; no content clipping or fixed chart height. */
+.shell.premium751 .content .dashboard-grid {gap:10px;}
+.shell.premium751 .content .module-card {
+  min-width:0;
+  padding:14px !important;
+  border-radius:var(--density592-radius) !important;
+  border-color:var(--density592-border);
+  box-shadow:0 1px 4px rgba(25,50,36,.035);
+}
+.shell.premium751 .content .dashboard-grid .module-card {min-height:162px !important;}
+.shell.premium751 .content .module-head {gap:8px;}
+.shell.premium751 .content .module-title {gap:7px;}
+.shell.premium751 .content .module-title h2 {
+  font-size:15px;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  font-weight:670;
+  letter-spacing:-.02em;
+}
+.shell.premium751 .content .module-subtitle {margin:6px 0 10px;line-height:1.38;}
+.shell.premium751 .content .compact-item {padding:7px 0;}
+.shell.premium751 .content .work-heading {gap:7px;margin-bottom:9px;}
+.shell.premium751 .content .work-card {border-radius:var(--density592-radius);}
+
+/* GTD: tasks, calendar and inspector keep their positions and interactions. */
+.shell.premium751 .content .today-layout.premium751-today {gap:10px !important;}
+.shell.premium751 .content .today-center,
+.shell.premium751 .content .today-context-rail {gap:9px !important;}
+.shell.premium751 .content .today-layout .work-card {padding:13px 14px !important;}
+.shell.premium751 .content .today-tasks {min-height:245px !important;}
+.shell.premium751 .content .capture-inline {margin-top:9px;padding-top:10px;}
+.shell.premium751 .content .below-today {gap:10px;}
+
+/* Inbox: more records per viewport, with unchanged selection and edit affordances. */
+.shell.premium751 .content .inbox-layout {gap:11px;}
+.shell.premium751 .content .inbox-layout .work-card {padding:13px 14px;}
+.shell.premium751 .content .inbox-row {padding:9px 0;gap:10px;}
+.shell.premium751 .content .inbox-items-large {min-height:240px;}
+
+/* OmniFocus-style Projects: compact outline, generous actual project content. */
+.shell.premium751 .content .compass58-workspace {gap:10px !important;}
+.shell.premium751 .content .compass58-center {padding:13px 14px !important;}
+.shell.premium751 .content .compass58-sidebar {padding:9px 5px;}
+.shell.premium751 .content .compass58-sidebar-heading {padding:4px 7px 8px;}
+.shell.premium751 .content .compass58-heading {margin-bottom:9px;padding-bottom:8px;}
+.shell.premium751 .content .compass58-heading h2 {font-size:19px;}
+.shell.premium751 .content .compass58-project-tile {min-height:39px;padding:7px 9px;}
+.shell.premium751 .content .compass58-outline .tree-line {padding-block:3px;}
+.shell.premium751 .content .compass58-inspector {padding:11px 12px;}
+@media (min-width:1241px) {
+  .shell.premium751 .content .compass58-workspace:not(.has-inspector) {
+    grid-template-columns:minmax(175px,210px) minmax(0,1fr);
+  }
+  .shell.premium751 .content .compass58-workspace.has-inspector {
+    grid-template-columns:minmax(175px,205px) minmax(0,1fr) minmax(235px,294px);
+  }
+}
+
+/* Insights: charts and data remain the first-class content, not introductory copy. */
+.shell.premium751 .insight-workspace > .insight-view-header {
+  margin:1px 0 8px !important;
+  gap:6px 12px;
+}
+.shell.premium751 .insight-workspace > .insight-view-header .insight-kicker {
+  display:none; /* Current title and selected subtab already provide context. */
+}
+.shell.premium751 .insight-workspace > .insight-view-header h2 {
+  font-size:clamp(18px,1.4vw,21px) !important;
+  margin:0;
+  line-height:1.2;
+}
+.shell.premium751 .insight-workspace .ins750-subtabs {
+  margin:0 0 9px !important;
+  padding:0 0 6px;
+  gap:3px;
+}
+.shell.premium751 .insight-workspace .ins750-subtab {min-height:33px;padding:6px 9px;}
+.shell.premium751 .insight-workspace .insight-kpi-grid {gap:8px;margin-bottom:9px;}
+.shell.premium751 .insight-workspace .insight-kpi {min-height:74px;padding:10px 12px;gap:4px;}
+.shell.premium751 .insight-workspace .insight-chart-grid {gap:9px;}
+.shell.premium751 .insight-workspace .insight-chart-card {padding:12px 14px !important;gap:6px;}
+.shell.premium751 .insight-workspace .insight-figure-title {margin-bottom:6px;}
+.shell.premium751 .insight-workspace .insight-data-note {padding:8px 10px;margin-bottom:10px;line-height:1.45;}
+.shell.premium751 .insight-workspace .ins750-hub {margin-bottom:9px;}
+.shell.premium751 .insight-workspace .ins750-hub-grid {gap:9px;}
+
+/* Finances: let existing Monarch-inspired graphs occupy the space. */
+.shell.premium751 .content .finance-workspace .fin32-header {margin-bottom:7px;padding-bottom:6px;}
+.shell.premium751 .content .finance-workspace .fin31-row {gap:9px;}
+.shell.premium751 .content .finance-workspace .fin31-card {padding:12px 13px;}
+.shell.premium751 .content .finance-workspace .fin33-spending-flow {margin-block:6px;padding:11px 13px;}
+.shell.premium751 .content .finance-workspace .fin33-cycle-compact {padding:11px 13px;gap:5px;}
+.shell.premium751 .content .finance-workspace .fin31-transaction {padding-block:4px;}
+
+/* People: agenda cards use the same spacing scale as tasks and projects. */
+.shell.premium751 .content .people-agenda-first {padding:13px 14px;}
+.shell.premium751 .content .person-point > summary {padding:9px 10px;}
+.shell.premium751 .content .people-relationship-card {margin-top:10px;}
+
+/* Touch controls: the compact desktop density must not reduce mobile targets. */
+@media (max-width:700px) {
+  .shell.premium751 .content,
+  .shell.premium751 .content.content-work,
+  .shell.premium751 .content.content-finance {
+    padding:10px 11px 16px !important;
+  }
+  .shell.premium751 .content > .page-intro.page-intro-compact {margin-bottom:9px !important;}
+  .shell.premium751 .content > .page-intro.page-intro-compact h1 {font-size:20px !important;}
+  .shell.premium751 .content .work-card,
+  .shell.premium751 .content .module-card,
+  .shell.premium751 .content .today-layout .work-card {padding:12px !important;}
+  .shell.premium751 .content .dashboard-grid {gap:9px;}
+  .shell.premium751 .content .compass58-center {padding:12px !important;}
+  .shell.premium751 .content .compass58-heading h2 {font-size:18px;}
+  .shell.premium751 .insight-workspace .ins750-subtab {min-height:40px;padding:8px 11px;}
+  .shell.premium751 .insight-workspace .insight-period {min-height:40px;}
+  .shell.premium751 .insight-workspace .insight-chart-card {padding:12px !important;}
+  .shell.premium751 .content .inbox-row {padding:11px 0;}
+  .shell.premium751 .content .person-point > summary {min-height:44px;}
+  .shell.premium751 .content .today-tasks {min-height:0 !important;}
+}
+
+/* Keep controls and plots contained even with long localized names. */
+.shell.premium751 .content :is(.dashboard-grid,.today-layout,.inbox-layout,.finance-workspace,.insight-workspace,.compass58-workspace) > * {min-width:0;}
+.shell.premium751 .content :is(.insight-chart-card,.health-report-card,.compass58-center,.compass58-inspector) {max-width:100%;}
+.shell.premium751 .content :is(.insight-chart-card,.health-report-card) svg {max-width:100%;}
+.shell.premium751 :is(button,a,summary):focus-visible {outline:2px solid var(--density592-focus);outline-offset:2px;}
