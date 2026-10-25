@@ -1,0 +1,25 @@
+/* Compass .59.22 – original Ars Vivendi artwork as interactive Vault cover. */
+html.ars22-locked{overflow:hidden!important;overscroll-behavior:none}
+.ars22-cover{position:fixed;inset:0;z-index:2147480000;display:flex;align-items:center;justify-content:center;isolation:isolate;background:#020d18;overflow:hidden;overscroll-behavior:contain;color:#f4e5c8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.ars22-wash{position:absolute;inset:-36px;background-image:var(--ars22-bg);background-size:cover;background-position:center;filter:blur(25px) brightness(.5);transform:scale(1.08)}
+.ars22-art{position:relative;flex:none;height:min(100dvh,177.68vw);width:min(100vw,56.28dvh);max-height:100dvh;max-width:100vw;overflow:hidden;box-shadow:0 0 35px #0009;background:#020d18}
+.ars22-image{display:block;width:100%;height:100%;object-fit:fill;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.ars22-tap{position:absolute;left:50%;top:83.5%;transform:translate(-50%,-50%);width:clamp(118px,30%,190px);height:clamp(92px,13%,162px);border:0;border-radius:50%;cursor:pointer;background:transparent;color:transparent;touch-action:manipulation}
+.ars22-tap:focus-visible{outline:2px solid #eac885;outline-offset:5px;box-shadow:0 0 24px #f9cf7780}
+.ars22-tap:hover{box-shadow:0 0 32px #f1c57e38}
+.ars22-panel[hidden]{display:none!important}
+.ars22-panel{position:absolute;inset:0;z-index:3;display:flex;align-items:flex-end;justify-content:center;padding:20px max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom));box-sizing:border-box;background:linear-gradient(180deg,#06142355 0%,#061321cc 35%,#05111df0 100%);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);overflow:auto}
+.ars22-sheet{width:min(460px,100%);box-sizing:border-box;background:linear-gradient(145deg,#162d3bf2,#091722f8);border:1px solid #dfc58c65;border-radius:24px;padding:22px clamp(18px,5vw,30px) 25px;box-shadow:0 25px 65px #0009;color:#f3e8ce}
+.ars22-sheet-top{display:flex;justify-content:space-between;align-items:center}.ars22-star{color:#e3bd74;font-size:26px}.ars22-close{border:1px solid #d6bd8c55;border-radius:50%;width:36px;height:36px;display:grid;place-items:center;background:#ffffff12;color:#fae8c7;font-size:26px;line-height:1;cursor:pointer}
+.ars22-title{font:normal clamp(21px,5vw,30px) Georgia,serif;letter-spacing:.015em;margin:6px 0 6px}.ars22-sub{font-size:13px;color:#e4d3b6bf;margin:0 0 22px}
+.ars22-form-slot .vault-form{display:grid;gap:12px;margin:0}
+.ars22-form-slot .vault-form input:not([type="file"]){box-sizing:border-box;width:100%;min-height:50px;background:#edf3f5!important;color:#122536!important;border:1px solid #ddcba9;border-radius:12px;padding:12px 15px;font-size:16px;letter-spacing:normal}
+.ars22-form-slot .vault-form input::placeholder{color:#677a7e!important}
+.ars22-form-slot .vault-form button[type="submit"]{min-height:50px;border-radius:12px;border:1px solid #e0c287;background:linear-gradient(130deg,#ecd39b,#c8a56a);color:#132330;font-weight:750;font-size:16px;cursor:pointer}
+.ars22-form-slot .vault-form :focus-visible,.ars22-panel button:focus-visible{outline:2px solid #f6d895;outline-offset:3px}
+.ars22-form-slot .vault-form .restore-label{color:#f2dab5}
+.ars22-form-slot .vault-form label.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+@media(min-width:720px){.ars22-panel{align-items:center}.ars22-sheet{background:#0d2031f5}}
+@media(prefers-reduced-motion:no-preference){.ars22-panel{animation:ars22-reveal .24s ease-out both}@keyframes ars22-reveal{from{opacity:0}to{opacity:1}}}
+
+@media(max-width:719px){.ars22-art{width:100vw;height:100dvh;max-height:none;max-width:none}.ars22-image{object-fit:cover;object-position:center}}
