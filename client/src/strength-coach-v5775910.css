@@ -53,3 +53,20 @@
 .str621-method{align-items:center;margin:10px 0;flex-wrap:wrap}.str621-method>span{color:#5e7b69;font-size:12px;padding:7px;flex:1}
 .str621-equipment-note{color:#53705e;font-size:12px;line-height:1.5;margin:10px 0;padding:10px 12px;border-radius:11px;background:#f6f8f4;border:1px solid #e1e9e1}
 @media(max-width:700px){.str621-location{align-items:flex-start;flex-direction:column}.str621-location-switch{width:100%;box-sizing:border-box}.str621-location-switch button{flex:1}.str621-method>span{flex-basis:100%}}
+
+/* .59.23 — no essay before the primary Coach action. */
+.str623-more{margin:7px 0;color:#587563;font-size:12px;line-height:1.45}
+.str623-more summary{cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:5px 0;color:#3f7357;font-weight:650;list-style:none}
+.str623-more summary::before{content:'ⓘ';font-weight:400}
+.str623-more .str621-equipment-note{margin:5px 0}
+.str623-more .str610-disclaimer{margin:5px 0}
+.str619-plan-head{margin-top:10px}
+@media(max-width:700px){
+ .str619-dialog{padding:15px 16px}
+ .str610-title h2{margin:3px 0 9px;font-size:22px}
+ .str621-location{margin:5px 0 9px}
+ .str619-plan-head{padding:12px;gap:9px}
+ .str619-plan-head h3{font-size:19px}
+ .str621-location-switch button{padding:10px}
+ .str619-exercise{padding:11px}
+}

@@ -27,7 +27,7 @@ export function matchingGuidedSessions(state,garminStart,{maxOffsetMinutes=120}=
 }
 export function confirmedGuidedSets(session){return (session?.exercises||[]).flatMap(e=>(e.confirmedSets||[]).filter(r=>r.confirmed).map(r=>({exerciseId:e.exerciseId,reps:Number.isInteger(r.reps)&&r.reps>=0?r.reps:null,weightKg:Number.isFinite(r.weightKg)&&r.weightKg>=0?r.weightKg:null,completedAt:r.completedAt||null})));}
 const VISUAL_ROOT=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/, '/')+'strength-visuals-v5775920/';
-const PREMIUM_VISUALS=new Set(['dumbbell-row','dumbbell-lateral-raise','ab-wheel-kneeling','goblet-squat','lat-pulldown','deadlift']);
+const PREMIUM_VISUALS=new Set(['dumbbell-row','dumbbell-lateral-raise','ab-wheel-kneeling','goblet-squat','lat-pulldown','deadlift','dumbbell-pullover']);
 const descriptions={
  'dumbbell-row':['Ellbogen am Körper zurückführen','Stütze dich stabil ab, ziehe die Kurzhantel Richtung Hüfte.','row'],
  'barbell-row':['Stabiler Rumpf · Stange zum Bauch','Hüfte nach hinten, Rücken neutral, zur Taille ziehen.','row'],
@@ -78,7 +78,7 @@ export function exerciseMovementSvg(exerciseId){
 /** Exercise-by-exercise player. Confirming a set is required; viewing alone never counts. */
 export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
  if(!plan?.exercises?.length)throw Error('Kein Workout-Plan vorhanden.');
- let ex=0,started=false,resting=false,restSeconds=0,restUntil=0,restTimer=null,closed=false,completed=false,active=false,wakeLock=null,plateKg=null;
+ let ex=0,started=false,resting=false,restSeconds=0,restUntil=0,restTimer=null,restVibrated=false,closed=false,completed=false,active=false,wakeLock=null,plateKg=null;
  let snapshot=makeGuidedSnapshot(plan),before=document.activeElement,saveChain=Promise.resolve();
  const host=document.createElement('div');host.className='str620-overlay';host.innerHTML='<section class="str620-panel" role="dialog" aria-modal="true" aria-label="Geführtes Krafttraining"></section>';document.body.append(host);
  const el=host.firstElementChild;
@@ -92,11 +92,20 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
  async function wake(){if(!active||closed||document.hidden||wakeLock||!navigator.wakeLock?.request)return;try{const lock=await navigator.wakeLock.request('screen');if(closed||!active){void lock.release();return;}wakeLock=lock;lock.addEventListener?.('release',()=>{if(wakeLock===lock)wakeLock=null;});}catch{}}
  const visibility=()=>{if(document.visibilityState==='visible'&&active)void wake();else releaseWake();};
  document.addEventListener('visibilitychange',visibility);
- function stopRest(){clearInterval(restTimer);restTimer=null;resting=false;}
- function timerTick(){restSeconds=Math.max(0,Math.ceil((restUntil-performance.now())/1000));const t=el.querySelector('[data-rest-clock]');if(t)t.textContent=clock(restSeconds);if(restSeconds===0){stopRest();render();}}
+ function stopRest(){clearInterval(restTimer);restTimer=null;resting=false;restVibrated=false;}
+ function timerTick(){
+  restSeconds=Math.max(0,Math.ceil((restUntil-performance.now())/1000));
+  if(restSeconds<=90&&!restVibrated&&resting){
+   restVibrated=true;
+   try{if(typeof navigator.vibrate==='function')navigator.vibrate(120);}catch{} // optional Android vibration; never interrupt the workout
+  }
+  const t=el.querySelector('[data-rest-clock]');if(t)t.textContent=clock(restSeconds);
+  const phase=el.querySelector('[data-rest-phase]');if(phase)phase.textContent=restSeconds>90?'Phase 1 / 2':'Phase 2 / 2';
+  if(restSeconds===0){stopRest();render();}
+ }
  function close(finish=false){if(closed)return;closed=true;active=false;stopRest();releaseWake();document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',onKey);host.remove();if(started)void persist(finish).catch(e=>console.warn('Workout-Sicherung fehlgeschlagen',e));before?.focus?.({preventScroll:true});}
  const onKey=e=>{if(e.key==='Escape')close();};document.addEventListener('keydown',onKey);
- function setRest(seconds){resting=seconds>0;restSeconds=seconds;restUntil=performance.now()+seconds*1000;clearInterval(restTimer);if(resting)restTimer=setInterval(timerTick,250);}
+ function setRest(seconds){const total=Math.max(180,seconds);restVibrated=false;resting=total>0;restSeconds=total;restUntil=performance.now()+total*1000;clearInterval(restTimer);if(resting)restTimer=setInterval(timerTick,250);}
  function render(){
   const curr=plan.exercises[ex],record=snapshot.exercises[ex],done=record.confirmedSets.length,allDone=done>=curr.sets;
   const circles=Array.from({length:curr.sets},(_,i)=>{
@@ -104,13 +113,13 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
     const label=old?(timeBased(ex)?targetCircleLabel(curr.reps):String(old.reps??'✓')):targetCircleLabel(curr.reps);
     return `<button type="button" class="str621-rep-circle ${old?'is-confirmed':''}" data-act="set-circle" data-set="${i+1}" aria-pressed="${Boolean(old)}" aria-label="Satz ${i+1}: ${old?'erledigt, '+label+' Wiederholungen. Tippen zum Korrigieren':'noch offen. Tippen zum Bestätigen'}" ${started?'':'disabled'}><strong>${esc(label)}</strong><small>${i+1}</small></button>`;
    }).join('');
-  el.innerHTML=`<header class="str620-head"><div><small>COMPASS · HEUTIGER WORKOUT</small><h2>${esc(plan.title)}</h2><p>${ex+1} / ${plan.exercises.length} Übungen · ${esc(curr.primary||'')}</p></div><button type="button" data-act="close" class="str620-close" aria-label="Schließen">×</button></header>
+  el.innerHTML=`<header class="str620-head"><div><small>COMPASS · HEUTIGER WORKOUT</small><h2>${esc(plan.title)}</h2><p>${ex+1} / ${plan.exercises.length} Übungen · ${esc(({back:'Rücken',shoulders:'Schultern',chest:'Brust',quads:'Beine',posterior:'Beinrückseite',core:'Rumpf'})[curr.primary]||curr.primary||'')}</p></div><button type="button" data-act="close" class="str620-close" aria-label="Schließen">×</button></header>
    <div class="str620-progress" aria-label="Übungsfortschritt">${plan.exercises.map((_,i)=>`<span class="${i<ex?'is-done':i===ex?'is-active':''}"></span>`).join('')}</div>
    <div class="str621-load-block"><div class="str621-load-title"><strong>${place==='home'?'Scheiben am Trainingsgerät':'Trainingsgewicht'}</strong><small>${place==='home'?`${maxHomeWeight(curr.id)} kg Scheiben insgesamt vorhanden · Griffgewicht separat`:'kg · inklusive Stange/Gerät falls zutreffend'}</small></div><div class="str621-load-controls"><button type="button" data-act="minus-plates" aria-label="Gewicht um 1 kg verringern">−</button><label><input inputmode="decimal" type="number" data-plates min="0" max="${place==='home'?maxHomeWeight(curr.id):500}" step="0.5" placeholder="–" value="${numericValue()}" aria-label="Gewicht in Kilogramm"/> kg</label><button type="button" data-act="plus-plates" aria-label="Gewicht um 1 kg erhöhen">+</button></div></div>
-   <div class="str620-stage"><div class="str620-art">${PREMIUM_VISUALS.has(curr.id)?`<figure class="str620-premium-figure"><img src="${VISUAL_ROOT}${curr.id}.webp" width="506" height="504" alt="${esc(curr.title)}: Start- und Endposition als Übungsbild" loading="eager" decoding="async"/><figcaption>Start <span aria-hidden="true">→</span> Ziel</figcaption></figure><p class="str620-cue">${esc((descriptions[curr.id]||[])[1]||'Kontrolliert bewegen.')}</p>`:exerciseMovementSvg(curr.id)}</div><div class="str620-metadata"><small>ÜBUNG ${ex+1}</small><h3>${esc(curr.title)}</h3><div class="str620-setcount">${done} / ${curr.sets} Sätze</div><div class="str620-plan">${esc(curr.reps)} Wdh. empfohlen · ${curr.restSeconds}s Pause</div>
+   <div class="str620-stage"><div class="str620-art">${PREMIUM_VISUALS.has(curr.id)?`<figure class="str620-premium-figure"><img src="${VISUAL_ROOT}${curr.id}.webp" width="506" height="504" alt="${esc(curr.title)}: Start- und Endposition als Übungsbild" loading="eager" decoding="async"/><figcaption>${curr.id==='dumbbell-pullover'?'Pullover · Hantel kontrolliert hinter den Kopf und zurück':'Start <span aria-hidden="true">→</span> Ziel'}</figcaption></figure><p class="str620-cue">${esc((descriptions[curr.id]||[])[1]||'Kontrolliert bewegen.')}</p>`:exerciseMovementSvg(curr.id)}</div><div class="str620-metadata"><small>ÜBUNG ${ex+1}</small><h3>${esc(curr.title)}</h3><div class="str620-setcount">${done} / ${curr.sets} Sätze</div><div class="str620-plan">${esc(curr.reps)} Wdh. empfohlen · 3 Min. Satzpause</div>
 
    <div class="str621-sets-head"><strong>Sätze</strong><span>${done} / ${curr.sets} bestätigt</span></div><div class="str621-reps" role="group" aria-label="Sätze und Wiederholungen">${circles}</div><p class="str621-set-hint">${!started?'▶ starten, dann jeden absolvierten Satz antippen.':'Kreis antippen = Satz bestätigen; erneut tippen = Wiederholungen korrigieren.'}</p>
-   ${resting?`<div class="str620-rest">Satzpause · <strong data-rest-clock>${clock(restSeconds)}</strong><button type="button" data-act="skip-rest">Überspringen</button></div>`:allDone?'<p class="str620-success">✓ Übung abgeschlossen.</p>':''}
+   ${resting?`<div class="str620-rest">Satzpause <small data-rest-phase>${restSeconds>90?'Phase 1 / 2':'Phase 2 / 2'}</small> · <strong data-rest-clock>${clock(restSeconds)}</strong><small>90 + 90s · Vibration bei 1:30</small><button type="button" data-act="skip-rest">Überspringen</button></div>`:allDone?'<p class="str620-success">✓ Übung abgeschlossen.</p>':''}
    </div></div>
    <footer class="str620-bottom"><button class="str620-secondary" type="button" data-act="prev" ${ex===0?'disabled':''}>← Zurück</button><div class="str620-actions">${!started?'<button type="button" class="str620-primary" data-act="start">▶ Starten</button>':resting?'<button type="button" class="str620-primary" data-act="skip-rest">⏭ Weiter</button>':allDone?`<button type="button" class="str620-primary" data-act="next">${ex===plan.exercises.length-1?'✓ Training beenden':'Nächste Übung →'}</button>`:`<button type="button" class="str620-primary" data-act="confirm">✓ Satz ${done+1} bestätigen</button>`}</div></footer>
    <small class="str620-disclaimer">Nur bestätigte Sätze werden als durchgeführt gespeichert. Garmin-Daten bleiben unverändert.</small>`;
