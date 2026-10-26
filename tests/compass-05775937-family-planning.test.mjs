@@ -105,7 +105,9 @@ test('Every registered historic and current plugin transforms the actual main so
   }
  }
  assert.ok(names.length>=43,`The historic plugin list changed unexpectedly: ${names.length}`);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.2'/);
+ const version=main.match(/COMPASS_CLIENT_VERSION='([0-9]+(?:\.[0-9]+)+)'/)?.[1];
+ assert.ok(version,'Transformed client version is missing');
+ assert.ok(lock.includes('Build '+version),'Lockscreen build version must match client version');
  assert.match(main,/familyForecastPanel37\(/);
  assert.match(main,/familyCreateStudy37\(/);
  assert.match(lock,/Build 0\.5\.77\.59\.40/);
