@@ -62,8 +62,15 @@ function chrome(content){`,'persistent mobile menu state');
  </nav>\`:''}<nav class="side-nav calm-side-nav" aria-label="Hauptnavigation">`,'five direct mobile destinations + more');
    patch("const target=el.dataset.tab;if(!target)return;if(target==='today')", "const target=el.dataset.tab;if(!target)return;cm930MobileMenuOpen=false;if(target==='today')", 'drawer closes on route selection');
    patch('async function runAction(action,id,stepId=null,plannerDay=null) {',`async function runAction(action,id,stepId=null,plannerDay=null) {
- if(action==='cm930-menu-toggle'){cm930MobileMenuOpen=!cm930MobileMenuOpen;render();return;}`,'explicit navigation drawer handler');
-   patch("if(action==='calm-nav-group'){calmNavGroup=calmNavGroup===id?'':id;render();return;}",`if(action==='calm-nav-group'){calmNavGroup=calmNavGroup===id?'':id;if(compass55Mode==='extended')cm930MobileMenuOpen=true;render();return;}`,'back from nested menu preserves root navigation');
+ if(action==='cm930-menu-toggle'){cm930MobileMenuOpen=!cm930MobileMenuOpen;render();return;}
+ // Handle Extended navigation before the legacy action branches. Do not rewrite
+ // the old calm-nav-group handler: previous bridges may already have changed it.
+ // Focus mode falls through unchanged to the existing implementation.
+ if(action==='calm-nav-group'&&compass55Mode==='extended'){
+  calmNavGroup=calmNavGroup===id?'':id;
+  cm930MobileMenuOpen=true;
+  render();return;
+ }`,'isolated extended navigation handler, preserving all legacy handlers');
    patch("if(action==='balance-select'){if(id===''||['sleep','activity','gtd','finance','people','body','recovery','work'].includes(id))", "if(action==='balance-select'){if(id===''||['sleep','activity','gtd','finance','people','body','recovery','work','nutrition930'].includes(id))", 'nutrition radar inspector enabled');
    patch("lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis})",`lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays,includeNutrition930:compass55Mode==='extended'}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount,includeNutrition930:compass55Mode==='extended'}),activeAxis:balanceSelectedAxis})+(compass55Mode==='extended'?dailyDozen5930View(dailyDozen5930(state,{day:today})): '')`,'ninth documented nutrition axis and linked evidence');
    patch('return chrome(\`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">',`return chrome(\`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">\${compass55Mode==='extended'&&insightTab==='nutrition'?dailyDozen5930View(dailyDozen5930(state,{day:today})):''}`,'Daily Dozen visible in nutrition insights');
