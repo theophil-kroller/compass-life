@@ -1,0 +1,17 @@
+/* 0.5.77.59.40.1 – Forecast uses width unless inspector explicitly opened. */
+@media(min-width:1260px){
+  .forecast-layout.forecast-inspector-closed{grid-template-columns:195px minmax(0,1fr)!important}
+}
+.forecast-layout .forecast-inspector{min-width:0}
+.forecast-layout.forecast-inspector-closed .forecast-inspector{display:none!important}
+.forecast-layout.forecast-inspector-closed .forecast-inspector{display:none!important}
+.forecast-inspector .forecast-inspector-close{background:transparent;border:1px solid #d9e6df;border-radius:9px;display:inline-grid;place-items:center;min-width:34px;min-height:34px;cursor:pointer;color:#315b49;margin-left:auto}
+.forecast-inspector .forecast-inspector-close:hover,.forecast-inspector .forecast-inspector-close:focus-visible{background:#eef6ef;outline-color:#427b62}
+/* The date range must never intrude into event titles. */
+.fr31-person .fr31-row{grid-template-columns:minmax(136px,150px) minmax(0,1fr)!important;column-gap:18px!important;align-items:start;min-width:0}
+.fr31-person .fr31-date{display:block;min-width:0;white-space:normal!important;overflow-wrap:normal;line-height:1.45}
+.fr31-person .fr31-detail{min-width:0;overflow-wrap:anywhere}
+@media(max-width:620px){
+  .fr31-person .fr31-row{grid-template-columns:minmax(0,1fr)!important;row-gap:4px!important}
+  .fr31-person .fr31-date{font-size:12px}
+}

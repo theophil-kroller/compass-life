@@ -47,6 +47,7 @@ import { compass59371FamilyShortcutsRelease } from './compass59371-family-shortc
 import { compass5938ExperienceRelease } from './compass5938-experience-release.js';
 import { compass5939LocationContextRelease } from './compass5939-location-context-release.js';
 import { compass5940ContextNextRelease } from './compass5940-context-next-release.js';
+import { compass59401NavigationRelease } from './compass59401-navigation-release.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -113,4 +114,5 @@ compassConfig.plugins.push(compass59371FamilyShortcutsRelease());
 compassConfig.plugins.push(compass5938ExperienceRelease());
 compassConfig.plugins.push(compass5939LocationContextRelease());
 compassConfig.plugins.push(compass5940ContextNextRelease());
+compassConfig.plugins.push(compass59401NavigationRelease());
 export default compassConfig;

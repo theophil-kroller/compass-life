@@ -52,9 +52,9 @@ test('new plugin is registered after .37 and the complete source transforms and 
    if(result){if(type==='main')main=result.code;else lock=result.code;}
   }
  }
- assert.ok(names.length>=44);assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40'/);
+ assert.ok(names.length>=44);assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.1'/);
  assert.match(lock,/Build 0\.5\.77\.59\.40/);
- assert.match(main,/familyStudyEventId37=id;tab='forecast';calmNavGroup='plan'/);
+ assert.match(main,/familyStudyEventId37=id;forecastInspectorOpen401=false;tab='forecast';calmNavGroup='plan'/);
  assert.match(main,/familyForecastPanel37/);assert.match(main,/familyTodayPanel/);
  execFileSync(process.execPath,['--input-type=module','--check'],{input:main});
 });
