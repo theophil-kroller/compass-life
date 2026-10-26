@@ -73,7 +73,17 @@ function chrome(content){`,'persistent mobile menu state');
  }`,'isolated extended navigation handler, preserving all legacy handlers');
    patch("if(action==='balance-select'){if(id===''||['sleep','activity','gtd','finance','people','body','recovery','work'].includes(id))", "if(action==='balance-select'){if(id===''||['sleep','activity','gtd','finance','people','body','recovery','work','nutrition930'].includes(id))", 'nutrition radar inspector enabled');
    patch("lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount}),activeAxis:balanceSelectedAxis})",`lifeBalanceRadarView(buildLifeBalanceRadar(state,{today,period:balancePeriod,healthDays,includeNutrition930:compass55Mode==='extended'}),{history:buildLifeBalanceHistory(state,{today,period:balancePeriod,healthDays,count:balanceHistoryCount,includeNutrition930:compass55Mode==='extended'}),activeAxis:balanceSelectedAxis})+(compass55Mode==='extended'?dailyDozen5930View(dailyDozen5930(state,{day:today})): '')`,'ninth documented nutrition axis and linked evidence');
-   patch('return chrome(\`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">',`return chrome(\`<div class="insight-workspace" aria-label="Compass Insights · Personal Analytics">\${compass55Mode==='extended'&&insightTab==='nutrition'?dailyDozen5930View(dailyDozen5930(state,{day:today})):''}`,'Daily Dozen visible in nutrition insights');
+   // Other historical bridges can prepend their own content to the Insights HTML.
+   // Add the Daily Dozen to the actual return value rather than matching that volatile markup.
+   const screenStart=s.indexOf('function insightsScreen(){');
+   const chromeAt=screenStart<0?-1:s.indexOf('return chrome(',screenStart);
+   const screenEnd=screenStart<0?-1:s.indexOf('\nfunction ',screenStart+25);
+   if(screenStart<0||chromeAt<0||(screenEnd>=0&&chromeAt>screenEnd)){
+    throw Error('Compass .59.30: unable to locate Insights return in transformed main.js');
+   }
+   const additions="return chrome((compass55Mode==='extended'&&insightTab==='nutrition'?dailyDozen5930View(dailyDozen5930(state,{day:today})):'' )+";
+   s=s.slice(0,chromeAt)+additions+s.slice(chromeAt+'return chrome('.length);
+
    return {code:s,map:null};
   }
   if(path.endsWith('/client/src/ars-vivendi-lock-v5775922.js')){

@@ -1,0 +1,15 @@
+/* Compass .59.31 · lightweight Family Radar, no additional top navigation */
+.fr31-person{margin:9px 0 14px;padding:14px 16px!important;border:1px solid #dce8e1!important;border-radius:16px!important}
+.fr31-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.fr31-head strong{font-size:13px;color:#294f40}.fr31-head small,.fr31-detail small,.fr31-disclaimer{color:#789084;font-size:11px}
+.fr31-row{display:grid;grid-template-columns:60px minmax(0,1fr);gap:9px;padding:10px 0;border-top:1px solid #ecf0eb;min-width:0}
+.fr31-date{font-size:11px;font-weight:700;color:#517a69;white-space:nowrap}.fr31-detail{min-width:0;display:grid;gap:3px}.fr31-detail>strong{font-size:12px;overflow-wrap:anywhere;color:#253e35}
+.fr31-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}.fr31-actions>span{flex-basis:100%;font-size:11px;color:#5e756b}
+.fr31-actions button{background:#f6f9f6;border:1px solid #d6e5dc;border-radius:8px;min-height:33px;padding:6px 9px;color:#345f4d;font-size:11px;cursor:pointer}
+.fr31-actions button:first-of-type{background:#295d49;color:white;border-color:#295d49}
+.fr31-empty{font-size:12px;color:#66796d;margin:10px 0}.fr31-disclaimer{display:block;margin-top:7px;line-height:1.4}
+.fr31-today{display:flex;gap:12px;align-items:start;padding:9px 12px;margin:0 0 12px;border:1px solid #e2eadc;background:#f8fbf6;border-radius:12px;min-width:0}
+.fr31-today>span{font-size:11px;font-weight:700;color:#326b52;flex:0 0 auto;white-space:nowrap}
+.fr31-today>div{display:grid;gap:4px;min-width:0;flex:1}.fr31-today button{font:inherit;text-align:left;font-size:11px;color:#435c4a;background:transparent;border:0;padding:0;cursor:pointer;overflow-wrap:anywhere}.fr31-today button small{font-size:10px;color:#718c7a;margin-left:5px}
+@media(max-width:600px){.fr31-person{padding:10px!important}.fr31-row{grid-template-columns:54px minmax(0,1fr);gap:7px}.fr31-actions button{flex:1 0 120px}.fr31-today{gap:7px;padding:8px 9px}.fr31-today button small{display:block;margin:2px 0 0}}
+.fr31-rules{border-top:1px solid #e5eae6;margin-top:10px;padding-top:10px;font-size:11px;color:#587164}.fr31-rules>summary{cursor:pointer;font-weight:650}.fr31-rules form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px;margin-top:9px;align-items:center}.fr31-rules form label{display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-size:11px}.fr31-rules form input[type=number]{width:56px;padding:5px}.fr31-rules form button{background:#315e4c;color:#fff;border:0;padding:9px;border-radius:9px;cursor:pointer}@media(max-width:600px){.fr31-rules form{grid-template-columns:1fr}}

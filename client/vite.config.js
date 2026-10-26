@@ -36,6 +36,7 @@ import { compass758Bridge } from './compass758-bridge.js';
 import { compass5928VtaperLuxBridge } from './compass5928-vtaper-lux-bridge.js';
 import { compass5929BreakfastBridge } from './compass5929-breakfast-bridge.js';
 import { compass5930MobileLongevityBridge } from './compass5930-mobile-longevity-bridge.js';
+import { compass5931FamilyRadarBridge } from './compass5931-family-radar-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -91,4 +92,5 @@ const compassConfig=defineConfig({
 // chain. Historic CI checks intentionally require that chain to stay final.
 compassConfig.plugins.push(compass5928VtaperLuxBridge(), compass5929BreakfastBridge());
 compassConfig.plugins.push(compass5930MobileLongevityBridge());
+compassConfig.plugins.push(compass5931FamilyRadarBridge());
 export default compassConfig;

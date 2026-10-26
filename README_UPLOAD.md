@@ -1,24 +1,35 @@
-# Compass 0.5.77.59.30 — Extended Mobile & Daily Dozen
+# Compass Life 0.5.77.59.31 – Family Radar + Repair #264
 
-Ausgangspunkt: GitHub Commit `9cb81a2433641b5058194f040c4f8a5cb4a9aa9d`, Workflow #262 erfolgreich.
+Repository: theophil-kroller/compass-life
+Base: commit 5911ab6f9bb7665f56f69acf8d26ef85f42a2cf3 (failed Actions #264)
 
-## Upload
+## INSTALLATION
+1. Unzip. Upload the `client/` and `tests/` subdirectories into the ROOT of the repository on branch `main`, keeping exact relative paths.
+2. Replace only files with matching names: `client/vite.config.js` and `client/compass5930-mobile-longevity-bridge.js`. All remaining files in the patch are new.
+3. Do NOT upload README to client/; it is documentation only.
+4. GitHub Actions must run `npm run check` and production build successfully before treating this as deployed.
 
-Die Verzeichnisse `client/` und `tests/` mit den im ZIP enthaltenen Pfaden nach `main` hochladen. Bestehende `client/vite.config.js` ersetzen. **Keine Skripte lokal ausführen.** Keine D1-Migration, kein Vault-Reset. Die alten `.28`- und `.29`-Bridges sowie ihre Tests nicht überschreiben.
+## Delivered
+- .30 hotfix: Daily Dozen integration no longer depends on volatile Insights HTML markup altered by historical bridges.
+- .31 Family Radar: parses Google Calendar titles prefixed `Nathanael:` or matching an existing contact's name/alias. Calendar events remain read-only and are grouped with reminder entries.
+- People: 30-day Family Radar for selected contact with compact rules (math-support default: 14 days; paperwork lead: 21 days; other tests informational by default).
+- Today: max 3 actionable family prompts, not a second large dashboard; rejects and snoozes are recorded.
+- GTD: explicit opt-in to create two math learning tasks, one paperwork task or a Familie project with 4 steps. Idempotency uses stable original calendar event IDs + decisions.
+- Preserves legacy Focus navigation and .30 Extended-only direct navigation.
+- No migrations, no Google Calendar writes, no new API calls.
+- Version: .31 in app & lockscreen source transform.
+- Adds a GitHub Actions `compass-full-source` artifact AFTER successful `npm run check` and `npm run build`. No extra user-side scripting or additional build workflow.
 
-## Funktionsumfang
+## Scope and limitations
+- The patch does not create Google Calendar study appointments, only private GTD tasks with suggested planned dates.
+- No automatic creation of tasks or projects.
+- Person profiles must already be present locally; current encrypted contact synchronization stays opt-in. The Family Radar decision record is stored in local Vault state and is not separately synchronized by this patch.
+- If Google Calendar cache is offline, the existing cached data is used; no fabricated event or availability is implied.
+- No dedicated Forecast badges are added; original calendar event listings remain available.
+- The longer-term schedule-aware learning suggestion engine remains a future step.
 
-- **Fokus-Modus:** vorherige Oberfläche und Menüstruktur bleiben unangetastet. Die neue Schnellnavigation wird hier nicht erzeugt, das Daily-Dozen-Panel nicht gerendert.
-- **Erweiterter Modus auf Mobilgeräten (bis 700px):** Heute, Inbox, Menschen, Finanzen, Insights und „Mehr“ direkt erreichbar. „Mehr“ öffnet die bisherige Navigation, die eingeblendete Schnellleiste bleibt erreichbar. Die alte, doppelte Insights-Kategorieleiste wird nur in diesem Modus ausgeblendet.
-- **Life Balance, erweitert:** zusätzliche neunte Dimension „Ernährung · dokumentiert“ mit dynamischer Radar-Geometrie. Für die Achse zählen nur protokollierte, dem Daily Dozen belegbar zuordenbare Ernährungsportionen (ohne Bewegung), und nur bei mindestens 3/7 beziehungsweise 8/30 Tagen mit Einträgen. Unbekannte Mengen werden nicht nachgetragen.
-- **Daily Dozen:** offizielle 12 Kategorien inkl. Bewegung als Referenz, Tagesansicht mit nachgewiesenen Portionsmengen; nicht dokumentierte Kategorien sind **keine Aussage, dass nichts gegessen wurde**. Noch keine automatische Garmin-Bewegungsbuchung. Die Auswertung ist kein Anti-Aging- oder Gesundheits-Score.
-- **Kontaktprofile:** bleiben aus Datenschutzgründen nur dann geräteübergreifend verfügbar, wenn vorhandener E2EE-Kontaktabgleich ausdrücklich aktiviert wurde. Dieser Patch macht keine automatische Übertragung.
-- Versionsanzeige im ausgeführten Quellcode: `0.5.77.59.30`. Eine bereits installierte PWA kann bis zum Service-Worker-Update vorübergehend einen alten Stand anzeigen.
-
-## Qualität / Einschränkungen
-
-- 5 neue gezielte Tests bestanden; Syntaxprüfung der JavaScript-Dateien und eines transformierten `main.js`-Fixtures bestanden.
-- Source-Anker gegen GitHub-Stand #262 geprüft; Radar-Transformation der echten GitHub-Datei syntaktisch geprüft.
-- **Keine Aussage**, dass die vollständige GitHub-Suite oder der Produktions-Build bereits erfolgreich gelaufen sind. Den vollständigen Ergebnisstatus liefert erst der GitHub-Workflow nach Upload.
-
-Quellen: https://nutritionfacts.org/daily-dozen/  und  https://nutritionfacts.org/topics/daily-dozen/
+## Verification
+- 24 targeted Node tests passed (including the previous v.30 tests, calendar matching, deduplication, deadlines, persistence decisions, and historical modified markup).
+- Node syntax checks passed for the new bridge and modules and the Vite configuration.
+- Full repository `npm run check` and Vite production build have NOT been executed locally. GitHub Actions remains the acceptance gate.
+- This is a PATCH, not a genuine full source build; complete source clone is not available in the current read-only runtime. The new CI source artifact will supply a real full source snapshot after the next successful deployment. Do not call the current ZIP a full build.
