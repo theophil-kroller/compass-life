@@ -16,12 +16,16 @@ const sourceFile=join(repo,'client/src/main.js');
 
 test('full production bridge chain transforms real main.js, and output parses', async()=>{
  const config=readFileSync(join(repo,'client/vite.config.js'),'utf8');
- const imports=[...config.matchAll(/import\s*\{\s*([\w]+Bridge)\s*\}\s*from\s*'\.\/([^']+-bridge\.js)'/g)]
+ const allImports=[...config.matchAll(/import\s*\{\s*([\w]+Bridge)\s*\}\s*from\s*'\.\/([^']+-bridge\.js)'/g)]
     .map(m=>({exportName:m[1],filename:m[2]}));
- assert.ok(imports.length>=26,'expected all currently installed bridge plugins');
- const oldLast=imports.findIndex(x=>x.exportName==='compass758Bridge');
+ assert.ok(allImports.length>=26,'expected all currently installed bridge plugins');
+ // Keep the original historical invariant alive: the .50–.58 chain ends at .58.
+ // Modern feature bridges are verified separately without moving legacy transforms.
+ const oldLast=allImports.findIndex(x=>x.exportName==='compass758Bridge');
  assert.ok(oldLast>=0,'historical .58 bridge must remain installed');
- const later=imports.slice(oldLast+1).map(x=>x.exportName);
+ const imports=allImports.slice(0,oldLast+1);
+ assert.equal(imports.at(-1).exportName,'compass758Bridge','historical .58 transformer must be last in the legacy chain');
+ const later=allImports.slice(oldLast+1).map(x=>x.exportName);
  assert.ok(later.every(name=>/^compass59\d+\w*Bridge$/.test(name)),
    'only explicitly versioned .59 feature bridges may follow the old .58 chain');
  assert.ok(later.includes('compass5928VtaperLuxBridge'),'V-Taper module must remain registered');
@@ -30,7 +34,8 @@ test('full production bridge chain transforms real main.js, and output parses', 
    '.29 breakfast requires the prior .28 feature transforms');
  let source=readFileSync(sourceFile,'utf8');
  let historicSource=null;
- for(const {filename,exportName} of imports){
+ // Verify every registered transform, including .59 enhancements, against real main.js.
+ for(const {filename,exportName} of allImports){
    const module=await import(pathToFileURL(join(repo,'client',filename)).href);
    assert.equal(typeof module[exportName],'function',`${filename}: exported plugin factory`);
    const plugin=module[exportName]();

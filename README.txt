@@ -1,10 +1,21 @@
-Compass 0.5.76.1 · kcal-Presets + Kontaktefilter
+COMPASS 0.5.77.59.29 – HOTFIX GitHub Actions #261
 
-Basis: aktueller GitHub-Stand 0.5.76.1 (letzter erfolgreicher Deploy #154).
-GitHub: entpacken und beide Dateien unter client/src/ ersetzen. Keine Skripte, keine Datenbankmigration.
+Nur 1 Datei, bereits fertig, kein Skript erforderlich:
+  tests/compass-057757-full-transform-chain.test.mjs
 
-Alle konkret benannten vordefinierten Speisen und Getränke haben eine Defaultportion und eine vorläufige kcal-Bandbreite; bisherige Einträge ohne Portionsangabe nutzen die Defaultportion. Die angezeigte Zahl "ohne Schätzung" kann für "Anderes", ältere eigene Lebensmittel oder nicht interpretierbare manuelle Mengen erhalten bleiben. Das ist absichtlich kein frei erfundener kcal-Wert.
+Installation: ZIP entpacken, die Datei in GitHub unter tests/ hochladen und die bestehende Version ersetzen.
+Ausgangslage: Commit 1ce9cc24889572b330b765128b1ab55a1f4e9a0d (Workflow #261).
+In #261 bestanden 1396/1397 Tests; Test #197 scheiterte allein an seiner alten textuellen Invariante.
+Jetzt prueft der Test die historische .58-Kette weiterhin (inkl. exakt vorausgesetzter Assertion),
+anschliessend beide .59-Erweiterungen in korrekter Reihenfolge und deren reale Transformationen.
+Keine Applikationsdateien, keine Vault-Daten und keine Integrationsmodule werden geaendert.
 
-Bei Berührung & Nähe werden im Dropdown nur Kontakte mit relationKind family/partner/friend angeboten. Kontakte mit fehlender Kategorie erscheinen erst nach Zuordnung unter Menschen. Historische bereits gespeicherte Einträge werden nicht gelöscht.
+Lokal geprueft:
+- node --check: bestanden
+- Legacy-Regressionstest-Ausdruck: bestanden
+- Vite-Plugin-Import-Reihenfolge mit gesichertem #260-Konfigurationsstand: bestanden
+- Erweiterungsinvarianten: bestanden
 
-Die vorliegenden Änderungen wurden mit node --check geprüft, kein kompletter Produktionsbuild durchgeführt.
+Ein vollstaendiger CI-Durchlauf oder produktiver Vite-Build ist in dieser Laufzeit
+nicht moeglich (der private GitHub-Code kann nicht vollstaendig in den Container
+geklont werden). Der neue GitHub-Workflow muss dies bestaetigen.
