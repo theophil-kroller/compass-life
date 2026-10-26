@@ -80,6 +80,8 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
  if(!plan?.exercises?.length)throw Error('Kein Workout-Plan vorhanden.');
  let ex=0,started=false,resting=false,restSeconds=0,restUntil=0,restTimer=null,restVibrated=false,closed=false,completed=false,active=false,wakeLock=null,plateKg=null;
  let snapshot=makeGuidedSnapshot(plan),before=document.activeElement,saveChain=Promise.resolve();
+ const previousLoad=i=>{const kg=plan.exercises[i]?.lastKg;return Number.isFinite(kg)&&kg>0&&validPlateWeight(kg,plan.equipment,plan.exercises[i]?.id)?kg:null;};
+ plateKg=previousLoad(0);
  const host=document.createElement('div');host.className='str620-overlay';host.innerHTML='<section class="str620-panel" role="dialog" aria-modal="true" aria-label="Geführtes Krafttraining"></section>';document.body.append(host);
  const el=host.firstElementChild;
  const place=plan.equipment==='gym'?'gym':'home';
@@ -116,7 +118,7 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
   el.innerHTML=`<header class="str620-head"><div><small>COMPASS · HEUTIGER WORKOUT</small><h2>${esc(plan.title)}</h2><p>${ex+1} / ${plan.exercises.length} Übungen · ${esc(({back:'Rücken',shoulders:'Schultern',chest:'Brust',quads:'Beine',posterior:'Beinrückseite',core:'Rumpf'})[curr.primary]||curr.primary||'')}</p></div><button type="button" data-act="close" class="str620-close" aria-label="Schließen">×</button></header>
    <div class="str620-progress" aria-label="Übungsfortschritt">${plan.exercises.map((_,i)=>`<span class="${i<ex?'is-done':i===ex?'is-active':''}"></span>`).join('')}</div>
    <div class="str621-load-block"><div class="str621-load-title"><strong>${place==='home'?'Scheiben am Trainingsgerät':'Trainingsgewicht'}</strong><small>${place==='home'?`${maxHomeWeight(curr.id)} kg Scheiben insgesamt vorhanden · Griffgewicht separat`:'kg · inklusive Stange/Gerät falls zutreffend'}</small></div><div class="str621-load-controls"><button type="button" data-act="minus-plates" aria-label="Gewicht um 1 kg verringern">−</button><label><input inputmode="decimal" type="number" data-plates min="0" max="${place==='home'?maxHomeWeight(curr.id):500}" step="0.5" placeholder="–" value="${numericValue()}" aria-label="Gewicht in Kilogramm"/> kg</label><button type="button" data-act="plus-plates" aria-label="Gewicht um 1 kg erhöhen">+</button></div></div>
-   <div class="str620-stage"><div class="str620-art">${PREMIUM_VISUALS.has(curr.id)?`<figure class="str620-premium-figure"><img src="${VISUAL_ROOT}${curr.id}.webp" width="506" height="504" alt="${esc(curr.title)}: Start- und Endposition als Übungsbild" loading="eager" decoding="async"/><figcaption>${curr.id==='dumbbell-pullover'?'Pullover · Hantel kontrolliert hinter den Kopf und zurück':'Start <span aria-hidden="true">→</span> Ziel'}</figcaption></figure><p class="str620-cue">${esc((descriptions[curr.id]||[])[1]||'Kontrolliert bewegen.')}</p>`:exerciseMovementSvg(curr.id)}</div><div class="str620-metadata"><small>ÜBUNG ${ex+1}</small><h3>${esc(curr.title)}</h3><div class="str620-setcount">${done} / ${curr.sets} Sätze</div><div class="str620-plan">${esc(curr.reps)} Wdh. empfohlen · 3 Min. Satzpause</div>
+   <div class="str620-stage"><div class="str620-art">${PREMIUM_VISUALS.has(curr.id)?`<figure class="str620-premium-figure"><img src="${VISUAL_ROOT}${curr.id}.webp" width="506" height="504" alt="${esc(curr.title)}: Start- und Endposition als Übungsbild" loading="eager" decoding="async"/><figcaption>${curr.id==='dumbbell-pullover'?'Pullover · Hantel kontrolliert hinter den Kopf und zurück':'Start <span aria-hidden="true">→</span> Ziel'}</figcaption></figure><p class="str620-cue">${esc((descriptions[curr.id]||[])[1]||'Kontrolliert bewegen.')}</p>`:exerciseMovementSvg(curr.id)}</div><div class="str620-metadata"><small>ÜBUNG ${ex+1}</small><h3>${esc(curr.title)}</h3><div class="str620-setcount">${done} / ${curr.sets} Sätze</div><div class="str620-plan">${esc(curr.reps)} Wdh. empfohlen · 3 Min. Satzpause</div>${curr.progressionHint?`<p class="str625-progression" style="font-size:12px;line-height:1.4;color:#40715b;margin:7px 0 0"><strong>Letztes Training:</strong> ${esc(curr.lastKg===null?"Gewicht unbekannt":curr.lastKg+" kg")} · ${esc(curr.progressionHint)}</p>`:""}
 
    <div class="str621-sets-head"><strong>Sätze</strong><span>${done} / ${curr.sets} bestätigt</span></div><div class="str621-reps" role="group" aria-label="Sätze und Wiederholungen">${circles}</div><p class="str621-set-hint">${!started?'▶ starten, dann jeden absolvierten Satz antippen.':'Kreis antippen = Satz bestätigen; erneut tippen = Wiederholungen korrigieren.'}</p>
    ${resting?`<div class="str620-rest">Satzpause <small data-rest-phase>${restSeconds>90?'Phase 1 / 2':'Phase 2 / 2'}</small> · <strong data-rest-clock>${clock(restSeconds)}</strong><small>90 + 90s · Vibration bei 1:30</small><button type="button" data-act="skip-rest">Überspringen</button></div>`:allDone?'<p class="str620-success">✓ Übung abgeschlossen.</p>':''}
@@ -124,7 +126,7 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
    <footer class="str620-bottom"><button class="str620-secondary" type="button" data-act="prev" ${ex===0?'disabled':''}>← Zurück</button><div class="str620-actions">${!started?'<button type="button" class="str620-primary" data-act="start">▶ Starten</button>':resting?'<button type="button" class="str620-primary" data-act="skip-rest">⏭ Weiter</button>':allDone?`<button type="button" class="str620-primary" data-act="next">${ex===plan.exercises.length-1?'✓ Training beenden':'Nächste Übung →'}</button>`:`<button type="button" class="str620-primary" data-act="confirm">✓ Satz ${done+1} bestätigen</button>`}</div></footer>
    <small class="str620-disclaimer">Nur bestätigte Sätze werden als durchgeführt gespeichert. Garmin-Daten bleiben unverändert.</small>`;
   el.querySelector('[data-act="close"]').onclick=()=>close();
-  el.querySelector('[data-act="prev"]').onclick=()=>{if(ex===0)return;stopRest();ex--;plateKg=null;render();};
+  el.querySelector('[data-act="prev"]').onclick=()=>{if(ex===0)return;stopRest();ex--;plateKg=previousLoad(ex);render();};
   el.querySelector('[data-act="start"]')?.addEventListener('click',()=>{started=true;active=true;void wake();void persist().catch(console.warn);render();});
   el.querySelector('[data-act="skip-rest"]')?.addEventListener('click',()=>{stopRest();render();});
   const weightBox=el.querySelector('[data-plates]');
@@ -164,7 +166,7 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
     if(next)confirmSet(next);
   });
   el.querySelector('[data-act="next"]')?.addEventListener('click',()=>{
-    stopRest();if(ex===plan.exercises.length-1){completed=true;close(true);return;}ex++;plateKg=null;render();
+    stopRest();if(ex===plan.exercises.length-1){completed=true;close(true);return;}ex++;plateKg=previousLoad(ex);render();
   });
  }
  render();return {close,save:()=>persist()};

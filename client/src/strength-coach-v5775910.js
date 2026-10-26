@@ -192,6 +192,42 @@ function annotatedHistory(period,today,state){
   usable:valid.length>=6&&days.size>=2,
   sourceStats:{garmin:merged.garminSets,coach:merged.coachSets,coachConfirmed:merged.coachConfirmed,deduplicated:merged.deduplicated}};
 }
+/** .59.25: performance-led double progression, based on actual recorded sets.
+ * No claim of measured readiness: only training observations are used. The
+ * previous load is a DEFAULT; the increase is a suggestion, never auto-applied.
+ */
+export function strengthProgressionForExercise(history,exerciseId,{reps='8–12',sets=3,equipment='home',strongLifts=false}={}){
+ const all=(history?.valid||[]).filter(e=>e.exerciseId===exerciseId&&/^\d{4}-\d{2}-\d{2}$/.test(String(e.day||'')));
+ if(!all.length)return {lastKg:null,sessionReps:[],suggestedKg:null,action:'unknown',message:'Noch keine bestätigten Gewichte für diese Übung.'};
+ const lastDay=all.reduce((v,e)=>e.day>v?e.day:v,'');
+ const sameDay=all.filter(e=>e.day===lastDay);
+ // Distinguish multiple workouts on the same day; do not aggregate two sessions
+ // as if they were one session's prescribed sets.
+ const groups=new Map();
+ for(const e of sameDay){const key=String(e.sessionId||e.day);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(e);}
+ const candidate=[...groups.values()].sort((a,b)=>b.length-a.length)[0]||[];
+ const weighted=candidate.filter(e=>Number.isFinite(e.weightKg)&&e.weightKg>0);
+ if(!weighted.length)return {lastKg:null,sessionReps:candidate.map(e=>e.reps).filter(Number.isFinite),suggestedKg:null,action:'unknown',message:'Zuletzt keine verlässliche Gewichtsangabe dokumentiert.'};
+ const latestWeight=weighted.at(-1).weightKg;
+ const consistent=weighted.filter(e=>Math.abs(e.weightKg-latestWeight)<.05&&Number.isInteger(e.reps)&&e.reps>0);
+ const repNumbers=consistent.map(e=>e.reps);
+ const bounds=String(reps).match(/(\d+)(?:\s*[–-]\s*(\d+))?/);
+ const lower=bounds?Number(bounds[1]):8,upper=bounds?Number(bounds[2]||bounds[1]):12;
+ const sufficient=consistent.length>=Math.min(sets,2); // only a minimally complete set of observations
+ const finishedAll=consistent.length>=sets;
+ const upperReached=finishedAll&&repNumbers.every(r=>r>=upper);
+ const minReached=sufficient&&repNumbers.every(r=>r>=lower);
+ const increment=equipment==='gym'?2.5:2; // Home: four 1-kg plates => symmetric +2 kg total
+ const capped=equipment==='home'&&latestWeight+increment>HOME_EQUIPMENT.availablePlateKg;
+ const suggestedKg=upperReached&&!capped?Math.round((latestWeight+increment)*100)/100:null;
+ const action=upperReached?(capped?'max-home':'increase-load'):(minReached?'increase-reps':'repeat-or-reduce');
+ const message=action==='increase-load'?`Alle dokumentierten Sätze im Zielbereich: +${increment.toLocaleString('de-AT')} kg als nächster Versuch möglich.`:
+  action==='max-home'?'Scheibengrenze erreicht: kontrollierte zusätzliche Wiederholungen, Tempo oder schwierigere Variante nutzen.':
+  action==='increase-reps'?`Bei ${latestWeight.toLocaleString('de-AT')} kg bleiben und zunächst Richtung ${upper} Wdh. steigern.`:
+  'Noch nicht stabil im Zielbereich: Gewicht beibehalten, Technik prüfen oder bei Bedarf reduzieren.';
+ return {lastKg:latestWeight,sessionReps:repNumbers,lastDay,previousSets:consistent.length,suggestedKg,action,message};
+}
+
 function nextStrongLiftsVariant(history){
  const latest=history.latest;if(!latest)return 'A';
  const exercises=new Set(history.valid.filter(e=>e.day===latest).map(e=>e.exerciseId));
@@ -240,15 +276,19 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   const primary=item.primary||IDEAS.find(x=>x[0]===id)?.[1]||'core';
   const age=ageDays(history.last[primary],todayValue);
   const seven=history.counts7[primary]||0;
+  const progression=strengthProgressionForExercise(history,id,{reps,sets,equipment:location,strongLifts});
   let reason=history.valid.length?
    `${GROUPS[primary]||primary}: ${Number(seven.toFixed(1)).toLocaleString('de-AT')} zugeordnete Satzbeteiligungen / 7 Tage${age!==null?` · zuletzt vor ${age} T.`:''}.`:
    `${GROUPS[primary]||primary}: empfohlen für ${profile.label}; Muskelhistorie noch unvollständig.`;
   if(age!==null&&age<=1&&history.valid.length)reason+=' Kürzlich beansprucht – bei Bedarf verschieben.';
-  return {id,title:item.name||id,primary,kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets,reps,restSeconds,ageDays:age,sevenSets:seven,reason,order:index+1};
+  return {id,title:item.name||id,primary,kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets,reps,restSeconds,ageDays:age,sevenSets:seven,
+   lastKg:progression.lastKg,suggestedKg:progression.suggestedKg,progressionAction:progression.action,progressionHint:progression.message,
+   reason,order:index+1};
  });
  const latestAge=ageDays(history.latest,todayValue);
  const recentlyTrained=history.valid.length>0&&latestAge!==null&&latestAge<=1;
  const cautious=recentlyTrained;
+ const suggestRecovery=exercises.some(x=>x.ageDays!==null&&x.ageDays<=1&&x.sevenSets>=3);
  // Rough session duration, not a promise or a scheduling commitment.
  const estimatedMinutes=Math.round(exercises.reduce((sum,x)=>sum+x.sets*(x.reps==='5'?1.0:0.8)+(x.sets-1)*x.restSeconds/60,5));
  const timeFit=estimatedMinutes>budget?'longer':'fits';
@@ -260,9 +300,9 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   {name:'Vorder- / Rückseite Beine',one:history.counts7.quads||0,two:history.counts7.posterior||0}
  ]:[];
  return {goal:selectedGoal,equipment:location,budget,mode:strongLifts?'stronglifts':'smart',trainingFocus:strongLifts?'Kraft · schweres 5×5':selectedGoal==='vtaper'?'Hypertrophie · kontrollierte 8–15+ Wiederholungen':'Zielorientiertes Training',homeEquipment:location==='home'?{...HOME_EQUIPMENT}:null,profile,variant,exercises,estimatedMinutes,timeFit,
-  cautious,recentlyTrained,latestAge,evidence,known,missing,history,sourceStats:history.sourceStats,balances,
+  cautious,recentlyTrained,latestAge,suggestRecovery,evidence,known,missing,history,sourceStats:history.sourceStats,balances,
   title:strongLifts?`StrongLifts 5×5 · Workout ${variant}`:selectedGoal==='vtaper'?'V-Taper · Rücken & Schultern':selectedGoal==='abs'?'Core & Ganzkörper':selectedGoal==='strength'?`Kraft · ${location==='gym'?'Gym':'Zuhause'}`:'Muskelbalance · Ganzkörper',
-  recoveryNote:cautious?'Letztes bestätigtes Coach- oder zugeordnetes Garmin-Training heute/gestern. Dieser Plan ist für den nächsten geeigneten Trainingstag, nicht automatisch für sofort. Erholung und individuelle Belastung prüfen.':
+  recoveryNote:suggestRecovery?'Rücken/Schultern oder andere geplante Muskeln wurden erst kürzlich mehrfach beansprucht. Heute ggf. Pause, Mobilität oder andere Muskelgruppen wählen; keine exakt berechnete biologische Regeneration.':cautious?'Letztes bestätigtes Coach- oder zugeordnetes Garmin-Training heute/gestern. Diesen Vorschlag erst am nächsten geeigneten Trainingstag umsetzen; vorher Erholung und Leistungsfähigkeit prüfen.':
    evidence==='none'?'Keine zugeordneten Übungssätze vorhanden: Es gibt keine belastbare Aussage zur Regeneration.':
    evidence==='limited'?'Für die Erholungsbeurteilung liegen noch zu wenige zugeordnete Trainingstage vor.':'Übungsauswahl basiert auf dokumentierter Belastung, nicht auf gemessener Muskelregeneration.'};
 }
@@ -273,7 +313,7 @@ function coachPrefs(){
 function saveCoachPrefs(p){try{localStorage.setItem(WORKOUT_PREF_KEY,JSON.stringify(p));}catch{}}
 function coachCopyText(plan){
  return [plan.title,`${plan.equipment==='home'?'Zuhause':'Gym'} · etwa ${plan.estimatedMinutes} min`,
-  ...plan.exercises.map((x,i)=>`${i+1}. ${x.title}: ${x.sets} × ${x.reps}; Pause ${x.restSeconds} s`),
+  ...plan.exercises.map((x,i)=>`${i+1}. ${x.title}: ${x.sets} × ${x.reps}; Pause ${x.restSeconds} s${x.lastKg!==null?`; zuletzt ${x.lastKg} kg`:``}; ${x.progressionHint}`),
   plan.recoveryNote,'Trainingsempfehlung, keine automatische Trainingsfreigabe.'].join('\n');
 }
 
@@ -300,12 +340,13 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
   ${prefs.goal==='strength'&&prefs.equipment==='gym'?`<div class="str621-method" role="group" aria-label="Trainingsmethode"><span>Trainingsmethode</span><button type="button" data-mode="smart" aria-pressed="${prefs.mode!=='stronglifts'}" class="${prefs.mode!=='stronglifts'?'active':''}">Intelligenter Mix</button><button type="button" data-mode="stronglifts" aria-pressed="${prefs.mode==='stronglifts'}" class="${prefs.mode==='stronglifts'?'active':''}">StrongLifts 5×5</button></div>`:''}
   <details class="str623-more"><summary>Equipmentdetails</summary><div class="str621-equipment-note">${prefs.equipment==='home'?'Zuhause: zwei verstellbare Kurzhanteln, nahezu gewichtslose Verbindungsstange, Ab Wheel · vier Scheiben je 2,5 / 2 / 1,5 / 1 kg = 28 kg Scheiben insgesamt; Bei zwei symmetrisch beladenen Kurzhanteln wären das je höchstens 14 kg Scheiben; für eine einzelne Hantel können mehr Scheiben verwendet werden. Griffgewichte separat erfassen.':'Gym: schwere Langhanteln, Maschinen und Kabelzug · StrongLifts nur auf Wunsch.'}</div></details>
   <section class="str619-plan-head" aria-label="Vorgeschlagener Trainingsplan"><div><small>${plan.cautious?'FÜR DEN NÄCHSTEN TRAININGSTAG':'DEIN VORSCHLAG'}</small><h3>${safe(plan.title)}</h3><p>${plan.exercises.length} Übungen · ${plan.equipment==='home'?'Zuhause':'Gym'} · ${safe(plan.trainingFocus)}</p>${plan.sourceStats.coachConfirmed?`<small class="str624-hist-badge">✓ ${plan.sourceStats.coachConfirmed} Coach-Sätze aus dem Vault berücksichtigt</small>`:''}</div><div class="str620-cta-stack"><button type="button" class="str620-launch" aria-label="Geführtes Workout starten">▶ Workout starten</button><button type="button" class="str619-copy">Plan kopieren</button></div></section>
+  ${plan.suggestRecovery?`<aside class="str625-rest-advice" style="background:#f0f4ed;border-left:3px solid #688b76;padding:9px 12px;border-radius:9px;margin:9px 0;font-size:12px">Heute eher Erholung oder andere Muskelgruppen einplanen. <details><summary>Begründung</summary><p>${safe(plan.recoveryNote)}</p></details></aside>`:``}
   ${plan.timeFit==='longer'?`<p class="str619-alert">Dieser Plan benötigt voraussichtlich mehr als die gewählten ${plan.budget} Minuten. Die Sätze werden nicht künstlich verkürzt.</p>`:''}
   <details class="str623-more"><summary>Trainingsdaten & Regeneration</summary><p class="str619-recovery">${safe(plan.recoveryNote)}</p>
   <div class="str619-coverage"><span>Coach: ${plan.sourceStats.coach} eigene Sätze · Garmin: ${plan.sourceStats.garmin} · ${plan.sourceStats.deduplicated} Überschneidungen berücksichtigt</span><span>${plan.missing} Garmin-Sätze noch nicht zugeordnet</span><span>${plan.evidence==='none'?'Noch keine Muskelhistorie':plan.evidence==='limited'?'Nur eingeschränkte Historie':plan.evidence==='partial'?'Viele Trainingsdetails fehlen':'Dokumentierte Muskelhistorie'}</span></div>
   ${plan.balances.length?`<div class="str619-balance" aria-label="Dokumentierte Muskelbalance in sieben Tagen">${plan.balances.map(row=>`<div><small>${safe(row.name)}</small><strong>${Number(row.one.toFixed(1))} : ${Number(row.two.toFixed(1))}</strong></div>`).join('')}</div>`:''}
   </details>
-  <div class="str619-workout" role="list">${plan.exercises.map(x=>`<article class="str619-exercise" role="listitem"><div class="str619-number">${x.order}</div><div class="str619-description"><h4>${safe(x.title)}</h4><div class="str619-prescription"><strong>${x.sets} × ${safe(x.reps)}</strong><span>3 Min. Satzpause</span></div><details><summary>Warum diese Übung?</summary><p>${safe(x.reason)}</p></details></div></article>`).join('')}</div>
+  <div class="str619-workout" role="list">${plan.exercises.map(x=>`<article class="str619-exercise" role="listitem"><div class="str619-number">${x.order}</div><div class="str619-description"><h4>${safe(x.title)}</h4><div class="str619-prescription"><strong>${x.sets} × ${safe(x.reps)}</strong><span>3 Min. Satzpause</span></div>${x.lastKg!==null?`<p class="str625-lastload" style="font-size:12px;color:#517866;margin:5px 0 0">Zuletzt ${safe(x.lastKg)} kg · ${safe(x.progressionHint)}</p>`:``}<details><summary>Warum diese Übung?</summary><p>${safe(x.reason)}</p></details></div></article>`).join('')}</div>
   <details class="str623-more"><summary>Methodik & Grenzen</summary><p class="str610-disclaimer">${safe(plan.profile.note)} Vorschläge berücksichtigen bestätigte Coach-Sätze und zugeordnete Garmin-Sätze; unbekannte Garmin-Daten werden nicht als untrainierte Muskeln gewertet. Die Regeneration ist eine vorsichtige Zeitregel, keine Messung deiner Belastbarkeit. Gewicht und Intensität bestimmst du selbst.</p></details>`;
   dialog.querySelector('.str610-close').onclick=close;
   const update=(key,val)=>{prefs={...prefs,[key]:val};saveCoachPrefs(prefs);draw();};

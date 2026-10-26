@@ -43,6 +43,47 @@ export function compass5910StrengthHabitsBridge(){
  const guidedMarkup=guidedChoice?'<div class="str732-pending"><strong>✦ Compass-Workout erkannt</strong><p>Zeitlich passende geführte Trainingseinheit ('+esc(guidedChoice.startedAt.slice(11,16))+'). Du kannst die dort bestätigten Übungen übernehmen und anschließend Garmin-Wiederholungen und Gewichte prüfen.</p><button type="button" class="secondary-btn" data-action="str620-prefill">Vorschlag in Garmin-Sätze übernehmen →</button></div>':'';`,'guided Garmin candidate');
     s=change(s,'<form id="str732-form"','${guidedMarkup}<form id="str732-form"','guided Garmin suggestion entry');
    }
+   // .59.25 – improved Garmin annotation editor, only for the real editor source.
+   // Keep legacy fixture transforms stable: inject only if these exact anchors exist.
+   if(s.includes('export function strengthSetRow(i,s={}){')&&s.includes('const prior=findStrengthAnnotation(state,current),raw=')){
+    s=change(s,'export function strengthSetRow(i,s={}){',`function compassRecentExerciseIds(state){
+ const recent=[];
+ for(const session of state?.strengthGuidedSessions||[])
+  for(const e of session?.exercises||[])
+   for(const set of e.confirmedSets||[])if(set.confirmed&&byId.has(e.exerciseId))recent.push({id:e.exerciseId,t:set.completedAt||session.startedAt||''});
+ for(const ann of state?.strengthJournal?.annotations||[])
+  for(const set of ann.sets||[])if(byId.has(set.exerciseId))recent.push({id:set.exerciseId,t:ann.updatedAt||ann.start||''});
+ recent.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
+ return [...new Set(recent.map(x=>x.id))].slice(0,8);
+}
+function compassGarminEnglishId(name){
+ const clean=String(name||'').toLowerCase().replace(/[_-]/g,' ').replace(/[^a-z0-9äöüß ]/g,' ').replace(/\\s+/g,' ').trim();
+ // Only precise, unambiguous titles are suggested; unknown exercises stay blank.
+ const aliases={
+  'one arm dumbbell row':'dumbbell-row','single arm dumbbell row':'dumbbell-row','dumbbell row':'dumbbell-row',
+  'dumbbell lateral raise':'dumbbell-lateral-raise','lateral raise':'dumbbell-lateral-raise',
+  'dumbbell pullover':'dumbbell-pullover','pullover':'dumbbell-pullover',
+  'lat pulldown':'lat-pulldown','lat pull down':'lat-pulldown',
+  'goblet squat':'goblet-squat','barbell squat':'squat','back squat':'squat',
+  'deadlift':'deadlift','barbell deadlift':'deadlift','dumbbell romanian deadlift':'dumbbell-romanian-deadlift',
+  'bench press':'bench','barbell bench press':'bench',
+  'barbell row':'barbell-row','bent over barbell row':'barbell-row',
+  'overhead barbell press':'military-press','military press':'military-press',
+  'face pull':'face-pull','seated cable row':'cable-row',
+  'dumbbell shoulder press':'dumbbell-shoulder-press','ab wheel rollout':'ab-wheel-kneeling'
+ };
+ return aliases[clean]&&byId.has(aliases[clean])?aliases[clean]:null;
+}
+export function strengthSetRow(i,s={},recent=[]){`,'recent exercises + exact English aliases');
+    s=change(s,'  options=\'<option value="">Übung zuordnen …</option>\'+favoritesOptions',`  recentOptions='<optgroup label="⏱ Zuletzt verwendet">'+recent.map(id=>byId.get(id)).filter(Boolean).map(x=>'<option value="'+esc(x.id)+'" '+(s.exerciseId===x.id?'selected':'')+'>'+esc(x.name)+' · '+esc(({ 'dumbbell-row':'Dumbbell Row','lat-pulldown':'Lat Pulldown','dumbbell-lateral-raise':'Lateral Raise','deadlift':'Deadlift','bench':'Bench Press','squat':'Squat','dumbbell-pullover':'Dumbbell Pullover' })[x.id]||x.id)+'</option>').join('')+'</optgroup>',
+  options='<option value="">Übung zuordnen …</option>'+recentOptions+favoritesOptions`,'recent section in options');
+    s=change(s,' const prior=findStrengthAnnotation(state,current),raw=',` const recentUsed=compassRecentExerciseIds(state);
+ const prior=findStrengthAnnotation(state,current),raw=`,'recent options available in form');
+    const setsAnchor=" const sets=Array.from({length:count},(_,i)=>{const s=raw[i]||{reps:null,weightKg:null};return !prior&&s.source==='garmin-fit-set'&&s.weightKg===0?{...s,weightKg:null}:s;});";
+    s=change(s,setsAnchor,setsAnchor+`\n // Garmin's English title can preselect an exact exercise; no silent persistence.
+ if(!prior)for(const item of sets){if(!item.exerciseId){const suggestion=compassGarminEnglishId(item.exercise);if(suggestion)item.exerciseId=suggestion;}}`,'exact import suggestions');
+    s=change(s,'${sets.map((set,i)=>strengthSetRow(i,set)).join(\'\')}', '${sets.map((set,i)=>strengthSetRow(i,set,recentUsed)).join(\'\')}','recent ids for editor rows');
+   }
    return {code:s,map:null};
   }
   if(name.endsWith('/client/src/strength-anatomy-v57737.js')){
