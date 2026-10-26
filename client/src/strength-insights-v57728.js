@@ -4,7 +4,113 @@
  */
 import {MUSCLE_GROUPS,strengthMuscles,mergeStrengthImports} from './garmin-strength-v57728.js';
 import {applyStrengthAnnotations,manualExerciseMuscles} from './strength-editor-v57732.js';
-import {mergeGuidedStrengthSessions} from './strength-coach-history-v5775926.js';
+// .59.27: pure, synchronous Coach/FIT overlay is embedded for compatibility with
+// historical independently-rendered Muscle Map fixtures. Standalone public API
+// stays available in strength-coach-history-v5775926.js.
+const dateValue=(value)=>{
+ const parsed=Date.parse(value||'');
+ return Number.isFinite(parsed)?parsed:null;
+};
+const localDay=(value)=>{
+ const stamp=dateValue(value);
+ if(stamp===null)return null;
+ const local=new Date(stamp).toLocaleDateString('sv-SE');
+ return /^\d{4}-\d{2}-\d{2}$/.test(local)?local:null;
+};
+const isPositiveInt=value=>Number.isInteger(value)&&value>0&&value<=500;
+const validLoad=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=500;
+const normalizedWeight=value=>validLoad(value)?value:null;
+const closeLoad=(a,b)=>a===null||b===null||Math.abs(a-b)<=0.25;
+const compatibleReps=(a,b)=>isPositiveInt(a)&&isPositiveInt(b)&&a===b;
+const isUnknownExercise=set=>!set?.exerciseId||!manualExerciseMuscles(set.exerciseId).known;
+const originalGarminSet=set=>set?.source!=='compass-guided-confirmed'&&!set?.pairedWithGarmin&&!set?.coachMatched;
+const eligibleSession=session=>session?.source==='compass-guided-v5920'&&dateValue(session.startedAt)!==null;
+
+/** Read confirmed Coach sets; for sets recorded without reps, retain the set
+ * as known performed work but do not invent reps/weight/volume. A synthetic
+ * count-only set may enter the map; it must not drive load progression.
+ */
+function coachConfirmedStrengthSets(session){
+ if(!eligibleSession(session))return [];
+ const rows=[];
+ for(const exercise of Array.isArray(session.exercises)?session.exercises:[]){
+  const muscles=manualExerciseMuscles(exercise?.exerciseId);
+  if(!muscles.known)continue;
+  const usedNumbers=new Set();
+  for(const set of Array.isArray(exercise.confirmedSets)?exercise.confirmedSets:[]){
+   if(set?.confirmed!==true)continue;
+   const index=Number.isInteger(set.setNumber)&&set.setNumber>0?set.setNumber:null;
+   if(index!==null&&usedNumbers.has(index))continue;
+   if(index!==null)usedNumbers.add(index);
+   rows.push({
+    source:'compass-guided-confirmed',exerciseId:exercise.exerciseId,exercise:muscles.name,
+    category:null,primary:muscles.primary,secondary:[...muscles.secondary],knownMuscles:true,
+    reps:isPositiveInt(set.reps)?set.reps:null,weightKg:normalizedWeight(set.weightKg),
+    start:set.completedAt||session.startedAt,end:set.completedAt||session.startedAt,
+    setNumber:index,confirmed:true
+   });
+  }
+ }
+ return rows;
+}
+
+/** Pure aggregation. Never changes the caller's state or original sessions.
+ * Keep summary-only reportedSets as a ceiling for missing sets, so a 4-set
+ * Garmin CSV + 3 confirmed Coach sets becomes 3 known + 1 unassigned, not 7.
+ */
+function mergeGuidedStrengthSessions(garminSessions,state,{today=null,start=null}={}){
+ const original=Array.isArray(garminSessions)?garminSessions:[];
+ const sessions=original.map(s=>({...s,sets:[...(Array.isArray(s.sets)?s.sets:[])]}));
+ const sources={coachSets:0,pairedSets:0,coachOnlySessions:0,matchedSets:0,unresolvedPairs:0};
+ const seen=new Set();
+ for(const guided of Array.isArray(state?.strengthGuidedSessions)?state.strengthGuidedSessions:[]){
+  if(!eligibleSession(guided))continue;
+  const key=String(guided.id||guided.startedAt);
+  if(seen.has(key))continue;seen.add(key);
+  const performed=coachConfirmedStrengthSets(guided);
+  if(!performed.length)continue;
+  const stamp=dateValue(guided.startedAt),day=localDay(guided.startedAt);
+  if(!day||(today&&day>today)||(start&&day<start))continue;
+  const candidates=sessions.map((s,i)=>({s,i,delta:Math.abs((dateValue(s.start)??Infinity)-stamp)}))
+   .filter(x=>x.s.source!=='compass-guided-v5920'&&x.delta<=120*60000)
+   .sort((a,b)=>a.delta-b.delta);
+  const target=candidates[0]?.s||null;
+  if(!target){
+   sessions.push({id:`coach|${key}`,source:'compass-guided-v5920',day,start:guided.startedAt,
+    end:guided.finishedAt||guided.updatedAt||guided.startedAt,sets:performed,activeSets:performed.length,
+    reportedSets:performed.length,summaryOnly:false,coachOnly:true,completed:Boolean(guided.completed)});
+   sources.coachOnlySessions++;sources.coachSets+=performed.length;
+   continue;
+  }
+  const consumed=new Set();
+  // The same Garmin row cannot be paired with two Coach confirmations.
+  for(const coach of performed){
+   let exact=target.sets.findIndex((g,i)=>!consumed.has(i)&&originalGarminSet(g)&&g?.exerciseId===coach.exerciseId&&compatibleReps(g.reps,coach.reps)&&closeLoad(normalizedWeight(g.weightKg),coach.weightKg));
+   if(exact>=0){consumed.add(exact);sources.matchedSets++;continue;}
+   // Repair only evidence-compatible *unassigned* Garmin sets. No index guessing.
+   exact=target.sets.findIndex((g,i)=>!consumed.has(i)&&originalGarminSet(g)&&isUnknownExercise(g)&&compatibleReps(g.reps,coach.reps)&&closeLoad(normalizedWeight(g.weightKg),coach.weightKg));
+   if(exact>=0){
+    const garmin=target.sets[exact];
+    target.sets[exact]={...garmin,exerciseId:coach.exerciseId,exercise:coach.exercise,
+     primary:coach.primary,secondary:coach.secondary,knownMuscles:true,
+     reps:isPositiveInt(garmin.reps)?garmin.reps:coach.reps,
+     weightKg:validLoad(garmin.weightKg)?garmin.weightKg:coach.weightKg,
+     coachMatched:true};
+    consumed.add(exact);sources.pairedSets++;continue;
+   }
+   // Do not discard a real confirmed Coach set merely because a FIT has an
+   // unknown, nonmatching set. Such mismatches remain visible for review.
+   target.sets.push({...coach,pairedWithGarmin:true});sources.coachSets++;
+   if(candidates.length)sources.unresolvedPairs++;
+  }
+  target.coachLinked=true;
+  target.reportedSets=Math.max(Number.isInteger(target.reportedSets)?target.reportedSets:0,target.sets.length);
+  target.summaryOnly=false;
+ }
+ sessions.sort((a,b)=>String(a.start||'').localeCompare(String(b.start||'')));
+ return {sessions,sources};
+}
+
 const e=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(x,dec=0)=>typeof x==='number'&&Number.isFinite(x)?x.toLocaleString('de-AT',{maximumFractionDigits:dec}):'–';
 const day=x=>x instanceof Date?`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`:String(x);
@@ -85,9 +191,10 @@ export function strengthPeriod(state,{range='28',today=day(new Date()),includeCo
   else if(missing)csvExtra+=missing;
   for(const set of session.sets||[]){total++;
    const manual=set.exerciseId?manualExerciseMuscles(set.exerciseId):null;
-   const category=manual?.known?manual:strengthMuscles(set.category);
-   const primary=category.primary,secondary=category.secondary||[];
-   const item={...set,sessionId:session.id,day:session.day,exercise:set.exercise||category.name};
+   const category=strengthMuscles(set.category);
+   const resolvedCategory=manual?.known?manual:category;
+   const primary=resolvedCategory.primary,secondary=resolvedCategory.secondary||[];
+   const item={...set,sessionId:session.id,day:session.day,exercise:set.exercise||resolvedCategory.name};
    events.push(item);
    if(primary&&groups[primary]){knownSets++;groups[primary].primary++;touched.add(primary);groups[primary].last=session.day;
     for(const id of secondary)if(groups[id]){groups[id].secondary++;touched.add(id);groups[id].last=session.day;}
@@ -175,7 +282,7 @@ export function strengthInsightsView(state,{range='28',side='front',today=day(ne
  ${m.coachSources.coachSets||m.coachSources.pairedSets||m.coachSources.matchedSets?`<p class="str728-note"><strong>Coach + Garmin:</strong> ${m.coachSources.coachSets} bestätigte Coach-Sätze ergänzt · ${m.coachSources.pairedSets} Garmin-Sätze zugeordnet · ${m.coachSources.matchedSets} bereits zugeordnete Übereinstimmungen nicht doppelt gezählt${m.coachSources.unresolvedPairs?` · ${m.coachSources.unresolvedPairs} Sätze bei zeitlich überlappenden Einheiten noch zu prüfen`:``}.</p>`:``}
  <div class="str728-stats">${stat('Trainingstage',m.trainingDays,'im ausgewählten Zeitraum')}${stat('Aktive Sätze',m.activeSets===0&&m.sessions.length>0?'–':m.activeSets,m.activeSets===0&&m.sessions.length>0?'Satzanzahl nicht angegeben':`${m.knownSets} zugeordnet · ${m.unassigned} offen`)}${stat('Dok. Gewichtsvolumen',m.volumeKg===null?'–':fmt(m.volumeKg,1)+' kg',`${m.volumeSets} Sätze mit Zusatzgewicht × Wdh.`)}${stat('Letztes Training',m.latest||'–',m.todayRecorded?'Heute kann noch ergänzt werden':'Garmin + Coach')}</div>
  <div class="str728-visual"><div class="str728-body-panel">${bodySvg(m,side)}<p class="str728-caption">${side==='front'?'Vorderseite':'Rückseite'} · klassifizierte Übungssätze; Farbintensität nach dokumentierten Haupt- und Nebenbeteiligungen</p></div><div class="str728-distribution"><h3>Beanspruchte Gruppen <small>Haupt / unterstützend</small></h3>${groupTiles(m)}<div class="str728-key"><i style="background:#DBE5E1"></i> Keine klassifizierten Sätze <i style="background:#285F76"></i> mehr erfasste Satzbeteiligungen</div></div></div>
- <p class="str728-note"><strong>Wichtig:</strong> Die Muskelzuordnung ist eine nachvollziehbare <em>Heuristik aus FIT-Kategorien und bestätigten Übungszuordnungen</em>, nicht Garmins exakte Muskelkarte und keine direkte Messung von Muskelwachstum. Unbenannte oder nicht eindeutig klassifizierte Übungen bleiben offen – nicht automatisch „untrainiert“.</p>
+ <p class="str728-note"><strong>Wichtig:</strong> Die Muskelzuordnung ist eine nachvollziehbare <em>Heuristik aus FIT-Übungskategorien</em> sowie bestätigten Coach- und manuellen Übungszuordnungen, nicht Garmins exakte Muskelkarte und keine direkte Messung von Muskelwachstum. Unbenannte oder nicht eindeutig klassifizierte Übungen bleiben offen – nicht automatisch „untrainiert“.</p>
  </section>
  <section class="work-card"><div class="work-heading"><span>📈 Trainingsrhythmus · einzelne Tagespunkte</span><small>aktive Sätze</small></div>${strengthTrainingDots(m)}</section>
  <section class="work-card"><div class="work-heading"><span>⚖️ Trainingsbalance &amp; Übungsideen</span><small>Vorschläge, keine Vorgaben</small></div>${ideas(m)}</section>

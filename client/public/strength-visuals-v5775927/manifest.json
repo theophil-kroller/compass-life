@@ -1,0 +1,143 @@
+{
+  "release": "0.5.77.59.27",
+  "model": "ai-generated instructional visualization, not a verified exercise technique reference",
+  "note": "Personal likeness approximated from owner-provided reference photos; not biometric identity reproduction",
+  "photos": {
+    "squat": {
+      "kind": "studio-pair",
+      "personalized": false,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "bench": {
+      "kind": "studio-pair",
+      "personalized": false,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "barbell-row": {
+      "kind": "studio-pair",
+      "personalized": false,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "military-press": {
+      "kind": "studio-pair",
+      "personalized": false,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "dumbbell-shoulder-press": {
+      "kind": "studio-pair",
+      "personalized": false,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "dumbbell-romanian-deadlift": {
+      "kind": "studio-pair",
+      "personalized": true,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "cable-lateral-raise": {
+      "kind": "studio-pair",
+      "personalized": false,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "face-pull": {
+      "kind": "studio-pair",
+      "personalized": false,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "plank": {
+      "kind": "studio-pair",
+      "personalized": false,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "dead-bug": {
+      "kind": "studio-pair",
+      "personalized": false,
+      "size": [
+        1200,
+        900
+      ]
+    },
+    "cable-straight-arm-pulldown": {
+      "kind": "contact-sheet-excerpt",
+      "personalized": true,
+      "size": [
+        512,
+        341
+      ]
+    },
+    "cable-single-arm-row": {
+      "kind": "contact-sheet-excerpt",
+      "personalized": true,
+      "size": [
+        512,
+        341
+      ]
+    },
+    "cable-rear-delt-fly": {
+      "kind": "contact-sheet-excerpt",
+      "personalized": true,
+      "size": [
+        512,
+        341
+      ]
+    },
+    "cable-crunch": {
+      "kind": "contact-sheet-excerpt",
+      "personalized": true,
+      "size": [
+        512,
+        341
+      ]
+    },
+    "cable-woodchop": {
+      "kind": "contact-sheet-excerpt",
+      "personalized": true,
+      "size": [
+        512,
+        341
+      ]
+    },
+    "dumbbell-floor-press": {
+      "kind": "contact-sheet-excerpt",
+      "personalized": true,
+      "size": [
+        512,
+        341
+      ]
+    },
+    "barbell-overhead-press": {
+      "kind": "contact-sheet-excerpt",
+      "personalized": true,
+      "size": [
+        512,
+        342
+      ]
+    }
+  }
+}

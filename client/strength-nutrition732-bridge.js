@@ -23,7 +23,6 @@ export function strengthNutrition732Bridge(){
  // Opening/closing remains explicit: nutritionQuickOpen false immediately enables render.
  if(nutritionQuickOpen&&state&&app.querySelector('.pj92-food-panel'))return;
  const renderMeasurement=performanceTrace.start();`,'mobile modal stable');
-   // Both full-page and localized refresh must preserve editor's current selection.
    change('strengthInsightsView(state,{range:strengthRange728,side:strengthSide728,today})', 'strengthInsightsView(state,{range:strengthRange728,side:strengthSide728,today,editingId:strengthEditId732})','strength main view');
    change('strengthInsightsView(state,{range:strengthRange728,side:strengthSide728,today:localDate()})', 'strengthInsightsView(state,{range:strengthRange728,side:strengthSide728,today:localDate(),editingId:strengthEditId732})','strength refresh');
    change('function bind() {',`function bindStrengthEditor732(){
@@ -58,6 +57,22 @@ function bind() {
   }
   if(path.endsWith('/client/src/strength-insights-v57728.js')){
    let out=source;const change=(a,b,label)=>{out=unique(out,a,b,label);};
+   // In .59.26 the raw module already performs annotation/Coach merging. Apply only
+   // the .32 UI/editor wiring instead of importing and annotating everything twice.
+   if(source.includes("function mergeGuidedStrengthSessions(garminSessions,state,")){
+    if(!source.includes("import {applyStrengthAnnotations,manualExerciseMuscles} from './strength-editor-v57732.js';") ||
+      !source.includes('includeCoach=true') || !source.includes('const resolvedCategory=manual?.known?manual:category;'))
+      throw Error('Compass .32: .59.26 already-integrated strength module is incomplete.');
+    change("import {applyStrengthAnnotations,manualExerciseMuscles} from './strength-editor-v57732.js';",
+      "import {applyStrengthAnnotations,manualExerciseMuscles,strengthEditorView} from './strength-editor-v57732.js';",'modern strength editor import');
+    change("export function strengthInsightsView(state,{range='28',side='front',today=day(new Date())}={}){",
+      "export function strengthInsightsView(state,{range='28',side='front',today=day(new Date()),editingId=''}={}){",'modern strength edit option');
+    change(" <div class=\"str728-stats\">${stat('Trainingstage'", " ${strengthEditorView(state,m.sessions,editingId)}\n <div class=\"str728-stats\">${stat('Trainingstage'",'modern editor');
+    change('Für Muskelgruppen und Einzelgewichte die Original-FIT-Datei dieser Aktivität exportieren.',
+      'Für die Muskelkarte diese Einheit oben im Übungseditor zuordnen – ohne zusätzlichen FIT-Export.','modern csv');
+    // .59.26 already changed the summary note; do not require that old string.
+    return {code:out,map:null};
+   }
    change("import {MUSCLE_GROUPS,strengthMuscles,mergeStrengthImports} from './garmin-strength-v57728.js';",
     "import {MUSCLE_GROUPS,strengthMuscles,mergeStrengthImports} from './garmin-strength-v57728.js';\nimport {applyStrengthAnnotations,manualExerciseMuscles,strengthEditorView} from './strength-editor-v57732.js';",'strength editor imports');
    change('return [...fits,...summaries].sort((a,b)=>a.start.localeCompare(b.start));',
@@ -66,7 +81,7 @@ function bind() {
     'const category=set.exerciseId?manualExerciseMuscles(set.exerciseId):strengthMuscles(set.category);','manual muscle mapping');
    change("export function strengthInsightsView(state,{range='28',side='front',today=day(new Date())}={}){",
     "export function strengthInsightsView(state,{range='28',side='front',today=day(new Date()),editingId=''}={}){",'strength edit option');
-   change(" <div class=\"str728-stats\">${stat('Trainingstage'", " ${strengthEditorView(state,m.sessions,editingId)}\n <div class=\"str728-stats\">${stat('Trainingstage'", 'edit block before map');
+   change(" <div class=\"str728-stats\">${stat('Trainingstage'", " ${strengthEditorView(state,m.sessions,editingId)}\n <div class=\"str728-stats\">${stat('Trainingstage'",'edit block before map');
    change('Für Muskelgruppen und Einzelgewichte die Original-FIT-Datei dieser Aktivität exportieren.',
     'Für die Muskelkarte diese Einheit oben im Übungseditor zuordnen – ohne zusätzlichen FIT-Export.','CSV info');
    change('für die farbige Muskelkarte fehlt die individuelle Aktivitäts-FIT-Datei.',

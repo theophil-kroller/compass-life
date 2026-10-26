@@ -248,7 +248,9 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  const profile=GOALS[selectedGoal];
  const period=strengthPeriod(state,{range:'28',today:todayValue,includeCoach:false});
  const history=annotatedHistory(period,todayValue,state);
- const health=strengthCoachHealthContext(state,{today:todayValue});
+ const health=typeof strengthCoachHealthContext==='function'
+  ?strengthCoachHealthContext(state,{today:todayValue})
+  :{attention:false,status:'insufficient',guidance:'Noch keine verfügbaren Gesundheitsvergleichswerte.',bodyNote:'',method:'',sleep:{usable:false,recentCount:0,baselineCount:0},hrv:{usable:false,recentCount:0,baselineCount:0},body:{latest:null,trend:null,count:0}};
  const strongLifts=selectedGoal==='strength'&&location==='gym'&&mode==='stronglifts'; // never prescribe StrongLifts at home
  const variant=strongLifts?nextStrongLiftsVariant(history):null;
  let ids=strongLifts?STRONG_LIFTS[variant].map(x=>x[0]):[...WORKOUT_POOLS[selectedGoal][location]];
