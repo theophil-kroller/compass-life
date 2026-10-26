@@ -3,6 +3,8 @@
  * Suggestions are optional exercise ideas, never training prescriptions.
  */
 import {MUSCLE_GROUPS,strengthMuscles,mergeStrengthImports} from './garmin-strength-v57728.js';
+import {applyStrengthAnnotations,manualExerciseMuscles} from './strength-editor-v57732.js';
+import {mergeGuidedStrengthSessions} from './strength-coach-history-v5775926.js';
 const e=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(x,dec=0)=>typeof x==='number'&&Number.isFinite(x)?x.toLocaleString('de-AT',{maximumFractionDigits:dec}):'–';
 const day=x=>x instanceof Date?`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`:String(x);
@@ -64,10 +66,13 @@ const setsCount=s=>Math.max(setsKnown(s),s.reportedSets??0);
 /** One active set counts 1 primary and 0.5 secondary in the *visual index*.
  * A dot after the decimal does not represent a physically measured half set.
  */
-export function strengthPeriod(state,{range='28',today=day(new Date())}={}){
- const all=strengthSummariesWithFit(state);
+export function strengthPeriod(state,{range='28',today=day(new Date()),includeCoach=true}={}){
+ const all=applyStrengthAnnotations(state,strengthSummariesWithFit(state));
  const start=range==='all'?null:shift(today,1-(Number(range)||28));
- const sessions=all.filter(s=>validDate(s.day)&&s.day<=today&&(!start||s.day>=start));
+ const garmin=all.filter(s=>validDate(s.day)&&s.day<=today&&(!start||s.day>=start));
+ const overlaid=includeCoach?mergeGuidedStrengthSessions(garmin,state,{today,start}):null;
+ const sessions=overlaid?overlaid.sessions:garmin;
+ const coachSources=overlaid?.sources||{coachSets:0,pairedSets:0,coachOnlySessions:0,matchedSets:0,unresolvedPairs:0};
  const groups=Object.fromEntries(MUSCLE_GROUPS.map(x=>[x.id,{...x,primary:0,secondary:0,sessions:0,last:null}]));
  const events=[],unknown=[],days=new Set();let total=0,knownSets=0,unassignedExtra=0,kgVolume=0,volumeSets=0;let csvOnly=0,csvExtra=0,csvOnlySets=0,csvOnlyReps=0,csvOnlyWithSets=0,csvOnlyWithReps=0;
  for(const session of sessions){const touched=new Set();days.add(session.day);
@@ -79,7 +84,8 @@ export function strengthPeriod(state,{range='28',today=day(new Date())}={}){
   if(session.summaryOnly){csvOnly++;if(session.reportedSets!==null){csvOnlyWithSets++;csvOnlySets+=session.reportedSets;}if(session.reportedReps!==null){csvOnlyWithReps++;csvOnlyReps+=session.reportedReps;}}
   else if(missing)csvExtra+=missing;
   for(const set of session.sets||[]){total++;
-   const category=strengthMuscles(set.category);
+   const manual=set.exerciseId?manualExerciseMuscles(set.exerciseId):null;
+   const category=manual?.known?manual:strengthMuscles(set.category);
    const primary=category.primary,secondary=category.secondary||[];
    const item={...set,sessionId:session.id,day:session.day,exercise:set.exercise||category.name};
    events.push(item);
@@ -100,7 +106,7 @@ export function strengthPeriod(state,{range='28',today=day(new Date())}={}){
   return {a,b,label,left:l,right:r,notable,under,ideas:under?STRENGTH_EXERCISE_IDEAS[under]:[]};
  });
  return {today,start,range:ranges[range]?range:'28',sessions,events,unknown,groups:ranked,maximum,
-  activeSets:total,knownSets,unassigned:unknown.length+unassignedExtra,trainingDays:days.size,
+  activeSets:total,knownSets,unassigned:unknown.length+unassignedExtra,trainingDays:days.size,coachSources,
   csvOnly,csvOnlySets,csvOnlyReps,csvOnlyWithSets,csvOnlyWithReps,csvExtra,
   volumeKg:volumeSets?kgVolume:null,volumeSets,balance,latest:sessions.at(-1)?.day||null,
   todayRecorded:sessions.some(s=>s.day===today)};
@@ -134,7 +140,7 @@ export function strengthTrainingDots(m){
  const grid=[0,.25,.5,.75,1].map(f=>`<line x1="${L}" y1="${Y(max*f)}" x2="${W-R}" y2="${Y(max*f)}" stroke="currentColor" opacity=".1"/><text x="${L-7}" y="${Y(max*f)+3}" text-anchor="end" class="str728-axis">${fmt(max*f,1)}</text>`).join('');
  const dots=rows.map((r,i)=>`<circle cx="${X(r).toFixed(2)}" cy="${Y(r.sets).toFixed(2)}" r="${rows.length>85?3.2:5}" fill="#437D83" stroke="var(--surface,#fff)" stroke-width="1.6"><title>${e(r.day)} · ${r.sets} aktive Sätze${r.day===m.today?' · Tag noch offen':''}</title></circle>`).join('');
  const labels=rows.filter((_,i)=>i%Math.max(1,Math.ceil(rows.length/12))===0||i===rows.length-1).map(r=>`<text x="${X(r)}" y="${H-10}" text-anchor="middle" class="str728-axis">${e(r.day.slice(5))}</text>`).join('');
- return `<div class="str728-dot-scroll" tabindex="0"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tagespunkte: dokumentierte FIT-Sätze oder Garmin-CSV-Gesamtsätze">${grid}${dots}${labels}</svg></div><p class="str728-note">Jeder Punkt zeigt die gemeldete Satzanzahl pro Trainingstag, auch aus Garmin Activities-CSV. Ohne Aktivitäts-FIT bleiben Übungsnamen und Muskelgruppen offen. Nicht erfasste Tage sind keine Nulltage. Der heutige Tag bleibt bis zum nächsten Import vorläufig.</p>`;
+ return `<div class="str728-dot-scroll" tabindex="0"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tagespunkte: dokumentierte Garmin- und bestätigte Coach-Sätze">${grid}${dots}${labels}</svg></div><p class="str728-note">Jeder Punkt zeigt die gemeldete oder bestätigte Satzanzahl pro Trainingstag aus Garmin und Coach. Ohne Aktivitäts-FIT bleiben Übungsnamen und Muskelgruppen offen. Nicht erfasste Tage sind keine Nulltage. Der heutige Tag bleibt bis zum nächsten Import vorläufig.</p>`;
 }
 const tone=x=>x===0?'#DBE5E1':x<2?'#B3D6CC':x<4?'#75B2A2':x<8?'#387C76':'#285F76';
 function bodySvg(model,side){
@@ -163,15 +169,16 @@ function activityTable(m){return m.sessions.length?`<details class="str728-detai
 export function strengthInsightsView(state,{range='28',side='front',today=day(new Date())}={}){
  const m=strengthPeriod(state,{range,today}); const groups=m.groups;
  return `<div class="str728-root" aria-label="Compass Krafttraining und Muskelkarte">
- <section class="work-card"><div class="work-heading"><span>💪 Krafttraining · Muscle Map</span><small>Garmin FIT + Activities-CSV · lokal im Tresor</small></div>
+ <section class="work-card"><div class="work-heading"><span>💪 Krafttraining · Muscle Map</span><small>Garmin FIT · Activities-CSV · Coach · lokal im Tresor</small></div>
  <div class="str728-toolbar"><div class="str728-ranges" role="group" aria-label="Trainingszeitraum">${Object.entries(ranges).map(([id,label])=>`<button type="button" data-action="str728-range" data-id="${id}" class="${m.range===id?'selected':''}" aria-pressed="${m.range===id}">${label}</button>`).join('')}</div><div class="str728-ranges" role="group" aria-label="Körperansicht">${[['front','Vorne'],['back','Hinten']].map(([id,label])=>`<button type="button" data-action="str728-side" data-id="${id}" class="${side===id?'selected':''}" aria-pressed="${side===id}">${label}</button>`).join('')}</div></div>
- ${m.csvOnly||m.csvExtra?`<p class="str728-csv-note"><strong>✓ Garmin-Krafttraining erkannt:</strong> ${m.csvOnly} CSV-Einheit(en) ohne Übungsdetails${m.csvOnly?` · ${m.csvOnlyWithSets?`${m.csvOnlySets} Sätze${m.csvOnlyWithSets<m.csvOnly?' (teilweise erfasst)':''}`:'Satzanzahl nicht angegeben'} · ${m.csvOnlyWithReps?`${m.csvOnlyReps} Wiederholungen${m.csvOnlyWithReps<m.csvOnly?' (teilweise erfasst)':''}`:'Wiederholungen nicht angegeben'}`:''}${m.csvExtra?` · ${m.csvExtra} weitere Sätze nur aus CSV`:''}. <span>Die Trainingsdaten zählen; für die farbige Muskelkarte fehlt die individuelle Aktivitäts-FIT-Datei.</span></p>`:''}
- <div class="str728-stats">${stat('Trainingstage',m.trainingDays,'im ausgewählten Zeitraum')}${stat('Aktive Sätze',m.activeSets===0&&m.sessions.length>0?'–':m.activeSets,m.activeSets===0&&m.sessions.length>0?'Satzanzahl nicht angegeben':`${m.knownSets} zugeordnet · ${m.unassigned} offen`)}${stat('Dok. Gewichtsvolumen',m.volumeKg===null?'–':fmt(m.volumeKg,1)+' kg',`${m.volumeSets} Sätze mit Zusatzgewicht × Wdh.`)}${stat('Letztes Training',m.latest||'–',m.todayRecorded?'Heute kann noch ergänzt werden':'Garmin-Einträge')}</div>
+ ${m.csvOnly||m.csvExtra?`<p class="str728-csv-note"><strong>✓ Garmin-Krafttraining erkannt:</strong> ${m.csvOnly} CSV-Einheit(en) ohne Übungsdetails${m.csvOnly?` · ${m.csvOnlyWithSets?`${m.csvOnlySets} Sätze${m.csvOnlyWithSets<m.csvOnly?' (teilweise erfasst)':''}`:'Satzanzahl nicht angegeben'} · ${m.csvOnlyWithReps?`${m.csvOnlyReps} Wiederholungen${m.csvOnlyWithReps<m.csvOnly?' (teilweise erfasst)':''}`:'Wiederholungen nicht angegeben'}`:''}${m.csvExtra?` · ${m.csvExtra} weitere Sätze nur aus CSV`:''}. <span>Unbekannte Sätze bleiben offen. Bestätigte Coach-Sätze können die Zuordnung ergänzen.</span></p>`:''}
+ ${m.coachSources.coachSets||m.coachSources.pairedSets||m.coachSources.matchedSets?`<p class="str728-note"><strong>Coach + Garmin:</strong> ${m.coachSources.coachSets} bestätigte Coach-Sätze ergänzt · ${m.coachSources.pairedSets} Garmin-Sätze zugeordnet · ${m.coachSources.matchedSets} bereits zugeordnete Übereinstimmungen nicht doppelt gezählt${m.coachSources.unresolvedPairs?` · ${m.coachSources.unresolvedPairs} Sätze bei zeitlich überlappenden Einheiten noch zu prüfen`:``}.</p>`:``}
+ <div class="str728-stats">${stat('Trainingstage',m.trainingDays,'im ausgewählten Zeitraum')}${stat('Aktive Sätze',m.activeSets===0&&m.sessions.length>0?'–':m.activeSets,m.activeSets===0&&m.sessions.length>0?'Satzanzahl nicht angegeben':`${m.knownSets} zugeordnet · ${m.unassigned} offen`)}${stat('Dok. Gewichtsvolumen',m.volumeKg===null?'–':fmt(m.volumeKg,1)+' kg',`${m.volumeSets} Sätze mit Zusatzgewicht × Wdh.`)}${stat('Letztes Training',m.latest||'–',m.todayRecorded?'Heute kann noch ergänzt werden':'Garmin + Coach')}</div>
  <div class="str728-visual"><div class="str728-body-panel">${bodySvg(m,side)}<p class="str728-caption">${side==='front'?'Vorderseite':'Rückseite'} · klassifizierte Übungssätze; Farbintensität nach dokumentierten Haupt- und Nebenbeteiligungen</p></div><div class="str728-distribution"><h3>Beanspruchte Gruppen <small>Haupt / unterstützend</small></h3>${groupTiles(m)}<div class="str728-key"><i style="background:#DBE5E1"></i> Keine klassifizierten Sätze <i style="background:#285F76"></i> mehr erfasste Satzbeteiligungen</div></div></div>
- <p class="str728-note"><strong>Wichtig:</strong> Die Muskelzuordnung ist eine nachvollziehbare <em>Heuristik aus FIT-Übungskategorien</em>, nicht Garmins exakte Muskelkarte und keine direkte Messung von Muskelwachstum. Unbenannte oder nicht eindeutig klassifizierte Übungen bleiben offen – nicht automatisch „untrainiert“.</p>
+ <p class="str728-note"><strong>Wichtig:</strong> Die Muskelzuordnung ist eine nachvollziehbare <em>Heuristik aus FIT-Kategorien und bestätigten Übungszuordnungen</em>, nicht Garmins exakte Muskelkarte und keine direkte Messung von Muskelwachstum. Unbenannte oder nicht eindeutig klassifizierte Übungen bleiben offen – nicht automatisch „untrainiert“.</p>
  </section>
  <section class="work-card"><div class="work-heading"><span>📈 Trainingsrhythmus · einzelne Tagespunkte</span><small>aktive Sätze</small></div>${strengthTrainingDots(m)}</section>
  <section class="work-card"><div class="work-heading"><span>⚖️ Trainingsbalance &amp; Übungsideen</span><small>Vorschläge, keine Vorgaben</small></div>${ideas(m)}</section>
- <section class="work-card"><div class="work-heading"><span>🗓️ Trainingsjournal</span><small>${m.sessions.length} Trainingseinheiten</small></div>${activityTable(m)}<p class="str728-note">Erneute Garmin-Imports ergänzen Einheiten ohne Doppelzählung: Für dieselbe Aktivität werden FIT-Einzelsätze und die CSV-Zusammenfassung anhand des Startzeitpunkts zusammengeführt. An einem noch laufenden Tag gelten alle Ergebnisse als Zwischenstand; Mehrfachimporte zählen nicht doppelt.</p></section>
+ <section class="work-card"><div class="work-heading"><span>🗓️ Trainingsjournal</span><small>${m.sessions.length} Trainingseinheiten</small></div>${activityTable(m)}<p class="str728-note">Erneute Garmin-Imports ergänzen Einheiten ohne Doppelzählung: Für dieselbe Aktivität werden FIT-Einzelsätze und die CSV-Zusammenfassung anhand des Startzeitpunkts zusammengeführt. An einem noch laufenden Tag gelten alle Ergebnisse als Zwischenstand; Exakt zugeordnete Coach-/Garmin-Satzpaare zählen nicht doppelt; unsichere Überschneidungen bleiben sichtbar.</p></section>
  </div>`;
 }

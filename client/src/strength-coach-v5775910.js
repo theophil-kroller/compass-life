@@ -3,6 +3,7 @@
  * Heuristics are training-planning aids rather than EMG or injury assessment.
  */
 import {strengthPeriod} from './strength-insights-v57728.js';
+import {strengthCoachHealthContext} from './strength-coach-recovery-v5775926.js';
 import {detailedMuscleData} from './strength-anatomy-v57737.js';
 import {EXERCISES} from './strength-editor-v57732.js';
 import './strength-coach-v5775910.css';
@@ -245,8 +246,9 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  const location=equipment==='gym'?'gym':'home';
  const budget=[25,45,65].includes(Number(minutes))?Number(minutes):45;
  const profile=GOALS[selectedGoal];
- const period=strengthPeriod(state,{range:'28',today:todayValue});
+ const period=strengthPeriod(state,{range:'28',today:todayValue,includeCoach:false});
  const history=annotatedHistory(period,todayValue,state);
+ const health=strengthCoachHealthContext(state,{today:todayValue});
  const strongLifts=selectedGoal==='strength'&&location==='gym'&&mode==='stronglifts'; // never prescribe StrongLifts at home
  const variant=strongLifts?nextStrongLiftsVariant(history):null;
  let ids=strongLifts?STRONG_LIFTS[variant].map(x=>x[0]):[...WORKOUT_POOLS[selectedGoal][location]];
@@ -287,7 +289,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  });
  const latestAge=ageDays(history.latest,todayValue);
  const recentlyTrained=history.valid.length>0&&latestAge!==null&&latestAge<=1;
- const cautious=recentlyTrained;
+ const cautious=recentlyTrained||health.attention;
  const suggestRecovery=exercises.some(x=>x.ageDays!==null&&x.ageDays<=1&&x.sevenSets>=3);
  // Rough session duration, not a promise or a scheduling commitment.
  const estimatedMinutes=Math.round(exercises.reduce((sum,x)=>sum+x.sets*(x.reps==='5'?1.0:0.8)+(x.sets-1)*x.restSeconds/60,5));
@@ -300,7 +302,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   {name:'Vorder- / Rückseite Beine',one:history.counts7.quads||0,two:history.counts7.posterior||0}
  ]:[];
  return {goal:selectedGoal,equipment:location,budget,mode:strongLifts?'stronglifts':'smart',trainingFocus:strongLifts?'Kraft · schweres 5×5':selectedGoal==='vtaper'?'Hypertrophie · kontrollierte 8–15+ Wiederholungen':'Zielorientiertes Training',homeEquipment:location==='home'?{...HOME_EQUIPMENT}:null,profile,variant,exercises,estimatedMinutes,timeFit,
-  cautious,recentlyTrained,latestAge,suggestRecovery,evidence,known,missing,history,sourceStats:history.sourceStats,balances,
+  cautious,recentlyTrained,latestAge,suggestRecovery,evidence,known,missing,history,sourceStats:history.sourceStats,balances,health,
   title:strongLifts?`StrongLifts 5×5 · Workout ${variant}`:selectedGoal==='vtaper'?'V-Taper · Rücken & Schultern':selectedGoal==='abs'?'Core & Ganzkörper':selectedGoal==='strength'?`Kraft · ${location==='gym'?'Gym':'Zuhause'}`:'Muskelbalance · Ganzkörper',
   recoveryNote:suggestRecovery?'Rücken/Schultern oder andere geplante Muskeln wurden erst kürzlich mehrfach beansprucht. Heute ggf. Pause, Mobilität oder andere Muskelgruppen wählen; keine exakt berechnete biologische Regeneration.':cautious?'Letztes bestätigtes Coach- oder zugeordnetes Garmin-Training heute/gestern. Diesen Vorschlag erst am nächsten geeigneten Trainingstag umsetzen; vorher Erholung und Leistungsfähigkeit prüfen.':
    evidence==='none'?'Keine zugeordneten Übungssätze vorhanden: Es gibt keine belastbare Aussage zur Regeneration.':
@@ -314,7 +316,7 @@ function saveCoachPrefs(p){try{localStorage.setItem(WORKOUT_PREF_KEY,JSON.string
 function coachCopyText(plan){
  return [plan.title,`${plan.equipment==='home'?'Zuhause':'Gym'} · etwa ${plan.estimatedMinutes} min`,
   ...plan.exercises.map((x,i)=>`${i+1}. ${x.title}: ${x.sets} × ${x.reps}; Pause ${x.restSeconds} s${x.lastKg!==null?`; zuletzt ${x.lastKg} kg`:``}; ${x.progressionHint}`),
-  plan.recoveryNote,'Trainingsempfehlung, keine automatische Trainingsfreigabe.'].join('\n');
+  plan.recoveryNote,plan.health?.guidance||'',plan.health?.bodyNote||'','Trainingsempfehlung, keine automatische Trainingsfreigabe.'].join('\n');
 }
 
 export function readStrengthCoachPreferences(){return coachPrefs();}
@@ -339,6 +341,14 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
   </div>
   ${prefs.goal==='strength'&&prefs.equipment==='gym'?`<div class="str621-method" role="group" aria-label="Trainingsmethode"><span>Trainingsmethode</span><button type="button" data-mode="smart" aria-pressed="${prefs.mode!=='stronglifts'}" class="${prefs.mode!=='stronglifts'?'active':''}">Intelligenter Mix</button><button type="button" data-mode="stronglifts" aria-pressed="${prefs.mode==='stronglifts'}" class="${prefs.mode==='stronglifts'?'active':''}">StrongLifts 5×5</button></div>`:''}
   <details class="str623-more"><summary>Equipmentdetails</summary><div class="str621-equipment-note">${prefs.equipment==='home'?'Zuhause: zwei verstellbare Kurzhanteln, nahezu gewichtslose Verbindungsstange, Ab Wheel · vier Scheiben je 2,5 / 2 / 1,5 / 1 kg = 28 kg Scheiben insgesamt; Bei zwei symmetrisch beladenen Kurzhanteln wären das je höchstens 14 kg Scheiben; für eine einzelne Hantel können mehr Scheiben verwendet werden. Griffgewichte separat erfassen.':'Gym: schwere Langhanteln, Maschinen und Kabelzug · StrongLifts nur auf Wunsch.'}</div></details>
+  <section class="str626-context" aria-label="Persönlicher Schlaf-HRV-Körpertrend" style="margin:10px 0;padding:14px;border:1px solid #c8dcd3;border-radius:14px;background:rgba(238,247,242,.65)">
+   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>🌙 Schlaf · ♥ HRV · Fitdays</strong><small>${plan.health.status==='attention'?'Zwei Trends unter Vergleich':'Persönliche Vergleichswerte · kein Recovery-Score'}</small></div>
+   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px">
+    <div><small>Schlaf · Median</small><strong style="display:block">${plan.health.sleep.usable?`${safe(Math.round(plan.health.sleep.recentMinutes))} / ${safe(Math.round(plan.health.sleep.baselineMinutes))} min`:'Zu wenig Werte'}</strong><small>${plan.health.sleep.usable?`Δ ${safe(plan.health.sleep.deltaMinutes)} min · ${plan.health.sleep.recentCount} Nächte`:`${plan.health.sleep.recentCount} aktuell · ${plan.health.sleep.baselineCount} Referenz`}</small></div>
+    <div><small>Nächtliche HRV · Median</small><strong style="display:block">${plan.health.hrv.usable?`${safe(plan.health.hrv.recentMs)} / ${safe(plan.health.hrv.baselineMs)} ms`:'Zu wenig Werte'}</strong><small>${plan.health.hrv.usable?`Δ ${safe(plan.health.hrv.deltaPct)} % · ${plan.health.hrv.recentCount} Nächte`:`${plan.health.hrv.recentCount} aktuell · ${plan.health.hrv.baselineCount} Referenz`}</small></div>
+    <div><small>Fitdays</small><strong style="display:block">${plan.health.body.latest?`${safe(plan.health.body.latest.weightKg)} kg`:'Noch keine Messung'}</strong><small>${plan.health.body.latest?`${safe(plan.health.body.latest.day)} · ${plan.health.body.latest.bodyFatPct===null?'KF unbekannt':safe(plan.health.body.latest.bodyFatPct)+' % KF'}`:'Kein Körpertrend möglich'}</small></div>
+   </div><p style="font-size:12px;margin:10px 0 4px">${safe(plan.health.guidance)}</p><details><summary>Körperkomposition · Vergleich · Methodik</summary><p>${safe(plan.health.bodyNote)}</p><p>${safe(plan.health.method)}</p></details>
+  </section>
   <section class="str619-plan-head" aria-label="Vorgeschlagener Trainingsplan"><div><small>${plan.cautious?'FÜR DEN NÄCHSTEN TRAININGSTAG':'DEIN VORSCHLAG'}</small><h3>${safe(plan.title)}</h3><p>${plan.exercises.length} Übungen · ${plan.equipment==='home'?'Zuhause':'Gym'} · ${safe(plan.trainingFocus)}</p>${plan.sourceStats.coachConfirmed?`<small class="str624-hist-badge">✓ ${plan.sourceStats.coachConfirmed} Coach-Sätze aus dem Vault berücksichtigt</small>`:''}</div><div class="str620-cta-stack"><button type="button" class="str620-launch" aria-label="Geführtes Workout starten">▶ Workout starten</button><button type="button" class="str619-copy">Plan kopieren</button></div></section>
   ${plan.suggestRecovery?`<aside class="str625-rest-advice" style="background:#f0f4ed;border-left:3px solid #688b76;padding:9px 12px;border-radius:9px;margin:9px 0;font-size:12px">Heute eher Erholung oder andere Muskelgruppen einplanen. <details><summary>Begründung</summary><p>${safe(plan.recoveryNote)}</p></details></aside>`:``}
   ${plan.timeFit==='longer'?`<p class="str619-alert">Dieser Plan benötigt voraussichtlich mehr als die gewählten ${plan.budget} Minuten. Die Sätze werden nicht künstlich verkürzt.</p>`:''}
