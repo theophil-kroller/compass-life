@@ -47,7 +47,7 @@ export function compass5928VtaperLuxBridge(){
  const period=strengthPeriod(state,{range:'28',today:todayValue,includeCoach:false});`,'train level calculation');
    patch("const [sets,reps,restSeconds]=spec?", "const [sets,reps,restSeconds]=spec?",'prescription identity');
    patch("  const primary=item.primary||IDEAS.find",`  // Session dosage is conservative when little performance history is available.
-  const adjustedSets=strongLifts?sets:(selectedGoal==='vtaper'&&level.level==='beginner'?Math.min(sets,2):sets);
+  const adjustedSets=strongLifts?sets:coach34RecommendedSets({state,goal:selectedGoal,exerciseId:id,primary:item.primary||'core',baseSets:sets,level,history,health,today:todayValue});
   const primary=item.primary||IDEAS.find`,'adaptive volume');
    patch("id,{reps,sets,equipment:location,strongLifts}", "id,{reps,sets:adjustedSets,equipment:location,strongLifts}",'progression matches sets');
    patch("kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets,reps,restSeconds", "kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets:adjustedSets,reps,restSeconds",'adaptive sets in plan');

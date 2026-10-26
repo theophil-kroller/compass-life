@@ -28,9 +28,19 @@ export function familyKind(subject){
 }
 export function familyIsReminder(subject){return /\b(in einer woche|eine woche vorher|noch (7|sieben) tage|erinnerung|reminder|vorwarnung)\b/i.test(clean(subject));}
 function subjectKey(subject){return clean(subject).replace(/\b(in einer woche|eine woche vorher|noch (7|sieben) tage|erinnerung|reminder|vorwarnung)\b/g,'').replace(/[^a-z\d ]/g,' ').replace(/\s+/g,' ').trim();}
+/** Child-specific and opt-in. A calendar name prefix never establishes kinship or age.
+ * Bootstrap the two already-confirmed children only; new children need explicit
+ * profile classification as Familie + opt-in Child role in this panel.
+ * Existing .31 enabled:true without a child role is NOT a trusted declaration.
+ */
 export function familyRules(state,person){
  const saved=state?.familyRadar?.rules?.[person?.id]||{};
- return {enabled:saved.enabled!==false,mathSupport:saved.mathSupport!==false,mathLead:Math.max(1,Math.min(60,Number(saved.mathLead)||14)),deadlineLead:Math.max(1,Math.min(90,Number(saved.deadlineLead)||21)),otherExams:saved.otherExams==='support'?'support':'observe'};
+ const name=clean(person?.name);
+ const knownChild=['nathanael','seraphina'].includes(name);
+ const role=saved.role==='child'?'child':saved.role==='information'?'information':saved.role==='off'?'off':knownChild?'child':'off';
+ const eligible=role==='child'&&(knownChild||person?.relationKind==='family');
+ const enabled=eligible&&saved.enabled!==false;
+ return {enabled,eligible,role,mathSupport:saved.mathSupport!==false,mathLead:Math.max(1,Math.min(60,Number(saved.mathLead)||14)),deadlineLead:Math.max(1,Math.min(90,Number(saved.deadlineLead)||21)),otherExams:saved.otherExams==='support'?'support':'observe'};
 }
 /** Groups one-week reminders under the real exam and never invents a second deadline.
  * When the main event isn't in the fetched horizon, orphan reminders stay informational.
@@ -99,7 +109,7 @@ const makeTask=(key,title,person,event,uuid,plannedDate=null,dueDate=null)=>({
 });
 /** Invoke only after the user explicitly accepts. Mutates only the user's already-unlocked vault state. */
 export function familyAccept(state,entry,person,{today,uuid}={}){
- if(!entry||!person||!isDay(today)||typeof uuid!=='function')return {created:[],reason:'invalid'};
+ if(!entry||!person||!familyRules(state,person).enabled||!isDay(today)||typeof uuid!=='function')return {created:[],reason:'invalid'};
  const key=entry.key,existing=Object.values(state.tasks||{}).filter(t=>t.familyRadarKey===key),prior=state?.familyRadar?.decisions?.[key];
  if(existing.length||prior?.status==='accepted')return {created:[],reason:'existing'};
  const generated=[];
@@ -120,7 +130,7 @@ export function familyAccept(state,entry,person,{today,uuid}={}){
 }
 /** Optional explicit project plan for paperwork, never an automatic Calendar mutation. */
 export function familyAcceptProject(state,entry,person,{today,uuid}={}){
- if(!entry||entry.action?.kind!=='organise'||!person||!isDay(today)||typeof uuid!=='function')return {project:null,tasks:[],reason:'invalid'};
+ if(!entry||entry.action?.kind!=='organise'||!person||!familyRules(state,person).enabled||!isDay(today)||typeof uuid!=='function')return {project:null,tasks:[],reason:'invalid'};
  const key=entry.key;
  if(state?.familyRadar?.decisions?.[key]?.status==='accepted'||Object.values(state?.projects||{}).some(p=>p.familyRadarKey===key)||Object.values(state?.tasks||{}).some(t=>t.familyRadarKey===key))return {project:null,tasks:[],reason:'existing'};
  state.projects??={};state.projectPending??={};state.tasks??={};state.taskPending??={};
@@ -145,7 +155,7 @@ export function familyPersonPanel(entries,suggestions,person,rules=familyRules({
  if(!person)return '';
  const items=entries.slice(0,12),actions=new Map(suggestions.filter(s=>s.personId===person.id).map(s=>[s.id,s]));
  return `<section class="work-card fr31-person" aria-label="Family Radar – bevorstehende Ereignisse"><div class="fr31-head"><strong>◉ Family Radar · ${esc(person.name)}</strong><small>Google Kalender · nächste 30 Tage</small></div>${items.length?items.map(e=>{
-  const rec=actions.get(e.id);return `<div class="fr31-row"><span class="fr31-date">${esc(prettyDay(e.day))}</span><div class="fr31-detail"><strong>${esc(e.title)}</strong><small>${esc(({exam:'Schularbeit / Prüfung',deadline:'Organisatorische Frist',project:'Projektwoche',holiday:'Ferien',reminder:'Erinnerung',event:'Termin'})[e.kind])}${e.linkedReminders.length?' · Erinnerung zugeordnet':''}</small>${rec?`<div class="fr31-actions"><span>${esc(rec.action.why)}</span><button type="button" data-action="fr31-accept" data-id="${esc(rec.key)}">${rec.action.kind==='learning'?'2 Lernaufgaben anlegen':'Vorbereitung übernehmen'}</button>${rec.action.kind==='organise'?`<button type="button" data-action="fr31-project" data-id="${esc(rec.key)}">Projektplan anlegen</button>`:''}<button type="button" data-action="fr31-snooze" data-id="${esc(rec.key)}">Später</button><button type="button" data-action="fr31-dismiss" data-id="${esc(rec.key)}">Verwerfen</button></div>`:''}</div></div>`}).join(''):'<p class="fr31-empty">Keine zugeordneten Familienereignisse im nächsten Monat. Kalender und Namenspräfixe prüfen.</p>'}<details class="fr31-rules"><summary>Unterstützungsregeln für ${esc(person.name)}</summary><form id="fr31-settings-form" data-person="${esc(person.id)}"><label><input name="enabled" type="checkbox" ${rules.enabled?'checked':''}>Automatische Kalenderzuordnung</label><label><input name="mathSupport" type="checkbox" ${rules.mathSupport?'checked':''}>Mathematik: gemeinsam lernen</label><label>Mathe-Vorlauf <input name="mathLead" type="number" min="1" max="60" value="${rules.mathLead}"> Tage</label><label>Andere Schularbeiten <select name="otherExams"><option value="observe" ${rules.otherExams==='observe'?'selected':''}>Nur beobachten</option><option value="support" ${rules.otherExams==='support'?'selected':''}>Lernunterstützung</option></select></label><label>Organisatorische Fristen <input name="deadlineLead" type="number" min="1" max="90" value="${rules.deadlineLead}"> Tage vorher</label><button type="button" data-action="fr31-rules-save" data-id="${esc(person.id)}">Regeln speichern</button></form></details><small class="fr31-disclaimer">Termine werden nur gelesen. Vorschläge ändern den geteilten Kalender nicht.</small></section>`;
+  const rec=actions.get(e.id);return `<div class="fr31-row"><span class="fr31-date">${esc(prettyDay(e.day))}</span><div class="fr31-detail"><strong>${esc(e.title)}</strong><small>${esc(({exam:'Schularbeit / Prüfung',deadline:'Organisatorische Frist',project:'Projektwoche',holiday:'Ferien',reminder:'Erinnerung',event:'Termin'})[e.kind])}${e.linkedReminders.length?' · Erinnerung zugeordnet':''}</small>${rec?`<div class="fr31-actions"><span>${esc(rec.action.why)}</span><button type="button" data-action="fr31-accept" data-id="${esc(rec.key)}">${rec.action.kind==='learning'?'2 Lernaufgaben anlegen':'Vorbereitung übernehmen'}</button>${rec.action.kind==='organise'?`<button type="button" data-action="fr31-project" data-id="${esc(rec.key)}">Projektplan anlegen</button>`:''}<button type="button" data-action="fr31-snooze" data-id="${esc(rec.key)}">Später</button><button type="button" data-action="fr31-dismiss" data-id="${esc(rec.key)}">Verwerfen</button></div>`:''}</div></div>`}).join(''):'<p class="fr31-empty">Keine zugeordneten Familienereignisse im nächsten Monat. Kalender und Namenspräfixe prüfen.</p>'}<details class="fr31-rules"><summary>Unterstützungsregeln für ${esc(person.name)}</summary><form id="fr31-settings-form" data-person="${esc(person.id)}"><label>Familienradar-Rolle<select name="role"><option value="off" ${rules.role==='off'?'selected':''}>Nicht für Familienradar verwenden</option><option value="child" ${rules.role==='child'?'selected':''}>Kind – Lern- und Fristunterstützung</option><option value="information" ${rules.role==='information'?'selected':''}>Nur Familie – informativ</option></select></label><label><input name="enabled" type="checkbox" ${rules.enabled?'checked':''}>Lern- und Fristvorschläge aktivieren</label><label><input name="mathSupport" type="checkbox" ${rules.mathSupport?'checked':''}>Mathematik: gemeinsam lernen</label><label>Mathe-Vorlauf <input name="mathLead" type="number" min="1" max="60" value="${rules.mathLead}"> Tage</label><label>Andere Schularbeiten <select name="otherExams"><option value="observe" ${rules.otherExams==='observe'?'selected':''}>Nur beobachten</option><option value="support" ${rules.otherExams==='support'?'selected':''}>Lernunterstützung</option></select></label><label>Organisatorische Fristen <input name="deadlineLead" type="number" min="1" max="90" value="${rules.deadlineLead}"> Tage vorher</label><button type="button" data-action="fr31-rules-save" data-id="${esc(person.id)}">Regeln speichern</button></form></details><small class="fr31-disclaimer">Termine werden nur gelesen. Vorschläge ändern den geteilten Kalender nicht.</small></section>`;
 }
 export function familyTodayPanel(suggestions){
  const items=suggestions.filter(s=>s.action&&s.daysLeft<=Math.max(s.action.lead,14)).slice(0,2);

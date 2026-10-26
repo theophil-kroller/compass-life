@@ -27,7 +27,7 @@ import {deadlineIntelligence}`,'family radar import');
    const familySelected=options.find(p=>p.id===selectedPersonId)||options[0];
    if(familySelected){
     const familySettings=familyRules(state,familySelected);
-    content=familyPersonPanel(familySettings.enabled?familyEvents(familyVisible,familySelected,{today:familyNow}):[],familyProposals,familySelected,familySettings)+content;
+    if(familySettings.enabled||familySelected.relationKind==='family')content=familyPersonPanel(familySettings.enabled?familyEvents(familyVisible,familySelected,{today:familyNow}):[],familyProposals,familySelected,familySettings)+content;
    }
   }
  }`,'read-only family panels');
@@ -37,7 +37,7 @@ import {deadlineIntelligence}`,'family radar import');
   const person=state?.people?.[id],form=app.querySelector('#fr31-settings-form');if(!person||!form||form.dataset.person!==id)return;
   const data=new FormData(form),mathLead=Number(data.get('mathLead')),deadlineLead=Number(data.get('deadlineLead'));
   if(!Number.isInteger(mathLead)||mathLead<1||mathLead>60||!Number.isInteger(deadlineLead)||deadlineLead<1||deadlineLead>90)return toast('Bitte gültige Vorlaufzeiten eingeben.',true);
-  await mutate(s=>{s.familyRadar??={};s.familyRadar.rules??={};s.familyRadar.rules[id]={enabled:data.has('enabled'),mathSupport:data.has('mathSupport'),mathLead,deadlineLead,otherExams:data.get('otherExams')==='support'?'support':'observe'};});toast('Familiäre Unterstützungsregeln gespeichert.');return;
+  await mutate(s=>{s.familyRadar??={};s.familyRadar.rules??={};s.familyRadar.rules[id]={role:['child','off','information'].includes(data.get('role'))?data.get('role'):'off',enabled:data.has('enabled')&&data.get('role')==='child',mathSupport:data.has('mathSupport'),mathLead,deadlineLead,otherExams:data.get('otherExams')==='support'?'support':'observe'};});toast('Familiäre Unterstützungsregeln gespeichert.');return;
  }
  if(['fr31-accept','fr31-project','fr31-dismiss','fr31-snooze'].includes(action)){
   if(!state)return;

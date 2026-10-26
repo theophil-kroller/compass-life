@@ -1,0 +1,14 @@
+/* Compass .59.34: small optional RIR quick-capture, no changes to initial app load */
+.str34-rir-panel{border:1px solid #dfebe4;background:#f7faf8;border-radius:12px;padding:10px 12px;margin:10px 0}
+.str34-rir-panel .str34-rir-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px;font-size:12px;color:#3f6555}
+.str34-rir-values{display:flex;gap:5px;flex-wrap:wrap}
+.str34-rir-values button{border:1px solid #cadbd1;background:#fff;border-radius:9px;padding:9px 11px;min-height:39px;font:600 12px inherit;color:#315f4c;cursor:pointer}
+.str34-rir-values button[aria-pressed=true]{background:#285d49;border-color:#285d49;color:#fff}
+.str34-rir-other summary{color:#708274;font-size:11px;margin-top:9px;cursor:pointer}
+.str34-rir-other label{display:inline-flex;gap:8px;align-items:center;margin:6px 9px 0 0;font-size:11px;color:#486859}
+.str34-rir-other select{background:#fff;border:1px solid #d2e0d7;border-radius:7px;min-width:60px;padding:6px}
+.str34-volume{margin:10px 0;border:1px solid #dce8e0;border-radius:12px;padding:11px 13px;background:#f8faf8}
+.str34-volume strong{font-size:12px;color:#356451}
+.str34-volume p{font-size:11px;margin:6px 0 0;color:#6f8277}
+.str34-volume-row{display:flex;justify-content:space-between;gap:8px;margin-top:5px;font-size:12px;color:#456956}
+@media(max-width:650px){.str34-rir-values button{flex:1;min-width:36px;padding:8px 5px}.str34-volume{padding:9px}}
