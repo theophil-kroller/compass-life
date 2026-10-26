@@ -1,0 +1,10 @@
+/* Compact, opt-in contact recovery. No new header or focus-mode navigation. */
+.p5933-recovery{border:1px solid #d7e4db!important;background:#f7faf7!important;border-radius:13px!important;padding:13px 15px!important;margin:0 0 12px!important;max-width:100%;min-width:0}
+.p5933-recovery-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.p5933-recovery-head strong{font-size:13px;color:#315e49}.p5933-recovery-head small{font-size:11px;color:#718779}
+.p5933-recovery p{font-size:12px;line-height:1.45;margin:5px 0 7px;color:#4c6758;overflow-wrap:anywhere}
+.p5933-recovery p strong{color:#2d4d3d}
+.p5933-recovery-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.p5933-recovery-actions span{font-size:10px;color:#718779;min-width:0;flex:1}
+.p5933-recovery .p5933-recovery-btn{min-height:38px;padding:8px 12px;flex:0 0 auto}
+@media(max-width:580px){.p5933-recovery{padding:10px 12px!important}.p5933-recovery-actions{align-items:stretch;flex-direction:column}.p5933-recovery .p5933-recovery-btn{width:100%}}

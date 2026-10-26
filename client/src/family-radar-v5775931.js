@@ -64,9 +64,26 @@ export const familyDecisionKey=(e,kind)=>`${e.personId}::${e.id}::${kind}`;
 export function familySuggestions(events,people,state,{today=new Date().toISOString().slice(0,10),horizon=FAMILY_RADAR_HORIZON,includeHidden=()=>true}={}){
  const decisions=state?.familyRadar?.decisions||{};
  const out=[];
+ // One linear calendar pass. The former algorithm scanned every event again
+ // for every person on each Today render (O(people × events)). Keep it pure:
+ // calendar edits and renamed prefixes take effect on the very next render.
+ const byPrefix=new Map();
+ for(const event of Array.isArray(events)?events:[]){
+  if(!event?.id||event.status==='cancelled')continue;
+  const name=String(event.summary||'');const sep=name.indexOf(':');
+  if(sep<1||sep>60)continue;
+  const prefix=clean(name.slice(0,sep));
+  if(!byPrefix.has(prefix))byPrefix.set(prefix,[]);
+  byPrefix.get(prefix).push(event);
+ }
  for(const person of Object.values(people||{})){
   const rules=familyRules(state,person);if(!rules.enabled)continue;
-  for(const event of familyEvents(events,person,{today,horizon,includeHidden})){
+  const candidates=[],seen=new Set();
+  for(const alias of aliasList(person))for(const event of byPrefix.get(alias)||[]){
+   if(seen.has(event.id))continue;
+   seen.add(event.id);candidates.push(event);
+  }
+  for(const event of familyEvents(candidates,person,{today,horizon,includeHidden})){
    const action=familyActionFor(event,rules,today);if(!action)continue;
    const key=familyDecisionKey(event,action.kind);
    const decision=decisions[key];
@@ -131,7 +148,7 @@ export function familyPersonPanel(entries,suggestions,person,rules=familyRules({
   const rec=actions.get(e.id);return `<div class="fr31-row"><span class="fr31-date">${esc(prettyDay(e.day))}</span><div class="fr31-detail"><strong>${esc(e.title)}</strong><small>${esc(({exam:'Schularbeit / Prüfung',deadline:'Organisatorische Frist',project:'Projektwoche',holiday:'Ferien',reminder:'Erinnerung',event:'Termin'})[e.kind])}${e.linkedReminders.length?' · Erinnerung zugeordnet':''}</small>${rec?`<div class="fr31-actions"><span>${esc(rec.action.why)}</span><button type="button" data-action="fr31-accept" data-id="${esc(rec.key)}">${rec.action.kind==='learning'?'2 Lernaufgaben anlegen':'Vorbereitung übernehmen'}</button>${rec.action.kind==='organise'?`<button type="button" data-action="fr31-project" data-id="${esc(rec.key)}">Projektplan anlegen</button>`:''}<button type="button" data-action="fr31-snooze" data-id="${esc(rec.key)}">Später</button><button type="button" data-action="fr31-dismiss" data-id="${esc(rec.key)}">Verwerfen</button></div>`:''}</div></div>`}).join(''):'<p class="fr31-empty">Keine zugeordneten Familienereignisse im nächsten Monat. Kalender und Namenspräfixe prüfen.</p>'}<details class="fr31-rules"><summary>Unterstützungsregeln für ${esc(person.name)}</summary><form id="fr31-settings-form" data-person="${esc(person.id)}"><label><input name="enabled" type="checkbox" ${rules.enabled?'checked':''}>Automatische Kalenderzuordnung</label><label><input name="mathSupport" type="checkbox" ${rules.mathSupport?'checked':''}>Mathematik: gemeinsam lernen</label><label>Mathe-Vorlauf <input name="mathLead" type="number" min="1" max="60" value="${rules.mathLead}"> Tage</label><label>Andere Schularbeiten <select name="otherExams"><option value="observe" ${rules.otherExams==='observe'?'selected':''}>Nur beobachten</option><option value="support" ${rules.otherExams==='support'?'selected':''}>Lernunterstützung</option></select></label><label>Organisatorische Fristen <input name="deadlineLead" type="number" min="1" max="90" value="${rules.deadlineLead}"> Tage vorher</label><button type="button" data-action="fr31-rules-save" data-id="${esc(person.id)}">Regeln speichern</button></form></details><small class="fr31-disclaimer">Termine werden nur gelesen. Vorschläge ändern den geteilten Kalender nicht.</small></section>`;
 }
 export function familyTodayPanel(suggestions){
- const items=suggestions.filter(s=>s.action&&s.daysLeft<=Math.max(s.action.lead,14)).slice(0,3);
+ const items=suggestions.filter(s=>s.action&&s.daysLeft<=Math.max(s.action.lead,14)).slice(0,2);
  if(!items.length)return '';
  return `<section class="fr31-today" aria-label="Wichtige Familienhinweise"><span>◉ Familie</span><div>${items.map(s=>`<button type="button" data-action="fr31-person" data-id="${esc(s.personId)}"><strong>${esc(s.personName)}</strong>: ${esc(s.title)} <small>in ${s.daysLeft} Tagen · ${s.action.kind==='learning'?'Lernvorbereitung':'Organisation'} empfohlen</small></button>`).join('')}</div></section>`;
 }

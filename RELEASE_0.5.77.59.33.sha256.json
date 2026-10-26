@@ -1,0 +1,10 @@
+{
+  "client/src/main.js": "f5f231388f6e5241f8ebff7a1699a391e8fea4163b67608d47112cadca1376bd",
+  "client/src/people-mobile-recovery-v5775933.js": "09d8ab86529318f3556979150bfa6b4ca558601cbf58276d0e25a07e16c910e9",
+  "client/src/people-mobile-recovery-v5775933.css": "2b5d8f6c946e7db047a9257ab3134781973003a9bd35b9a5bfad7969445c82b1",
+  "client/src/family-radar-v5775931.js": "b6c26f9b2164da55f824a12de8e22a2f00ffd542612cbb9586437d9c0d5be722",
+  "client/compass5933-people-family-bridge.js": "3defdc53cd4ddaf55a24095302f6a601973da21b991f25a7fb3bc10f504f1906",
+  "client/vite.config.js": "0e6f476d63fd5e4069cc37fa023f84c74fefe52a14d57839b875dc0b25864916",
+  "tests/compass-05775933-people-family.test.mjs": "02cef1413ad2ae1014fbfdea12bccd011bf0e61f3db8a19b136ac6089c673e0e",
+  "RELEASE_0.5.77.59.33.md": "04657a886e5399ecf90b610b09b2eb0e9959b8fe42128aeb5a824162a8119dcd"
+}

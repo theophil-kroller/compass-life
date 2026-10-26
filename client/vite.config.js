@@ -38,6 +38,7 @@ import { compass5929BreakfastBridge } from './compass5929-breakfast-bridge.js';
 import { compass5930MobileLongevityBridge } from './compass5930-mobile-longevity-bridge.js';
 import { compass5931FamilyRadarBridge } from './compass5931-family-radar-bridge.js';
 import { compass5932FoodDesktopBridge } from './compass5932-food-desktop-bridge.js';
+import { compass5933PeopleFamilyBridge } from './compass5933-people-family-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -95,4 +96,5 @@ compassConfig.plugins.push(compass5928VtaperLuxBridge(), compass5929BreakfastBri
 compassConfig.plugins.push(compass5930MobileLongevityBridge());
 compassConfig.plugins.push(compass5931FamilyRadarBridge());
 compassConfig.plugins.push(compass5932FoodDesktopBridge());
+compassConfig.plugins.push(compass5933PeopleFamilyBridge());
 export default compassConfig;
