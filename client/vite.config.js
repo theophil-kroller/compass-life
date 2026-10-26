@@ -35,6 +35,7 @@ import { compass757Bridge } from './compass757-bridge.js';
 import { compass758Bridge } from './compass758-bridge.js';
 import { compass5928VtaperLuxBridge } from './compass5928-vtaper-lux-bridge.js';
 import { compass5929BreakfastBridge } from './compass5929-breakfast-bridge.js';
+import { compass5930MobileLongevityBridge } from './compass5930-mobile-longevity-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -89,4 +90,5 @@ const compassConfig=defineConfig({
 // Register late feature transforms without modifying the legacy PWA / .50–.58
 // chain. Historic CI checks intentionally require that chain to stay final.
 compassConfig.plugins.push(compass5928VtaperLuxBridge(), compass5929BreakfastBridge());
+compassConfig.plugins.push(compass5930MobileLongevityBridge());
 export default compassConfig;

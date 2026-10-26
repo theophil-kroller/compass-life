@@ -1,0 +1,31 @@
+/* Compass .59.30: extended-only mobile quick navigation. Focus layout untouched. */
+.cm930-direct{display:none}
+@media(max-width:700px){
+  .sidebar[data-cm930-mode="extended"] .cm930-direct{
+    display:flex;flex-wrap:nowrap;align-items:stretch;gap:4px;overflow-x:auto;
+    scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+    padding:4px 3px 8px;margin:2px 0 5px;min-width:0;width:100%;
+  }
+  .sidebar[data-cm930-mode="extended"] .cm930-direct::-webkit-scrollbar{display:none}
+  .sidebar[data-cm930-mode="extended"] .cm930-direct button{
+    flex:1 0 auto;display:flex;flex-direction:column;justify-content:center;align-items:center;
+    gap:3px;min-width:56px;min-height:54px;padding:6px 9px;border-radius:13px;
+    border:1px solid transparent;background:#f6faf7;color:#456657;
+    font-size:10px;font-weight:600;font-family:inherit;line-height:1.2;cursor:pointer;
+  }
+  .sidebar[data-cm930-mode="extended"] .cm930-direct button.active{
+    color:#1f614b;background:#e7f2e9;border-color:#b3d8bf;
+  }
+  .sidebar[data-cm930-mode="extended"] .cm930-direct button:focus-visible{outline:2px solid #448b68;outline-offset:2px}
+  .sidebar[data-cm930-mode="extended"] .calm-side-nav{display:none!important}
+  .sidebar[data-cm930-mode="extended"][data-cm930-menu-open="true"] .calm-side-nav{
+    display:flex!important;flex-wrap:nowrap!important;align-items:center;
+    border-top:1px solid #e2ede6;padding-top:6px!important;
+  }
+  /* The extended mode already provides one primary Insights category row through
+     the standard taxonomy. Hide the older, redundant classic row ONLY there. */
+  .sidebar[data-cm930-mode="extended"] ~ .workspace .insight-workspace>.calm-insight-toolbar{
+    display:none!important;
+  }
+  .sidebar[data-cm930-mode="extended"] ~ .workspace .page-intro-compact{margin-bottom:5px}
+}

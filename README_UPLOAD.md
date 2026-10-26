@@ -1,32 +1,24 @@
-# Compass Life 0.5.77.59.29 — Workflow #259 Fix + Lyttos-Frühstück
+# Compass 0.5.77.59.30 — Extended Mobile & Daily Dozen
 
-**Direkter GitHub-Upload. Keine lokalen Skripte oder Python erforderlich.**
+Ausgangspunkt: GitHub Commit `9cb81a2433641b5058194f040c4f8a5cb4a9aa9d`, Workflow #262 erfolgreich.
 
-Basis: GitHub `main` Commit `878a4092b43a4bcad667be9dc5c87ef68dcb6fe3` (Workflow #259 fehlgeschlagen).
+## Upload
 
-## Upload auf Branch main
+Die Verzeichnisse `client/` und `tests/` mit den im ZIP enthaltenen Pfaden nach `main` hochladen. Bestehende `client/vite.config.js` ersetzen. **Keine Skripte lokal ausführen.** Keine D1-Migration, kein Vault-Reset. Die alten `.28`- und `.29`-Bridges sowie ihre Tests nicht überschreiben.
 
-ZIP entpacken. Verzeichnispfade wie im ZIP beibehalten und **alle enthaltenen Dateien** hochladen:
+## Funktionsumfang
 
-- `client/vite.config.js` – bestehende Datei **ersetzen**, historische `.50`–`.58`-Kette unverändert; der bereits gelieferte `.28`-Baustein wird wieder wirksam registriert.
-- `client/compass5929-breakfast-bridge.js` – **neue Datei** mit vorgefertigter Lyttos-/KoRo-Frühstücksbibliothek und Version `.29`.
-- `tests/compass-05775929-breakfast-deploy.test.mjs` – **neue Regressionstests** zur alten Vite-Reihenfolge und zu Rezept-/Mengenberechnung.
+- **Fokus-Modus:** vorherige Oberfläche und Menüstruktur bleiben unangetastet. Die neue Schnellnavigation wird hier nicht erzeugt, das Daily-Dozen-Panel nicht gerendert.
+- **Erweiterter Modus auf Mobilgeräten (bis 700px):** Heute, Inbox, Menschen, Finanzen, Insights und „Mehr“ direkt erreichbar. „Mehr“ öffnet die bisherige Navigation, die eingeblendete Schnellleiste bleibt erreichbar. Die alte, doppelte Insights-Kategorieleiste wird nur in diesem Modus ausgeblendet.
+- **Life Balance, erweitert:** zusätzliche neunte Dimension „Ernährung · dokumentiert“ mit dynamischer Radar-Geometrie. Für die Achse zählen nur protokollierte, dem Daily Dozen belegbar zuordenbare Ernährungsportionen (ohne Bewegung), und nur bei mindestens 3/7 beziehungsweise 8/30 Tagen mit Einträgen. Unbekannte Mengen werden nicht nachgetragen.
+- **Daily Dozen:** offizielle 12 Kategorien inkl. Bewegung als Referenz, Tagesansicht mit nachgewiesenen Portionsmengen; nicht dokumentierte Kategorien sind **keine Aussage, dass nichts gegessen wurde**. Noch keine automatische Garmin-Bewegungsbuchung. Die Auswertung ist kein Anti-Aging- oder Gesundheits-Score.
+- **Kontaktprofile:** bleiben aus Datenschutzgründen nur dann geräteübergreifend verfügbar, wenn vorhandener E2EE-Kontaktabgleich ausdrücklich aktiviert wurde. Dieser Patch macht keine automatische Übertragung.
+- Versionsanzeige im ausgeführten Quellcode: `0.5.77.59.30`. Eine bereits installierte PWA kann bis zum Service-Worker-Update vorübergehend einen alten Stand anzeigen.
 
-Keine Vault-Migration, keine D1-Migration, kein Reset; vorhandene Fotos und Coach-Logs bleiben unverändert.
+## Qualität / Einschränkungen
 
-## Frühstücksvarianten
+- 5 neue gezielte Tests bestanden; Syntaxprüfung der JavaScript-Dateien und eines transformierten `main.js`-Fixtures bestanden.
+- Source-Anker gegen GitHub-Stand #262 geprüft; Radar-Transformation der echten GitHub-Datei syntaktisch geprüft.
+- **Keine Aussage**, dass die vollständige GitHub-Suite oder der Produktions-Build bereits erfolgreich gelaufen sind. Den vollständigen Ergebnisstatus liefert erst der GitHub-Workflow nach Upload.
 
-Neues Schnellmenü: Lyttos Greek Style Natur 150 g plus ein Esslöffel Honig (15 g angenommen) plus wahlweise ein Esslöffel KoRo 100%-Pistazienmus oder schwarzes Bio Tahini (15 g angenommen). Zwei komplette Rezeptkacheln + vier separat buchbare Zutaten. Im Ernährungsjournal sind die Gramm-Mengen direkt im Mengenfeld editierbar (Beispiel: `150 g Joghurt + 10 g Honig + 20 g Pistazienmus`). Bei Änderung werden kcal und Makros für die Komponenten neu berechnet.
-
-KoRo-Werte nach Hersteller: Pistazienmus 658 kcal/100 g (MUS_060), schwarzes Tahin 616 kcal/100 g (MUS_037). Lyttos-Werte derzeit nur vorläufig aus Fitatu: 115 kcal/100 g; Etikett muss noch mit realem Produkt abgeglichen werden. Honigwert generische Schätzung. Portionen etwa 318 / 311 kcal.
-
-## Workflow #259
-
-Der Fehler lag vollständig in 13 historischen Vite-Konfigurationstests, die einen unveränderten PWA-/Bridge-Abschnitt erwarten. Beim vorigen Patch wurde `compass5928VtaperLuxBridge()` in die abschließende alte `.50`–`.58`-Kette gesetzt. Der neue Fix stellt genau die historisch überprüfte Array-Liste wieder her und registriert die neuen Bausteine danach über `compassConfig.plugins.push(...)`. Dadurch ist die alte Test-Reihenfolge unverändert, und die neuen Module werden trotzdem auf die Quellen angewendet.
-
-## Teststatus
-
-- Node-Syntaxprüfungen für beide neuen/ersetzten JavaScript-Dateien erfolgreich.
-- 5 neue Tests bestanden, inklusive alter Vite-Regex-Assertions und Kalorienberechnung nach individuell geänderten Gramm.
-- 7 vorherige `.28`-Integrationstests auf Basis des unveränderten `.28`-Bausteins bestanden.
-- Der vollständige GitHub `npm run check` und `npm run build` kann erst nach deinem Upload im GitHub-Workflow bestätigt werden. Vorher keine Erfolgsbehauptung.
+Quellen: https://nutritionfacts.org/daily-dozen/  und  https://nutritionfacts.org/topics/daily-dozen/

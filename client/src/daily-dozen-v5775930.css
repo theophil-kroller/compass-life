@@ -1,0 +1,19 @@
+/* Compass .59.30 — restrained, accessible evidence-first nutrition panel */
+.dd930{border:1px solid #d9e5db;border-radius:17px;background:linear-gradient(145deg,#fff,#f7fbf7);padding:clamp(14px,2.5vw,22px);margin:12px 0 18px;color:#294d40}
+.dd930-header{display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.dd930-header small{color:#577e68;font-size:10px;letter-spacing:.11em;font-weight:800}
+.dd930-header h3{font-size:clamp(21px,3vw,27px);margin:5px 0;font-family:Georgia,serif;font-weight:500}
+.dd930-header p{font-size:12px;color:#667c71;margin:0}
+.dd930-total{background:#e8f3ec;border-radius:13px;padding:11px 14px;display:grid;gap:3px;text-align:right}
+.dd930-total strong{font-size:22px;font-variant-numeric:tabular-nums}
+.dd930-total small{letter-spacing:0;font-size:10px}
+.dd930-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 15px}
+.dd930-row{min-width:0;background:#fff;border:1px solid #e2ebe5;border-radius:12px;padding:10px 12px}
+.dd930-name{display:flex;align-items:center;gap:8px;font-size:12px;min-width:0}
+.dd930-name strong{flex:1;min-width:0;overflow-wrap:anywhere}.dd930-name small{font-variant-numeric:tabular-nums;font-size:11px;white-space:nowrap;color:#527562}
+.dd930-progress{height:7px;background:#eaf0eb;border-radius:9px;margin:10px 0 7px;overflow:hidden}
+.dd930-progress i{display:block;height:100%;background:linear-gradient(90deg,#85b79a,#31775b);border-radius:9px}
+.dd930-row>small{font-size:10px;line-height:1.45;color:#778c7e}
+.dd930-note{font-size:11px;line-height:1.65;color:#60796a;margin-top:14px}
+.dd930-note a{color:#226f53;text-decoration:underline}
+@media(max-width:650px){.dd930-grid{grid-template-columns:1fr}.dd930{padding:13px}.dd930-total strong{font-size:20px}}
