@@ -131,7 +131,7 @@ export function familyAccept(state,entry,person,{today,uuid}={}){
  }
  state.tasks??={};state.taskPending??={};state.familyRadar??={};state.familyRadar.decisions??={};
  for(const t of generated){state.tasks[t.id]=t;state.taskPending[t.id]=true;}
- state.familyRadar.decisions[key]={status:'accepted',at:today,taskIds:generated.map(t=>t.id),eventId:entry.id};
+ state.familyRadar.decisions[key]={status:'accepted',at:today,updatedAt:new Date().toISOString(),taskIds:generated.map(t=>t.id),eventId:entry.id};
  return {created:generated,reason:null};
 }
 /** Optional explicit project plan for paperwork, never an automatic Calendar mutation. */
@@ -148,13 +148,13 @@ export function familyAcceptProject(state,entry,person,{today,uuid}={}){
  state.projects[project.id]=project;state.projectPending[project.id]=true;
  if(state.people?.[person.id]){const profile=state.people[person.id];profile.relatedProjectIds=[...new Set([...(profile.relatedProjectIds||[]),project.id])];}
  for(const t of tasks){state.tasks[t.id]=t;state.taskPending[t.id]=true;}
- state.familyRadar??={};state.familyRadar.decisions??={};state.familyRadar.decisions[key]={status:'accepted',at:today,projectId:project.id,taskIds:tasks.map(t=>t.id),eventId:entry.id};
+ state.familyRadar??={};state.familyRadar.decisions??={};state.familyRadar.decisions[key]={status:'accepted',at:today,updatedAt:new Date().toISOString(),projectId:project.id,taskIds:tasks.map(t=>t.id),eventId:entry.id};
  return {project,tasks,folder,reason:null};
 }
 export function familyChoose(state,key,choice,today){
  if(!key||!['dismissed','snoozed'].includes(choice)||!isDay(today))return false;
  state.familyRadar??={};state.familyRadar.decisions??={};
- state.familyRadar.decisions[key]={status:choice,at:today,...(choice==='snoozed'?{until:delta(today,3)}:{})};return true;
+ state.familyRadar.decisions[key]={status:choice,at:today,updatedAt:new Date().toISOString(),...(choice==='snoozed'?{until:delta(today,3)}:{})};return true;
 }
 const prettyDay=s=>new Date(`${s}T12:00:00Z`).toLocaleDateString('de-AT',{day:'numeric',month:'short'});
 export function familyPersonPanel(entries,suggestions,person,rules=familyRules({},person)){

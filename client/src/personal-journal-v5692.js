@@ -246,6 +246,7 @@ export function mergeFeelingCheckins(local=[],remote=[]){
  return [...byId.values()].sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||a.id.localeCompare(b.id));
 }
 function mergeTouchRecords(a={},b={}){const map=new Map();for(const e of [...(a?.entries||[]),...(b?.entries||[])]){if(!e?.id)continue;const x=map.get(e.id);if(!x||String(e.updatedAt||'')>String(x.updatedAt||'')||(String(e.updatedAt||'')===String(x.updatedAt||'')&&e.deleted===true))map.set(e.id,e);}return {entries:[...map.values()].sort((x,y)=>String(x.id).localeCompare(String(y.id)))};}
+import {mergeFamilyRadar37} from './family-planning-v5775937.js';
 export function mergeJournalData(local,remote){
  // Versioned per-ID merge; a remote device must never erase a newer local entry.
  const lc=local&&typeof local==='object'?local:{},rc=remote&&typeof remote==='object'?remote:{};
@@ -262,6 +263,7 @@ export function mergeJournalData(local,remote){
   feelingCheckins:mergeFeelingCheckins(lc.feelingCheckins,rc.feelingCheckins),
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),
   ...(lc.calendarArchive||rc.calendarArchive?{calendarArchive:mergeCalendarArchives(lc.calendarArchive,rc.calendarArchive)}:{}),
+  ...(lc.familyRadar||rc.familyRadar?{familyRadar:mergeFamilyRadar37(lc.familyRadar,rc.familyRadar)}:{}),
   ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{}),
   ...((lc.people||rc.people||lc.peopleDeleted||rc.peopleDeleted)?mergePeopleDirectory(lc.people,rc.people,lc.peopleDeleted,rc.peopleDeleted):{})
  };
