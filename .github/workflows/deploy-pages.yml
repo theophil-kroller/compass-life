@@ -1,4 +1,3 @@
-
 name: Deploy Compass Web
 
 on:
@@ -31,6 +30,17 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE_PATH: /compass-life/
+      # Only successful source-and-build validations produce a full source snapshot.
+      # The snapshot can be downloaded by ChatGPT's read-only GitHub connection for
+      # a complete, reproducible future Full Build. No secrets or node_modules.
+      - name: Package validated source snapshot
+        run: git archive --format=zip --output=compass-full-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compass-full-source
+          path: compass-full-source.zip
+          if-no-files-found: error
+          retention-days: 30
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
