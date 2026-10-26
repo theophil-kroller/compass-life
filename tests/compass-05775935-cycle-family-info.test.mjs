@@ -27,7 +27,10 @@ test('An English exam next week appears as an informational Today notice without
 test('Informationshinweise are hidden when the exam is more than 14 days away or the family role is disabled',()=>{
  assert.deepEqual(familyTodayObservations([e('late','Nathanael: Englisch-Schularbeit','2026-11-13')],{n:child},{},{today}),[]);
  assert.deepEqual(familyTodayObservations(calendar,{n:child},{familyRadar:{rules:{n:{enabled:false}}}},{today}),[]);
- assert.deepEqual(familyTodayObservations(calendar,{b:adult},{},{today}),[]);
+ const unmatchedChild=familyTodayObservations(calendar,{b:adult},{},{today});
+ assert.deepEqual(unmatchedChild.map(x=>x.id),['english','math']);
+ assert.ok(unmatchedChild.every(x=>x.personId===null),'only already-confirmed child prefixes may appear before People sync');
+ assert.ok(unmatchedChild.every(x=>x.personName!=='Bettina Klampfer'));
 });
 test('Observational exam deduplicates a same-event actionable math suggestion',()=>{
  const proposals=familySuggestions(calendar,{n:child},{},{today});

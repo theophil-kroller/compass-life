@@ -8,7 +8,12 @@ const day=e=>String(e?.start?.dateTime||e?.start?.date||'').slice(0,10);
 const isDay=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s+'T12:00:00Z'));
 const delta=(date,d)=>{const t=Date.parse(`${date}T12:00:00Z`);return Number.isFinite(t)?new Date(t+d*86400000).toISOString().slice(0,10):null;};
 const distance=(from,to)=>Math.round((Date.parse(to+'T12:00:00Z')-Date.parse(from+'T12:00:00Z'))/86400000);
-const aliasList=person=>[person?.name,...String(person?.aliases||'').split(/[,;\n]/)].map(clean).filter(n=>n.length>2);
+const aliasList=person=>{
+ const full=clean(person?.name),first=full.split(' ')[0];
+ const eligibleFirst=(['nathanael','nathaniel','seraphina'].includes(first) && !['friend','colleague','partner','acquaintance'].includes(person?.relationKind));
+ const variants=eligibleFirst? (first==='seraphina'?['seraphina']:['nathanael','nathaniel']):[];
+ return [...new Set([person?.name,...String(person?.aliases||'').split(/[,;\n]/),...variants].map(clean).filter(n=>n.length>2))];
+};
 export const FAMILY_RADAR_HORIZON=30;
 export function familyPrefix(event,person){
  if(event?.status==='cancelled'||!event?.id)return null;
@@ -23,7 +28,7 @@ export function familyKind(subject){
  if(/\b(ferien|herbstferien|weihnachtsferien|osterferien|sommerferien|schulfrei|urlaub|feiertag)\b/.test(s))return 'holiday';
  if(/\b(praktikumsplatz|unterlagen|abgabe|abgeben|spatestens|einreich|deadline|anmeldeschluss|frist)\b/.test(s))return 'deadline';
  if(/\b(projektwoche|berufsorientierung|berufspraktische tage|praktikumstage)\b/.test(s))return 'project';
- if(/\b(schularbeit|prufung|test|klausur)\b/.test(s))return 'exam';
+ if(/(?:schularbeit|prufung|klausur)\b|\b(?:test|sa)\b/.test(s))return 'exam';
  return 'event';
 }
 export function familyIsReminder(subject){return /\b(in einer woche|eine woche vorher|noch (7|sieben) tage|erinnerung|reminder|vorwarnung)\b/i.test(clean(subject));}
@@ -36,7 +41,8 @@ function subjectKey(subject){return clean(subject).replace(/\b(in einer woche|ei
 export function familyRules(state,person){
  const saved=state?.familyRadar?.rules?.[person?.id]||{};
  const name=clean(person?.name);
- const knownChild=['nathanael','seraphina'].includes(name);
+ const first=name.split(' ')[0];
+ const knownChild=['nathanael','nathaniel','seraphina'].includes(first)&&!['friend','colleague','partner','acquaintance'].includes(person?.relationKind);
  const role=saved.role==='child'?'child':saved.role==='information'?'information':saved.role==='off'?'off':knownChild?'child':'off';
  const eligible=role==='child'&&(knownChild||person?.relationKind==='family');
  const enabled=eligible&&saved.enabled!==false;
@@ -63,7 +69,7 @@ export function familyEvents(events,person,{today=new Date().toISOString().slice
 export function familyActionFor(entry,rules,today){
  const until=distance(today,entry.day);if(!Number.isFinite(until)||until<0)return null;
  if(entry.kind==='deadline'&&until<=rules.deadlineLead)return {kind:'organise',lead:rules.deadlineLead,why:'Organisatorische Frist: Vorbereitungszeit und Unterlagen prüfen'};
- const isMath=/\bmathematik\b|\bmathe\b/i.test(entry.subject);
+ const isMath=/(?:\bmathematik\b|\bmathe\b|mathematikschularbeit\b|matheschularbeit\b)/i.test(entry.subject);
  const examLead=isMath?rules.mathLead:14;
  if(entry.kind==='exam'&&(isMath?rules.mathSupport:rules.otherExams==='support')&&until<=examLead){
   return {kind:'learning',lead:examLead,why:'Gemeinsame Lernvorbereitung anbieten'};
@@ -176,6 +182,24 @@ export function familyTodayObservations(events,people,state,{today=new Date().to
    found.push({...row,daysLeft:distance(today,row.day),action:null,kind:'exam',key:infoKey});
   }
  }
+ // A child-tagged Google event is still worth a non-mutating Today notice
+ // when this device has not yet synced the child's People profile. Only the
+ // two explicitly known child name prefixes qualify; never infer age or role
+ // from arbitrary calendar contacts (e.g. Bettina). Explicit profile rules win.
+ const profiles=Object.values(people||{});
+ const knownPrefixes={nathanael:'Nathanael',nathaniel:'Nathanael',seraphina:'Seraphina'};
+ const already=new Set(found.map(x=>x.id));
+ for(const e of relevant){
+  if(already.has(e.id))continue;
+  const summary=String(e.summary||''),split=summary.indexOf(':');if(split<1||split>60)continue;
+  const prefix=clean(summary.slice(0,split)),personName=knownPrefixes[prefix];if(!personName)continue;
+  if(profiles.some(p=>aliasList(p).includes(prefix)))continue; // do not override profile opt-outs
+  const title=summary.slice(split+1).trim();
+  if(familyKind(title)!=='exam'||familyIsReminder(title))continue;
+  const daysLeft=distance(today,day(e));
+  found.push({id:e.id,personId:null,personName,title,day:day(e),event:e,
+   kind:'exam',linkedReminders:[],daysLeft,action:null,key:`calendar::${e.id}::observe`});
+ }
  return found.sort((a,b)=>a.daysLeft-b.daysLeft||a.personName.localeCompare(b.personName,'de'));
 }
 /** At most two tiny notices. Informational exams appear regardless of whether
@@ -190,6 +214,6 @@ export function familyTodayPanel(suggestions,observations=[]){
  }
  const items=[...combined.values()].sort((a,b)=>a.daysLeft-b.daysLeft||Number(!!b.action)-Number(!!a.action)).slice(0,2);
  if(!items.length)return '';
- return `<section class="fr31-today" aria-label="Wichtige Familienhinweise"><span>◉ Familie</span><div>${items.map(s=>`<button type="button" data-action="fr31-person" data-id="${esc(s.personId)}"><strong>${esc(s.personName)}</strong>: ${esc(s.title)} <small>in ${s.daysLeft} Tagen · ${s.action?(s.action.kind==='learning'?'Lernvorbereitung':'Organisation')+' empfohlen':'Schularbeit im Blick behalten'}</small></button>`).join('')}</div></section>`;
+ return `<section class="fr31-today" aria-label="Wichtige Familienhinweise"><span>◉ Familie</span><div>${items.map(s=>`<button type="button" data-action="${s.personId?'fr31-person':'agenda-open'}" data-id="${esc(s.personId||s.id)}"><strong>${esc(s.personName)}</strong>: ${esc(s.title)} <small>in ${s.daysLeft} Tagen · ${s.action?(s.action.kind==='learning'?'Lernvorbereitung':'Organisation')+' empfohlen':'Schularbeit im Blick behalten'}</small></button>`).join('')}</div></section>`;
 }
 

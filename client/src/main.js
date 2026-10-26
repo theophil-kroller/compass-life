@@ -479,7 +479,7 @@ function restoreCalendarFromVault(st){
  const archive=normalizeCalendarArchive(st?.calendarArchive);
  calendarEvents=visibleCachedCalendar(archive);calendarIndex=null;calendarIndexedArray=null;
  calendarUpdatedAt=Date.parse(archive.updatedAt)||0;calendarCoverage=archive.completed?{complete:true,start:archive.start,end:archive.end}:null;
- if(calendarEvents.length)calendarStatus=`${calendarEvents.length} gespeicherte Termine · Stand ${new Date(calendarUpdatedAt).toLocaleDateString('de-AT')}`;
+ if(archive.completed||calendarEvents.length)calendarStatus=`${calendarEvents.length} gespeicherte Termine · ${calendarUpdatedAt?'Stand '+new Date(calendarUpdatedAt).toLocaleDateString('de-AT'):'Aktualisierungsdatum unbekannt'}`;
 }
 function indexedCalendarDay(day){
  if(calendarIndexedArray!==calendarEvents){calendarIndex=new Map();calendarIndexedArray=calendarEvents;
@@ -534,11 +534,32 @@ function eventAgendaPanel(){
  <form id="agenda-note-form" class="project-form"><input type="hidden" name="tag" value="${h(suggested)}"><label>Neuen Agendapunkt notieren<input name="title" required maxlength="180" placeholder="Was möchte ich besprechen?"/></label><button type="submit" class="primary-btn">${ico('plus',16)} Agendapunkt hinzufügen</button></form>
  <p class="form-hint">Tag-Vorschlag: #${h(suggested)}. Keine Kalendereinträge werden verändert.</p></section>`;
 }
+function calendarAccess36(){
+ // Showing saved events must not depend on the short-lived Google OAuth token.
+ // Keep this local to main.js because older UI test harnesses load render
+ // functions without module imports. Never cache a Google access token.
+ const tokenValid=Boolean(calendarToken)&&Date.now()<calendarExpires;
+ const archive=state?.calendarArchive;
+ const cached=archive?.completed===true||calendarEvents.length>0;
+ const updatedAt=typeof archive?.updatedAt==='string'&&Number.isFinite(Date.parse(archive.updatedAt))?archive.updatedAt:'';
+ return {tokenValid,cached,canDisplay:tokenValid||cached,updatedAt,count:calendarEvents.length};
+}
+function calendarReadable36(){return calendarAccess36().canDisplay;}
+function cachedCalendarControls36(){
+ const access=calendarAccess36();
+ if(!access.cached||access.tokenValid)return '';
+ const date=access.updatedAt?new Date(access.updatedAt).toLocaleDateString('de-AT'):'unbekannt';
+ return `<div class="calendar-cache-info" role="note"><small>🔒 Termine aus deinem verschlüsselten Tresor · Stand ${h(date)}. Google-Freigabe nur zum Aktualisieren nötig.</small>${calendarConnectUI()}</div>`;
+}
+function calendarRowsOrConnect36(day,{filters=true}={}){
+ if(!calendarReadable36())return calendarConnectUI();
+ return calendarCardRows(day)+(filters?calendarFilterToggle():'')+cachedCalendarControls36();
+}
 function calendarConnectUI(){
  if(calendarBusy)return '<span class="calendar-connection">Google Calendar wird geladen …</span>';
  return calendarToken&&Date.now()<calendarExpires
   ?`<button type="button" class="secondary-btn" data-action="calendar-refresh">${ico('sync',15)} Kalender aktualisieren</button>`
-  :`<button type="button" class="secondary-btn" data-action="calendar-connect">${ico('calendar',15)} ${calendarEvents.length?'Kalender aktualisieren':'Google Calendar verbinden'} (Google-Freigabe)</button>`;
+  :`<button type="button" class="secondary-btn" data-action="calendar-connect">${ico('calendar',15)} ${calendarAccess36().cached?'Optional aktualisieren':'Google Calendar verbinden'} (Google-Freigabe)</button>`;
 }
 async function fetchGoogleCalendarWindow(startDay,endDay,signal){
  const url=new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
@@ -978,7 +999,7 @@ function dashboardCards(locked=false){
  ${inboxPreview()}
  ${moduleCard({name:'Wochenreview',iconName:'sync',cls:'grid-review',active:true,sub:'Klarheit gewinnen. Regelmäßig.',body:`<div class="review-steps review-steps-icon"><div>${ico('inbox',16)} Eingang klären</div><div>${ico('checkSquare',16)} Nächste Schritte</div><div>${ico('calendar',16)} Fristen prüfen</div></div><button class="text-link" type="button" data-tab="review">Wochenreview öffnen ${ico('arrow',14)}</button>`})}
  ${moduleCard({name:'Projekte',iconName:'folder',cls:'grid-projects',active:true,sub:'Aktive Ergebnisse und nächste Schritte',body:`<div class="project-summary"><strong>${Object.values(state?.projects||{}).filter(p=>p.status==='active').length}</strong><span>aktive Projekte</span><small>${Object.values(state?.projects||{}).filter(p=>p.status==='active'&&!nextActions(state).some(t=>t.projectId===p.id)).length} ohne nächste Aktion</small></div><button type="button" class="text-link" data-tab="projects">Projekte öffnen ${ico('arrow',14)}</button>`})}
- ${moduleCard({name:'Kalender & Fokus',iconName:'calendar',cls:'grid-calendar',active:true,sub:'Deine Termine (Google, nur lesend)',body:calendarToken?calendarCardRows(localDateString(new Date())):calendarConnectUI()})}
+ ${moduleCard({name:'Kalender & Fokus',iconName:'calendar',cls:'grid-calendar',active:true,sub:'Deine Termine (Google, nur lesend)',body:calendarRowsOrConnect36(localDateString(new Date()),{filters:false})})}
 
 
 
@@ -1165,7 +1186,7 @@ function todayWork(locked=false){
  const dayTasks=tasksForDay(state,selectedDay).filter(t=>!waitingSourceId(t));
  return `<div class="today-layout">${calendarRail()}<div class="today-center">
  <section class="work-card appointments"><div class="work-heading"><span>${ico('calendar',18)} Termine ${selected?'heute':h(dayFormat(new Date(`${selectedDay}T12:00:00`)))}</span><span class="quiet-tag">${h(calendarStatus)}</span></div>
- ${calendarToken?calendarCardRows(selectedDay)+calendarFilterToggle():calendarConnectUI()}</section>${eventAgendaPanel()}${selectedDay===localDate()?researchRefreshPanel('today'): ''}
+ ${calendarRowsOrConnect36(selectedDay)}</section>${eventAgendaPanel()}${selectedDay===localDate()?researchRefreshPanel('today'): ''}
  <section class="work-card today-tasks"><div class="work-heading"><span>${ico('list',18)} Meine Aufgaben ${selected?'für heute':'für diesen Tag'}</span><span class="quiet-tag">${dayTasks.filter(t=>t.completed).length} / ${dayTasks.length} erledigt</span></div>
  ${yesterday710Panel(selectedDay)}
  ${waiting715TodayPanel(selectedDay)}
@@ -1186,7 +1207,7 @@ function forecastScreen(){
  const overdue=list.filter(t=>t.dueDate<today);
  const dayContent=day=>{
   const tasks=list.filter(t=>t.dueDate===day);const plannedTasks=planned.filter(t=>t.plannedDate===day&&t.dueDate!==day);
-  const ev=calendarToken?visibleCalendarEvents(day):[];
+  const ev=calendarReadable36()?visibleCalendarEvents(day):[];
   if(!tasks.length&&!plannedTasks.length&&!ev.length)return '';
   const combined=[...tasks.map(t=>({type:'task',sort:'0',obj:t})),...plannedTasks.map(t=>({type:'planned',sort:'0b',obj:t})),...ev.map(e=>({type:'event',sort:e.start?.dateTime||'1',obj:e}))].sort((a,b)=>a.sort.localeCompare(b.sort));
   return `<div class="forecast-date-group"><h3>${h(new Intl.DateTimeFormat('de-AT',{weekday:'long',day:'numeric',month:'long'}).format(new Date(day+'T12:00:00')))}</h3><div class="timeline-day">${combined.map(x=>x.type==='task'?`<div class="timeline-item deadline-event">${ico('flag',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · harte Deadline · ${h(CATEGORY_LABELS[x.obj.category]||x.obj.category)}</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:x.type==='planned'?`<div class="timeline-item planned-event">${ico('calendar',19)}<div><strong>${h(x.obj.title)}</strong><small>Compass · Planned (Wunschtermin, keine Deadline)</small></div><button type="button" class="secondary-btn" data-action="task-select" data-id="${h(x.obj.id)}">Details</button></div>`:`<button type="button" class="timeline-item calendar-event" data-action="agenda-open" data-id="${h(x.obj.id)}"><span class="forecast-event-emoji">${h(eventAppearance(x.obj).emoji)}</span><div><strong>${h(eventAppearance(x.obj).displayTitle||'Kalendertermin')}</strong><small>Google Calendar · ${h(eventAppearance(x.obj).category)} · ${h(calendarTime(x.obj))}${x.obj.start?.date?' · Ganztagsmarker':''}${eventAppearance(x.obj).hidden?' · ausgeblendet':''}</small></div>${agendaEvent(x.obj)}${ico('arrow',15)}</button>`).join('')}</div></div>`;
@@ -1197,7 +1218,7 @@ function forecastScreen(){
  ${proactivePlannerPanel()}
  ${recoveryView(recoveryCandidates(state,localCapacity(localDate(),14),{kind:timeoffKind,today:localDate()}),recoveryEvidence(state?.workTime||{},state?.healthImports?.garminNights||[],localDate(),workThreshold),{kind:timeoffKind,open:timeoffOpen})}
  ${deadlineCompact({inForecast:true})}
- <div class="forecast-tools">${calendarToken?calendarFilterToggle():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · ${planned.length} geplante Aufgaben · ${days.reduce((sum,d)=>sum+recoveryEvents(d).length,0)} Erholungstermine · Google Calendar nur lesend</span></div>
+ <div class="forecast-tools">${calendarReadable36()?calendarFilterToggle()+cachedCalendarControls36():calendarConnectUI()}<span class="muted-line">${list.length} offene Deadlines · ${planned.length} geplante Aufgaben · ${days.reduce((sum,d)=>sum+recoveryEvents(d).length,0)} Erholungstermine · Google Calendar nur lesend</span></div>
  ${overdue.length?`<div class="forecast-date-overdue"><strong>Überfällig</strong>${taskList(overdue,'forecast')}</div>`:''}
  ${days.map(dayContent).join('')||'<div class="task-empty">Keine Termine oder Fristen für die kommenden 14 Tage.</div>'}
  <p class="rail-footnote">Ganztägig markierte Fristen blockieren nicht automatisch deinen ganzen Tag. Zeitblöcke können ausgeblendet werden.</p></section><aside class="forecast-inspector">${eventAgendaPanel()}<section class="work-card task-inspector"><div class="work-heading"><span>${ico('checkSquare',18)} Aufgabe bearbeiten</span></div>${taskEditor()}</section></aside></div>`);
@@ -1477,13 +1498,13 @@ async function loadWeather(city){
  }catch(ex){weather={city,status:'idle',temperature:null,label:''};toast(`Wetter konnte nicht geladen werden: ${ex.message}`,true);}
 }
 function calendarContactPanel(person){
- if(!calendarToken||!person)return '';
+ if(!calendarReadable36()||!person)return '';
  const suggestions=contactSuggestions(calendarEvents,{[person.id]:person},localDate(),state?.calendarSuggestionDismissed||{}).slice(0,5);
  if(!suggestions.length)return '';
  return `<section class="work-card v568-calendar-hints"><h3>📅 Mögliche Treffen bestätigen</h3><p class="muted-line">Kalendertermine belegen nicht, dass ein Treffen tatsächlich stattgefunden hat.</p>${suggestions.map(s=>`<div class="v568-suggestion"><div><strong>${h(s.title)}</strong><small>${h(s.day)} · ${h(s.personName)}</small></div><div><button type="button" class="secondary-btn" data-action="calendar-contact-confirm" data-id="${h(s.id)}" data-person="${h(s.personId)}">Hat stattgefunden ✓</button><button type="button" data-action="calendar-contact-dismiss" data-id="${h(s.id)}">Ignorieren</button></div></div>`).join('')}</section>`;
 }
 function calendarDeadlinePanel(){
- if(!state||!calendarToken)return '';
+ if(!state||!calendarReadable36())return '';
  const suggestions=deadlineSuggestions(calendarEvents,state.projects||{},state.calendarSuggestionDismissed||{},localDate());
  if(!suggestions.length)return '';
  return `<section class="work-card v568-calendar-hints"><div class="work-heading"><span>🎓 Prüfung & Deadlines aus Google Kalender</span><span class="quiet-tag">${suggestions.length} Vorschläge</span></div><p class="muted-line">Kein passendes Vorbereitungsprojekt erkannt. Kalendertermine sind unverbindliche Hinweise – bitte prüfen.</p>${suggestions.slice(0,5).map(s=>`<div class="v568-suggestion"><div><strong>${h(s.title)}</strong><small>${h(s.day)} · Noch kein passendes aktives Projekt erkannt</small></div><div><button type="button" class="primary-btn" data-action="calendar-deadline-create" data-id="${h(s.id)}">Vorbereitungsprojekt anlegen</button><button type="button" class="secondary-btn" data-action="calendar-deadline-dismiss" data-id="${h(s.id)}">Passt nicht</button></div></div>`).join('')}<small>Automatische Textzuordnung kann ähnliche Projekte übersehen. Vor dem Anlegen bestehende Projekte prüfen.</small></section>`;
@@ -1583,7 +1604,7 @@ function reviewQuickAction(defaultProject=null){
  return `<form id="review-quick-action" class="assistant-quick-action"><label>Nächste Aktion direkt hier erfassen<input name="title" required maxlength="180" placeholder="Konkreter, ausführbarer nächster Schritt …"/></label><div class="assistant-form-grid"><label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label><label>Status<select name="workflow">${workflowOptions('next')}</select></label><label>Personen- / Agenda-Tags<input name="tags" data-smart-tags maxlength="300" placeholder="Tag eingeben …"/></label></div><button class="secondary-btn" type="submit">${ico('plus',14)} Aktion anlegen</button></form>`;
 }
 function reviewCalendarEntries(events,kind){
- if(!calendarToken)return `<p class="muted-line">Google Kalender ist noch nicht verbunden. Du kannst diesen Schritt trotzdem bewusst abschließen oder später erneut prüfen. Kalender-Zugriff bleibt nur lesend.</p>${reviewQuickAction()}`;
+ if(!calendarReadable36())return `<p class="muted-line">Google Kalender ist noch nicht verbunden. Du kannst diesen Schritt trotzdem bewusst abschließen oder später erneut prüfen. Kalender-Zugriff bleibt nur lesend.</p>${reviewQuickAction()}`;
  return `${events.length?events.slice(0,35).map(e=>`<div class="assistant-task"><div><strong>${h(e.summary||'Kalendertermin')}</strong><small>${h(String(e.reviewDay))} · ${h(calendarTime(e))}${e.status==='tentative'?' · vorläufig':''}</small></div><span class="quiet-tag">${kind==='past'?'Vergangen':'Geplant'}</span></div>`).join(''):'<p class="muted-line">Keine passenden Kalendertermine in diesem Zeitfenster.</p>'}<p class="muted-line">Vergangene Termine sind keine bestätigten Treffen. Bei Nachbereitung oder Vorbereitung direkt eine Aktion anlegen.</p>${reviewQuickAction()}`;
 }
 function reviewStepBody(step,queue){
@@ -2139,7 +2160,7 @@ function recoveryScreen(){
  <form id="recovery-idea-form" class="recovery-add-form"><label>Eigene Freizeitidee<input name="title" required maxlength="90" placeholder="z. B. Ausflug zum See"/></label><label>Symbol<input name="emoji" maxlength="12" value="🌿" aria-label="Emoji für Idee"/></label><label>Dauer (Min.)<input name="minutes" type="number" min="15" max="1440" value="120" required/></label>
  <label>Wetter<select name="weather"><option value="any">Jedes Wetter</option><option value="sun">Sonnig</option><option value="rain">Regen</option></select></label><label>Energie<select name="energy"><option value="low">Wenig</option><option value="medium" selected>Mittel</option><option value="high">Viel</option></select></label><label>Entfernung<select name="range"><option value="home">Zuhause</option><option value="near" selected>In der Nähe</option><option value="trip">Ausflug</option></select></label><button type="submit" class="primary-btn">${ico('plus',15)} Idee speichern</button></form>
  </section>
- <div class="recovery-view"><section class="work-card"><div class="work-heading"><span>${ico('calendar',19)} Geplante Erholung · 30 Tage</span><span class="quiet-tag">${cal.length} Termine</span></div>${cal.length?cal.map(e=>`<button type="button" class="recovery-row" data-action="agenda-open" data-id="${h(e.id)}"><span>${h(eventAppearance(e).emoji)}</span><strong>${h(eventAppearance(e).displayTitle)}</strong><small>${h(calendarDate(e))}</small></button>`).join(''):`<p class="muted-line">${calendarToken?'Keine erkannten Erholungstermine in den nächsten 30 Tagen.':'Verbinde Google Calendar, um Erholungstermine anzuzeigen.'}</p>`}${calendarToken?calendarFilterToggle():calendarConnectUI()}</section>
+ <div class="recovery-view"><section class="work-card"><div class="work-heading"><span>${ico('calendar',19)} Geplante Erholung · 30 Tage</span><span class="quiet-tag">${cal.length} Termine</span></div>${cal.length?cal.map(e=>`<button type="button" class="recovery-row" data-action="agenda-open" data-id="${h(e.id)}"><span>${h(eventAppearance(e).emoji)}</span><strong>${h(eventAppearance(e).displayTitle)}</strong><small>${h(calendarDate(e))}</small></button>`).join(''):`<p class="muted-line">${calendarReadable36()?'Keine erkannten Erholungstermine in den nächsten 30 Tagen.':'Keine im Tresor gespeicherten Erholungstermine. Für aktuelle Termine Google Calendar verbinden.'}</p>`}${calendarReadable36()?calendarFilterToggle()+cachedCalendarControls36():calendarConnectUI()}</section>
  <section class="work-card"><div class="work-heading"><span>${ico('activity',19)} Erlebte Erholung</span><span class="quiet-tag">${acts.length} Aktivitäten</span></div>${acts.map(a=>`<button type="button" class="recovery-row" data-action="activity-open" data-id="${h(a.id)}"><span>🌿</span><strong>${h(a.title)}</strong><small>${h(a.startedAt.slice(0,10))} · ${a.durationMinutes} min</small></button>`).join('')||'<p class="muted-line">Du kannst in Aktivitäten eine Garmin-Session oder eine manuelle Aktivität als Erholung kennzeichnen.</p>'}<button type="button" class="text-link" data-tab="activity">Aktivitäten bearbeiten ${ico('arrow',14)}</button></section></div>`);
 }
 
