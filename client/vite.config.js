@@ -34,9 +34,10 @@ import { compass7593UxBridge } from './compass7593-ux-bridge.js';
 import { compass757Bridge } from './compass757-bridge.js';
 import { compass758Bridge } from './compass758-bridge.js';
 import { compass5928VtaperLuxBridge } from './compass5928-vtaper-lux-bridge.js';
+import { compass5929BreakfastBridge } from './compass5929-breakfast-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
-export default defineConfig({
+const compassConfig=defineConfig({
   base,
   plugins: [compass5910StrengthHabitsBridge(), nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), nutritionStrength733Bridge(), nutritionLongevity734Bridge(), strengthTouch735Bridge(), nutrition736Bridge(), anatomyRecipes737Bridge(), nutritionPill577371Bridge(), strengthPremium738Bridge(), compass741Bridge(), strengthSync742Bridge(), compass743Bridge(), compass744Bridge(), compass745Bridge(), compass746Bridge(), compass747Bridge(), compass748Bridge(), compass749Bridge(), VitePWA({
     registerType: 'autoUpdate',
@@ -79,7 +80,13 @@ export default defineConfig({
       cleanupOutdatedCaches: true
     }
   }),
+  // Guarded 0.5.77.50 and later transforms remain adjacent after PWA.
   compass7593UxBridge(),
-  compass750Bridge(), compass751Bridge(), compass752Bridge(), compass753Bridge(), compass754Bridge(), compass755Bridge(), compass756Bridge(), compass757Bridge(), compass758Bridge(), compass5928VtaperLuxBridge()],
+  compass750Bridge(), compass751Bridge(), compass752Bridge(), compass753Bridge(), compass754Bridge(), compass755Bridge(), compass756Bridge(), compass757Bridge(), compass758Bridge()],
   server: {port: 5173, strictPort:true}
 });
+
+// Register late feature transforms without modifying the legacy PWA / .50–.58
+// chain. Historic CI checks intentionally require that chain to stay final.
+compassConfig.plugins.push(compass5928VtaperLuxBridge(), compass5929BreakfastBridge());
+export default compassConfig;
