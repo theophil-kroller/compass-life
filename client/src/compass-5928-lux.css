@@ -1,0 +1,15 @@
+/* Compass .59.28 – gold rings around the original illustrated compass, not a fake checkbox. */
+#ars22-lockscreen .ars28-gold-rings{position:absolute;z-index:1;left:50%;top:83.5%;width:min(36%,180px);aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;isolation:isolate}
+#ars22-lockscreen .ars28-gold-rings i{position:absolute;inset:0;border:1px solid rgba(226,189,109,.0);border-radius:50%;box-shadow:0 0 2px rgba(225,190,116,0);transform:scale(.78);opacity:0}
+#ars22-lockscreen.ars28-entering .ars28-gold-rings i{animation:ars28-ripple .62s cubic-bezier(.22,.65,.28,1) both}
+#ars22-lockscreen.ars28-entering .ars28-gold-rings i:nth-child(2){animation-delay:.11s}
+#ars22-lockscreen.ars28-entering .ars28-gold-rings i:nth-child(3){animation-delay:.2s}
+@keyframes ars28-ripple{0%{opacity:1;transform:scale(.48);border-color:#e8c77b;box-shadow:0 0 13px rgba(238,199,125,.6)}100%{opacity:0;transform:scale(1.48);border-color:#edd9b5;box-shadow:0 0 35px rgba(238,199,125,0)}}
+#ars22-lockscreen .ars28-version{position:absolute;z-index:2;bottom:max(13px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;pointer-events:none;color:rgba(240,223,185,.84);font:500 10px/1.6 system-ui,-apple-system,sans-serif;letter-spacing:.17em;text-shadow:0 2px 8px #051522}
+#ars22-lockscreen .ars22-tap{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color:transparent;outline:0!important;box-shadow:none!important;touch-action:manipulation}
+#ars22-lockscreen .ars22-tap:focus-visible{outline:2px solid #eac885!important;outline-offset:5px!important;border-radius:50%}
+#ars22-lockscreen .ars22-tap:hover{box-shadow:none!important}
+#ars22-lockscreen .ars22-tap:active{background:radial-gradient(circle,rgba(248,210,126,.12),transparent 70%)}
+.str628-level{margin:8px 0 12px;display:flex;flex-direction:column;gap:5px;border-left:2px solid #b5a06e;padding:8px 11px;background:rgba(232,218,177,.1);border-radius:6px}
+.str628-level strong{font-size:12px;color:#735b38}.str628-level small{font-size:11px;color:#6d776c;line-height:1.5}
+@media(prefers-reduced-motion:reduce){#ars22-lockscreen.ars28-entering .ars28-gold-rings i{animation:none}}

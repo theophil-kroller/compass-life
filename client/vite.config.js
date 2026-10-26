@@ -33,6 +33,7 @@ import { compass756Bridge } from './compass756-bridge.js';
 import { compass7593UxBridge } from './compass7593-ux-bridge.js';
 import { compass757Bridge } from './compass757-bridge.js';
 import { compass758Bridge } from './compass758-bridge.js';
+import { compass5928VtaperLuxBridge } from './compass5928-vtaper-lux-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 export default defineConfig({
@@ -60,28 +61,25 @@ export default defineConfig({
     workbox: {
       navigateFallback: `${base}index.html`,
       globPatterns: ['**/*.{js,css,html,svg,png,json,webmanifest}'],
-      // The opt-in exercise guides must NOT preload during install/update.
       globIgnores: ['**/*makko-ho-guide-v5775910*','**/*strength-coach-v5775910*'],
-      // Cache guide chunks only AFTER the user first clicks Play / Coach.
-      // Subsequent use is offline-capable once those chunks have been opened.
       runtimeCaching: [{
         urlPattern: /(?:makko-ho-guide|strength-coach)-v5775910[^/]*\.(?:js|css)$/,
         handler: 'CacheFirst',
         options: {cacheName:'compass-guides-on-demand-v1',cacheableResponse:{statuses:[0,200]}}
       },{
-        // Versioned Makko-Ho WebP poses are cached ONLY when a step displays.
-        // WebP is excluded from globPatterns above, so no initial precache.
         urlPattern: /\/makko-ho-illustrations-v5775911\/(?:metal|earth|fire|water|innerfire|wood)\.webp$/,
         handler: 'CacheFirst',
         options: {cacheName:'compass-makko-art-on-demand-v5775911',cacheableResponse:{statuses:[0,200]},expiration:{maxEntries:6,maxAgeSeconds:31536000}}
+      },{
+        // Load V-Taper premium photos only when their exercise is opened, then reuse offline.
+        urlPattern: /\/strength-visuals-v5775928\/(?:pike-pushup|decline-pushup|prone-y-raise)\.webp$/,
+        handler: 'CacheFirst',
+        options: {cacheName:'compass-vtaper-photos-v5928',cacheableResponse:{statuses:[0,200]},expiration:{maxEntries:3,maxAgeSeconds:31536000}}
       }],
       cleanupOutdatedCaches: true
     }
   }),
-  // Guarded 0.5.77.50 transform executes before VitePWA because enforce='pre'.
-  // .59.3 UX runs after the legacy PWA declaration, before the .50-.58 chain.
-  // It is still a pre-transform (enforce: pre); no historical adjacency is broken.
   compass7593UxBridge(),
-  compass750Bridge(), compass751Bridge(), compass752Bridge(), compass753Bridge(), compass754Bridge(), compass755Bridge(), compass756Bridge(), compass757Bridge(), compass758Bridge()],
+  compass750Bridge(), compass751Bridge(), compass752Bridge(), compass753Bridge(), compass754Bridge(), compass755Bridge(), compass756Bridge(), compass757Bridge(), compass758Bridge(), compass5928VtaperLuxBridge()],
   server: {port: 5173, strictPort:true}
 });
