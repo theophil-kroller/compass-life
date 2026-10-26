@@ -22,7 +22,8 @@ test('An English exam next week appears as an informational Today notice without
  assert.match(html,/Schularbeit im Blick behalten/);
  assert.doesNotMatch(html,/Bettina/);
  assert.equal(Object.keys(state.tasks).length,0);
- assert.ok((html.match(/data-action="fr31-person"/g)||[]).length<=2);
+ assert.ok((html.match(/class="fr371-row"/g)||[]).length<=2);
+ assert.ok((html.match(/data-action="fr31-person"/g)||[]).length<=4);
 });
 test('Informationshinweise are hidden when the exam is more than 14 days away or the family role is disabled',()=>{
  assert.deepEqual(familyTodayObservations([e('late','Nathanael: Englisch-Schularbeit','2026-11-13')],{n:child},{},{today}),[]);

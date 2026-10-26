@@ -23,7 +23,7 @@ function chrome(content){
   const today=localDate(),e=familyForecastEntries37(calendarEvents,state?.people||{},state,{today}).find(x=>x.id===id);
   const person=e&&state.people?.[e.personId];
   if(!person)return toast('Familienzuordnung nicht mehr verfügbar.',true);
-  const model=familyStudySlots37(calendarEvents,e,calendarCoverage,calendarUpdatedAt,{now:new Date(),today});
+  const model=familyStudySlots37(calendarEvents,e,calendarCoverage,calendarUpdatedAt,{now:new Date(),today,familyRadar:state?.familyRadar});
   const slot=model.status==='ready'&&model.slots.find(x=>x.day===plannerDay&&x.start===Number(stepId));
   if(!slot)return toast('Zeitfenster nicht mehr bestätigt. Bitte Kalender aktualisieren.',true);
   let result;

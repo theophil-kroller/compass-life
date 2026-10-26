@@ -15,7 +15,7 @@ test('Family notice provides an interactive crystal ball and a separate forecast
  assert.match(html,/data-action="fr371-plan" data-id="exam-en"/);
  assert.match(html,/Forecast öffnen/);
  assert.equal((html.match(/class="fr371-row"/g)||[]).length,1);
- assert.equal((html.match(/<button /g)||[]).length,2);
+ assert.equal((html.match(/<button /g)||[]).length,3);
 });
 test('Unavailable People profile still opens source Calendar and Forecast without fabricating a profile',()=>{
  const html=familyTodayPanel([],[{...notice,personId:null}]);
@@ -52,8 +52,8 @@ test('new plugin is registered after .37 and the complete source transforms and 
    if(result){if(type==='main')main=result.code;else lock=result.code;}
   }
  }
- assert.ok(names.length>=44);assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.37\.1'/);
- assert.match(lock,/Build 0\.5\.77\.59\.37\.1/);
+ assert.ok(names.length>=44);assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.38'/);
+ assert.match(lock,/Build 0\.5\.77\.59\.38/);
  assert.match(main,/familyStudyEventId37=id;tab='forecast';calmNavGroup='plan'/);
  assert.match(main,/familyForecastPanel37/);assert.match(main,/familyTodayPanel/);
  execFileSync(process.execPath,['--input-type=module','--check'],{input:main});

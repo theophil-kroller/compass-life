@@ -41,7 +41,8 @@ test('Family Radar today stays small and does not turn reminders into extra even
  assert.equal(items.filter(x=>x.id==='math-rem').length,0);
  const html=familyTodayPanel(items);
  assert.match(html,/fr31-today/);
- assert.ok((html.match(/data-action="fr31-person"/g)||[]).length<=2);
+ assert.ok((html.match(/class="fr371-row"/g)||[]).length<=2);
+ assert.ok((html.match(/data-action="fr31-person"/g)||[]).length<=4);
 });
 test('Calendar event prefix index supports aliases and disappears when event is removed',()=>{
  const a=[entry('x','Nathaniel: Mathematik-Schularbeit','2026-11-11')];

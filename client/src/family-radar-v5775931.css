@@ -25,3 +25,9 @@
 .fr31-today button.fr371-person:focus-visible{outline:2px solid #407e61;outline-offset:2px;border-radius:5px}
 .fr31-today button.fr371-plan svg{width:18px;height:18px}
 @media(max-width:600px){.fr31-today .fr371-row{gap:5px}.fr31-today button.fr371-person{gap:6px}.fr31-today .fr371-orb{flex-basis:25px;width:25px;height:25px}}
+
+/* .59.38: compact direct actions with separated, accessible tooltip targets. */
+.fr31-today button.fr371-orb-link{display:grid;place-items:center;flex:0 0 32px;width:32px;height:34px;border:0;background:transparent;border-radius:10px;padding:0;cursor:pointer}
+.fr31-today button.fr371-orb-link:hover .fr371-orb,.fr31-today button.fr371-orb-link:focus-visible .fr371-orb{box-shadow:0 0 0 2px #a7ccb5,0 3px 9px #244b3824}
+.fr31-today button.fr371-orb-link:focus-visible,.fr31-today button.fr371-plan:focus-visible{outline:2px solid #327557;outline-offset:2px}
+.fr31-today .fr371-person{gap:3px}

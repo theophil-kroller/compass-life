@@ -27,7 +27,7 @@ import {deadlineIntelligence}`,'family radar import');
    const familySelected=options.find(p=>p.id===selectedPersonId)||options[0];
    if(familySelected){
     const familySettings=familyRules(state,familySelected);
-    if(familySettings.enabled||familySelected.relationKind==='family')content=familyPersonPanel(familySettings.enabled?familyEvents(familyVisible,familySelected,{today:familyNow}):[],familyProposals,familySelected,familySettings)+content;
+    if(familySettings.enabled||familySelected.relationKind==='family')content=familyPersonPanel(familySettings.enabled?familyEvents(familyVisible,familySelected,{today:familyNow}):[],familyProposals,familySelected,familySettings,state?.familyRadar?.availability?.[familySelected.id]||{})+content;
    }
   }
  }`,'read-only family panels');
