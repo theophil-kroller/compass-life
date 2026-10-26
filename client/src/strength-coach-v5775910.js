@@ -9,6 +9,8 @@ import {EXERCISES} from './strength-editor-v57732.js';
 import './strength-coach-v5775910.css';
 import {coach34Feedback,coach34RecommendedSets,coach34RirGuidance} from './strength-adaptive-v5775934.js';
 import './strength-adaptive-v5775934.css';
+import {readCycle35,saveCycleAction35,coachCycle35} from './strength-cycle-v5775935.js';
+import './strength-cycle-v5775935.css';
 
 const safe=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const GROUPS={back:'Rücken/Lat',shoulders:'Schultern',core:'Bauch/Rumpf',chest:'Brust',quads:'Oberschenkel',posterior:'Beinrückseite',glutes:'Gesäß',biceps:'Bizeps',triceps:'Trizeps'};
@@ -253,6 +255,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  const health=typeof strengthCoachHealthContext==='function'
   ?strengthCoachHealthContext(state,{today:todayValue})
   :{attention:false,status:'insufficient',guidance:'Noch keine verfügbaren Gesundheitsvergleichswerte.',bodyNote:'',method:'',sleep:{usable:false,recentCount:0,baselineCount:0},hrv:{usable:false,recentCount:0,baselineCount:0},body:{latest:null,trend:null,count:0}};
+ const cycle=typeof coachCycle35==='function'?coachCycle35(state,{today:todayValue,goal:selectedGoal,history,health,cycle:readCycle35()}):null;
  const strongLifts=selectedGoal==='strength'&&location==='gym'&&mode==='stronglifts'; // never prescribe StrongLifts at home
  const variant=strongLifts?nextStrongLiftsVariant(history):null;
  let ids=strongLifts?STRONG_LIFTS[variant].map(x=>x[0]):[...WORKOUT_POOLS[selectedGoal][location]];
@@ -287,11 +290,15 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
    `${GROUPS[primary]||primary}: ${Number(seven.toFixed(1)).toLocaleString('de-AT')} zugeordnete Satzbeteiligungen / 7 Tage${age!==null?` · zuletzt vor ${age} T.`:''}.`:
    `${GROUPS[primary]||primary}: empfohlen für ${profile.label}; Muskelhistorie noch unvollständig.`;
   if(age!==null&&age<=1&&history.valid.length)reason+=' Kürzlich beansprucht – bei Bedarf verschieben.';
+  if(cycle?.deloadActive&&selectedGoal==='vtaper')reason+=' Aktive Entlastungswoche: Satzanzahl reduziert; Last frei wählen.';
   if(typeof coach34RirGuidance==='function'){const rirNote=coach34RirGuidance(state,id,todayValue);if(rirNote)reason+=' '+rirNote;}
   return {id,title:item.name||id,primary,kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets,reps,restSeconds,ageDays:age,sevenSets:seven,
    lastKg:progression.lastKg,suggestedKg:progression.suggestedKg,progressionAction:progression.action,progressionHint:progression.message,
    reason,order:index+1};
  });
+ // The existing .28 adaptive-sets bridge still transforms the original per-exercise
+ // prescription first. Reduce *only on explicit opt-in* to an active deload.
+ if(cycle?.deloadActive&&selectedGoal==='vtaper')exercises=exercises.map(e=>({...e,sets:Math.max(1,Math.ceil(e.sets/2))}));
  const latestAge=ageDays(history.latest,todayValue);
  const recentlyTrained=history.valid.length>0&&latestAge!==null&&latestAge<=1;
  const cautious=recentlyTrained||health.attention;
@@ -308,7 +315,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   {name:'Vorder- / Rückseite Beine',one:history.counts7.quads||0,two:history.counts7.posterior||0}
  ]:[];
  return {goal:selectedGoal,equipment:location,budget,mode:strongLifts?'stronglifts':'smart',trainingFocus:strongLifts?'Kraft · schweres 5×5':selectedGoal==='vtaper'?'Hypertrophie · kontrollierte 8–15+ Wiederholungen':'Zielorientiertes Training',homeEquipment:location==='home'?{...HOME_EQUIPMENT}:null,profile,variant,exercises,estimatedMinutes,timeFit,
-  cautious,recentlyTrained,latestAge,suggestRecovery,evidence,known,missing,history,sourceStats:history.sourceStats,balances,health,adaptive,
+  cautious,recentlyTrained,latestAge,suggestRecovery,evidence,known,missing,history,sourceStats:history.sourceStats,balances,health,adaptive,cycle,
   title:strongLifts?`StrongLifts 5×5 · Workout ${variant}`:selectedGoal==='vtaper'?'V-Taper · Rücken & Schultern':selectedGoal==='abs'?'Core & Ganzkörper':selectedGoal==='strength'?`Kraft · ${location==='gym'?'Gym':'Zuhause'}`:'Muskelbalance · Ganzkörper',
   recoveryNote:suggestRecovery?'Rücken/Schultern oder andere geplante Muskeln wurden erst kürzlich mehrfach beansprucht. Heute ggf. Pause, Mobilität oder andere Muskelgruppen wählen; keine exakt berechnete biologische Regeneration.':cautious?'Letztes bestätigtes Coach- oder zugeordnetes Garmin-Training heute/gestern. Diesen Vorschlag erst am nächsten geeigneten Trainingstag umsetzen; vorher Erholung und Leistungsfähigkeit prüfen.':
    evidence==='none'?'Keine zugeordneten Übungssätze vorhanden: Es gibt keine belastbare Aussage zur Regeneration.':
@@ -358,6 +365,7 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
   <section class="str619-plan-head" aria-label="Vorgeschlagener Trainingsplan"><div><small>${plan.cautious?'FÜR DEN NÄCHSTEN TRAININGSTAG':'DEIN VORSCHLAG'}</small><h3>${safe(plan.title)}</h3><p>${plan.exercises.length} Übungen · ${plan.equipment==='home'?'Zuhause':'Gym'} · ${safe(plan.trainingFocus)}</p>${plan.sourceStats.coachConfirmed?`<small class="str624-hist-badge">✓ ${plan.sourceStats.coachConfirmed} Coach-Sätze aus dem Vault berücksichtigt</small>`:''}</div><div class="str620-cta-stack"><button type="button" class="str620-launch" aria-label="Geführtes Workout starten">▶ Workout starten</button><button type="button" class="str619-copy">Plan kopieren</button></div></section>
   ${plan.suggestRecovery?`<aside class="str625-rest-advice" style="background:#f0f4ed;border-left:3px solid #688b76;padding:9px 12px;border-radius:9px;margin:9px 0;font-size:12px">Heute eher Erholung oder andere Muskelgruppen einplanen. <details><summary>Begründung</summary><p>${safe(plan.recoveryNote)}</p></details></aside>`:``}
   ${plan.timeFit==='longer'?`<p class="str619-alert">Dieser Plan benötigt voraussichtlich mehr als die gewählten ${plan.budget} Minuten. Die Sätze werden nicht künstlich verkürzt.</p>`:''}
+  ${plan.goal==='vtaper'&&plan.cycle?`<section class="str35-cycle" aria-label="V-Taper Trainingszyklus"><div class="str35-title"><strong>Trainingszyklus · ${plan.cycle.week?'Woche '+plan.cycle.week+' / 6':'noch nicht gestartet'}</strong><span>${plan.cycle.phase==='deload'?'Entlastung':plan.cycle.phase==='review'?'Rückblick':'Progression'}</span></div><p>${safe(plan.cycle.reason)}</p><div class="str35-region"><span>Seitliche Schulter: ${plan.cycle.shoulder.counts.lateral} bekannte Sätze / 7 Tage</span><span>Hintere Schulter: ${plan.cycle.shoulder.counts.posterior} bekannte Sätze / 7 Tage</span></div><small>Unbekannte Garmin-Übungen sind keine Nullwerte. Teilweise Daten = eingeschränkte Aussage.</small><div class="str35-actions"><button class="secondary-btn" type="button" data-cycle35="start">${plan.cycle.week?'Neuen 6-Wochen-Block starten':'6-Wochen-Block starten'}</button>${plan.cycle.deloadActive?'<button class="secondary-btn" type="button" data-cycle35="resume">Entlastung beenden</button>':'<button class="secondary-btn" type="button" data-cycle35="deload">Entlastungswoche wählen</button>'}</div></section>`:''}
   ${plan.goal==='vtaper'?`<details class="str34-volume"><summary><strong>Wochenvolumen & RIR · adaptiver Coach</strong></summary>${plan.adaptive.weekly.map(x=>`<div class="str34-volume-row"><span>${safe(({back:'Rücken',shoulders:'Schultern',chest:'Brust',quads:'Beine',posterior:'Beinrückseite',core:'Rumpf'})[x.group])}</span><span>${x.observed===null?'Noch keine verlässlichen Daten':safe(x.observed)+' / '+x.minimum+'–'+x.maximum+' Satzbeteiligungen'}</span></div>`).join('')}<p>${safe(plan.adaptive.recordedRir)} RIR-Angaben dokumentiert · ${safe(plan.adaptive.caveat)}</p></details>`:''}
   <details class="str623-more"><summary>Trainingsdaten & Regeneration</summary><p class="str619-recovery">${safe(plan.recoveryNote)}</p>
   <div class="str619-coverage"><span>Coach: ${plan.sourceStats.coach} eigene Sätze · Garmin: ${plan.sourceStats.garmin} · ${plan.sourceStats.deduplicated} Überschneidungen berücksichtigt</span><span>${plan.missing} Garmin-Sätze noch nicht zugeordnet</span><span>${plan.evidence==='none'?'Noch keine Muskelhistorie':plan.evidence==='limited'?'Nur eingeschränkte Historie':plan.evidence==='partial'?'Viele Trainingsdetails fehlen':'Dokumentierte Muskelhistorie'}</span></div>
@@ -367,6 +375,7 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
   <details class="str623-more"><summary>Methodik & Grenzen</summary><p class="str610-disclaimer">${safe(plan.profile.note)} Vorschläge berücksichtigen bestätigte Coach-Sätze und zugeordnete Garmin-Sätze; unbekannte Garmin-Daten werden nicht als untrainierte Muskeln gewertet. Die Regeneration ist eine vorsichtige Zeitregel, keine Messung deiner Belastbarkeit. Gewicht und Intensität bestimmst du selbst.</p></details>`;
   dialog.querySelector('.str610-close').onclick=close;
   const update=(key,val)=>{prefs={...prefs,[key]:val};saveCoachPrefs(prefs);draw();};
+  dialog.querySelectorAll('[data-cycle35]').forEach(button=>button.onclick=()=>{if(saveCycleAction35(button.dataset.cycle35,today))draw();});
   dialog.querySelector('.str610-goal').onchange=e=>update('goal',e.target.value);
   dialog.querySelectorAll('[data-place]').forEach(button=>button.onclick=()=>update('equipment',button.dataset.place));
   dialog.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>update('mode',button.dataset.mode));

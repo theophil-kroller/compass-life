@@ -11,7 +11,7 @@ export function compass5931FamilyRadarBridge(){
   let s=source;
   s=once(s,"const COMPASS_CLIENT_VERSION='0.5.77.59.30';","const COMPASS_CLIENT_VERSION='0.5.77.59.31';",'build number');
   s=once(s,'Build 0.5.77.59.30','Build 0.5.77.59.31','visible build number');
-  s=once(s,"import {deadlineIntelligence}",`import {familyEvents,familySuggestions,familyRules,familyPersonPanel,familyTodayPanel,familyAccept,familyAcceptProject,familyChoose} from './family-radar-v5775931.js';
+  s=once(s,"import {deadlineIntelligence}",`import {familyEvents,familySuggestions,familyRules,familyPersonPanel,familyTodayPanel,familyTodayObservations,familyAccept,familyAcceptProject,familyChoose} from './family-radar-v5775931.js';
 import './family-radar-v5775931.css';
 import {deadlineIntelligence}`,'family radar import');
   s=once(s,'function chrome(content){',`function chrome(content){
@@ -21,7 +21,7 @@ import {deadlineIntelligence}`,'family radar import');
   const familyVisible=calendarEvents.filter(e=>e.status!=='cancelled'&&String(e.summary||'').includes(':')&&(!eventAppearance(e).hidden||showHiddenCalendarEvents));
   const familyNow=localDate();
   const familyProposals=familySuggestions(familyVisible,familyPeople,state,{today:familyNow});
-  if(tab==='today')content=familyTodayPanel(familyProposals)+content;
+  if(tab==='today')content=familyTodayPanel(familyProposals,familyTodayObservations(familyVisible,familyPeople,state,{today:familyNow}))+content;
   if(tab==='people'){
    const options=peopleInScope(Object.values(familyPeople),peopleScope);
    const familySelected=options.find(p=>p.id===selectedPersonId)||options[0];

@@ -1,0 +1,6 @@
+/* .59.35 – lazy-loaded coach panel, no additional Focus CSS */
+.str35-cycle{margin:12px 0;padding:13px;border:1px solid var(--line,#d5ded8);border-radius:14px;background:var(--surface,#fff);display:grid;gap:8px}
+.str35-title{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.str35-title span{font-size:12px;color:#476a59}.str35-cycle p{margin:0;font-size:13px;line-height:1.4}
+.str35-region{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:6px;font-size:12px;color:#365e4d}
+.str35-actions{display:flex;flex-wrap:wrap;gap:8px}.str35-actions button{min-height:39px}.str35-cycle small{color:#62776d}

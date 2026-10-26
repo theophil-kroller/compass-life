@@ -157,8 +157,39 @@ export function familyPersonPanel(entries,suggestions,person,rules=familyRules({
  return `<section class="work-card fr31-person" aria-label="Family Radar – bevorstehende Ereignisse"><div class="fr31-head"><strong>◉ Family Radar · ${esc(person.name)}</strong><small>Google Kalender · nächste 30 Tage</small></div>${items.length?items.map(e=>{
   const rec=actions.get(e.id);return `<div class="fr31-row"><span class="fr31-date">${esc(prettyDay(e.day))}</span><div class="fr31-detail"><strong>${esc(e.title)}</strong><small>${esc(({exam:'Schularbeit / Prüfung',deadline:'Organisatorische Frist',project:'Projektwoche',holiday:'Ferien',reminder:'Erinnerung',event:'Termin'})[e.kind])}${e.linkedReminders.length?' · Erinnerung zugeordnet':''}</small>${rec?`<div class="fr31-actions"><span>${esc(rec.action.why)}</span><button type="button" data-action="fr31-accept" data-id="${esc(rec.key)}">${rec.action.kind==='learning'?'2 Lernaufgaben anlegen':'Vorbereitung übernehmen'}</button>${rec.action.kind==='organise'?`<button type="button" data-action="fr31-project" data-id="${esc(rec.key)}">Projektplan anlegen</button>`:''}<button type="button" data-action="fr31-snooze" data-id="${esc(rec.key)}">Später</button><button type="button" data-action="fr31-dismiss" data-id="${esc(rec.key)}">Verwerfen</button></div>`:''}</div></div>`}).join(''):'<p class="fr31-empty">Keine zugeordneten Familienereignisse im nächsten Monat. Kalender und Namenspräfixe prüfen.</p>'}<details class="fr31-rules"><summary>Unterstützungsregeln für ${esc(person.name)}</summary><form id="fr31-settings-form" data-person="${esc(person.id)}"><label>Familienradar-Rolle<select name="role"><option value="off" ${rules.role==='off'?'selected':''}>Nicht für Familienradar verwenden</option><option value="child" ${rules.role==='child'?'selected':''}>Kind – Lern- und Fristunterstützung</option><option value="information" ${rules.role==='information'?'selected':''}>Nur Familie – informativ</option></select></label><label><input name="enabled" type="checkbox" ${rules.enabled?'checked':''}>Lern- und Fristvorschläge aktivieren</label><label><input name="mathSupport" type="checkbox" ${rules.mathSupport?'checked':''}>Mathematik: gemeinsam lernen</label><label>Mathe-Vorlauf <input name="mathLead" type="number" min="1" max="60" value="${rules.mathLead}"> Tage</label><label>Andere Schularbeiten <select name="otherExams"><option value="observe" ${rules.otherExams==='observe'?'selected':''}>Nur beobachten</option><option value="support" ${rules.otherExams==='support'?'selected':''}>Lernunterstützung</option></select></label><label>Organisatorische Fristen <input name="deadlineLead" type="number" min="1" max="90" value="${rules.deadlineLead}"> Tage vorher</label><button type="button" data-action="fr31-rules-save" data-id="${esc(person.id)}">Regeln speichern</button></form></details><small class="fr31-disclaimer">Termine werden nur gelesen. Vorschläge ändern den geteilten Kalender nicht.</small></section>`;
 }
-export function familyTodayPanel(suggestions){
- const items=suggestions.filter(s=>s.action&&s.daysLeft<=Math.max(s.action.lead,14)).slice(0,2);
- if(!items.length)return '';
- return `<section class="fr31-today" aria-label="Wichtige Familienhinweise"><span>◉ Familie</span><div>${items.map(s=>`<button type="button" data-action="fr31-person" data-id="${esc(s.personId)}"><strong>${esc(s.personName)}</strong>: ${esc(s.title)} <small>in ${s.daysLeft} Tagen · ${s.action.kind==='learning'?'Lernvorbereitung':'Organisation'} empfohlen</small></button>`).join('')}</div></section>`;
+/** A next-week exam is relevant to a parent even without a learning action.
+ * Read-only; no API calls, no new tasks, and only children explicitly eligible
+ * for the Family Radar. Exam reminders fold into the true exam.
+ */
+export function familyTodayObservations(events,people,state,{today=new Date().toISOString().slice(0,10),leadDays=14}={}){
+ if(!isDay(today))return [];
+ const relevant=(Array.isArray(events)?events:[]).filter(e=>e?.id&&e.status!=='cancelled'&&
+  isDay(day(e))&&distance(today,day(e))>=0&&distance(today,day(e))<=leadDays&&String(e.summary||'').includes(':'));
+ const found=[];
+ for(const person of Object.values(people||{})){
+  if(!familyRules(state,person).enabled)continue;
+  for(const row of familyEvents(relevant,person,{today,horizon:leadDays})){
+   if(row.kind!=='exam')continue;
+   const infoKey=familyDecisionKey(row,'observe');
+   const decision=state?.familyRadar?.decisions?.[infoKey];
+   if(decision?.status==='dismissed'||(decision?.status==='snoozed'&&decision.until>today))continue;
+   found.push({...row,daysLeft:distance(today,row.day),action:null,kind:'exam',key:infoKey});
+  }
+ }
+ return found.sort((a,b)=>a.daysLeft-b.daysLeft||a.personName.localeCompare(b.personName,'de'));
 }
+/** At most two tiny notices. Informational exams appear regardless of whether
+ * the parent opted into proactive learning tasks. Clicking opens the person.
+ */
+export function familyTodayPanel(suggestions,observations=[]){
+ const combined=new Map();
+ for(const s of [...(Array.isArray(suggestions)?suggestions:[]),...(Array.isArray(observations)?observations:[])]){
+  if(!s||s.daysLeft<0||s.daysLeft>Math.max(s.action?.lead||14,14))continue;
+  const key=String(s.personId)+'::'+String(s.id);
+  const previous=combined.get(key);if(!previous||(s.action&&!previous.action))combined.set(key,s);
+ }
+ const items=[...combined.values()].sort((a,b)=>a.daysLeft-b.daysLeft||Number(!!b.action)-Number(!!a.action)).slice(0,2);
+ if(!items.length)return '';
+ return `<section class="fr31-today" aria-label="Wichtige Familienhinweise"><span>◉ Familie</span><div>${items.map(s=>`<button type="button" data-action="fr31-person" data-id="${esc(s.personId)}"><strong>${esc(s.personName)}</strong>: ${esc(s.title)} <small>in ${s.daysLeft} Tagen · ${s.action?(s.action.kind==='learning'?'Lernvorbereitung':'Organisation')+' empfohlen':'Schularbeit im Blick behalten'}</small></button>`).join('')}</div></section>`;
+}
+

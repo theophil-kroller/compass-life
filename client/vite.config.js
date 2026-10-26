@@ -40,6 +40,7 @@ import { compass5931FamilyRadarBridge } from './compass5931-family-radar-bridge.
 import { compass5932FoodDesktopBridge } from './compass5932-food-desktop-bridge.js';
 import { compass5933PeopleFamilyBridge } from './compass5933-people-family-bridge.js';
 import { compass5934CoachBridge } from './compass5934-coach-release-bridge.js';
+import { compass5935CycleReleaseBridge } from './compass5935-cycle-release-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -99,4 +100,5 @@ compassConfig.plugins.push(compass5931FamilyRadarBridge());
 compassConfig.plugins.push(compass5932FoodDesktopBridge());
 compassConfig.plugins.push(compass5933PeopleFamilyBridge());
 compassConfig.plugins.push(compass5934CoachBridge());
+compassConfig.plugins.push(compass5935CycleReleaseBridge());
 export default compassConfig;
