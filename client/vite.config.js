@@ -43,6 +43,7 @@ import { compass5934CoachBridge } from './compass5934-coach-release-bridge.js';
 import { compass5935CycleReleaseBridge } from './compass5935-cycle-release-bridge.js';
 import { compass5936CalendarAccessRelease } from './compass5936-calendar-access-release.js';
 import { compass5937FamilyPlanningRelease } from './compass5937-family-planning-release.js';
+import { compass59371FamilyShortcutsRelease } from './compass59371-family-shortcuts-release.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -105,4 +106,5 @@ compassConfig.plugins.push(compass5934CoachBridge());
 compassConfig.plugins.push(compass5935CycleReleaseBridge());
 compassConfig.plugins.push(compass5936CalendarAccessRelease());
 compassConfig.plugins.push(compass5937FamilyPlanningRelease());
+compassConfig.plugins.push(compass59371FamilyShortcutsRelease());
 export default compassConfig;

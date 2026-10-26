@@ -105,9 +105,9 @@ test('Every registered historic and current plugin transforms the actual main so
   }
  }
  assert.ok(names.length>=43,`The historic plugin list changed unexpectedly: ${names.length}`);
- assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.37'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.37\.1'/);
  assert.match(main,/familyForecastPanel37\(/);
  assert.match(main,/familyCreateStudy37\(/);
- assert.match(lock,/Build 0\.5\.77\.59\.37/);
+ assert.match(lock,/Build 0\.5\.77\.59\.37\.1/);
  execFileSync(process.execPath,['--input-type=module','--check'],{input:main,stdio:['pipe','pipe','pipe']});
 });
