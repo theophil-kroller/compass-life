@@ -45,6 +45,7 @@ import { compass5936CalendarAccessRelease } from './compass5936-calendar-access-
 import { compass5937FamilyPlanningRelease } from './compass5937-family-planning-release.js';
 import { compass59371FamilyShortcutsRelease } from './compass59371-family-shortcuts-release.js';
 import { compass5938ExperienceRelease } from './compass5938-experience-release.js';
+import { compass5939LocationContextRelease } from './compass5939-location-context-release.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -109,4 +110,5 @@ compassConfig.plugins.push(compass5936CalendarAccessRelease());
 compassConfig.plugins.push(compass5937FamilyPlanningRelease());
 compassConfig.plugins.push(compass59371FamilyShortcutsRelease());
 compassConfig.plugins.push(compass5938ExperienceRelease());
+compassConfig.plugins.push(compass5939LocationContextRelease());
 export default compassConfig;
