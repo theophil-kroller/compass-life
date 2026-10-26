@@ -20,6 +20,12 @@ const BIOACTIVE_ICONS=Object.freeze({EGC:'🍵',EGCG:'🍃',caffeine:'☕',lThea
 export const NUTRIENT_LABELS=N;
 const profile=(name,amount,unit,values,source='Etikett',extra={},note='')=>({name,reference:{amount,unit},nutrients:values,source,extra,note,estimatedNutrients:[]});
 const LABELLED={
+ 'pizza-margherita':profile('Pizza Margherita (generischer Richtwert)',100,'g',{kcal:250,protein:11,carbs:31,sugar:3,fat:10,saturated:4,fiber:2,salt:1.2},'Grobe Rezeptschätzung',{},'Teig, Käse, Öl und Gewicht stark unterschiedlich; 300 g nur vorläufig.'),
+ 'krautsalat':profile('Krautsalat mit Dressing (generisch)',100,'g',{kcal:85,protein:1,carbs:9,sugar:6,fat:5,fiber:2,salt:.7},'Grobe Rezeptschätzung',{},'Öl, Zucker und Dressing unbekannt; ohne Dressing ggf. deutlich weniger.'),
+ 'stangenbohnensalat':profile('Stangenbohnensalat (generisch)',100,'g',{kcal:80,protein:2,carbs:7,sugar:2.5,fat:5,fiber:3,salt:.6},'Grobe Rezeptschätzung',{},'Öl und Dressing unbekannt.'),
+ 'champagne':profile('Champagner (generisch)',100,'ml',{kcal:75,carbs:2,sugar:1.5},'Grobe Schätzung',{},'Alkoholenergie in kcal enthalten; Restzucker und Alkoholgehalt je Cuvée unterschiedlich.'),
+ 'chocolate-cookie':profile('Chocolate Cookie (generisch)',100,'g',{kcal:490,protein:5,carbs:61,sugar:37,fat:25,saturated:13,fiber:3,salt:.5},'Grobe Rezeptschätzung',{},'Backrezept, Schokolade und Größe variieren.'),
+ 'whipped-cream':profile('Schlagsahne / Schlagobers',100,'g',{kcal:320,protein:2,carbs:3,sugar:3,fat:33,saturated:21},'Grobe Schätzung',{},'Ohne zugesetzten Zucker angenommen; Schlagsahne kann süßer sein.'),
  'milk-my-vay':profile('My Vay Barista Haferdrink · Hofer',100,'ml',{kcal:48,fat:2.3,saturated:.2,carbs:6.1,sugar:2.5,fiber:.2,protein:.6,salt:.11,calcium:120,vitaminB2:.21,vitaminD:1.1,vitaminB12:.38},'Etikett',{},'Angereichert mit Calcium, B2, B12 und D; Zucker aus Haferfermentation.'),
  'monin-caramel':profile('Monin Salted Caramel Sirup',100,'ml',{kcal:326,fat:0,saturated:0,carbs:80.3,sugar:80.3,protein:0,salt:1.01},'Etikett',{},'Kleiner Schuss: 10 ml geschätzt, nicht abgemessen.'),
  'mixed-nuts':profile('MorgenLand Bio Kerniger Nuss Mix',100,'g',{kcal:649,fat:58,saturated:7.1,carbs:12,sugar:4.2,fiber:6.9,protein:17,salt:.02},'Etikett',{},'1 Handvoll = 30 g (vom Nutzer gewogen). Paranüsse: Selen enthalten, Menge unbekannt.'),
@@ -148,6 +154,13 @@ export function nutritionParts(foodId,amount='',food=null){
  const fake={foodId,amount};
  const value=quantityFor(fake,source);
  const piece=(id,qty,unit,part)=>rescale(LABELLED[id],qty,unit,part);
+ if(foodId==='chocolate-cookie-cream'){
+  const entry=String(amount||source.defaultAmount||'');
+  const grams=key=>{const match=entry.match(new RegExp('(\\d+(?:[.,]\\d+)?)\\s*g\\s*'+key,'i'));return match?amountNumber(match[1]):null;};
+  const cookie=grams('(?:cookie|keks)'),cream=grams('(?:schlagobers|sahne|schlagsahne)');
+  if(!Number.isFinite(cookie)||!Number.isFinite(cream)||cookie<=0||cream<0||cookie>600||cream>300)return [];
+  return [piece('chocolate-cookie',cookie,'g','Cookie'),...(cream>0?[piece('whipped-cream',cream,'g','Schlagsahne')]:[])].filter(Boolean);
+ }
  if(foodId==='matcha'||foodId==='matcha-oat-plain'){
    const milk=String(amount||'').match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:hafermilch|haferdrink)/i);
    const ml=milk?amountNumber(milk[1]):75;

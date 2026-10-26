@@ -7,6 +7,7 @@ import './ars-vivendi-lock-v5775922.css';
 
 const BASE=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/,'/');
 const ASSET=BASE+'ars-vivendi-lock-v5775922.png';
+const DESKTOP_MOONLIT=BASE+'ars-vivendi-moonlit-desktop-v5775932.webp';
 const ROOT_ID='ars22-lockscreen';
 
 function init(){
@@ -62,6 +63,7 @@ function init(){
       </div>
      </section>`;
     shell.style.setProperty('--ars22-bg',`url("${ASSET}")`);
+    shell.style.setProperty('--ars22-desktop-bg',`url("${DESKTOP_MOONLIT}")`);
     document.body.append(shell);
     app.inert=true;
     trigger=shell.querySelector('[data-ars22-open]');

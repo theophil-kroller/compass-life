@@ -1,0 +1,24 @@
+{
+  "release": "0.5.77.59.32",
+  "baseline_commit": "df13c0c5e453421d2a81c8c486c325dbe1d29f30",
+  "changed_files": {
+    "client/src/personal-journal-v5692.js": "decef41da306cda6658d4f4c4850d21af0a4b87b3d9851f33b457c952703ff05",
+    "client/src/nutrition-intelligence-v57712.js": "967a0909107bb2243ad1020d4380b467032437634f9ad28d62d70bc3d0b4d767",
+    "client/src/daily-dozen-v5775930.js": "7adbed1e104fba017fb8de38be893db27d9209df470e2eee1a3ed591167b035c",
+    "client/src/ars-vivendi-lock-v5775922.js": "73997a51ae7ba7af3737d790c0b365562b233955f2af139c34829e2289b167b4",
+    "client/src/ars-vivendi-lock-v5775922.css": "38676e168360b272b9384c86001dfcfa3da96e6b2266709d17b3403a8822ad71",
+    "client/public/ars-vivendi-moonlit-desktop-v5775932.webp": "87d2f9db383eac8064e0e2aac73714e295503572a1e55229495935f3f64ee904",
+    "client/compass5932-food-desktop-bridge.js": "93d58227c9f37ebb97e595872d48d2d7ebed0aea82f6059f72b83d89490db066",
+    "client/vite.config.js": "58e0eb16ff4b53a8b95f54e2e690318969cdf011b20d885423e9b65a98f74cff",
+    "tests/compass-05775932-food-desktop.test.mjs": "341343042f54e25e57744a9cf5b8ed45d94301ca134ce2701e7be67ccc3a3127",
+    "RELEASE_0.5.77.59.32.md": "c14c8c4157f0c9e13ddf86b9627ef80555a9880f623688cbdbfe02af77d2ea73"
+  },
+  "qa": {
+    "npm_run_check": {
+      "tests": 1429,
+      "passed": 1429,
+      "failed": 0
+    },
+    "npm_run_build": "not runnable in this environment; dependencies unavailable"
+  }
+}

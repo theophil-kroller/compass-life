@@ -19,7 +19,13 @@ html.ars22-locked{overflow:hidden!important;overscroll-behavior:none}
 .ars22-form-slot .vault-form :focus-visible,.ars22-panel button:focus-visible{outline:2px solid #f6d895;outline-offset:3px}
 .ars22-form-slot .vault-form .restore-label{color:#f2dab5}
 .ars22-form-slot .vault-form label.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-@media(min-width:720px){.ars22-panel{align-items:center}.ars22-sheet{background:#0d2031f5}}
+@media(min-width:720px){
+ .ars22-cover{background:#020d18}
+ .ars22-wash{inset:0;background-image:var(--ars22-desktop-bg);background-size:cover;background-position:center;filter:brightness(.87);transform:none}
+ .ars22-art{box-shadow:0 0 70px #000b,0 0 2px #d9ab6c55}
+ .ars22-panel{align-items:center}
+ .ars22-sheet{background:#0d2031f5}
+}
 @media(prefers-reduced-motion:no-preference){.ars22-panel{animation:ars22-reveal .24s ease-out both}@keyframes ars22-reveal{from{opacity:0}to{opacity:1}}}
 
 @media(max-width:719px){.ars22-art{width:100vw;height:100dvh;max-height:none;max-width:none}.ars22-image{object-fit:cover;object-position:center}}

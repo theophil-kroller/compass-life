@@ -37,6 +37,7 @@ import { compass5928VtaperLuxBridge } from './compass5928-vtaper-lux-bridge.js';
 import { compass5929BreakfastBridge } from './compass5929-breakfast-bridge.js';
 import { compass5930MobileLongevityBridge } from './compass5930-mobile-longevity-bridge.js';
 import { compass5931FamilyRadarBridge } from './compass5931-family-radar-bridge.js';
+import { compass5932FoodDesktopBridge } from './compass5932-food-desktop-bridge.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -44,7 +45,7 @@ const compassConfig=defineConfig({
   plugins: [compass5910StrengthHabitsBridge(), nutrition3Bridge(), strength728Bridge(), strength729Bridge(), strength730Bridge(), nutrition731Bridge(), strengthNutrition732Bridge(), nutritionStrength733Bridge(), nutritionLongevity734Bridge(), strengthTouch735Bridge(), nutrition736Bridge(), anatomyRecipes737Bridge(), nutritionPill577371Bridge(), strengthPremium738Bridge(), compass741Bridge(), strengthSync742Bridge(), compass743Bridge(), compass744Bridge(), compass745Bridge(), compass746Bridge(), compass747Bridge(), compass748Bridge(), compass749Bridge(), VitePWA({
     registerType: 'autoUpdate',
     base,
-    includeAssets: ['compass-icon.svg','icon-192.png','icon-512.png','runtime-config.json'],
+    includeAssets: ['compass-icon.svg','icon-192.png','icon-512.png','runtime-config.json','ars-vivendi-moonlit-desktop-v5775932.webp'],
     manifest: {
       id: base,
       name: 'Compass – Personal Life Manager', short_name: 'Compass',
@@ -93,4 +94,5 @@ const compassConfig=defineConfig({
 compassConfig.plugins.push(compass5928VtaperLuxBridge(), compass5929BreakfastBridge());
 compassConfig.plugins.push(compass5930MobileLongevityBridge());
 compassConfig.plugins.push(compass5931FamilyRadarBridge());
+compassConfig.plugins.push(compass5932FoodDesktopBridge());
 export default compassConfig;

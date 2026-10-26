@@ -27,6 +27,13 @@ export const FOOD_PRESETS=[
  ['white-wine','🥂','Weißwein','Getränke','1 Glas (125 ml)',85,115],
  ['whiskey','🥃','Whiskey','Getränke','1 Glas (40 ml)',85,105],
  ['mensa','🍲','Mensaessen','Mahlzeiten','1 Teller',400,1000],
+ ['pizza-margherita','🍕','Pizza Margherita','Mahlzeiten','1 Pizza (300 g; geschätzt)',650,900],
+ ['krautsalat','🥬','Krautsalat mit Dressing','Mahlzeiten','1 Beilage (150 g)',70,200],
+ ['stangenbohnensalat','🫛','Stangenbohnensalat','Mahlzeiten','1 Beilage (150 g)',65,180],
+ ['champagne','🥂','Champagner','Getränke','1 Glas (125 ml)',85,115],
+ ['chocolate-cookie','🍪','Chocolate Cookie','Snacks','1 Cookie (80 g)',330,450],
+ ['whipped-cream','🍦','Schlagsahne / Schlagobers','Zutaten','1 Portion (40 g)',100,145],
+ ['chocolate-cookie-cream','🍪','Chocolate Cookie mit Schlagsahne','Snacks','80 g Cookie + 40 g Schlagobers',440,600],
  ['wholegrain-toast-butter-jam','🍞','Vollkorn-Toast mit Butter & Marmelade','Frühstück','1 Stück',140,260],
  ['fried-egg','🍳','Spiegelei','Frühstück','1 Stück',95,160],
  ['dark-bread-butter','🍞','Bio Nur-Kornbrot mit Hofer Bio-Butter','Frühstück','1 Scheibe (50 g) + Butter (10 g; geschätzt)',202,214],
@@ -46,6 +53,7 @@ export const FOOD_PRESETS=[
  ['other-food','➕','Anderes','Sonstiges']
 ].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({
  id,emoji,title,group,defaultAmount,kcalLow,kcalHigh,
+ ...(id==='pizza-margherita'||id==='krautsalat'||id==='stangenbohnensalat'||id==='champagne'||id==='chocolate-cookie'||id==='whipped-cream'||id==='chocolate-cookie-cream'?{recipeNote:'Grobe Nährwert- und Portionsschätzung, kein Herstelleretikett. Menge und Zutaten können stark abweichen.'}:{}),
  ...(id==='matcha'||id==='matcha-oat-plain'?{
   recipeNote:`1 TL Matcha (ca. 2 g), heißes Wasser, geschätzt 75 ml Hafermilch${id==='matcha'?', 1 TL Honig (ca. 7 g)':''}. Die gesamte Trinkmenge (ca. 500 ml) ist nicht die Hafermilchmenge.`
  }:{})
@@ -162,6 +170,12 @@ export function nutritionKcalEstimate(food,amount){
   return {low:Math.max(0,kcal-2),high:kcal+2,kind:'Etikett + Schätzung'};
  }
  const parseNumber=v=>Number(String(v).replace(',','.'));
+ if(food.id==='chocolate-cookie-cream'){
+  const get=(str,key)=>{const match=String(str).match(new RegExp('(\\d+(?:[.,]\\d+)?)\\s*g\\s*'+key,'i'));return match?parseFloat(match[1].replace(',','.')):null;};
+  const cookie=get(given,'(?:cookie|keks)'),cream=get(given,'(?:schlagobers|sahne|schlagsahne)');
+  if(!Number.isFinite(cookie)||!Number.isFinite(cream)||cookie<=0||cream<0||cookie>600||cream>300)return null;
+  return {low:Math.round(cookie*4.3+cream*2.5),high:Math.round(cookie*5.7+cream*3.6),kind:'Zutaten-Schätzung'};
+ }
  const unit=u=>({gramm:'g',stücke:'stück',scheiben:'scheibe',portionen:'portion',liter:'l'}[u]||u);
  const measures=str=>{
   const items=[...str.matchAll(/(\d+(?:[.,]\d+)?)\s*(stücke|stück|scheiben|scheibe|g|gramm|ml|liter|l\b|packung|dose|teller|tassen|tasse|bechern|becher|portionen|portion)\b/gi)]

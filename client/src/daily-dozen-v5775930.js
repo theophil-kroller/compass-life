@@ -30,6 +30,9 @@ function quantities(food,amount){
  const add=(key,amount)=>{if(nonnegative(amount)&&amount>0)units[key]=(units[key]||0)+amount;};
  if(id==='apple'){const m=original.match(/(\d+(?:[.,]\d+)?)\s*(?:stück|äpfel|apfel)/i);add('fruits',m?num(m[1]):1);}
  if(id==='dried-mango')add('fruits',gramAmount(original,200)/40);
+ // Conservative portions for explicitly logged sides; dressing is never treated as vegetables.
+ if(id==='krautsalat')add('cruciferous',gramAmount(original,150)/150);
+ if(id==='stangenbohnensalat')add('vegetables',gramAmount(original,150)/150);
  if(id==='peanuts'||id==='mixed-nuts')add('nuts',gramAmount(original,30)/30);
  if(id==='koro-pistachio-puree'||id==='koro-black-tahini')add('nuts',gramAmount(original,15)/30);
  if(id==='lyttos-pistachio-breakfast'||id==='lyttos-tahini-breakfast')add('nuts',fromNames(id==='lyttos-pistachio-breakfast'?'pistazienmus':'tahini',15)/30);
