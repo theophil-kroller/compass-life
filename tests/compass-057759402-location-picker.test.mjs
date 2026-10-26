@@ -44,7 +44,7 @@ test('Final Vite plugin applies after .40.1; old panel removed but opt-in recomm
  assert.match(recommendation,/ctx40Expanded/); // lazy panel still provided by .40
  assert.match(mainSrc,/locationPicker42\(state\)/);
 });
-test('Actual full source pipeline places one pin immediately after Today day navigation, without a full-width bar',async()=>{
+test('Actual full source pipeline still places one pin immediately after Today day navigation; later .40.3 compaction may swap the renderer',async()=>{
  const imports=new Map([...config.matchAll(/import\s*\{\s*(\w+)\s*\}\s*from\s*'\.\/(.+?\.js)'/g)].map(x=>[x[1],x[2]]));
  const names=[...config.matchAll(/\b([a-zA-Z]\w*(?:Bridge|Release))\(\)/g)].map(x=>x[1]);
  let code=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
@@ -53,10 +53,10 @@ test('Actual full source pipeline places one pin immediately after Today day nav
   const result=await mod[name]().transform(code,'/repo/client/src/main.js');
   if(result?.code)code=result.code;
  }
- assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.2'/);
+ assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.(?:2|3)'/);
  assert.match(code,/<div class="ctx42-date-row"><nav class="daynav38"/);
- assert.match(code,/<\/nav>\$\{locationPicker42\(state\)\}<\/div>/);
- assert.equal((code.match(/locationPicker42\(state\)/g)||[]).length,1);
+ assert.match(code,/<\/nav>\$\{locationPicker4[23]\(state\)\}<\/div>/);
+ assert.equal((code.match(/locationPicker4[23]\(state\)/g)||[]).length,1);
  assert.equal((code.match(/locationContextPanel39\(state,nextActions\(state\)\)/g)||[]).length,0);
  assert.match(code,/ctx40Expanded&&selectedDay===localDate\(\)/);
  assert.match(code,/if\(tab==='today'&&state\)\{ctx42BindHover\(\);ctx39ScheduleAuto\(\);\}/);
