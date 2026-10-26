@@ -1,0 +1,27 @@
+/* 0.5.77.59.40.2: one small location icon alongside the Today date.
+   Desktop: hover/focus; mobile: touch/summary. No extra top navigation. */
+.ctx42-date-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;position:relative;min-width:0;margin:0 0 8px;isolation:isolate;z-index:30}
+.ctx42-date-row .daynav38{margin:0}
+.ctx42-menu{position:relative;display:inline-block;flex:none;min-width:0;color:#285747}
+.ctx42-menu>summary{list-style:none}.ctx42-menu>summary::-webkit-details-marker{display:none}
+.ctx42-pin{display:inline-flex;align-items:center;gap:6px;min-height:42px;padding:7px 11px;border-radius:12px;border:1px solid #bdd6c9;background:#e9f4ee;color:#2a6350;cursor:pointer;font-size:13px;font-weight:600;user-select:none;box-shadow:0 1px 3px #2043330b}
+.ctx42-pin:hover,.ctx42-pin:focus-visible,.ctx42-menu[open]>.ctx42-pin{background:#dceee5;border-color:#75a88f;outline-offset:2px}
+.ctx42-emoji{font-size:19px;line-height:1}.ctx42-pin-label{white-space:nowrap}.ctx42-chevron{font-size:17px;color:#688376;line-height:1}
+.ctx42-popover{position:absolute;top:calc(100% + 7px);left:0;width:min(345px,calc(100vw - 32px));max-height:min(72dvh,560px);overflow-y:auto;overscroll-behavior:contain;z-index:1000;padding:12px;background:#fff;border:1px solid #d9e7df;box-shadow:0 16px 38px #1a40302e;border-radius:16px;color:#294d3e;display:grid;gap:9px}
+.ctx42-popover-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1px solid #e8efe9;padding:2px 2px 9px}.ctx42-popover-head strong{font-size:14px}.ctx42-popover-head small{font-size:11px;color:#738579;text-align:right}
+.ctx42-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.ctx42-popover button{font:inherit;cursor:pointer;border:1px solid #d8e5dc;background:#f6faf7;color:#315b4a;border-radius:10px;padding:9px 10px;min-height:40px;text-align:left;font-size:12px}
+.ctx42-popover button:hover,.ctx42-popover button:focus-visible,.ctx42-config>summary:hover{border-color:#8bb69e;background:#eaf5ed;outline-offset:2px}
+.ctx42-choice[aria-pressed="true"],.ctx42-auto.ctx42-on{background:#d8eee1;border-color:#699c80;color:#20553d;font-weight:700}
+.ctx42-popover .ctx42-auto,.ctx42-popover .ctx42-recommend,.ctx42-popover .ctx42-check{width:100%;text-align:center}
+.ctx42-popover .ctx42-recommend{border-color:#d0ddd3;background:#edf6f0;font-weight:600}
+.ctx42-config{border:1px solid #dde8e1;border-radius:11px;min-width:0;overflow:visible}.ctx42-config>summary{cursor:pointer;padding:10px 11px;font-size:12px;font-weight:600;color:#315847;list-style:none}.ctx42-config>summary::-webkit-details-marker{display:none}.ctx42-config>summary:before{content:'▸';padding-right:7px}.ctx42-config[open]>summary:before{content:'▾'}
+.ctx42-config-inner{display:grid;gap:9px;padding:0 10px 11px;font-size:12px}.ctx42-config-inner p{font-size:11px;line-height:1.5;color:#5f786b;margin:3px 0}.ctx42-config-inner small{font-size:10px;line-height:1.45;color:#667f72}
+.ctx42-radius{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px}.ctx42-radius select{max-width:110px;min-height:34px;border:1px solid #cddfd4;border-radius:7px;padding:4px 6px;color:#294e3e;background:#fff}
+.ctx42-zone{border-top:1px solid #eef3f0;padding-top:9px;display:flex;align-items:center;flex-wrap:wrap;gap:5px}.ctx42-zone>span{display:flex;flex:1;flex-direction:column;min-width:120px;gap:3px}.ctx42-zone strong{font-size:12px}.ctx42-zone small{font-size:10px}.ctx42-zone button{flex:none}.ctx42-zone .ctx42-remove{min-width:34px;text-align:center}
+.ctx42-menu button:focus-visible,.ctx42-menu summary:focus-visible{outline:2px solid #2d7355}
+@media(min-width:720px){.ctx42-popover{left:auto;right:0}}
+@media(max-width:550px){.ctx42-date-row{gap:7px;margin-bottom:7px}.ctx42-pin{min-height:40px;padding:7px 9px}.ctx42-pin-label{max-width:100px;overflow:hidden;text-overflow:ellipsis;font-size:12px}.ctx42-popover{left:auto;right:0;width:min(330px,calc(100vw - 27px))}}
+@media(max-width:390px){.ctx42-pin-label{max-width:75px}}
+
+.ctx42-links{display:grid;gap:6px;border-top:1px solid #e8efe9;padding-top:8px}.ctx42-links>small{color:#718578;font-size:11px}.ctx42-links>div{display:flex;flex-wrap:wrap;gap:5px}.ctx42-links button{flex:1 1 auto;text-align:center;white-space:nowrap}

@@ -48,6 +48,7 @@ import { compass5938ExperienceRelease } from './compass5938-experience-release.j
 import { compass5939LocationContextRelease } from './compass5939-location-context-release.js';
 import { compass5940ContextNextRelease } from './compass5940-context-next-release.js';
 import { compass59401NavigationRelease } from './compass59401-navigation-release.js';
+import { compass59402LocationPickerRelease } from './compass59402-location-picker-release.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -115,4 +116,5 @@ compassConfig.plugins.push(compass5938ExperienceRelease());
 compassConfig.plugins.push(compass5939LocationContextRelease());
 compassConfig.plugins.push(compass5940ContextNextRelease());
 compassConfig.plugins.push(compass59401NavigationRelease());
+compassConfig.plugins.push(compass59402LocationPickerRelease());
 export default compassConfig;

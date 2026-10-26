@@ -1,0 +1,40 @@
+COMPASS LIFE 0.5.77.59.40.2 — INSTALLATION
+========================================
+
+VORAUSSETZUNG
+Dein GitHub-Projekt entspricht Full-Source-Stand 0.5.77.59.40.1.
+
+OPTION A — PATCH (empfohlen, nur von 0.5.77.59.40.1)
+1. Sichere wie gewohnt den verschlüsselten lokalen Tresor; keine Browserdaten löschen.
+2. Compass_0.5.77.59.40.2_PATCH_FROM_0.5.77.59.40.1.zip entpacken.
+3. Die enthaltenen Dateien in GitHub unter exakt denselben relativen Pfaden hochladen. Bereits vorhandene Dateien überschreiben; neue Dateien hinzufügen. Nicht nur die ZIP selbst in GitHub hochladen.
+4. Änderungen auf main committen, GitHub Actions/Cloudflare-Deploy auf grün prüfen.
+5. Die Compass-PWA auf dem Handy vollständig schließen und wieder öffnen bzw. neu laden.
+6. Versionsanzeige 0.5.77.59.40.2 prüfen.
+
+OPTION B — FULL SOURCE
+Compass_0.5.77.59.40.2_FULL_SOURCE_READY.zip enthält den vollständigen
+Quellstand mit allen früheren Features, neuen Dateien und Tests. Nur
+anstelle des Patches verwenden, nicht zusätzlich. Vorhandene Daten bleiben
+im Gerätetresor und dürfen nicht gelöscht werden.
+
+SO BENUTZT DU 📍
+- Heute öffnen: Direkt neben ‹ Heute › erscheint 📍 Standort offen.
+- Desktop: mit der Maus darüber fahren / klicken.
+- Android: 📍 antippen.
+- Zuhause / Arbeit / Unterwegs auswählen (keine GPS-Freigabe notwendig).
+- Für automatische Erkennung: Auf dem jeweiligen realen Ort ⚙ Standorte
+  & Radius einstellen → Hier festlegen tippen; Browserfreigabe zulassen.
+- Danach Automatisch erkennen einschalten. Über Standort jetzt prüfen kann
+  jederzeit eine explizite Messung ausgelöst werden.
+- Die passenden Ansichten und „✦ Was passt jetzt?“ stehen ebenfalls im Menü.
+
+PRÜFEN
+- Sichtbarkeit in Focus und Extended, Desktop und Smartphone.
+- Öffnen über Hover sowie Tippen (auch ohne GPS-Berechtigung).
+- Kontext auswählen und nach App-Neustart den Zustand kontrollieren.
+- GPS- und Automatik-Einrichtung explizit testen, wenn du am Ort bist.
+- Family Radar und Forecast funktionieren weiterhin.
+
+Keine Worker-/D1-Migration. Automatisches Geofencing nur bei sichtbarer PWA.
+Tests: npm run check (Node-Tests + Worker-Syntax), npm run build nach npm install.
