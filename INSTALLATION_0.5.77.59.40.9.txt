@@ -1,0 +1,15 @@
+COMPASS WEB 0.5.77.59.40.9 – PATCH / FULL SOURCE
+
+PATCH: Nur auf Quellstand 0.5.77.59.40.8 anwenden. ZIP entpacken, Dateien relativ zur Repository-Wurzel in GitHub ersetzen oder hinzufügen, committen. GitHub Pages Actions auf erfolgreichen Test + Build prüfen.
+FULL: Enthält den vollständigen Quellstand, alternativ zum Patch.
+
+WICHTIG: Worker aus 0.40.8 (oder neuer) muss für die Archiv-/Papierkorb-Projektstatuswerte bereits ausgerollt sein. Das Web-Deployment allein aktualisiert den Worker NICHT. Falls noch nicht geschehen: aus dem entsprechenden Repository npm run deploy:api ausführen. Keine Datenbankmigration erforderlich.
+
+Prüfen:
+1. Planen > Projekte: linke Leiste unten Archiv und Papierkorb sichtbar, auch bei vielen Ordnern.
+2. Aufgabe öffnen oder in Projektliste ansehen: Archiv/Papierkorb-Aktionen erreichbar.
+3. Zurück aus Archiv/Papierkorb > Wiederherstellen prüfen.
+4. Heute: ↑ und ↓ verschiebt offene Aufgaben; nach Reload bleibt Reihenfolge.
+5. Neben Heute: kleine Standort- und Kontext-Icons am rechten Ende.
+
+Lokalen verschlüsselten Tresor vor Versionswechsel sichern, Cache NICHT blind löschen.

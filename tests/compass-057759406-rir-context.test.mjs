@@ -76,14 +76,14 @@ test('Version and actual Vite transform chain both reach .40.6 with single locat
  const config=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
  const imports=new Map([...config.matchAll(/import\s*\{\s*(\w+)\s*\}\s*from\s*'\.\/(.+?\.js)'/g)].map(x=>[x[1],x[2]]));
  const names=[...config.matchAll(/\b([a-zA-Z]\w*(?:Bridge|Release))\(\)/g)].map(x=>x[1]);
- assert.equal(names.at(-1),'compass59408ProjectsExperimentsRelease');
+ assert.equal(names.at(-1),'compass59409WorkspaceRelease');
  let code=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  for(const name of names){
   const mod=await import(new URL('../client/'+imports.get(name),import.meta.url));
   const res=await mod[name]().transform(code,'/repo/client/src/main.js');
   if(res?.code)code=res.code;
  }
- assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.8'/);
+ assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.9'/);
  assert.match(code,/locationCycle46\(state\)/);
  assert.match(code,/ctx46-cycle/);
  assert.doesNotMatch(code,/locationPicker43\(state\)/);

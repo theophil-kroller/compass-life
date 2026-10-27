@@ -1,0 +1,30 @@
+/* .40.9 user-visible three-pane archive/trash and Today task order */
+.shell .compass58-sidebar{display:flex;flex-direction:column;min-height:0;height:calc(100dvh - 110px);overflow:hidden}
+.compass58-sidebar-list{min-height:0;overflow:auto;flex:1 1 auto}
+.p49-vault-nav{display:grid;gap:4px;flex:0 0 auto;padding:10px 8px;border-top:1px solid #d9e3e1;background:#f7f9f7}
+.p49-vault-nav button{display:flex;align-items:center;gap:9px;border:0;border-radius:8px;background:#edf2f1;color:#556b77;font-size:12px;font-weight:600;min-height:36px;padding:8px 10px;text-align:left;cursor:pointer}
+.p49-vault-nav button:nth-child(2){color:#8a675f;background:#faf0ed}
+.p49-vault-nav button[aria-pressed="true"]{box-shadow:inset 0 0 0 2px #819e90;background:#e0eee5}
+.p49-today-move{display:inline-flex;flex-direction:column;gap:1px;flex:none;align-self:center;margin:0 5px 0 0}
+.p49-today-move button{border:1px solid transparent;border-radius:7px;min-width:25px;min-height:23px;padding:0;background:#f4f8f5;color:#456956;cursor:pointer;font-size:13px}
+.p49-today-move button:hover:not(:disabled),.p49-today-move button:focus-visible{background:#dceee4;border-color:#9abbab}
+.p49-today-move button:disabled{opacity:.24;cursor:default}
+.p49-trash-button{color:#915e55!important}
+.p49-task-vault{border-top:1px solid #dfe9e3;margin-top:12px;padding:12px 0;display:grid;gap:8px}
+.p49-task-vault h3{font-size:13px;display:flex;gap:7px;align-items:center}
+.p49-task-vault-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;border:1px solid #e1e8e4;padding:10px;border-radius:9px}
+.p49-task-vault-row strong{font-size:12px}.p49-task-vault-row div{display:flex;gap:7px;flex-wrap:wrap}
+.p49-task-vault-row button{border:1px solid #d2e2d8;border-radius:8px;padding:8px;background:#f5faf6;color:#42654e;cursor:pointer;font-size:11px}
+.p49-task-vault-row .p49-danger{color:#9e5347;background:#fff6f4;border-color:#ead0c9}
+/* The GPS controls are secondary to the day's headline. Keep them together,
+   but scaled down; reserve the far right of the heading for them on desktop. */
+.ctx46-pair{gap:3px!important;margin-left:auto!important}
+.ctx46-pin,.ctx46-cycle{min-width:30px!important;min-height:30px!important;width:30px!important;height:30px!important;padding:3px!important;border-radius:9px!important;font-size:15px!important;box-shadow:none!important}
+.ctx46-pin{font-size:14px!important}
+@media(max-width:700px){.p49-today-move button{min-width:31px;min-height:27px}.p49-vault-nav{padding:8px 3px}}
+
+.p49-task-row-actions{display:inline-flex;gap:3px;flex:0 0 auto;align-items:center}
+.p49-task-row-actions button{border:0;border-radius:7px;background:#eef4f0;color:#52756a;min-width:25px;min-height:28px;padding:4px;cursor:pointer}
+.p49-task-row-actions button:last-child{color:#94635b;background:#faf3f1}
+.p49-task-row-actions button:hover{filter:brightness(.95)}
+@media(max-width:700px){.shell .compass58-sidebar{display:none}}
