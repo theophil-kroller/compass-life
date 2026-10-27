@@ -53,10 +53,10 @@ test('Actual full source pipeline still places one pin immediately after Today d
   const result=await mod[name]().transform(code,'/repo/client/src/main.js');
   if(result?.code)code=result.code;
  }
- assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.(?:2|3|4|5)'/);
+ assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.(?:2|3|4|5|6)'/);
  assert.match(code,/<div class="ctx42-date-row"><nav class="daynav38"/);
- assert.match(code,/<\/nav>\$\{locationPicker4[23]\(state\)\}<\/div>/);
- assert.equal((code.match(/locationPicker4[23]\(state\)/g)||[]).length,1);
+ assert.match(code,/<\/nav>\$\{(?:locationPicker4[23]|locationCycle46)\(state\)\}<\/div>/);
+ assert.equal((code.match(/(?:locationPicker4[23]|locationCycle46)\(state\)/g)||[]).length,1);
  assert.equal((code.match(/locationContextPanel39\(state,nextActions\(state\)\)/g)||[]).length,0);
  assert.match(code,/ctx40Expanded&&selectedDay===localDate\(\)/);
  assert.match(code,/if\(tab==='today'&&state\)\{ctx42BindHover\(\);ctx39ScheduleAuto\(\);\}/);

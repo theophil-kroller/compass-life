@@ -8,9 +8,17 @@ const today='2026-10-26';
 const task=(id,title,more={})=>({id,title,workflow:'next',completed:false,archived:false,projectId:null,contextTags:[],estimateMinutes:30,...more});
 const example=()=>({tasks:{a:task('a','Büroarbeit',{contextTags:['büro'],dueDate:'2026-10-27'}),b:task('b','Zuhause lernen',{contextTags:['zuhause'],flagged:true}),c:task('c','Telefonat',{contextTags:[],dueDate:'2026-10-26'}),d:task('d','Verschieben',{contextTags:[],deferUntil:'2026-11-01'}),e:task('e','Fertig',{completed:true}),f:task('f','Warte',{workflow:'waiting'}),g:task('g','Lange Aufgabe',{estimateMinutes:180}),h:task('h','Energie low',{contextTags:['energy-low']})},projects:{},uiPreferences:{dailyMinutes:60,dailyEnergy:'low'},locationContext39:{mode:'manual',manual:'home'}});
 test('Unknown location gives only location-independent tasks, never guesses a home location',()=>{
- const state=example();state.locationContext39.manual='unknown';const out=recommendNext40(state,{day:today});
+ const state=example();state.locationContext39={mode:'auto',last:null};const out=recommendNext40(state,{day:today});
  assert.ok(out.items.every(x=>!taskPlace40(x.task).length));assert.ok(!out.items.some(x=>x.task.id==='a'||x.task.id==='b'));
  assert.equal(out.skippedPlace,2);assert.equal(out.kind,'unknown');
+});
+test('Manual all-context option shows work, home and neutral tasks, each with honest location caveats',()=>{
+ const state=example();state.locationContext39.manual='unknown';
+ const out=recommendNext40(state,{day:today,limit:10});
+ assert.equal(out.allContexts,true);
+ assert.ok(out.items.some(x=>x.task.id==='a'&&x.reasons.some(r=>r.includes('Ort prüfen'))));
+ assert.ok(out.items.some(x=>x.task.id==='b'&&x.reasons.some(r=>r.includes('Ort prüfen'))));
+ assert.match(contextNextPanel40(state,{day:today}),/Alle Kontexte/);
 });
 test('Home vs office tasks are never mistaken for each other and due dates explain rank',()=>{
  const st=example();const atHome=recommendNext40(st,{day:today,context:'home'});

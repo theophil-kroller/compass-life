@@ -18,7 +18,7 @@ export function guidedPlanFromSession(session){
   return {id:e.exerciseId,title:e.title||item.title||e.exerciseId,primary:item.primary||e.primary||'',
    sets:e.plannedSets,reps:e.plannedReps,restSeconds:Number.isFinite(e.restSeconds)?e.restSeconds:Number.isFinite(item.restSeconds)?item.restSeconds:180,
    lastKg:Number.isFinite(last)?last:Number.isFinite(item.lastKg)?item.lastKg:null,
-   progressionHint:item.progressionHint||'',order:i+1};
+   progressionHint:item.progressionHint||'',targetReps:Array.isArray(e.targetReps)?e.targetReps:Array.isArray(item.targetReps)?item.targetReps:null,order:i+1};
  });
  return {goal:session.goal||old.goal||'balance',equipment:session.equipment==='gym'?'gym':'home',
   title:session.planTitle||old.title||'Gespeichertes Workout',exercises};

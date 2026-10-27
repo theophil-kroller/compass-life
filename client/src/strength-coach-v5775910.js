@@ -9,6 +9,7 @@ import {EXERCISES} from './strength-editor-v57732.js';
 import './strength-coach-v5775910.css';
 import {resumableGuidedSession,guidedPlanFromSession} from './strength-workout-resume-v57759405.js';
 import './strength-workout-resume-v57759405.css';
+import {rirProgression46} from './strength-rir-progress-v57759406.js';
 import {coach34Feedback,coach34RecommendedSets,coach34RirGuidance} from './strength-adaptive-v5775934.js';
 import './strength-adaptive-v5775934.css';
 import {readCycle35,saveCycleAction35,coachCycle35} from './strength-cycle-v5775935.js';
@@ -294,8 +295,11 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   if(age!==null&&age<=1&&history.valid.length)reason+=' Kürzlich beansprucht – bei Bedarf verschieben.';
   if(cycle?.deloadActive&&selectedGoal==='vtaper')reason+=' Aktive Entlastungswoche: Satzanzahl reduziert; Last frei wählen.';
   if(typeof coach34RirGuidance==='function'){const rirNote=coach34RirGuidance(state,id,todayValue);if(rirNote)reason+=' '+rirNote;}
+  const rirModel=typeof rirProgression46==='function'?rirProgression46(state,id,{today:todayValue,reps,plannedSets:typeof adjustedSets==='number'?adjustedSets:sets,lastKg:progression.lastKg,equipment:location,goal:selectedGoal,strongLifts,healthAttention:health?.attention===true,deload:cycle?.deloadActive===true,weightStepKg:location==='gym'?2.5:2}):null;
+  const corrected=rirModel?{...progression,action:rirModel.action,suggestedKg:rirModel.suggestedKg,message:rirModel.message}:progression;
+  if(rirModel)reason+=' RIR-Progression auf bestätigten Arbeitssätzen; Vorschlag jederzeit anpassbar.';
   return {id,title:item.name||id,primary,kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets,reps,restSeconds,ageDays:age,sevenSets:seven,
-   lastKg:progression.lastKg,suggestedKg:progression.suggestedKg,progressionAction:progression.action,progressionHint:progression.message,
+   lastKg:corrected.lastKg,suggestedKg:corrected.suggestedKg,progressionAction:corrected.action,progressionHint:corrected.message,targetReps:rirModel?.targetReps||null,rirConfidence:rirModel?.confidence||null,
    reason,order:index+1};
  });
  // The existing .28 adaptive-sets bridge still transforms the original per-exercise
@@ -375,7 +379,7 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
   <div class="str619-coverage"><span>Coach: ${plan.sourceStats.coach} eigene Sätze · Garmin: ${plan.sourceStats.garmin} · ${plan.sourceStats.deduplicated} Überschneidungen berücksichtigt</span><span>${plan.missing} Garmin-Sätze noch nicht zugeordnet</span><span>${plan.evidence==='none'?'Noch keine Muskelhistorie':plan.evidence==='limited'?'Nur eingeschränkte Historie':plan.evidence==='partial'?'Viele Trainingsdetails fehlen':'Dokumentierte Muskelhistorie'}</span></div>
   ${plan.balances.length?`<div class="str619-balance" aria-label="Dokumentierte Muskelbalance in sieben Tagen">${plan.balances.map(row=>`<div><small>${safe(row.name)}</small><strong>${Number(row.one.toFixed(1))} : ${Number(row.two.toFixed(1))}</strong></div>`).join('')}</div>`:''}
   </details>
-  <div class="str619-workout" role="list">${plan.exercises.map(x=>`<article class="str619-exercise" role="listitem"><div class="str619-number">${x.order}</div><div class="str619-description"><h4>${safe(x.title)}</h4><div class="str619-prescription"><strong>${x.sets} × ${safe(x.reps)}</strong><span>3 Min. Satzpause</span></div>${x.lastKg!==null?`<p class="str625-lastload" style="font-size:12px;color:#517866;margin:5px 0 0">Zuletzt ${safe(x.lastKg)} kg · ${safe(x.progressionHint)}</p>`:``}<details><summary>Warum diese Übung?</summary><p>${safe(x.reason)}</p></details></div></article>`).join('')}</div>
+  <div class="str619-workout" role="list">${plan.exercises.map(x=>`<article class="str619-exercise" role="listitem"><div class="str619-number">${x.order}</div><div class="str619-description"><h4>${safe(x.title)}</h4><div class="str619-prescription"><strong>${x.sets} × ${safe(x.reps)}</strong>${x.targetReps?.length?`<small class="str46-rep-target">RIR-Ziele: ${safe(x.targetReps.join(' / '))}</small>`:''}<span>3 Min. Satzpause</span></div>${x.lastKg!==null?`<p class="str625-lastload" style="font-size:12px;color:#517866;margin:5px 0 0">Zuletzt ${safe(x.lastKg)} kg · ${safe(x.progressionHint)}</p>`:``}<details><summary>Warum diese Übung?</summary><p>${safe(x.reason)}</p></details></div></article>`).join('')}</div>
   <details class="str623-more"><summary>Methodik & Grenzen</summary><p class="str610-disclaimer">${safe(plan.profile.note)} Vorschläge berücksichtigen bestätigte Coach-Sätze und zugeordnete Garmin-Sätze; unbekannte Garmin-Daten werden nicht als untrainierte Muskeln gewertet. Die Regeneration ist eine vorsichtige Zeitregel, keine Messung deiner Belastbarkeit. Gewicht und Intensität bestimmst du selbst.</p></details>`;
   dialog.querySelector('.str610-close').onclick=close;
   const update=(key,val)=>{prefs={...prefs,[key]:val};saveCoachPrefs(prefs);draw();};

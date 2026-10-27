@@ -48,8 +48,8 @@ test('Pipeline upgrades the actual main source to .40.3 and keeps one today pick
   const result=await mod[name]().transform(code,'/repo/client/src/main.js');
   if(result?.code)code=result.code;
  }
- assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.[345]'/);
- assert.match(code,/locationPicker43\(state\)/);
- assert.equal((code.match(/locationPicker43\(state\)/g)||[]).length,1);
+ assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.[3456]'/);
+ assert.match(code,/locationCycle46\(state\)/);
+ assert.equal((code.match(/locationCycle46\(state\)/g)||[]).length,1);
  assert.equal((code.match(/locationPicker42\(state\)/g)||[]).length,0);
 });

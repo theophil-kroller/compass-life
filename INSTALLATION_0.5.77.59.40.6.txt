@@ -1,0 +1,26 @@
+COMPASS LIFE 0.5.77.59.40.6 — INSTALLATION
+=========================================
+
+Prerequisite for PATCH: the repository contains full build 0.5.77.59.40.5.
+
+PATCH OPTION (recommended when .40.5 is already on GitHub)
+1. Make your usual encrypted-vault backup. Do not clear your phone/browser data.
+2. Extract the PATCH archive locally.
+3. Upload its files into GitHub, keeping the paths identical, replacing files when prompted.
+4. Commit to main; verify that GitHub Actions (check and production build) completes successfully.
+5. Fully close and restart Compass on your smartphone and verify version 0.5.77.59.40.6.
+
+FULL SOURCE OPTION
+If GitHub is behind .40.5 or multiple patches were missed, use the full source package INSTEAD of the patch.
+
+SMOKE CHECKS
+- Today: exactly 📍 and a second context icon, repeated tapping cycles home/work/on-the-move/all.
+- Pin: stored GPS zones and the radius remain configurable, no automatic GPS request on a manual switch.
+- All context: location-specific actions are visible with an 'Ort prüfen' caveat.
+- Workout: log three weight-bearing working sets, add RIR 4+, complete the session.
+- Next Coach plan: exercise repetition goals (for example 8/8/8 -> 9/9/9) should appear at the same actual weight.
+- Reload mid-workout: 'Training fortsetzen' returns to the same exercise and per-set targets.
+- RIR 0, incomplete training, missing RIR or significant recovery caution must not trigger an aggressive load increase.
+
+Note: GitHub Actions must validate the Vite production build; local Vite dependencies were not available here.
+No Worker, D1 or Vault migration is required.

@@ -1,0 +1,13 @@
+/* Compass .59.40.6: 2 compact premium controls, pin for GPS / single-tap cycle */
+.ctx46-pair{display:inline-flex;align-items:center;gap:5px;position:relative;flex:none;z-index:50}
+.ctx46-settings{position:relative}.ctx46-settings>summary{list-style:none}.ctx46-settings>summary::-webkit-details-marker{display:none}
+.ctx46-pin,.ctx46-cycle{min-width:42px;min-height:42px;display:inline-grid;place-items:center;border:1px solid #cee2d5;background:#e9f4ee;color:#245946;border-radius:12px;cursor:pointer;padding:7px 10px;font:600 22px/1 system-ui,-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 1px 3px #20433309}
+.ctx46-pin{font-size:19px}.ctx46-cycle{min-width:44px}
+.ctx46-pin:hover,.ctx46-cycle:hover,.ctx46-pin:focus-visible,.ctx46-cycle:focus-visible{border-color:#85ae99;background:#d7eadf;outline-offset:2px}
+.ctx46-sheet{position:absolute;top:calc(100% + 8px);left:0;width:min(310px,calc(100vw - 28px));max-height:min(75dvh,550px);overflow:auto;z-index:1000;display:grid;gap:9px;border:1px solid #d7e5dc;background:white;border-radius:16px;padding:13px;box-shadow:0 15px 35px #173e2c33;color:#305d4b;font:12px/1.4 system-ui,-apple-system,sans-serif}
+.ctx46-sheet .ctx46-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ctx46-sheet .ctx46-head small,.ctx46-sheet>small,.ctx46-zone small{color:#718579;font-size:10px}
+.ctx46-sheet button,.ctx46-sheet select{border:1px solid #d5e4da;border-radius:10px;background:#f6faf7;cursor:pointer;color:#285e48;padding:8px 9px;min-height:38px;font:inherit}
+.ctx46-sheet label,.ctx46-zone{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ctx46-zone{border-top:1px solid #edf3ee;padding-top:6px}.ctx46-zone span{flex:1;display:grid;gap:2px}
+@media(max-width:700px){.ctx46-sheet{position:fixed;top:auto;bottom:calc(12px + env(safe-area-inset-bottom, 0px));left:12px;right:12px;width:auto;max-height:min(74dvh,570px);border-radius:18px;box-shadow:0 20px 55px #163e2b4d}}
