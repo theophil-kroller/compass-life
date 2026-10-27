@@ -10,7 +10,7 @@ export function inboxTaskDraft(state,recordId,fields={},newId,now=new Date().toI
  if(!newId||state.tasks?.[newId])throw new Error('Neue Aufgaben-ID ungültig.');
  const projectId=String(fields.projectId||'').trim()||null;
  const project=projectId?state.projects?.[projectId]:null;
- if(projectId&&(!project||project.kind!=='project'||project.isTemplate||project.status==='completed'))throw new Error('Bitte ein aktives oder pausiertes Projekt auswählen; keine Vorlage.');
+ if(projectId&&(!project||project.kind!=='project'||project.isTemplate||!['active','hold'].includes(project.status)))throw new Error('Bitte ein aktives oder pausiertes Projekt auswählen; keine Vorlage.');
  const workflow=String(fields.workflow||'next');
  if(!['next','waiting','hold'].includes(workflow))throw new Error('GTD-Status ungültig.');
  const title=String(fields.title??record.title??'').trim();

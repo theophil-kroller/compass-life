@@ -1,0 +1,13 @@
+/* Separate archive/trash destinations; no confusing these with ordinary folders. */
+.p48-destinations{display:grid;gap:7px;margin-top:12px;border-top:1px solid #e2eae7;padding:12px 4px 0}
+.p48-destinations button{display:flex;gap:9px;align-items:center;width:100%;min-height:39px;padding:8px 12px;text-align:left;background:#f2f5f5;border:1px solid #dce6e4;color:#516a77;border-radius:10px;cursor:pointer;font-size:12px}
+.p48-destinations .p48-trash{background:#faf3f1;color:#96665a;border-color:#eedfdb}
+.p48-destinations button[aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
+.p48-vault{padding:10px 3px;display:grid;gap:12px}
+.p48-heading,.p48-row,.p48-actions{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.p48-heading button,.p48-actions button{padding:8px 11px;border:1px solid #dce6df;background:#f7faf8;border-radius:9px;color:#396551;cursor:pointer;font-size:12px}
+.p48-row{padding:11px 8px;border:1px solid #e4eae7;border-radius:12px}
+.p48-title{display:flex;gap:9px;align-items:center;min-width:0}.p48-title>span{display:flex;flex-direction:column;gap:3px;font-weight:600;font-size:13px}.p48-title small,.p48-muted,.p48-vault>small{font-size:11px;color:#75847b;font-weight:400}
+.p48-actions .p48-danger{color:#9c493d;border-color:#efcec7;background:#fff7f5}
+.p48-inspector-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.p48-inspector-actions button{font-size:12px;border-radius:9px;padding:9px 12px;border:1px solid #dce6df;background:#f3f8f5;cursor:pointer}
+.p48-inspector-actions .p48-trash{color:#954d43;border-color:#ebd8d3;background:#fff7f6}

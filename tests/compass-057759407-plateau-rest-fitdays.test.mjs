@@ -62,12 +62,12 @@ test('complete Vite chain transforms coach, guided set tracking and main to .40.
  const cfg=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
  const imports=new Map([...cfg.matchAll(/import\s*\{\s*(\w+)\s*\}\s*from\s*'\.\/(.+?\.js)'/g)].map(x=>[x[1],x[2]]));
  const names=[...cfg.matchAll(/\b([a-zA-Z]\w*(?:Bridge|Release))\(\)/g)].map(x=>x[1]);
- assert.equal(names.at(-1),'compass59407PlateauRelease');
+ assert.equal(names.at(-1),'compass59408ProjectsExperimentsRelease');
  for(const file of ['main.js','strength-coach-v5775910.js','strength-guided-v5775920.js']){
   let code=readFileSync(new URL('../client/src/'+file,import.meta.url),'utf8');
   for(const name of names){const mod=await import(new URL('../client/'+imports.get(name),import.meta.url));const res=mod[name]().transform(code,'/repo/client/src/'+file);if(res?.code)code=res.code;}
   execFileSync(process.execPath,['--input-type=module','--check'],{input:code});
-  if(file==='main.js')assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.7'/);
+  if(file==='main.js')assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.8'/);
   if(file.startsWith('strength-coach')){assert.match(code,/coachPlateauView47\(state,plan,today\)/);assert.match(code,/coachPlateauRestPlan47\(state,planNextWorkout/);}
   if(file.startsWith('strength-guided')){assert.match(code,/pendingSetStarts47/);assert.match(code,/data-act="begin-set"/);assert.match(code,/restActualSeconds:observed/);assert.match(code,/data-act="extend-rest"/);}
  }

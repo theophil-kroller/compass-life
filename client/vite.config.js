@@ -54,6 +54,7 @@ import { compass59404NutritionBridge } from './compass59404-nutrition-bridge.js'
 import { compass59405WorkoutResumeRelease } from './compass59405-workout-resume-release.js';
 import { compass59406RirContextRelease } from './compass59406-rir-context-release.js';
 import { compass59407PlateauRelease } from './compass59407-plateau-release.js';
+import { compass59408ProjectsExperimentsRelease } from './compass59408-projects-experiments-release.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -127,4 +128,5 @@ compassConfig.plugins.push(compass59404NutritionBridge());
 compassConfig.plugins.push(compass59405WorkoutResumeRelease());
 compassConfig.plugins.push(compass59406RirContextRelease());
 compassConfig.plugins.push(compass59407PlateauRelease());
+compassConfig.plugins.push(compass59408ProjectsExperimentsRelease());
 export default compassConfig;

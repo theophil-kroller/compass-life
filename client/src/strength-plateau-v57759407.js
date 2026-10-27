@@ -33,7 +33,7 @@ export function coachRestRecommendation47(primary,kind='general'){
  return kind==='isolation'||['shoulders','biceps','triceps'].includes(primary)?120:180;
 }
 
-function sessionEvidence(state,exerciseId,today){
+export function sessionEvidence47(state,exerciseId,today){
  const out=[];
  for(const session of Array.isArray(state?.strengthGuidedSessions)?state.strengthGuidedSessions:[]){
   if(session?.source!=='compass-guided-v5920'||!(session.completed===true||session.finishedAt))continue;
@@ -60,7 +60,7 @@ function sessionEvidence(state,exerciseId,today){
 }
 
 export function coachPlateau47(state,exerciseId,{today=new Date().toISOString().slice(0,10),primary='back',healthAttention=false,weeklyKnownSets=null,activeDeload=false}={}){
- const series=sessionEvidence(state,exerciseId,today);
+ const series=sessionEvidence47(state,exerciseId,today);
  if(series.length<4)return {status:'insufficient',count:series.length,reason:'Mindestens vier dokumentierte vollständige Trainingstage nötig.',action:'gather',restDays:series.filter(s=>s.rest!==null).length};
  const recent=series.slice(-4),days=deltaDays(recent[0].day,recent.at(-1).day);
  if(days<21)return {status:'insufficient',count:recent.length,reason:'Trainingsvergleich benötigt mindestens 21 Tage.',action:'gather',restDays:recent.filter(s=>s.rest!==null).length};

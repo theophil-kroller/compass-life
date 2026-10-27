@@ -2,7 +2,7 @@ import {validFolderIcon} from './folder-icons-v35.js';
 export const TASK_CATEGORIES=['Allgemein','Forschung','Lehre','Pruefungen','Verwaltung','Meeting','Weiterbildung','Familie','Beziehungsdynamiken'];
 export const CATEGORY_LABELS={Pruefungen:'Prüfungen',Beziehungsdynamiken:'Counseling'};
 export const WORKFLOWS=['next','waiting','hold'];
-export const PROJECT_STATUSES=['active','hold','completed'];
+export const PROJECT_STATUSES=['active','hold','completed','archived','trash','deleted'];
 export const PROJECT_KINDS=['project','folder'];
 export const PROJECT_TYPES=['parallel','sequential','single'];
 const uuid=/^[0-9a-f-]{36}$/i;

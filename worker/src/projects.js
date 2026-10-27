@@ -2,7 +2,7 @@ import {validTask} from './tasks.js';
 const out=(v,code=200)=>new Response(JSON.stringify(v),{status:code,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const re=/^[0-9a-f-]{36}$/i;
 const categories=new Set(['Allgemein','Forschung','Lehre','Pruefungen','Verwaltung','Meeting','Weiterbildung','Familie','Beziehungsdynamiken']);
-const statuses=new Set(['active','hold','completed']);
+const statuses=new Set(['active','hold','completed','archived','trash','deleted']);
 const kinds=new Set(['folder','project']);
 const types=new Set(['parallel','sequential','single']);
 const folderIcons=new Set(['folder','book','target','calendar','people','heart','activity','suitcase','bookmark','shield','spark','compass']);
@@ -15,6 +15,14 @@ export async function putProject(req,env,owner){
  if(!validProjectPayload(p))return out({error:'invalid-project'},400);
  if(p.parentId){let parentId=p.parentId,seen=new Set([p.id]);for(let i=0;i<100&&parentId;i++){if(seen.has(parentId))return out({error:'project-parent-cycle'},400);seen.add(parentId);const parent=await env.DB.prepare('SELECT id,parent_id FROM planning_projects WHERE owner_sub=? AND id=?').bind(owner.sub,parentId).first();if(!parent)return out({error:'invalid-project-parent'},400);parentId=parent.parent_id;if(i===99)return out({error:'project-parent-too-deep'},400);}}
  let row=await env.DB.prepare('SELECT * FROM planning_projects WHERE owner_sub=? AND id=?').bind(owner.sub,p.id).first();
+ if(row?.status==='deleted')return out({error:'project-permanently-deleted'},410);
+ if(p.status==='deleted'){
+  if(!row||row.status!=='trash')return out({error:'project-not-in-trash'},400);
+  const children=await env.DB.prepare("SELECT COUNT(*) AS n FROM planning_projects WHERE owner_sub=? AND parent_id=? AND status!='deleted'").bind(owner.sub,p.id).first();
+  const tasks=await env.DB.prepare('SELECT COUNT(*) AS n FROM planning_tasks WHERE owner_sub=? AND project_id=?').bind(owner.sub,p.id).first();
+  if((children?.n||0)>0||(tasks?.n||0)>0)return out({error:'project-not-empty'},409);
+  if(p.title!=='Entferntes Projekt'||p.outcome!==''||p.dueDate!==null||p.parentId!==null)return out({error:'project-delete-redaction-required'},400);
+ }
  if((!row&&p.baseVersion!==0)||(row&&row.version!==p.baseVersion))return out({error:'project-conflict',remote:row?projectRow(row):null},409);
  const now=new Date().toISOString();
  try{

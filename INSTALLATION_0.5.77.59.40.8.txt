@@ -1,0 +1,38 @@
+COMPASS LIFE 0.5.77.59.40.8 – INSTALLATION
+=========================================
+
+BASIS
+GitHub entspricht dem Full-Source-Build 0.5.77.59.40.7.
+
+A) PATCH (empfohlen):
+1. Vault-Backup anlegen. KEINE Browser-/App-Daten löschen.
+2. PATCH-ZIP entpacken.
+3. Alle enthaltenen Dateien unter denselben relativen Pfaden in GitHub hochladen.
+4. Bestehende Dateien überschreiben, neue Dateien hinzufügen, auf main committen.
+
+B) FULL:
+Vollständiges Full-Source-ZIP alternativ zum Patch verwenden. Nicht beide mischen.
+
+WICHTIG – ZWEI DEPLOYMENTS:
+- Der GitHub-Workflow "Deploy Compass Web" aktualisiert nur GitHub Pages.
+- Archiv und Papierkorb benötigen die NEUEN Projektstatuswerte auf dem Cloudflare Worker.
+- Aus dem aktualisierten Repository einmalig `npm install`, danach `npm run deploy:api` ausführen
+  (mit bestehendem Wrangler-/Cloudflare-Zugang). Keine neue D1-Migration.
+- Worker zuerst aktualisieren, DANN die Web-App mit neuen Statuswerten nutzen.
+- Bis zum Worker-Update Projekte NICHT archivieren/wegwerfen, da der alte API-Stand
+  diese Statuswerte bei der Synchronisierung zurückweist.
+
+PRÜFEN
+- Angelegtes Projekt: Mehrfach-Klick auf Anlegen erzeugt kein Duplikat.
+- Zwei gleichnamige Projekte im selben Ordner werden blockiert; bereits bestehende
+  Gründungsgarage-Duplikate müssen MANUELL in den Papierkorb verschoben werden.
+- Projekt archivieren -> erscheint im Archiv; Wiederherstellen.
+- Projekt in Papierkorb -> erscheint dort, nicht mehr im normalen Baum.
+- Leeres Projekt endgültig löschen -> nicht wiederherstellbar; technische ID bleibt als Sperre.
+- Nichtleeres Projekt -> endgültiges Löschen blockiert, Aufgaben bleiben erhalten.
+- Einkaufslisten: Warenkorb; Checklisten: Checkbox/Liste.
+- Coach / V-Taper: N-of-1-Strategieversuch mit Baseline starten, weitere Sätze
+  dokumentieren, bei genügend vergleichbaren Einheiten auswerten.
+- Nach Deployment auf Handy und Desktop prüfen, inklusive Sync zwischen Geräten.
+
+TESTS: 1553/1553 bestanden; Vite-Build erst in GitHub Actions zu verifizieren.

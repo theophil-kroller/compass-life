@@ -9,7 +9,7 @@ export function projectMatchesDeadline(event,projects={}){
  if(!title)return false;
  const significant=title.split(' ').filter(t=>t.length>=4);
  return Object.values(projects||{}).some(p=>{
-  if(!p||p.isTemplate||p.archived||p.status==='completed')return false;
+  if(!p||p.isTemplate||p.archived||p.status!=='active'&&p.status!=='hold')return false;
   if(p.calendarSourceId&&p.calendarSourceId===event.id)return true;
   const t=clean(p.title);return !!t&&(t===title||(significant.length>0&&significant.some(w=>t.split(' ').includes(w))));
  });

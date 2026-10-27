@@ -28,7 +28,7 @@ export function timelineItems(state,calendarEvents=[],startDay,endDay,appearance
   if(include(t.plannedDate)&&t.plannedDate!==t.dueDate)items.push({date:t.plannedDate,type:'planned',id:t.id,title:t.title,projectId:t.projectId});
  }
  for(const p of Object.values(state?.projects||{})){
-  if(p.kind==='folder'||p.status==='completed'||!include(p.dueDate))continue;
+  if(p.kind==='folder'||p.status!=='active'||!include(p.dueDate))continue;
   items.push({date:p.dueDate,type:'milestone',id:p.id,title:p.title,projectId:p.id});
  }
  for(const e of calendarEvents){

@@ -53,7 +53,7 @@ export function capacityGuardianModel(state,{today,days=14}={}){
  const totalKnownMinutes=known.reduce((s,t)=>s+getEstimate(t),0);
  const dailyBudget=prefs.weeklyFocusHours===null?null:(prefs.weeklyFocusHours*60/5)*(1-prefs.reservePct/100);
  const weekdays=planDays(shift(now,1),to),totalCapacity=dailyBudget===null?null:dailyBudget*weekdays;
- const milestones=Object.values(state?.projects||{}).filter(p=>p&&!p.isTemplate&&p.kind!=='folder'&&p.status!=='completed'&&dayValid(p.dueDate)&&p.dueDate<=to).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
+ const milestones=Object.values(state?.projects||{}).filter(p=>p&&!p.isTemplate&&p.kind!=='folder'&&p.status==='active'&&dayValid(p.dueDate)&&p.dueDate<=to).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
  const checklist=future.map(t=>{
   const candidates=future.filter(x=>x.dueDate<=t.dueDate),need=candidates.reduce((s,x)=>s+(getEstimate(x)||0),0);
   const capacity=dailyBudget===null?null:dailyBudget*planDays(shift(now,1),t.dueDate);

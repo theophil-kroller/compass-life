@@ -16,7 +16,7 @@ export function isShoppingList(state,project){
  return Boolean(folder&&project.parentId===folder.id)||/einkauf|shopping/i.test(project.title||'');
 }
 export function shoppingLists(state,{archived=false}={}){
- return Object.values(state?.projects||{}).filter(p=>isShoppingList(state,p)&&(archived?p.status==='completed':p.status!=='completed'))
+ return Object.values(state?.projects||{}).filter(p=>isShoppingList(state,p)&&(archived?['completed','archived'].includes(p.status):['active','hold'].includes(p.status)))
   .sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))||a.title.localeCompare(b.title,'de'));
 }
 export function shoppingProgress(state,projectId){
@@ -38,7 +38,7 @@ export function instantiateShoppingList(state,templateId,idFactory,title,now=new
  return result;
 }
 export function archiveShoppingList(state,projectId,{now=new Date().toISOString()}={}){
- const p=state?.projects?.[projectId];if(!isShoppingList(state,p)||p.status==='completed')throw Error('Nur eine aktive Einkaufsliste kann archiviert werden.');
+ const p=state?.projects?.[projectId];if(!isShoppingList(state,p)||!['active','hold'].includes(p.status))throw Error('Nur eine aktive Einkaufsliste kann archiviert werden.');
  p.status='completed';p.updatedAt=now;(state.projectPending??={})[p.id]=true;
  return shoppingProgress(state,projectId);
 }
