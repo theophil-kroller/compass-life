@@ -19,6 +19,13 @@ source=source.replace("import {listTasks,putTask} from './tasks.js';", "const li
 source=source.replace("import {privateMirror} from './private-device-mirror.js';","const privateMirror=()=>new Response(null,{status:404});");
 source=source.replace("import {privateMirrorChunks} from './private-device-chunks-v552.js';","const privateMirrorChunks=()=>new Response(null,{status:404});");
 source=source.replace("import {publicKrakenHistory} from './market-kraken-v39.js';","const publicKrakenHistory=()=>new Response(null,{status:503});");
+// The Worker imports the watch dashboard, but these tests deliberately isolate
+// opaque-session authentication. Stub this external route module just as the
+// existing health, finance and project modules are stubbed above.
+source=source.replace("import {watchDashboard,watchCalendarPublish,watchShoppingToggle} from './watch-dashboard-v512.js';",`const watchDashboard=()=>new Response(null,{status:503});
+const watchCalendarPublish=()=>new Response(null,{status:503});
+const watchShoppingToggle=()=>new Response(null,{status:503});`);
+
 source=source.replace("import {publicBitcoinLongHistory} from './market-bitcoin-long-v40.js';","const publicBitcoinLongHistory=()=>new Response(null,{status:503});");
 const {default:worker}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 function fakeD1(){
