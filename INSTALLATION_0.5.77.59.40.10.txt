@@ -1,0 +1,25 @@
+COMPASS WEB 0.5.77.59.40.10 — PROJECT TRASH SYNC RECOVERY
+============================================================
+
+PATCH (empfohlen, wenn 0.5.77.59.40.9 bereits deployed ist)
+1. Compass_0.5.77.59.40.10_PATCH_FROM_0.5.77.59.40.9.zip entpacken.
+2. Dateien mit unveränderter Ordnerstruktur in GitHub hochladen und vorhandene ersetzen.
+3. Commit auf main; GitHub Actions/Deploy Compass Web prüfen.
+4. Die Web-App neu öffnen; Version 0.5.77.59.40.10 prüfen.
+5. Tresor entsperren und die normale Synchronisation erneut auslösen.
+6. Die zuvor lokal gespeicherte Löschung wird automatisch in der richtigen Reihenfolge abgearbeitet.
+
+FULL BUILD
+Enthält alle Web-Projektdateien und die Korrektur. Alternativ zum Patch.
+
+DATENSCHUTZ / SICHERHEIT
+- Bitte NICHT Browserdaten löschen, Tresor zurücksetzen oder Projekte erneut anlegen.
+- Das Löschen wird durch den Worker weiterhin nur für leere Projekte und nach
+  bestätigtem Papierkorbstatus zugelassen.
+- Worker aus mindestens Build 0.40.8 muss bereits live sein.
+- Für diesen Hotfix ist kein neues Worker-Deployment und keine D1-Migration nötig.
+
+TEST
+- npm run check: 1563/1563 erfolgreich.
+- npm run build: hier nicht ausgeführt, weil Vite-Abhängigkeiten fehlen.
+- Echter GitHub-Actions-Produktionsbuild und Live-Sync stehen noch aus.

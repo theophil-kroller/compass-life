@@ -84,9 +84,9 @@ test('Terminal Vite plugin transforms complete .40.4 code to .40.5 without chang
  const cfg=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
  const files=new Map([...cfg.matchAll(/import\s*\{\s*(\w+)\s*\}\s*from\s*'\.\/(.+?\.js)'/g)].map(m=>[m[1],m[2]]));
  const names=[...cfg.matchAll(/\b([a-zA-Z]\w*(?:Bridge|Release))\(\)/g)].map(m=>m[1]);
- assert.equal(names.at(-1),'compass59409WorkspaceRelease');
+ assert.equal(names.at(-1),'compass594010ProjectSyncRecoveryRelease');
  let code=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  for(const name of names){const mod=await import(new URL('../client/'+files.get(name),import.meta.url));const r=mod[name]().transform(code,'/repo/client/src/main.js');if(r?.code)code=r.code;}
- assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.9'/);
+ assert.match(code,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.10'/);
  assert.match(code,/storeStrengthGuidedSession/);
 });
