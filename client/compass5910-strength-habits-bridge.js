@@ -200,8 +200,10 @@ function habitQuickOverlay(){`,'encrypted guided session storage');
  habitQuickOpen=false;render();
  const coach=await import('./strength-coach-v5775910.js');
  const guide=await import('./strength-guided-v5775920.js');
- const plan=coach.planNextWorkout(state,{...coach.readStrengthCoachPreferences(),today:localDate()});
- guide.openGuidedWorkout({plan,onSession:storeStrengthGuidedSession});return;
+ const {resumableGuidedSession,guidedPlanFromSession}=await import('./strength-workout-resume-v57759405.js');
+ const unfinished=resumableGuidedSession(state);
+ const plan=unfinished?guidedPlanFromSession(unfinished):coach.planNextWorkout(state,{...coach.readStrengthCoachPreferences(),today:localDate()});
+ guide.openGuidedWorkout({plan,resumeSession:unfinished,onSession:storeStrengthGuidedSession});return;
  }
  if(action==='str620-prefill'){
  if(!state)return;

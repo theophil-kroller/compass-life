@@ -1,0 +1,21 @@
+COMPASS LIFE 0.5.77.59.40.5 – WORKOUT-WIEDERAUFNAHME
+======================================================
+
+PATCH: nur auf vollständig installiertes 0.5.77.59.40.4 anwenden.
+
+1. Verschlüsseltes Compass-Vault-Backup erstellen (Browserdaten nicht löschen).
+2. Das PATCH-ZIP entpacken und die enthaltenen Dateien mit exakt denselben
+   Ordnerpfaden im Repository in GitHub hochladen/überschreiben.
+3. GitHub-Commit auf main durchführen. Deploy Compass Web auf grün prüfen.
+4. Compass-PWA neu öffnen. Versionsanzeige muss 0.5.77.59.40.5 zeigen.
+5. Im Coach: falls ein begonnenes Training im verschlüsselten Vault vorhanden ist,
+   auf „▶ Fortsetzen“ tippen. Dasselbe gilt über „▶ Direkt starten“.
+6. Testen: einen Satz in einem neuen Workout bestätigen, „✓ Gesichert“ abwarten,
+   die Seite neu laden, über Coach fortsetzen. Original-Übung, Gewichte und
+   bestätigte Sätze müssen unverändert sein.
+7. „Training beenden“ erst nach der letzten Übung ausführen.
+
+FULL SOURCE: Vollständiger Quellstand alternativ zum Patch.
+
+Keine Migration, keine Änderung an bestehendem Vault oder Garmin-Daten.
+Prüfung: npm run check, npm run build und CI nach GitHub-Commit.

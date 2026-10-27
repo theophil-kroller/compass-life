@@ -2,6 +2,7 @@
  * Manual confirmations are kept separate from Garmin/FIT and never auto-annotate imports.
  */
 import './strength-guided-v5775920.css';
+import {guidedPlanFromSession,resumeExerciseIndex} from './strength-workout-resume-v57759405.js';
 import {validRir34} from './strength-adaptive-v5775934.js';
 import './strength-adaptive-v5775934.css';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -16,7 +17,9 @@ export function validPlateWeight(value,place,exerciseId=''){const n=Number(value
 
 export function makeGuidedSnapshot(plan,startedAt=new Date().toISOString(),id=(globalThis.crypto?.randomUUID?.()||`guided-${Date.now()}-${Math.random().toString(36).slice(2)}`)){
  return {id,source:'compass-guided-v5920',startedAt,finishedAt:null,completed:false,goal:plan.goal,equipment:plan.equipment,planTitle:plan.title,
-  exercises:plan.exercises.map(e=>({exerciseId:e.id,title:e.title,plannedSets:e.sets,plannedReps:e.reps,restSeconds:e.restSeconds,confirmedSets:[]})),
+  currentExerciseIndex:0,started:false,restUntilAt:null,workingWeights:{},
+  planSnapshot:{title:plan.title,goal:plan.goal,equipment:plan.equipment,exercises:plan.exercises.map(e=>({id:e.id,title:e.title,primary:e.primary||'',sets:e.sets,reps:e.reps,restSeconds:e.restSeconds,lastKg:e.lastKg??null,progressionHint:e.progressionHint||''}))},
+  exercises:plan.exercises.map(e=>({exerciseId:e.id,title:e.title,plannedSets:e.sets,plannedReps:e.reps,restSeconds:e.restSeconds,primary:e.primary||'',confirmedSets:[]})),
   updatedAt:startedAt};
 }
 export function matchingGuidedSessions(state,garminStart,{maxOffsetMinutes=120}={}){
@@ -82,11 +85,13 @@ export function exerciseMovementSvg(exerciseId){
  return `<div class="str620-motion" role="img" aria-label="Schematische Start- und Zielhaltung: ${esc(title)}"><div>${show(false)}<small>Start</small></div><span aria-hidden="true">→</span><div>${show(true)}<small>Ziel</small></div></div><p class="str620-cue">${esc(cue)}</p>`;
 }
 /** Exercise-by-exercise player. Confirming a set is required; viewing alone never counts. */
-export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
+export function openGuidedWorkout({plan,onSession=async()=>{},resumeSession=null}={}){
+ if(resumeSession)plan=guidedPlanFromSession(resumeSession);
  if(!plan?.exercises?.length)throw Error('Kein Workout-Plan vorhanden.');
- let ex=0,started=false,resting=false,restSeconds=0,restUntil=0,restTimer=null,restVibrated=false,closed=false,completed=false,active=false,wakeLock=null,plateKg=null;
- let snapshot=makeGuidedSnapshot(plan),before=document.activeElement,saveChain=Promise.resolve();
- const previousLoad=i=>{const kg=plan.exercises[i]?.lastKg;return Number.isFinite(kg)&&kg>0&&validPlateWeight(kg,plan.equipment,plan.exercises[i]?.id)?kg:null;};
+ let ex=resumeSession?resumeExerciseIndex(resumeSession):0,started=Boolean(resumeSession),resting=false,restSeconds=0,restUntil=0,restTimer=null,restVibrated=false,closed=false,completed=false,active=Boolean(resumeSession),wakeLock=null,plateKg=null;
+ let snapshot=resumeSession?structuredClone(resumeSession):makeGuidedSnapshot(plan),before=document.activeElement,saveChain=Promise.resolve(),saveStatus='saved',saveSerial=0;
+ snapshot.workingWeights||={};
+ const previousLoad=i=>{const saved=snapshot.workingWeights?.[i];const kg=saved===null?null:Number.isFinite(saved)?saved:plan.exercises[i]?.lastKg;return Number.isFinite(kg)&&kg>=0&&validPlateWeight(kg,plan.equipment,plan.exercises[i]?.id)?kg:null;};
  plateKg=previousLoad(0);
  const host=document.createElement('div');host.className='str620-overlay';host.innerHTML='<section class="str620-panel" role="dialog" aria-modal="true" aria-label="Geführtes Krafttraining"></section>';document.body.append(host);
  const el=host.firstElementChild;
@@ -94,13 +99,14 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
  const proposedReps=idx=>numericReps(plan.exercises[idx].reps);
  const numericValue=()=>plateKg===null?'':String(plateKg);
  const timeBased=idx=>/sek\.|sec|s\b/i.test(String(plan.exercises[idx].reps));
- function persist(finished=false){snapshot.updatedAt=new Date().toISOString();if(finished){snapshot.completed=completed;snapshot.finishedAt=snapshot.updatedAt;}
-  const data=structuredClone(snapshot);saveChain=saveChain.catch(()=>{}).then(()=>onSession(data));return saveChain;}
+ function persist(finished=false){snapshot.updatedAt=new Date().toISOString();snapshot.started=started;snapshot.currentExerciseIndex=ex;if(finished){snapshot.completed=completed;snapshot.finishedAt=snapshot.updatedAt;}
+  const data=structuredClone(snapshot),serial=++saveSerial;saveStatus='saving';const show=()=>{const indicator=el.querySelector('[data-save-status]');if(indicator)indicator.textContent=saveStatus==='saved'?'✓ Gesichert':saveStatus==='saving'?'Speichert …':'⚠ Nicht gesichert · erneut versuchen';};show();
+  saveChain=saveChain.catch(()=>{}).then(()=>onSession(data)).then(()=>{if(serial===saveSerial){saveStatus='saved';show();}},e=>{if(serial===saveSerial){saveStatus='error';show();}throw e;});return saveChain;}
  function releaseWake(){try{void wakeLock?.release?.();}catch{}wakeLock=null;}
  async function wake(){if(!active||closed||document.hidden||wakeLock||!navigator.wakeLock?.request)return;try{const lock=await navigator.wakeLock.request('screen');if(closed||!active){void lock.release();return;}wakeLock=lock;lock.addEventListener?.('release',()=>{if(wakeLock===lock)wakeLock=null;});}catch{}}
  const visibility=()=>{if(document.visibilityState==='visible'&&active)void wake();else releaseWake();};
  document.addEventListener('visibilitychange',visibility);
- function stopRest(){clearInterval(restTimer);restTimer=null;resting=false;restVibrated=false;}
+ function stopRest(){clearInterval(restTimer);restTimer=null;resting=false;restVibrated=false;snapshot.restUntilAt=null;}
  function timerTick(){
   restSeconds=Math.max(0,Math.ceil((restUntil-performance.now())/1000));
   if(restSeconds<=90&&!restVibrated&&resting){
@@ -111,9 +117,10 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
   const phase=el.querySelector('[data-rest-phase]');if(phase)phase.textContent=restSeconds>90?'Phase 1 / 2':'Phase 2 / 2';
   if(restSeconds===0){stopRest();render();}
  }
- function close(finish=false){if(closed)return;closed=true;active=false;stopRest();releaseWake();document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',onKey);host.remove();if(started)void persist(finish).catch(e=>console.warn('Workout-Sicherung fehlgeschlagen',e));before?.focus?.({preventScroll:true});}
+ function close(finish=false){if(closed)return;closed=true;active=false;stopRest();releaseWake();document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',onKey);window.removeEventListener('pagehide',onPageHide);host.remove();if(started)void persist(finish).catch(e=>console.warn('Workout-Sicherung fehlgeschlagen',e));before?.focus?.({preventScroll:true});}
  const onKey=e=>{if(e.key==='Escape')close();};document.addEventListener('keydown',onKey);
- function setRest(seconds){const total=Math.max(180,seconds);restVibrated=false;resting=total>0;restSeconds=total;restUntil=performance.now()+total*1000;clearInterval(restTimer);if(resting)restTimer=setInterval(timerTick,250);}
+ const onPageHide=()=>{if(started&&!closed)void persist().catch(console.warn);};window.addEventListener('pagehide',onPageHide);
+ function setRest(seconds){const total=Math.max(180,seconds);restVibrated=false;resting=total>0;restSeconds=total;restUntil=performance.now()+total*1000;snapshot.restUntilAt=new Date(Date.now()+total*1000).toISOString();clearInterval(restTimer);if(resting)restTimer=setInterval(timerTick,250);}
  function render(){
   const curr=plan.exercises[ex],record=snapshot.exercises[ex],done=record.confirmedSets.length,allDone=done>=curr.sets;
   const circles=Array.from({length:curr.sets},(_,i)=>{
@@ -130,9 +137,10 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
    ${resting?`<div class="str620-rest">Satzpause <small data-rest-phase>${restSeconds>90?'Phase 1 / 2':'Phase 2 / 2'}</small> · <strong data-rest-clock>${clock(restSeconds)}</strong><small>90 + 90s · Vibration bei 1:30</small><button type="button" data-act="skip-rest">Überspringen</button></div>`:allDone?'<p class="str620-success">✓ Übung abgeschlossen.</p>':''}
    </div></div>
    <footer class="str620-bottom"><button class="str620-secondary" type="button" data-act="prev" ${ex===0?'disabled':''}>← Zurück</button><div class="str620-actions">${!started?'<button type="button" class="str620-primary" data-act="start">▶ Starten</button>':resting?'<button type="button" class="str620-primary" data-act="skip-rest">⏭ Weiter</button>':allDone?`<button type="button" class="str620-primary" data-act="next">${ex===plan.exercises.length-1?'✓ Training beenden':'Nächste Übung →'}</button>`:`<button type="button" class="str620-primary" data-act="confirm">✓ Satz ${done+1} bestätigen</button>`}</div></footer>
-   <small class="str620-disclaimer">Nur bestätigte Sätze werden als durchgeführt gespeichert. Garmin-Daten bleiben unverändert.</small>`;
+   <button type="button" class="str620-save-status" data-save-status data-act="retry-save" title="Speicherstatus · antippen, um erneut zu sichern" aria-label="Gespeicherte Workoutdaten prüfen oder erneut sichern">${saveStatus==='saved'?'✓ Gesichert':saveStatus==='saving'?'Speichert …':'⚠ Nicht gesichert · erneut versuchen'}</button><small class="str620-disclaimer">Nur bestätigte Sätze werden als durchgeführt gespeichert. Garmin-Daten bleiben unverändert.</small>`;
   el.querySelector('[data-act="close"]').onclick=()=>close();
-  el.querySelector('[data-act="prev"]').onclick=()=>{if(ex===0)return;stopRest();ex--;plateKg=previousLoad(ex);render();};
+  el.querySelector('[data-act="retry-save"]')?.addEventListener('click',()=>{if(started)void persist().catch(console.warn);});
+  el.querySelector('[data-act="prev"]').onclick=()=>{if(ex===0)return;stopRest();ex--;plateKg=previousLoad(ex);void persist().catch(console.warn);render();};
   el.querySelector('[data-act="start"]')?.addEventListener('click',()=>{started=true;active=true;void wake();void persist().catch(console.warn);render();});
   el.querySelector('[data-act="skip-rest"]')?.addEventListener('click',()=>{stopRest();render();});
   const weightBox=el.querySelector('[data-plates]');
@@ -142,11 +150,11 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
     if(!validPlateWeight(raw,place,curr.id)){if(weightBox)weightBox.setCustomValidity(place==='home'?`Maximal ${maxHomeWeight(curr.id)} kg Scheiben für diese Übung.`:'Gewicht überprüfen.');return false;}
     plateKg=Number(raw);if(weightBox)weightBox.setCustomValidity('');return true;
   };
-  weightBox?.addEventListener('change',e=>{if(!setWeight(e.target.value))e.target.reportValidity();});
+  weightBox?.addEventListener('change',e=>{if(!setWeight(e.target.value))e.target.reportValidity();else{snapshot.workingWeights[ex]=plateKg;if(started)void persist().catch(console.warn);}});
   ['plus','minus'].forEach(sign=>el.querySelector(`[data-act="${sign}-plates"]`)?.addEventListener('click',()=>{
     const current=Number.isFinite(plateKg)?plateKg:0;
     setWeight(Math.min(place==='home'?maxHomeWeight(curr.id):500,Math.max(0,current+(sign==='plus'?1:-1))));
-    if(weightBox)weightBox.value=numericValue();
+    if(weightBox)weightBox.value=numericValue();snapshot.workingWeights[ex]=plateKg;if(started)void persist().catch(console.warn);
   }));
   function confirmSet(index){
     if(!started||index<1||index>curr.sets)return;
@@ -175,8 +183,9 @@ export function openGuidedWorkout({plan,onSession=async()=>{}}={}){
     if(next)confirmSet(next);
   });
   el.querySelector('[data-act="next"]')?.addEventListener('click',()=>{
-    stopRest();if(ex===plan.exercises.length-1){completed=true;close(true);return;}ex++;plateKg=previousLoad(ex);render();
+    stopRest();if(ex===plan.exercises.length-1){completed=true;close(true);return;}ex++;plateKg=previousLoad(ex);void persist().catch(console.warn);render();
   });
  }
+ if(resumeSession){const until=Date.parse(snapshot.restUntilAt||'');const remaining=Number.isFinite(until)?Math.max(0,Math.ceil((until-Date.now())/1000)):0;if(remaining>0){resting=true;restSeconds=remaining;restUntil=performance.now()+remaining*1000;restVibrated=remaining<=90;restTimer=setInterval(timerTick,250);}void wake();}
  render();return {close,save:()=>persist()};
 }

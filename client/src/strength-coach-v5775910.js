@@ -7,6 +7,8 @@ import {strengthCoachHealthContext} from './strength-coach-recovery-v5775926.js'
 import {detailedMuscleData} from './strength-anatomy-v57737.js';
 import {EXERCISES} from './strength-editor-v57732.js';
 import './strength-coach-v5775910.css';
+import {resumableGuidedSession,guidedPlanFromSession} from './strength-workout-resume-v57759405.js';
+import './strength-workout-resume-v57759405.css';
 import {coach34Feedback,coach34RecommendedSets,coach34RirGuidance} from './strength-adaptive-v5775934.js';
 import './strength-adaptive-v5775934.css';
 import {readCycle35,saveCycleAction35,coachCycle35} from './strength-cycle-v5775935.js';
@@ -343,6 +345,7 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
  const onKey=e=>{if(e.key==='Escape')close();};document.addEventListener('keydown',onKey);
  host.addEventListener('click',e=>{if(e.target===host)close();});
  function draw(){
+  const unfinished=resumableGuidedSession(state);
   const plan=planNextWorkout(state,{...prefs,today});
   dialog.innerHTML=`<div class="str610-title"><div><small>COMPASS · DEIN PERSÖNLICHER COACH</small><h2>Dein nächstes Training</h2></div><button class="str610-close" aria-label="Schließen" type="button">×</button></div>
   <div class="str621-location" role="group" aria-label="Trainingsort umschalten">
@@ -356,12 +359,13 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
   <details class="str623-more"><summary>Equipmentdetails</summary><div class="str621-equipment-note">${prefs.equipment==='home'?'Zuhause: zwei verstellbare Kurzhanteln, nahezu gewichtslose Verbindungsstange, Ab Wheel · vier Scheiben je 2,5 / 2 / 1,5 / 1 kg = 28 kg Scheiben insgesamt; Bei zwei symmetrisch beladenen Kurzhanteln wären das je höchstens 14 kg Scheiben; für eine einzelne Hantel können mehr Scheiben verwendet werden. Griffgewichte separat erfassen.':'Gym: schwere Langhanteln, Maschinen und Kabelzug · StrongLifts nur auf Wunsch.'}</div></details>
   <section class="str626-context" aria-label="Persönlicher Schlaf-HRV-Körpertrend" style="margin:10px 0;padding:14px;border:1px solid #c8dcd3;border-radius:14px;background:rgba(238,247,242,.65)">
    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>🌙 Schlaf · ♥ HRV · Fitdays</strong><small>${plan.health.status==='attention'?'Zwei Trends unter Vergleich':'Persönliche Vergleichswerte · kein Recovery-Score'}</small></div>
-   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px">
-    <div><small>Schlaf · Median</small><strong style="display:block">${plan.health.sleep.usable?`${safe(Math.round(plan.health.sleep.recentMinutes))} / ${safe(Math.round(plan.health.sleep.baselineMinutes))} min`:'Zu wenig Werte'}</strong><small>${plan.health.sleep.usable?`Δ ${safe(plan.health.sleep.deltaMinutes)} min · ${plan.health.sleep.recentCount} Nächte`:`${plan.health.sleep.recentCount} aktuell · ${plan.health.sleep.baselineCount} Referenz`}</small></div>
-    <div><small>Nächtliche HRV · Median</small><strong style="display:block">${plan.health.hrv.usable?`${safe(plan.health.hrv.recentMs)} / ${safe(plan.health.hrv.baselineMs)} ms`:'Zu wenig Werte'}</strong><small>${plan.health.hrv.usable?`Δ ${safe(plan.health.hrv.deltaPct)} % · ${plan.health.hrv.recentCount} Nächte`:`${plan.health.hrv.recentCount} aktuell · ${plan.health.hrv.baselineCount} Referenz`}</small></div>
+   <small class="str405-window-hint">Garmin-Vergleich: letzte 3 Kalendertage gegen 3–45 Tage davor. Nicht ab Trainingsbeginn.</small><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px">
+    <div><small>Schlaf · Median</small><strong style="display:block">${plan.health.sleep.usable?`${safe(Math.round(plan.health.sleep.recentMinutes))} / ${safe(Math.round(plan.health.sleep.baselineMinutes))} min`:'Zu wenig Werte'}</strong><small>${plan.health.sleep.usable?`Δ ${safe(plan.health.sleep.deltaMinutes)} min · ${plan.health.sleep.recentCount} Nächte`:`${plan.health.sleep.recentCount}/2 letzte 3 Tage · ${plan.health.sleep.baselineCount}/10 Referenznächte (Tag 3–45)`}</small></div>
+    <div><small>Nächtliche HRV · Median</small><strong style="display:block">${plan.health.hrv.usable?`${safe(plan.health.hrv.recentMs)} / ${safe(plan.health.hrv.baselineMs)} ms`:'Zu wenig Werte'}</strong><small>${plan.health.hrv.usable?`Δ ${safe(plan.health.hrv.deltaPct)} % · ${plan.health.hrv.recentCount} Nächte`:`${plan.health.hrv.recentCount}/2 letzte 3 Tage · ${plan.health.hrv.baselineCount}/10 Referenznächte (Tag 3–45)`}</small></div>
     <div><small>Fitdays</small><strong style="display:block">${plan.health.body.latest?`${safe(plan.health.body.latest.weightKg)} kg`:'Noch keine Messung'}</strong><small>${plan.health.body.latest?`${safe(plan.health.body.latest.day)} · ${plan.health.body.latest.bodyFatPct===null?'KF unbekannt':safe(plan.health.body.latest.bodyFatPct)+' % KF'}`:'Kein Körpertrend möglich'}</small></div>
    </div><p style="font-size:12px;margin:10px 0 4px">${safe(plan.health.guidance)}</p><details><summary>Körperkomposition · Vergleich · Methodik</summary><p>${safe(plan.health.bodyNote)}</p><p>${safe(plan.health.method)}</p></details>
   </section>
+  ${unfinished?`<section class="str405-resume" aria-label="Unvollständiges Workout"><div><strong>↩ Training fortsetzen</strong><small>${safe(unfinished.planTitle||'Gespeichertes Workout')} · ${unfinished.exercises.reduce((n,e)=>n+(e.confirmedSets||[]).filter(x=>x.confirmed).length,0)} Sätze bestätigt · Übung ${(unfinished.currentExerciseIndex??0)+1}/${unfinished.exercises.length}</small></div><button type="button" class="str405-resume-now">▶ Fortsetzen</button></section>`:''}
   <section class="str619-plan-head" aria-label="Vorgeschlagener Trainingsplan"><div><small>${plan.cautious?'FÜR DEN NÄCHSTEN TRAININGSTAG':'DEIN VORSCHLAG'}</small><h3>${safe(plan.title)}</h3><p>${plan.exercises.length} Übungen · ${plan.equipment==='home'?'Zuhause':'Gym'} · ${safe(plan.trainingFocus)}</p>${plan.sourceStats.coachConfirmed?`<small class="str624-hist-badge">✓ ${plan.sourceStats.coachConfirmed} Coach-Sätze aus dem Vault berücksichtigt</small>`:''}</div><div class="str620-cta-stack"><button type="button" class="str620-launch" aria-label="Geführtes Workout starten">▶ Workout starten</button><button type="button" class="str619-copy">Plan kopieren</button></div></section>
   ${plan.suggestRecovery?`<aside class="str625-rest-advice" style="background:#f0f4ed;border-left:3px solid #688b76;padding:9px 12px;border-radius:9px;margin:9px 0;font-size:12px">Heute eher Erholung oder andere Muskelgruppen einplanen. <details><summary>Begründung</summary><p>${safe(plan.recoveryNote)}</p></details></aside>`:``}
   ${plan.timeFit==='longer'?`<p class="str619-alert">Dieser Plan benötigt voraussichtlich mehr als die gewählten ${plan.budget} Minuten. Die Sätze werden nicht künstlich verkürzt.</p>`:''}
@@ -380,7 +384,12 @@ export function openStrengthCoach({state,today,onSession=async()=>{}}){
   dialog.querySelectorAll('[data-place]').forEach(button=>button.onclick=()=>update('equipment',button.dataset.place));
   dialog.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>update('mode',button.dataset.mode));
   dialog.querySelector('.str619-minutes').onchange=e=>update('minutes',Number(e.target.value));
+  dialog.querySelector('.str405-resume-now')?.addEventListener('click',async()=>{
+   const guide=await import('./strength-guided-v5775920.js');
+   close();guide.openGuidedWorkout({plan:guidedPlanFromSession(unfinished),resumeSession:unfinished,onSession});
+  });
   dialog.querySelector('.str620-launch').onclick=async()=>{
+   if(unfinished&&!window.confirm('Es gibt ein offenes Workout. Wirklich ein zusätzliches neues Training starten? Das vorherige bleibt zum Fortsetzen gespeichert.'))return;
    const guide=await import('./strength-guided-v5775920.js');
    close();guide.openGuidedWorkout({plan,onSession});
   };

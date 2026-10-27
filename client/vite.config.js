@@ -51,6 +51,7 @@ import { compass59401NavigationRelease } from './compass59401-navigation-release
 import { compass59402LocationPickerRelease } from './compass59402-location-picker-release.js';
 import { compass59403LocationPickerCompactRelease } from './compass59403-location-picker-compact-release.js';
 import { compass59404NutritionBridge } from './compass59404-nutrition-bridge.js';
+import { compass59405WorkoutResumeRelease } from './compass59405-workout-resume-release.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -121,4 +122,5 @@ compassConfig.plugins.push(compass59401NavigationRelease());
 compassConfig.plugins.push(compass59402LocationPickerRelease());
 compassConfig.plugins.push(compass59403LocationPickerCompactRelease());
 compassConfig.plugins.push(compass59404NutritionBridge());
+compassConfig.plugins.push(compass59405WorkoutResumeRelease());
 export default compassConfig;
