@@ -1,0 +1,12 @@
+/* Compact coach-only panel; intentionally hidden until requested. */
+.str407-panel{margin:9px 0;border:1px solid #cbded3;background:#f8fbf9;border-radius:13px;color:#2d5a48}
+.str407-panel>summary{cursor:pointer;padding:12px 14px;font-size:13px;font-weight:700;line-height:1.4}
+.str407-panel-body{padding:0 14px 13px;font-size:12px;line-height:1.5}
+.str407-panel-body p{font-size:12px;color:#567264;margin:7px 0}
+.str407-plateau-row{padding:8px 0;border-top:1px solid #e3ede7;display:grid;gap:3px}
+.str407-plateau-row span{font-weight:650}.str407-plateau-row strong{font-size:11px}.str407-plateau-row small{font-size:11px;color:#607c6b}
+.str407-segments{border-top:1px solid #dce9e1;margin-top:11px;padding-top:10px}
+.str407-segment{display:flex;justify-content:space-between;gap:8px;padding:3px 0}
+.str407-panel-body>small{color:#718779;font-size:11px}
+.str407-exact-rest{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;font-size:12px}
+.str407-exact-rest button{padding:8px 10px;border:1px solid #abcbb8;border-radius:9px;background:#eaf5ee;color:#285b43;cursor:pointer;font-size:12px;font-weight:650}

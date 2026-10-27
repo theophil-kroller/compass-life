@@ -1,0 +1,14 @@
+COMPASS LIFE 0.5.77.59.40.7 — INSTALLATION
+
+PATCH: ausschliesslich auf 0.5.77.59.40.6 anwenden.
+1. Patch-ZIP entpacken (nicht selbst als ZIP ins GitHub-Hauptverzeichnis hochladen).
+2. Enthaltene Dateien mit identischer relativer Ordnerstruktur in GitHub hochladen / überschreiben.
+3. Commit auf main, GitHub Actions "Deploy Compass Web" prüfen.
+4. Compass PWA am Handy neu laden; Versionsangabe .40.7 überprüfen.
+
+FULL BUILD: vollständiger Sourcecode, alternativ zum Patch.
+
+Im Coach: „Plateau-Strategie · Satzpausen · Fitdays-Segmente“ öffnen.
+Im Workout: ab zweitem Satz optional „Satz beginnen“ antippen, damit echte Pausen messbar werden; Satz nach Durchführung bestätigen. Keine Browserdaten löschen.
+
+WICHTIG: GitHub/Vite-Produktionsbuild wird von GitHub Actions geprüft, nicht lokal bestätigt.
