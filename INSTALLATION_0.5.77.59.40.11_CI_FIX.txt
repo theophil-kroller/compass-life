@@ -1,0 +1,13 @@
+COMPASS WEB 0.5.77.59.40.11 – CI-FIX NACH ACTIONS #289
+
+EMPFOHLEN – PATCH AUF BEREITS HOCHGELADENES .40.11
+1. ZIP Compass_0.5.77.59.40.11_CI_FIX_PATCH.zip entpacken.
+2. Die 7 Dateien im Ordner tests/ an denselben Pfaden auf GitHub ersetzen.
+3. Commit nach main; neue Aktion "Deploy Compass Web" kontrollieren.
+4. Erst wenn alle Prüfungen grün sind, ist .40.11 tatsächlich produktiv.
+
+ALTERNATIV – FULL SOURCE
+Compass_0.5.77.59.40.11_CI_FIX_FULL_SOURCE_READY.zip enthält die gesamten Quellen inklusive des Fixes. Nur anstelle des Patches verwenden.
+
+KEIN Worker-Deploy, keine Migration, keine Tresordaten löschen.
+Die sichtbare Version bleibt 0.5.77.59.40.11.

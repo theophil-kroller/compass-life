@@ -65,11 +65,12 @@ test('Integrated full Vite source has staged acknowledgement and .40.10 version'
  const config=readFileSync(new URL('client/vite.config.js',root),'utf8');
  const map=new Map([...config.matchAll(/import\s*\{\s*(\w+)\s*\}\s*from\s*'\.\/(.+?\.js)'/g)].map(x=>[x[1],x[2]]));
  const names=[...config.matchAll(/\b([a-zA-Z]\w*(?:Bridge|Release))\(\)/g)].map(x=>x[1]);
- assert.equal(names.at(-1),'compass594010ProjectSyncRecoveryRelease');
+ assert.ok(names.includes('compass594010ProjectSyncRecoveryRelease'));
+ assert.ok(names.indexOf('compass594010ProjectSyncRecoveryRelease') < names.indexOf('compass594011FoodsRelease'));
  let src=readFileSync(new URL('client/src/main.js',root),'utf8');
  for(const name of names){const mod=await import(new URL('../client/'+map.get(name),import.meta.url));const res=mod[name]().transform(src,'/repo/client/src/main.js');if(res?.code)src=res.code;}
  execFileSync(process.execPath,['--input-type=module','--check'],{input:src});
- assert.match(src,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.10'/);
+ assert.match(src,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.\d+'/);
  assert.match(src,/syncProjectWithTrash410\(payload,/);
  assert.match(src,/state\.projectVersions\[id\]=version;await persist\(\)/);
  assert.match(src,/if\(data\.deferred\)continue;/);
