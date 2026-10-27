@@ -28,6 +28,15 @@ export function dailyDozenIngredientEvidence404(state,day){
  };
  for(const e of entries){
   const id=String(e.foodId||''),a=String(e.amount||''),g=grams(a),factor=scale(e),sourceId=String(e.id||id);
+  if(id==='spar-bio-flaxseed'){
+   // Do not silently credit whole seeds. Label prohibits raw consumption.
+   const note=String(e.note||'');
+   const ground=/(?:geschrotet|gemahlen|vermahlen)/i.test(note);
+   const heated=/(?:gekocht|gebacken|erhitzt|gegart|geröstet|geroestet)/i.test(note);
+   if(g!==null&&g>0&&ground&&heated)add('flax',g/7,'Leinsamen · geschrotet & erhitzt (1 EL ca. 7 g)',sourceId);
+   else if(g!==null&&g>0)notes.flax.push(`Leinsamen: ${round(g)} g erfasst, Zubereitung nicht als geschrotet UND gegart bestätigt; kein automatischer Daily-Dozen-Haken`);
+   continue;
+  }
   if(id==='smoothie-personal'){
    const rows=smoothieRecipe(e.recipe),by=Object.fromEntries(rows.map(x=>[x.id,validAmount(x.grams)?x.grams*factor:0]));
    add('fruit',(by.banana||0)/120,'Smoothie · Banane',sourceId);

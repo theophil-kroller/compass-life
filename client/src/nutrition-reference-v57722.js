@@ -30,6 +30,9 @@ export const NUT_MIX_ASSUMED_FRACTIONS=Object.freeze({cashew:.30,hazelnut:.30,wa
 const nutKeys=Object.keys(nutComposition.cashew);
 const nutMicros=Object.fromEntries(nutKeys.map(k=>[k,Math.round(Object.entries(NUT_MIX_ASSUMED_FRACTIONS).reduce((v,[nut,fraction])=>v+fraction*nutComposition[nut][k],0)*1000)/1000]));
 export const GENERIC_MICRONUTRIENTS=Object.freeze({
+ 'spar-bio-flaxseed':Object.freeze({calcium:255,magnesium:392,phosphorus:642,potassium:813,iron:5.73,zinc:4.34,copper:1.22,manganese:2.48,selenium:25.4,vitaminB1:1.644,vitaminB2:.161,niacin:3.08,vitaminB6:.473,folate:87,pantothenicAcid:.985,choline:78.7,vitaminE:.31,vitaminK:4.3}),
+ // Different product (unsweetened 1% quark): only indicative dairy micros; product itself not analysed.
+ 'sbudget-topfencreme-vanilla':Object.freeze({calcium:125,phosphorus:145,potassium:150,magnesium:13,zinc:.6,vitaminB2:.18,vitaminB12:.8}),
  'mixed-nuts':Object.freeze(nutMicros),
  'cheddar':Object.freeze({calcium:710,phosphorus:455,potassium:76,magnesium:27,zinc:3.64,selenium:28.5,vitaminA:337,vitaminD:.6,vitaminE:.71,vitaminK:2.4,vitaminB2:.43,vitaminB12:1.1,vitaminB1:.029,vitaminB6:.066,folate:27,iron:.14}),
  'cheddar-hofer':Object.freeze({calcium:710,phosphorus:455,potassium:76,magnesium:27,zinc:3.64,selenium:28.5,vitaminA:337,vitaminD:.6,vitaminE:.71,vitaminK:2.4,vitaminB2:.43,vitaminB12:1.1,vitaminB1:.029,vitaminB6:.066,folate:27,iron:.14}),

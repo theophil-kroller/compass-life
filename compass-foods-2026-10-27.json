@@ -1,0 +1,99 @@
+{
+  "status": "source_aware",
+  "source_version": "0.5.77.59.40.11",
+  "micros_are_generic_estimates": true,
+  "products": [
+    {
+      "id": "spar-bio-flaxseed",
+      "brand": "SPAR Natur*pur",
+      "name": "Bio-Leinsamen ganz",
+      "group": "Zutaten",
+      "portion": {
+        "label": "1 Teelöffel",
+        "grams": 3,
+        "estimated": true
+      },
+      "basis": "photo_label_2026_10_27",
+      "per_100g": {
+        "kcal": 533,
+        "protein_g": 20,
+        "carbs_g": 3.3,
+        "sugar_g": 1.1,
+        "fat_g": 43,
+        "saturated_g": 4.8,
+        "fiber_g": 27,
+        "salt_g": 0.15
+      },
+      "referenced_micros_per_100g": {
+        "calcium_mg": 255,
+        "magnesium_mg": 392,
+        "phosphorus_mg": 642,
+        "potassium_mg": 813,
+        "iron_mg": 5.73,
+        "zinc_mg": 4.34,
+        "copper_mg": 1.22,
+        "manganese_mg": 2.48,
+        "selenium_ug": 25.4,
+        "thiamin_mg": 1.644,
+        "vitamin_b6_mg": 0.473,
+        "folate_ug": 87,
+        "vitamin_e_alpha_mg": 0.31,
+        "vitamin_e_gamma_mg": 19.95
+      },
+      "phytonutrients": {
+        "ALA_omega3_mg_per_100g": 19970,
+        "gamma_tocopherol_mg_per_100g": 19.95,
+        "lignans_SDG": "present_not_quantified"
+      },
+      "greger": {
+        "daily_dozen_flax_serving_g": 7,
+        "auto_count_condition": "ground_AND_heated",
+        "flax_evidence_g_default": 0,
+        "anti_aging_eight": "microbiome_partial_indicator_only"
+      },
+      "warning": "Packung: Nur zum Kochen und Backen verwenden, nicht roh verzehren."
+    },
+    {
+      "id": "sbudget-topfencreme-vanilla",
+      "brand": "S-BUDGET",
+      "name": "Topfencreme Vanille",
+      "group": "Snacks",
+      "portion": {
+        "label": "1 Becher",
+        "grams": 180,
+        "estimated": false
+      },
+      "basis": "photo_label_and_spar_product",
+      "per_100g": {
+        "kcal": 99,
+        "protein_g": 5.8,
+        "carbs_g": 15,
+        "sugar_g": 14,
+        "fat_g": 2,
+        "saturated_g": 1.3,
+        "fiber_g": 0,
+        "salt_g": 0.09
+      },
+      "referenced_micros_per_100g": {
+        "calcium_mg": 125,
+        "phosphorus_mg": 145,
+        "potassium_mg": 150,
+        "magnesium_mg": 13,
+        "zinc_mg": 0.6,
+        "riboflavin_mg": 0.18,
+        "vitamin_b12_ug": 0.8
+      },
+      "phytonutrients": {
+        "vanilla_phenolics": "unknown_unquantified"
+      },
+      "greger": {
+        "daily_dozen": "no_automatic_credit",
+        "anti_aging_eight": "protein_and_energy_coverage_only"
+      },
+      "allergens": [
+        "milk",
+        "lactose"
+      ]
+    }
+  ]
+}

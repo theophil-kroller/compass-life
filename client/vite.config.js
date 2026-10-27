@@ -57,6 +57,7 @@ import { compass59407PlateauRelease } from './compass59407-plateau-release.js';
 import { compass59408ProjectsExperimentsRelease } from './compass59408-projects-experiments-release.js';
 import { compass59409WorkspaceRelease } from './compass59409-workspace-release.js';
 import { compass594010ProjectSyncRecoveryRelease } from './compass594010-project-sync-recovery-release.js';
+import { compass594011FoodsRelease } from './compass594011-foods-release.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -133,4 +134,5 @@ compassConfig.plugins.push(compass59407PlateauRelease());
 compassConfig.plugins.push(compass59408ProjectsExperimentsRelease());
 compassConfig.plugins.push(compass59409WorkspaceRelease());
 compassConfig.plugins.push(compass594010ProjectSyncRecoveryRelease());
+compassConfig.plugins.push(compass594011FoodsRelease());
 export default compassConfig;
