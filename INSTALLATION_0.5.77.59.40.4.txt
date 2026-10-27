@@ -1,0 +1,25 @@
+COMPASS LIFE 0.5.77.59.40.4 — INSTALLATION
+========================================
+
+BASIS
+Build 0.5.77.59.40.3 inkl. DEPLOYFIX (grüner GitHub-Actions-Lauf).
+
+PATCH (empfohlen)
+1. Sicherheitshalber bestehenden verschlüsselten Tresor exportieren.
+2. ZIP "Compass_0.5.77.59.40.4_PATCH_FROM_0.5.77.59.40.3_DEPLOYFIX.zip" entpacken.
+3. Alle enthaltenen Dateien unter denselben relativen Pfaden ins GitHub-Repository hochladen (geänderte überschreiben, neue hinzufügen).
+4. Commit auf main; GitHub Actions "Deploy Compass Web" kontrollieren. Nach dem Deploy sollte Version 0.5.77.59.40.4 erscheinen.
+5. Compass-PWA am Smartphone komplett schließen und neu öffnen.
+
+FULL SOURCE (alternativ)
+Die Full-Source-ZIP enthält die vollständige App inklusive .github/workflows. Nicht gleichzeitig zum Patch einspielen. Bestehenden verschlüsselten Tresor und Browserdaten NICHT löschen.
+
+FUNKTIONSPRÜFUNG
+- Ernährungstagebuch → persönlichen Smoothie heute protokollieren oder vorhandenen Eintrag öffnen.
+- Überprüfen: Banane, Blaubeeren, Nussmix, schwarzer Sesam, Zimt/Ingwer und jetzt auch Kurkuma (eigene Gramm-Zeile). Eventuelle Mengenannahmen korrigieren und speichern.
+- Insights → Ernährung → Daily Dozen: Obst, Beeren, Nüsse/Samen und Gewürze müssen als dokumentierte Fortschritte erscheinen.
+- Anti-Aging Eight: Beeren und Nüsse werden aus demselben Eintrag angezeigt; nicht messbare Anti-Aging-Themen bleiben ausdrücklich nicht messbar.
+- Im Today-/Life-Balance-Widget sollte die dokumentierte Ernährung dieselbe Evidenz erhalten.
+- Eintrag bearbeiten/löschen: Fortschritt muss entsprechend neu berechnet werden. Eingetragene manuelle Daily-Dozen-Korrekturen sind weiterhin bewusst vorrangig.
+
+Keine Migration. Keine Hintergrund-GPS-, Cloud- oder unverschlüsselte Ernährungssynchronisation.

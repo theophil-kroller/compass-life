@@ -8,6 +8,7 @@ export const SMOOTHIE_INGREDIENTS=Object.freeze([
  {id:'pollen',label:'Bio Blütenpollen (1 TL)',grams:5,unit:'g',basis:'Unbekannte Mischung; Nährstoffe nicht belastbar quantifiziert',values:{}},
  {id:'cinnamon',label:'Zimt (1 Prise)',grams:.4,unit:'g',basis:'USDA Zimt, gemahlen · Menge geschätzt',values:{kcal:247,fiber:53.1,carbs:80.6,fat:1.24,protein:3.99}},
  {id:'ginger',label:'Ingwerpulver (1 Prise)',grams:.4,unit:'g',basis:'USDA Ingwer, gemahlen · Menge geschätzt',values:{kcal:335,protein:8.98,carbs:71.62,fiber:14.1,fat:4.24}},
+ {id:'turmeric',label:'Kurkuma (1 Prise)',grams:.4,unit:'g',basis:'USDA Kurkuma, gemahlen · Menge geschätzt; bei älteren Einträgen ohne Angabe 0 g',values:{kcal:312,protein:9.68,carbs:67.14,fat:3.25,fiber:22.7}},
  {id:'blueberries',label:'Hofer gefrorene Blaubeeren (1 Handvoll)',grams:75,unit:'g',basis:'USDA Heidelbeeren, roh; tiefgekühlt und Sorte können abweichen',values:{kcal:57,protein:.74,carbs:14.49,sugar:9.96,fat:.33,saturated:.028,fiber:2.4,vitaminC:9.7,manganese:.336}},
  {id:'mint',label:'Frische Pfefferminzblätter',grams:2,unit:'g',basis:'Für Blätter nicht sicher auf Portionsbasis spezifiziert',values:{}},
  {id:'nuts',label:'Bio Nussmischung (1 Handvoll)',grams:30,unit:'g',basis:'MorgenLand Bio Kerniger Nuss Mix – Etikett; ggf. abweichende Mischung',values:{kcal:649,protein:17,carbs:12,sugar:4.2,fat:58,saturated:7.1,fiber:6.9}}
@@ -18,7 +19,8 @@ export function smoothieRecipe(input){
  const byId=new Map(Array.isArray(input)?input.map(x=>[String(x?.id),x]):[]);
  return SMOOTHIE_INGREDIENTS.map(i=>{
   const candidate=byId.get(i.id),v=candidate?.grams===undefined||candidate?.grams===null?NaN:number(candidate.grams);
-  const grams=Number.isFinite(v)&&v>=0&&v<=1000?round(v):i.grams;
+  // Never attribute a newly added ingredient to a previously saved smoothie.
+  const grams=i.id==='turmeric'&&Array.isArray(input)&&!byId.has('turmeric')?0:Number.isFinite(v)&&v>=0&&v<=1000?round(v):i.grams;
   return {id:i.id,grams,assumed:candidate?.assumed===false?false:true};
  });
 }

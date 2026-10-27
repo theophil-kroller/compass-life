@@ -1,3 +1,4 @@
+import {dailyDozenIngredientEvidence404} from './daily-dozen-evidence-v57759404.js';
 /** Compass 0.5.77.59.30 — evidence-first Daily Dozen (NutritionFacts.org).
  * Read-only derivation from locally decrypted nutrition journal; never infers
  * unrecorded meals or makes medical, longevity or anti-aging predictions.
@@ -51,18 +52,15 @@ function quantities(food,amount){
 export function dailyDozen5930(state,{day=new Date().toLocaleDateString('sv-SE')}={}){
  if(!safeDay(day))throw Error('Invalid Daily Dozen date');
  const records=(state?.nutritionJournal?.entries||[]).filter(e=>e&&!e.deleted&&typeof e.at==='string'&&Number.isFinite(Date.parse(e.at))&&localDay(e.at)===day);
- const lookup=new Map([...(state?.nutritionJournal?.customFoods||[])].map(x=>[x.id,x]));
- const totals=Object.fromEntries(DAILY_DOZEN_5930.map(x=>[x.id,0]));
- const evidence=[];
- for(const record of records){
-  const food=lookup.get(record.foodId)||{id:record.foodId,defaultAmount:record.amount};
-  const part=quantities(food,record.amount);
-  if(Object.keys(part).length)evidence.push({id:record.id,foodId:record.foodId,part});
-  for(const [key,value] of Object.entries(part))totals[key]+=value;
- }
+ // The same evidence ledger feeds the historic 12-category tracker and Anti-Aging Eight.
+ const ledger=dailyDozenIngredientEvidence404(state,day);
+ const aliases={legumes:'beans',fruits:'fruit'};
+ const totals=Object.fromEntries(DAILY_DOZEN_5930.map(x=>[x.id,ledger.totals[aliases[x.id]||x.id]||0]));
+ const evidence=ledger.sources.map(x=>({id:x.id,category:x.category,source:x.source,portion:x.portion,grams:x.grams}));
+ const mappedIds=new Set(ledger.sources.map(x=>x.id));
  const rows=DAILY_DOZEN_5930.map(x=>({...x,observed:Math.min(x.goal,Math.round((totals[x.id]||0)*10)/10),raw:Math.round((totals[x.id]||0)*10)/10,covered:totals[x.id]>0}));
  const observed=rows.reduce((n,x)=>n+x.observed,0),goal=rows.reduce((n,x)=>n+x.goal,0);
- return {day,rows,entries:records.length,mapped:evidence.length,unmapped:records.length-evidence.length,observed:Math.round(observed*10)/10,goal,notObserved:rows.filter(x=>!x.covered).length,evidence,uncertainty:'Nur eindeutig erkannte und protokollierte Mengen; nicht erfasst bedeutet nicht nicht gegessen. Aktivität und Nahrungsergänzung werden nicht aus anderen Datensätzen vorgetäuscht.'};
+ return {day,rows,entries:records.length,mapped:mappedIds.size,unmapped:Math.max(0,records.length-mappedIds.size),observed:Math.round(observed*10)/10,goal,notObserved:rows.filter(x=>!x.covered).length,evidence,uncertainty:'Nur eindeutig erkannte und protokollierte Mengen; nicht erfasst bedeutet nicht nicht gegessen. Aktivität und Nahrungsergänzung werden nicht aus anderen Datensätzen vorgetäuscht.'};
 }
 function localDay(timestamp){const d=new Date(timestamp);if(!Number.isFinite(d.getTime()))return '';return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 export function dailyDozen5930View(model){

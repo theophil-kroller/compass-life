@@ -19,9 +19,9 @@ test('time-of-day adapts food categories without removing anything',()=>{
  assert.equal(nutritionDaypart(11),'midday');
  assert.deepEqual(smartNutritionFoods(demoFoods,'Getränke').map(x=>x.id),['green-tea-chinese','smoothie-personal','coffee']);
 });
-test('smoothie comprises exactly eight separate ingredients with assumed weights',()=>{
- assert.equal(SMOOTHIE_INGREDIENTS.length,8);
- for(const id of ['banana','sesame','pollen','cinnamon','ginger','blueberries','mint','nuts'])assert.ok(SMOOTHIE_INGREDIENTS.find(x=>x.id===id));
+test('smoothie comprises nine ingredient fields including turmeric with assumed weights',()=>{
+ assert.equal(SMOOTHIE_INGREDIENTS.length,9);
+ for(const id of ['banana','sesame','pollen','cinnamon','ginger','turmeric','blueberries','mint','nuts'])assert.ok(SMOOTHIE_INGREDIENTS.find(x=>x.id===id));
  const fresh=smoothieRecipe();assert.equal(fresh.find(x=>x.id==='sesame').grams,15);
  assert.equal(fresh.find(x=>x.id==='blueberries').grams,75);
  assert.ok(fresh.every(x=>x.assumed));
@@ -37,7 +37,7 @@ test('editing individual grams preserves defaults for absent fields and actual z
  assert.match(smoothieEditFields({recipe:rec}),/name="smoothie-sesame"/);
 });
 test('per ingredient macro and micronutrients and missing bee-pollen data are not fabricated',()=>{
- const p=smoothieParts();assert.equal(p.length,8);
+ const p=smoothieParts();assert.equal(p.length,9);
  assert.ok(p.find(x=>x.name.startsWith('Banane')).values.potassium>300);
  assert.ok(p.find(x=>x.name.includes('Blaubeeren')).values.vitaminC>0);
  assert.deepEqual(p.find(x=>x.name.includes('Blütenpollen')).values,{});
