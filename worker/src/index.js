@@ -1,3 +1,4 @@
+import {watchDashboard,watchCalendarPublish,watchShoppingToggle} from './watch-dashboard-v512.js';
 import {publicBitcoinLongHistory} from './market-bitcoin-long-v40.js';
 import {publicKrakenHistory} from './market-kraken-v39.js';
 import {privateMirror} from './private-device-mirror.js';
@@ -148,6 +149,7 @@ async function route(req,env,identity) {
   if(req.method==='POST' && url.pathname==='/api/projects')return putProject(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/events')return listDiscoveryEvents(env,identity);
   if(req.method==='POST' && url.pathname==='/api/events/batch')return upsertDiscoveryEvents(req,env,identity);
+  if(req.method==='POST' && url.pathname==='/api/watch/calendar-snapshot')return watchCalendarPublish(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/tasks')return listTasks(env,identity);
   if(req.method==='POST' && url.pathname==='/api/tasks')return putTask(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/health/days')return listHealthDays(req,env,identity);
@@ -223,6 +225,8 @@ export default {
       if(path==='/api/health/pair/claim' && req.method==='POST')return finish(await claimHealthPair(req,env));
       if(path==='/api/health/days' && req.method==='POST')return finish(await uploadHealthDays(req,env));
       if(path==='/api/watch/pair/claim' && req.method==='POST')return finish(await claimPair(req,env));
+      if(path==='/api/watch/dashboard' && req.method==='GET')return finish(await watchDashboard(req,env));
+      if(path==='/api/watch/shopping/toggle' && req.method==='POST')return finish(await watchShoppingToggle(req,env));
       if(path==='/api/watch/planning' && req.method==='GET')return finish(await watchPlanning(req,env));
       if(path==='/api/watch/sessions' && req.method==='POST')return finish(await acceptWatchSession(req,env));
       if(path==='/api/session' && req.method==='POST') {

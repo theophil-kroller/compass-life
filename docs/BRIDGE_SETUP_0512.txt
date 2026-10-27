@@ -1,0 +1,16 @@
+COMPASS WEB 0.5.77.59.40.11 – WATCH BRIDGE (Calendar relevance filter)
+
+Install patch in existing Compass Web 0.5.77.59.40.11, keeping path names.
+Requires Cloudflare D1 migration worker/migrations/0019_watch_calendar_daily.sql
+and an updated Worker, not only GitHub Pages.
+
+Existing encrypted Compass Google calendar archive provides today's timed events.
+The unlocked Web app projects only titles and local HH:mm ranges through an
+authenticated endpoint. Work/Arbeit/busy/focus placeholders and timed events
+under 60 minutes are suppressed. Longer named meetings like 09:00-10:30
+and teaching sessions like 13:00-15:00 appear on Garmin's AM/PM clock tracks.
+No second Google authorization needed. Current-day calendar projection is stored
+in Cloudflare D1 as plaintext for watch delivery; only deploy when acceptable.
+
+For the watch install the corresponding Chrono 0.5.12 package.
+The real Garmin SDK build and device sync still require local verification.

@@ -212,7 +212,7 @@ async function resumeSession(){
     if(!navigator.onLine)return;
     const who=await request(config.apiUrl,authToken,'/api/me');
     currentUser=who.email;render();
-    await syncNow();scheduleJournalSync(0);
+    await syncNow();scheduleJournalSync(0);scheduleWatchCalendarSnapshot();
   }catch(ex){
     if(ex.status===401){authToken='';currentUser='';await vault.clearSession();toast('Compass-Sitzung abgelaufen. Bitte einmalig mit Google anmelden.');}
     else {error='Verbindung derzeit nicht erreichbar. Lokale Erfassung bleibt möglich.';render();}
@@ -480,6 +480,47 @@ function restoreCalendarFromVault(st){
  calendarEvents=visibleCachedCalendar(archive);calendarIndex=null;calendarIndexedArray=null;
  calendarUpdatedAt=Date.parse(archive.updatedAt)||0;calendarCoverage=archive.completed?{complete:true,start:archive.start,end:archive.end}:null;
  if(archive.completed||calendarEvents.length)calendarStatus=`${calendarEvents.length} gespeicherte Termine · ${calendarUpdatedAt?'Stand '+new Date(calendarUpdatedAt).toLocaleDateString('de-AT'):'Aktualisierungsdatum unbekannt'}`;
+ scheduleWatchCalendarSnapshot();
+}
+// 0.5.12: Only an owner-approved, bounded projection of the ALREADY saved
+// encrypted Compass Calendar is placed on Cloudflare for the paired Garmin.
+// No Google token, location, descriptions or attendee metadata is transmitted.
+let watchCalendarUploadTimer=null,watchCalendarLastKey='';
+function scheduleWatchCalendarSnapshot(){
+ clearTimeout(watchCalendarUploadTimer);
+ if(!state||!authToken||!navigator.onLine||!state.calendarArchive?.completed)return;
+ watchCalendarUploadTimer=setTimeout(()=>uploadWatchCalendarSnapshot().catch(()=>{}),1500);
+}
+async function uploadWatchCalendarSnapshot(){
+ if(!state?.calendarArchive?.completed||!authToken||!config.apiUrl||!navigator.onLine)return;
+ const day=localDate(), archive=normalizeCalendarArchive(state.calendarArchive);
+ const key=day+'|'+archive.updatedAt;
+ if(watchCalendarLastKey===key)return;
+ const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Vienna';
+ const local=new Intl.DateTimeFormat('sv-SE',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+ const parts=dt=>{
+   const d=new Date(dt);if(!Number.isFinite(d.getTime()))return null;
+   const p=Object.fromEntries(local.formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+   return {day:`${p.year}-${p.month}-${p.day}`,time:`${p.hour}:${p.minute}`};
+ };
+ // CompassWatch is a compact 12-hour meeting dial, not a time-sheet.
+ // Skip generic busy/work blocks and appointments shorter than one hour.
+ const isGenericWatchSlot=title=>/^(?:work|working|work block|work time|arbeit|arbeitszeit|arbeitsblock|fokus|focus|focus time|fokuszeit|busy|beschäftigt|blocked|blockiert)$/i.test(String(title||'').trim().replace(/\s+/g,' '));
+ const events=[];
+ for(const event of visibleCachedCalendar(archive)){
+   // All-day records are deliberately excluded from the clock ring.
+   if(event.transparency==='transparent'||!event.start?.dateTime||!event.end?.dateTime)continue;
+   const a=parts(event.start.dateTime),b=parts(event.end.dateTime);
+   if(!a||!b||a.day!==day||b.day!==day||b.time<=a.time)continue;
+   const title=String(event.summary||'').trim();
+   const minutes=t=>Number(t.slice(0,2))*60+Number(t.slice(3,5));
+   if(!title||isGenericWatchSlot(title)||minutes(b.time)-minutes(a.time)<60)continue;
+   events.push({start:a.time,end:b.time,title:title.slice(0,64)});
+   if(events.length>=24)break;
+ }
+ events.sort((a,b)=>a.start.localeCompare(b.start));
+ await request(config.apiUrl,authToken,'/api/watch/calendar-snapshot',{method:'POST',body:JSON.stringify({day,events})});
+ watchCalendarLastKey=key;
 }
 function indexedCalendarDay(day){
  if(calendarIndexedArray!==calendarEvents){calendarIndex=new Map();calendarIndexedArray=calendarEvents;
