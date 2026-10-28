@@ -43,7 +43,7 @@ export const FOOD_PRESETS=[
  ['cheddar-hofer','🧀','Hofer BBQ Cheddar','Snacks','1 Scheibe (33 g)',127,131],
  ['peanuts','🥜','Hofer gesalzene Erdnüsse','Snacks','1 Handvoll (30 g; geschätzt)',175,190],['mixed-nuts','🌰','MorgenLand Bio Kerniger Nuss Mix','Snacks','1 Handvoll (30 g)',193,197],
  ['dried-mango','🥭','SPAR Vital Bio-Mangohälften','Snacks','1 Packung (200 g)',590,600],
- ['spar-bio-flaxseed','🌱','SPAR Natur*pur Bio-Leinsamen (ganz)','Zutaten','1 TL (3 g)',16,16],
+ ['spar-bio-flaxseed','🌱','SPAR Bio-Leinsamen · gekaut','Snacks','1 TL (3 g)',16,16],
  ['sbudget-topfencreme-vanilla','🍮','S-BUDGET Topfencreme Vanille','Snacks','1 Becher (180 g)',178,179],['rice-pudding','🍚','S-BUDGET Milchreis Zimt · SPAR','Snacks','1 Becher (200 g)',225,230],
  ['apple','🍎','Apfel','Snacks','1 Stück',60,120],['chocolate','🍫','Schokoriegel','Snacks','1 Riegel (50 g)',220,300],
  ['snickers','🍫','Snickers','Snacks','1 Riegel (50 g)',225,275],
@@ -55,6 +55,7 @@ export const FOOD_PRESETS=[
  ['other-food','➕','Anderes','Sonstiges']
 ].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({
  id,emoji,title,group,defaultAmount,kcalLow,kcalHigh,
+ ...(id==='spar-bio-flaxseed'?{recipeNote:'1 TL ≈ 3 g, vor dem Schlucken zerkaut. ACHTUNG: Die verwendete SPAR-Packung ist mit „Nur zum Kochen und Backen – nicht roh verzehren“ gekennzeichnet. Zerkauen ersetzt Erhitzen nicht.'}:{}),
  ...(id==='pizza-margherita'||id==='krautsalat'||id==='stangenbohnensalat'||id==='champagne'||id==='chocolate-cookie'||id==='whipped-cream'||id==='chocolate-cookie-cream'?{recipeNote:'Grobe Nährwert- und Portionsschätzung, kein Herstelleretikett. Menge und Zutaten können stark abweichen.'}:{}),
  ...(id==='matcha'||id==='matcha-oat-plain'?{
   recipeNote:`1 TL Matcha (ca. 2 g), heißes Wasser, geschätzt 75 ml Hafermilch${id==='matcha'?', 1 TL Honig (ca. 7 g)':''}. Die gesamte Trinkmenge (ca. 500 ml) ist nicht die Hafermilchmenge.`
@@ -227,7 +228,7 @@ export function timeJournalView(state,{period=7,editingId='',showForm=false}={})
 }
 export function nutritionQuickView(state,{selectedFoodId='',dateToday}={}){
  const foods=nutritionFoods(state),groups=[...new Set(foods.map(f=>f.group))];
- return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3>${group==='Frühstück'?'<p class="pj92-matcha-note">Matcha: 1 TL Pulver, heißes Wasser, ca. 75 ml Hafermilch; optional 1 TL Honig. Die ca. 500 ml sind die gesamte Trinkmenge. Hafermilch-Menge im Tagebuch bearbeitbar.</p>':''}<div>${foods.filter(f=>f.group===group).map(f=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.recipeNote||f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}${f.defaultAmount?` · ${esc(f.defaultAmount)}`:''}</small></button>`).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. kcal-Schätzungen und ein freiwilliges persönliches Ziel findest du im Ernährungstagebuch. Details können später ergänzt werden. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
+ return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3>${group==='Frühstück'?'<p class="pj92-matcha-note">Matcha: 1 TL Pulver, heißes Wasser, ca. 75 ml Hafermilch; optional 1 TL Honig. Die ca. 500 ml sind die gesamte Trinkmenge. Hafermilch-Menge im Tagebuch bearbeitbar.</p>':''}<div>${foods.filter(f=>f.group===group).map(f=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.recipeNote||f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}${f.defaultAmount?` · ${esc(f.defaultAmount)}`:''}</small></button>${f.id==='spar-bio-flaxseed'?`<div class="pj92-flax-quick"><small>Vor dem Schlucken gekaut · 1 TL ≈ 3 g</small><button type="button" data-action="pj92-flax-yesterday" data-id="spar-bio-flaxseed">Gestern mit Uhrzeit nachtragen</button><small>⚠ Packung: nur kochen/backen, nicht roh verzehren.</small></div>`:''}`).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. kcal-Schätzungen und ein freiwilliges persönliches Ziel findest du im Ernährungstagebuch. Details können später ergänzt werden. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
 }
 export function nutritionInsightsView(state,{period=30,editingId=''}={}){
  const stats=nutritionStats(state,period),foods=nutritionFoods(state),editing=nutritionEntries(state).find(e=>e.id===editingId);

@@ -38,6 +38,7 @@ import * as discoveryFreshness5777 from '../client/src/discovery-freshness-v5777
 import * as cinemaModule5772 from '../client/src/cinema-program-v5772.js';
 import * as cinemaDetails5773 from '../client/src/cinema-details-v5773.js';
 import * as eventSync from '../client/src/event-sync.js';
+import * as currentDiscovery412 from '../client/src/discovery-current-day-v577594012.js';
 import * as review from '../client/src/guided-review.js';
 import * as tags from '../client/src/smart-tags.js';
 import * as personMatching from '../client/src/people-matching.js';
@@ -71,7 +72,7 @@ function context(){
  Object.assign(ctx,agendaIndex717,planIndex717,peopleScope720);
  Object.assign(ctx,waiting715,friction715,yesterday710,dailyPlanning,capacity,deadline,projectExchange,treeWorkspace,shopping713,gtd23,life,tasks,calendar,activities,occasions,peopleOccasions,perspectives,recovery,eventsImport,healthVisual,healthDashboard);
  Object.assign(ctx,contactCare568,calendarSuggestions568);
- Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,discoveryFreshness5777,cinemaModule5772,cinemaDetails5773,eventSync,relationships);
+ Object.assign(ctx,inboxFlags,inboxOrder,review,tags,personMatching,sportsModule,reviewHubModule,personLinks,discoveryFilter,discoveryResearch577,discoveryFreshness5777,cinemaModule5772,cinemaDetails5773,eventSync,currentDiscovery412,relationships);
  Object.assign(ctx,{technicalSettings,TECHNICAL_TOGGLES,wireTechnicalCrosshair});
  ctx.discoveryAppearance=eventsImport.eventAppearance;
  ctx.createEditDraftGuard=createEditDraftGuard;ctx.createPerformanceTrace=createPerformanceTrace;Object.assign(ctx,peopleSync719);

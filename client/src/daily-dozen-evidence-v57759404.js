@@ -33,8 +33,10 @@ export function dailyDozenIngredientEvidence404(state,day){
    const note=String(e.note||'');
    const ground=/(?:geschrotet|gemahlen|vermahlen)/i.test(note);
    const heated=/(?:gekocht|gebacken|erhitzt|gegart|geröstet|geroestet)/i.test(note);
+   const chewed=/(?:zerkaut|gekaut)/i.test(note);
    if(g!==null&&g>0&&ground&&heated)add('flax',g/7,'Leinsamen · geschrotet & erhitzt (1 EL ca. 7 g)',sourceId);
-   else if(g!==null&&g>0)notes.flax.push(`Leinsamen: ${round(g)} g erfasst, Zubereitung nicht als geschrotet UND gegart bestätigt; kein automatischer Daily-Dozen-Haken`);
+   else if(g!==null&&g>0&&chewed)add('flax',g/7,'Leinsamen · vor dem Schlucken gekaut (Teilportion, Zerkleinerung ungewiss; Packung verlangt Erhitzen)',sourceId);
+   else if(g!==null&&g>0)notes.flax.push(`Leinsamen: ${round(g)} g erfasst; ganze nicht zerkleinerte Samen werden nicht als Greger-Portion gewertet`);
    continue;
   }
   if(id==='smoothie-personal'){

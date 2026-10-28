@@ -22,13 +22,16 @@ test('Photographed macro nutrients used at 3g and 180g, micros flagged as estima
  assert(flax.estimatedKeys.has('magnesium'));assert(quark.estimatedKeys.has('calcium'));
  assert(!quark.estimatedKeys.has('kcal'));
 });
-test('Greger credits ONLY explicitly ground and heated flax and never double counts nuts',()=>{
+test('Greger credits explicit ground+heated or chewed flax, never intact seeds or nuts',()=>{
  let e=dailyDozenIngredientEvidence404(state([record('spar-bio-flaxseed','7 g')]),day);
  assert.equal(e.totals.flax,0);assert.equal(e.nutGrams,0);
  e=dailyDozenIngredientEvidence404(state([record('spar-bio-flaxseed','7 g','geschrotet und gebacken')]),day);
  assert.equal(e.totals.flax,1);assert.equal(e.totals.nuts,0);
  e=dailyDozenIngredientEvidence404(state([record('spar-bio-flaxseed','3 g','gemahlen, gekocht')]),day);
  assert(Math.abs(e.totals.flax-3/7)<0.001);
+ e=dailyDozenIngredientEvidence404(state([record('spar-bio-flaxseed','1 TL (3 g)','Vor dem Schlucken gekaut')]),day);
+ assert(Math.abs(e.totals.flax-3/7)<0.001);assert.equal(e.totals.nuts,0);
+ assert.match(e.notes.flax.join(' '),/Packung verlangt Erhitzen/);
 });
 test('Topfencreme earns no Daily Dozen ticks and flax gives microbiome only partial observation',()=>{
  const x=state([record('sbudget-topfencreme-vanilla','180 g'),record('spar-bio-flaxseed','3 g')]);

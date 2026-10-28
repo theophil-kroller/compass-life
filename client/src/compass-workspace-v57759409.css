@@ -28,3 +28,12 @@
 .p49-task-row-actions button:last-child{color:#94635b;background:#faf3f1}
 .p49-task-row-actions button:hover{filter:brightness(.95)}
 @media(max-width:700px){.shell .compass58-sidebar{display:none}}
+
+/* .40.12: the date navigator stays left; GPS/context controls sit at the
+   far right of the Today header, as a secondary compact control group. */
+.content .ctx42-date-row{display:flex;width:100%;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:10px}
+.content .ctx42-date-row .daynav38{flex:0 1 auto;min-width:0}
+.content .ctx42-date-row .ctx46-pair{margin-left:auto!important;flex:0 0 auto}
+.content .ctx42-date-row .ctx46-sheet{left:auto;right:0}
+.content .discovery-event-ongoing{display:block;color:#376c50;font-weight:650;margin-top:6px}
+@media(max-width:700px){.content .ctx42-date-row{gap:5px}.content .ctx42-date-row .ctx46-pair{margin-left:auto!important}.content .ctx42-date-row .ctx46-sheet{position:fixed;left:12px;right:12px;width:auto}}

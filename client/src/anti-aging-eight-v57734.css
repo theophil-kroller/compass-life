@@ -14,3 +14,6 @@
 .aa734-item p{font-size:.75rem;line-height:1.5;margin:0;color:var(--text-muted,#74837a)}
 .dd734-autoproof{color:#368663!important;font-weight:600}.dd734-manualproof{color:#42789b!important;font-weight:600}.dd734-progress-note{color:#ad7f2c!important}
 @media(max-width:570px){.aa734-root{gap:10px}.aa734-grid{grid-template-columns:1fr}.aa734-item{padding:10px}.aa734-metrics span{padding:7px}}
+
+/* .40.13: fractional Daily Dozen flax serving, no premature checkmark */
+.dd734-flax-partial{display:block;height:5px;width:min(155px,100%);border-radius:5px;background:#e6ece6;overflow:hidden;margin-top:4px}.dd734-flax-partial i{display:block;height:100%;background:#608f73;border-radius:5px}

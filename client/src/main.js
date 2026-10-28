@@ -73,6 +73,7 @@ import {allRecoveryIdeas,scoreRecoveryIdeas,recoveryWeather,validRecoveryIdea} f
 import {assertCompatibleWorker} from './health-check.js';
 import {parseEventImport,upcomingImportedEvents,discoveryPromptRegional,discoveryPromptTravel,eventKey,eventAppearance as discoveryAppearance,EVENT_CATEGORIES,eventArea,eventCountry} from './event-import.js';
 import {eventState,queueEvent,queueEventPreference,removeEvents,removeCinemaEvents,isCinemaEvent,prunePastEvents,pendingEventBatch,acknowledgeEventBatch,mergeEventSnapshot,resolveEventConflict} from './event-sync.js';
+import {discoveryDisplayDay412,discoveryOverlaps412,discoveryOngoingLabel412} from './discovery-current-day-v577594012.js';
 import {healthViewModel,healthBars,healthTime,healthObservation} from './health-visual.js';
 import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-import.js';
 import {healthImportCoverage} from './health-import-diagnostics-v492.js';
@@ -2126,12 +2127,12 @@ function discoveryPanel(){
  const preferences=state?.eventPreferences||{},fav=all.filter(e=>preferences[eventKey(e)]==='saved').length,hide=all.filter(e=>preferences[eventKey(e)]==='hidden').length;
  const filter=(e)=>{const status=preferences[eventKey(e)]||'open';if(discoveryRange==='saved'&&status!=='saved')return false;if(discoveryRange==='hidden'&&status!=='hidden')return false;if(!['saved','hidden'].includes(discoveryRange)&&status==='hidden')return false;
   if(discoveryCity!=='all'&&e.city!==discoveryCity)return false;if(discoveryArea!=='all'){const area=eventArea(e);if(discoveryArea==='austria'?!['graz','vienna','austria'].includes(area):discoveryArea==='europe'?!['graz','vienna','austria','europe'].includes(area):area!==discoveryArea)return false;}if(!matchesEventCategories(e.category,discoveryCategories))return false;if(discoveryDisplayMode==='cinema')return true;
-  const d=new Date(today+'T12:00:00Z'),wd=d.getUTCDay();if(discoveryRange==='today')return e.date===today;
+  const d=new Date(today+'T12:00:00Z'),wd=d.getUTCDay();if(discoveryRange==='today')return discoveryDisplayDay412(e,today)===today;
   if(discoveryRange==='week'){d.setUTCDate(d.getUTCDate()+7);return e.date<=d.toISOString().slice(0,10);}
-  if(discoveryRange==='weekend'){d.setUTCDate(d.getUTCDate()+(6-wd+7)%7);const sat=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+1);return e.date>=sat&&e.date<=d.toISOString().slice(0,10);}
-  if(discoveryRange==='calendar')return (e.endDate||e.date)>=mondayStr&&e.date<=sundayStr;
+  if(discoveryRange==='weekend'){d.setUTCDate(d.getUTCDate()+(6-wd+7)%7);const sat=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+1);return discoveryOverlaps412(e,sat,d.toISOString().slice(0,10));}
+  if(discoveryRange==='calendar')return discoveryOverlaps412(e,mondayStr,sundayStr);
   return true;};
- const events=all.filter(filter),groups=new Map();for(const e of events){if(!groups.has(e.date))groups.set(e.date,[]);groups.get(e.date).push(e);}
+ const events=all.filter(filter),groups=new Map();for(const e of events){const displayDay=discoveryDisplayDay412(e,today);if(!groups.has(displayDay))groups.set(displayDay,[]);groups.get(displayDay).push(e);}
  const allCinema=cinemaOverview(all);
  const cinemaStored=(state?.discoveredEvents||[]).filter(isCinemaEvent).length;
  const catalogCinemaEvents=discoveryCinemaPeriod==='day'?cinemaForDay(events,discoveryCinemaDay):events.filter(e=>e.category==='Kino'||e.category==='Filmfestival');
@@ -2152,7 +2153,7 @@ function discoveryPanel(){
  </section>`:'';
  const posterManual=manualFilm?`<section class="discovery-poster-manual"><div class="discovery-poster-review-head"><strong>Poster ergänzen · ${h(manualFilm.title)}</strong><button type="button" class="text-link" data-action="discovery-poster-manual-close">Schließen</button></div><form id="discovery-poster-manual-form"><label>Direkter HTTPS-Link zum Filmposter<input type="url" name="posterUrl" required placeholder="https://…/poster.jpg" maxlength="500" value="${h(manualFilm.imageUrl||'')}"/></label><button type="submit" class="primary-btn">Bild testen & für diesen Film speichern</button></form><small>Nur echte, für die Anzeige zulässige Bild-URLs. Ein Link zur Film-Website allein genügt nicht. Die Kinos und Vorführungen bleiben bestehen.</small></section>`:'';
  const eventCard=e=>{const key=eventKey(e),[emoji,tone]=discoveryAppearance(e.category),status=preferences[key]||'open';const desc=e.description||`${e.category} im ${e.venue||e.city}. Genauere Informationen zum Programm stehen auf der Veranstalterseite.`;
- return `<article class="discovery-card discovery-${tone}"><div class="discovery-art" aria-hidden="true">${e.imageUrl?`<img src="${h(e.imageUrl)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"/>`:""}<span class="discovery-art-fallback">${emoji}</span></div><div class="discovery-copy"><span class="discovery-type">${h(e.category)} · ${h(e.city)}${eventCountry(e)?` · ${h(eventCountry(e))}`:""}</span><h4>${h(e.title)}</h4><p>${h(desc)}</p><small>${h(e.venue)} · ${h(e.city)}${e.startTime?' · '+h(e.startTime):''} · Termin und Details vor Besuch prüfen</small><small class="discovery-import-timestamp">${e.lastImportedAt?'Zuletzt importiert: '+h(formatResearchDate(e.lastImportedAt)):'Importdatum: vor Version 0.5.77 unbekannt'}</small></div><div class="discovery-card-actions"><button type="button" class="secondary-btn ${status==='saved'?'is-chosen':''}" data-action="discovery-save" data-id="${h(key)}" aria-label="${status==='saved'?'Von Merkliste entfernen':'Zur Merkliste hinzufügen'}">${status==='saved'?'♥ Gemerkt':'♡ Merken'}</button><button type="button" class="text-link" data-action="discovery-hide" data-id="${h(key)}">${status==='hidden'?'Einblenden':'Ausblenden'}</button><a href="${h(e.sourceUrl)}" class="text-link" target="_blank" rel="noopener noreferrer">Details ↗</a></div></article>`;};
+ return `<article class="discovery-card discovery-${tone}"><div class="discovery-art" aria-hidden="true">${e.imageUrl?`<img src="${h(e.imageUrl)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"/>`:""}<span class="discovery-art-fallback">${emoji}</span></div><div class="discovery-copy"><span class="discovery-type">${h(e.category)} · ${h(e.city)}${eventCountry(e)?` · ${h(eventCountry(e))}`:""}</span><h4>${h(e.title)}</h4><p>${h(desc)}</p>${discoveryOngoingLabel412(e,today)?`<small class="discovery-event-ongoing">${h(discoveryOngoingLabel412(e,today))}</small>`:''}<small>${h(e.venue)} · ${h(e.city)}${!discoveryOngoingLabel412(e,today)&&e.startTime?' · '+h(e.startTime):''} · Termin und Details vor Besuch prüfen</small><small class="discovery-import-timestamp">${e.lastImportedAt?'Zuletzt importiert: '+h(formatResearchDate(e.lastImportedAt)):'Importdatum: vor Version 0.5.77 unbekannt'}</small></div><div class="discovery-card-actions"><button type="button" class="secondary-btn ${status==='saved'?'is-chosen':''}" data-action="discovery-save" data-id="${h(key)}" aria-label="${status==='saved'?'Von Merkliste entfernen':'Zur Merkliste hinzufügen'}">${status==='saved'?'♥ Gemerkt':'♡ Merken'}</button><button type="button" class="text-link" data-action="discovery-hide" data-id="${h(key)}">${status==='hidden'?'Einblenden':'Ausblenden'}</button><a href="${h(e.sourceUrl)}" class="text-link" target="_blank" rel="noopener noreferrer">Details ↗</a></div></article>`;};
  const cinemaCard=(film)=>{
   const expanded=discoveryExpandedFilms.has(film.key),shown=expanded?film.screenings:film.screenings.slice(0,3),remaining=film.screenings.length-shown.length;
   const synopsis=film.description||'Noch keine verifizierte Inhaltsbeschreibung hinterlegt. Mit „Filmtexte & Poster recherchieren“ kannst du sie ergänzen.';
@@ -3431,8 +3432,19 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
   catch(ex){toast('Kopieren nicht möglich. Browser-Zwischenablage bitte erlauben.',true);}
   return;
  }
- if(action==='pj92-food-tap'){
-  try{const item={id:crypto.randomUUID(),foodId:id,at:stamp()};
+ if(action==='pj92-food-tap'||action==='pj92-flax-yesterday'){
+  try{
+   const isFlax=id==='spar-bio-flaxseed'||action==='pj92-flax-yesterday';
+   if(action==='pj92-flax-yesterday'&&id!=='spar-bio-flaxseed')return;
+   let at=stamp();
+   if(action==='pj92-flax-yesterday'){
+    const entered=window.prompt('Gestern: Um welche Uhrzeit hast du die Leinsamen gegessen? (HH:MM)');
+    if(entered===null)return;
+    const match=/^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(entered).trim());
+    if(!match)return toast('Bitte die tatsächliche Uhrzeit als HH:MM eingeben.',true);
+    const previous=new Date();previous.setDate(previous.getDate()-1);previous.setHours(Number(match[1]),Number(match[2]),0,0);at=previous.toISOString();
+   }
+   const item={id:crypto.randomUUID(),foodId:isFlax?'spar-bio-flaxseed':id,at,...(isFlax?{amount:'1 TL (3 g)',note:'Vor dem Schlucken gekaut (roh). Packungswarnung: nur zum Kochen/Backen.'}:{})};
    if(!state){await vault.appendSealedNutrition(item);foodQueuedCount++;nutritionQuickOpen=false;toast('Ernährung verschlüsselt vorgemerkt.');}
    else{journalSyncStatus='lokal';await mutate(s=>addNutrition(s,item));nutritionQuickOpen=false;
      const goal=dayEnergyStatus(state,{foods:nutritionFoods(state),estimate:nutritionKcalEstimate});
