@@ -1,4 +1,4 @@
-/** Ars Vivendi Annual 0.5.77.59.40.21 (report print / SVG QA) — chronological, evidence-first print edition.
+/** Ars Vivendi Annual 0.5.77.59.40.22 (report print / SVG QA) — chronological, evidence-first print edition.
  * Extends the 40.18 report rather than replacing its proven data audit and recommendation engine.
  * Financial, location, relationship and emotional data only after independent opt-in.
  * Never exports or uploads report payload, and never imputes missing records.
@@ -9,6 +9,8 @@ import {renderSleepYearDistribution} from './sleep-year-v552.js';
 import {worktimeWeeks,worktimeView} from './worktime-v553.js';
 import {bodyTransformationView,bodyTransformationModel} from './body-transformation-v57749.js';
 import {strengthInsightsView,strengthPeriod,strengthTrainingDots,strengthPrintBodySvg} from './strength-insights-v57728.js';
+import {detailedMuscleData,detailedMuscleSvg} from './strength-anatomy-v57737.js';
+import {compassRegionForAnatomyId} from './strength-premium-v57738.js';
 import {nutritionTimingView} from './nutrition-timing-v57725.js';
 import {nutritionTrendsView} from './nutrition-trends-v57726.js';
 import {nutritionFatView} from './nutrition-fat-quality-v57731.js';
@@ -18,9 +20,10 @@ import {dailyDozen5930,DAILY_DOZEN_5930} from './daily-dozen-v5775930.js';
 import {nutritionDay} from './nutrition-intelligence-v57712.js';
 import {financeMonthlySeries,financeExpenseOverview} from './finance-analytics.js';
 import {financeViewModel} from './finance-core.js';
-import {hierarchicalSankey,signedSunburst} from './finance-exotic-hierarchy.js';
+import {hierarchicalSankey,hierarchicalFlows,signedSunburst,radialSankey,voronoiTreemap} from './finance-exotic-hierarchy.js';
+import {merchantDisplay} from './finance-merchant-editor.js';
 import {expenseSankey} from './finance-dashboard.js';
-import {spendingCalendar,spendingStreamgraph} from './finance-exotic-time.js';
+import {spendingCalendar,spendingStreamgraph,spendingAlluvial} from './finance-exotic-time.js';
 import {relationshipMapView} from './relationship-map-v567.js';
 import {feelingStats} from './feeling-wheel-v565.js';
 import {placesInsightsView,placeClusters} from './insights-places.js';
@@ -53,6 +56,53 @@ const fig=(heading,svg,caption,{wide=false}={})=>svg?`<figure class="av19-figure
 const page=(kicker,inner,{wide=false}={})=>`<section class="av19-page${wide?' av19-landscape':''}"><div class="av19-running">COMPASS LIFE <span>ARS VIVENDI · PRIVATE ANNUAL</span></div><div class="av19-kicker">${H(kicker)}</div>${inner}</section>`;
 const chapter=(n,kicker,name,deck)=>page('PART '+String(n).padStart(2,'0')+' / '+kicker,`<div class="av19-chapter-label">${String(n).padStart(2,'0')} / THE CHRONICLE</div><h1>${H(name)}</h1><p class="av19-lead">${H(deck)}</p><div class="av19-ornament">◈</div>`,{wide:false}).replace('class="av19-page"','class="av19-page av19-chapter"');
 const twoplots=(a,b)=>`<div class="av19-stack">${a}${b}</div>`;
+/** The report uses precisely the same 70+ anatomical paths as Compass' premium
+ * strength dashboard. Paths are loaded from the installed body-muscles package
+ * before document creation and embedded as static SVG in the printable snapshot.
+ * Never substitute the small 10-muscle silhouette when professional paths exist.
+ */
+export function annualPremiumAnatomy(model,parts=[],side='front'){
+ if(!Array.isArray(parts)||parts.length<20)return '';
+ const anatomy=detailedMuscleData(model), back=side==='back';
+ const shapes=parts.filter(p=>p&&typeof p.path==='string'&&p.path.length<120000);
+ if(shapes.length<20)return '';
+ const svg=shapes.map(p=>{
+  const regionId=compassRegionForAnatomyId(p.id,side),r=regionId?anatomy.regions[regionId]:null;
+  const color=r?.primary>0?'#e95e37':r?.secondary>0?'#e8bd52':'#b4c1bf';
+  const title=`${p.name||p.id}: ${r?.primary||0} Hauptsätze, ${r?.secondary||0} unterstützende Sätze`;
+  return `<path d="${H(p.path)}" fill="${color}" stroke="#fff" stroke-width="0.07" stroke-linejoin="round"><title>${H(title)}</title></path>`;
+ }).join('');
+ return `<svg class="av22-anatomy-detailed" viewBox="${back?'37 0 35 93':'0 0 35 93'}" role="img" aria-label="Compass Premium-Muskelkarte ${back?'Rückseite':'Vorderseite'} mit ${shapes.length} anatomischen SVG-Regionen">${svg}</svg>`;
+}
+/** Auditable transaction hierarchy: only confirmed expense rows, NEVER account
+ * transfers, cash withdrawals or unclassified outflows. Grouping is exactly the
+ * existing finance hierarchy used in Compass Dashboard. */
+export function annualFinanceCategories(transactions=[]){
+ const groups=hierarchicalFlows(transactions).filter(g=>!g.special&&g.cents>0),total=groups.reduce((n,g)=>n+g.cents,0);
+ return {groups,total,topShare:total?groups[0].cents/total:0};
+}
+export function annualCategoryBars(info,max=11){
+ const groups=info.groups.slice(0,max),total=info.total;
+ if(!groups.length||!total)return '';
+ const W=1000,L=270,R=177,T=24,row=46,H=T+groups.length*row+12,bar=W-L-R;
+ const lines=groups.map((g,i)=>{const y=T+i*row;const share=g.cents/total;return `<g><text x="${L-14}" y="${y+17}" text-anchor="end" font-size="17" fill="#24483d">${Htm(g.name.slice(0,33))}</text><rect x="${L}" y="${y}" width="${bar}" height="23" rx="4" fill="#e9eeeb"/><rect x="${L}" y="${y}" width="${(share*bar).toFixed(2)}" height="23" rx="4" fill="${Htm(g.color||'#477e74')}"/><text x="${L+bar+12}" y="${y+17}" font-size="17" fill="#2e4c42">${Htm(fmt(g.cents/100,0))} €</text><text x="${W-4}" y="${y+17}" font-size="15" fill="#607168" text-anchor="end">${Htm(fmt(share*100))}%</text></g>`;}).join('');
+ return `<svg class="av22-finance-category-chart" role="img" aria-label="Klassifizierte Konsumausgaben je Hauptkategorie, Beträge und Prozentanteile" viewBox="0 0 ${W} ${H}">${lines}</svg>`;
+}
+function annualCategoryRows(info,limit=7){
+ return `<table class="av19-table av22-subcategory-table"><thead><tr><th>Hauptkategorie / Unterkategorie</th><th>Betrag</th><th>Anteil am Konsum</th></tr></thead><tbody>${info.groups.slice(0,limit).flatMap(g=>[
+ `<tr class="av22-parent"><th>${H(g.name)}</th><td>${H(fmt(g.cents/100,2))} €</td><td>${H(fmt(g.cents/Math.max(1,info.total)*100))}%</td></tr>`,
+ ...(g.children||[]).slice(0,3).map(c=>`<tr><td>↳ ${H(c.name)}</td><td>${H(fmt(c.cents/100,2))} €</td><td>${H(fmt(c.cents/Math.max(1,info.total)*100))}%</td></tr>`)
+ ]).join('')}</tbody></table>`;
+}
+export function annualMerchantRanking(transactions=[],top=12){
+ const merchants=new Map();
+ for(const t of rows(transactions)){
+  if(t?.needsReview||t.flow!=='expense'||!Number.isFinite(t.amountCents)||t.amountCents>=0)continue;
+  const name=merchantDisplay(t)||'Nicht benannter Händler';const prev=merchants.get(name)||0;merchants.set(name,prev-t.amountCents);
+ }
+ return [...merchants].map(([name,cents])=>({name,cents})).sort((a,b)=>b.cents-a.cents).slice(0,top);
+}
+
 const width=W=>Number(W).toFixed(1);
 // Compact, vector-true plot with a fixed calendar x-axis. No imputed samples and no invented connecting line.
 export function annualDots(points,w,{label='Messpunkte',unit='',color='#3f8776',min=null,max=null}={}){
@@ -141,12 +191,12 @@ export function annualDocument(state={},settings={}){
  // loading placeholder until browser hydration; it cannot be copied into a static report.
  const strengthModel=guard(()=>strengthPeriod(state,{range:w.days>90?'365':'28',today:w.end}));
  if(strengthModel&&(strengthModel.sessions.length||strengthModel.knownSets)){
-  const fronts=guard(()=>strengthPrintBodySvg(state,{range:w.days>90?'365':'28',today:w.end,side:'front'}));
-  const backs=guard(()=>strengthPrintBodySvg(state,{range:w.days>90?'365':'28',today:w.end,side:'back'}));
+  const fronts=annualPremiumAnatomy(strengthModel,settings.anatomy?.FRONT_MUSCLES,'front')||guard(()=>detailedMuscleSvg(strengthModel,'front','roles'));
+  const backs=annualPremiumAnatomy(strengthModel,settings.anatomy?.BACK_MUSCLES,'back')||guard(()=>detailedMuscleSvg(strengthModel,'back','roles'));
   const strengthDots=guard(()=>chartSvg(strengthTrainingDots(strengthModel),'Tagespunkte'));
   const groups=strengthModel.groups.filter(g=>g.primary||g.secondary).sort((a,b)=>(b.primary+b.secondary)-(a.primary+a.secondary)).slice(0,12);
   const groupBars=annualBars(groups.map(g=>({label:g.label,value:g.primary,color:'#397c6c'})),{label:'Dokumentierte Hauptsätze je Muskelgruppe',format:'Sätze',maxCount:12});
-  S.push(page('IV / MUSCLE & STRENGTH',`${title(4,'STRENGTH INSIGHTS','Training & Muskelbalance','Aus tatsächlich zugeordneten Garmin-/Coach-Sätzen berechnet. Druckfertige anatomische Vorder- und Rückseite, ohne asynchronen Platzhalter.')}<div class="av19-stats">${card('Trainingstage',String(strengthModel.trainingDays),'Garmin + Coach')}${card('Sätze mit Muskelzuordnung',String(strengthModel.knownSets),'Nur dokumentierte Sets')}${card('Offene Zuordnung',String(strengthModel.unassigned),'Unbekannt bleibt unbekannt')}</div><div class="av21-muscle-maps">${fig('Vorderseite',fronts,'Intensität = klassifizierte Satzbeteiligung.')}${fig('Rückseite',backs,'Keine direkte Messung von Muskelwachstum.')}</div>`,{}));
+  S.push(page('IV / MUSCLE & STRENGTH',`${title(4,'STRENGTH INSIGHTS','Training & Muskelbalance','Aus bestätigten Garmin-/Coach-Sätzen berechnet. Originale Compass-Premium-Anatomie, statisch und druckfähig.')}<div class="av19-stats">${card('Trainingstage',String(strengthModel.trainingDays),'Garmin + Coach')}${card('Sätze mit Muskelzuordnung',String(strengthModel.knownSets),'Nur dokumentierte Sets')}${card('Offene Zuordnung',String(strengthModel.unassigned),'Unbekannt bleibt unbekannt')}</div><div class="av21-muscle-maps av22-muscle-maps">${fig('Vorderseite · Originalanatomie',fronts,'Rot: Hauptsätze · Gold: Nebenbeteiligung · Grau: nicht zugeordnet.')}${fig('Rückseite · Originalanatomie',backs,'Die Farbe beschreibt Satzbeteiligung, nicht Muskelwachstum oder EMG.')}</div>`,{}));
   if(strengthDots||groupBars)S.push(page('IV / STRENGTH PROGRESSION',`${title(4,'STRENGTH INSIGHTS','Training im Zeitverlauf','Dokumentierte Trainingstage und Hauptsatzverteilung; ohne Ergänzung fehlender Übungen.')}<div class="av19-stack">${fig('Trainingstage · Original-Dot-Plot',strengthDots,'Garmin und bestätigte Coach-Sätze.')}${fig('Muskelgruppen · klassifizierte Hauptsätze',groupBars,'Die Grafik enthält nur zugeordnete Sätze. Details siehe Trainingsjournal in Compass.')}</div>`));
  }
  // Nutrition: 5 deliberately separated designed spreads, all based on actual journal.
@@ -162,8 +212,9 @@ export function annualDocument(state={},settings={}){
   if(fat.length)S.push(page('V / FAT QUALITY',`${title(5,'FATTY ACIDS','Fettqualität & Fettsäuren','Gesättigte, einfach und mehrfach ungesättigte Fettsäuren; die Abdeckung variiert je Lebensmittel.')}<div class="av19-stack">${fat.slice(0,3).map((s,i)=>fig(['Fettverteilung','Fettsäure-Verlauf','Weitere Fettkennzahlen'][i],s,'Originale Compass-Fettqualitätsgrafik; generische Produktwerte bleiben Schätzungen.')).join('')}</div>`));
   const phyto=guard(()=>figures(nutritionPhytoView(isolated,{period:Math.min(w.days,365),today:w.end}),3));
   if(phyto.length)S.push(page('V / PHYTONUTRIENTS',`${title(5,'PLANT COMPOUNDS','Pflanzenstoffe & Antioxidantien','Schätzwerte aus beschriebenen Lebensmitteln, keine gemessenen Antioxidantien im Blut.')}<div class="av19-stack">${phyto.slice(0,3).map((s,i)=>fig(['Polyphenole und weitere Pflanzenstoffe','Dokumentierte Lebensmittelgruppen','Pflanzliche Vielfalt'][i],s,'Vorhandene Compass-Phyto-Visualisierung.')).join('')}</div>`));
-  const aa=guard(()=>antiAgingEightModel(isolated,w.end));if(aa){const keys=Object.entries(aa).filter(([,v])=>typeof v==='number'&&Number.isFinite(v)).slice(0,8);
-   if(keys.length)S.push(page('V / ANTI-AGING EIGHT',`${title(5,'LONGEVITY','Anti-Aging Eight','Eine Dokumentations- und Orientierungsperspektive, keine Lebensdauer- oder Gesundheitsprognose.')}${fig('Vorhandene Anti-Aging-Kennzahlen',annualBars(keys.map(([label,value])=>({label,value})), 'Dargestellt werden nur vorhandene numerische Modul-Kennzahlen.'),'Momentaufnahme; nicht als Jahresveränderung zu interpretieren.')}`));}
+  const aa=guard(()=>antiAgingEightModel(isolated,w.end));if(aa?.rows?.length){
+   S.push(page('V / ANTI-AGING EIGHT',`${title(5,'LONGEVITY','Anti-Aging Eight · acht konkrete Themen','Dokumentierte pflanzliche Ernährung und vorsichtige Orientierung nach Dr. Greger. Keine Biomarker- oder Lebensdauerprognose.')}<div class="av22-eight-grid">${aa.rows.map(x=>`<article class="av22-eight-item"><div class="av22-eight-head"><strong>${H(x.title)}</strong><span>${x.status==='observed'?'Dokumentiert':x.status==='partial'?'Teilinformation':x.status==='unmeasurable'?'Nicht messbar':'Nicht belegt'}</span></div><p>${H(x.value)}</p><small>${H(x.reason)}</small></article>`).join('')}</div>${essay('Beobachtung, keine medizinische Prognose',`Diese acht Themen wurden für den letzten erfassten Tag (${w.end}) geprüft. Sie sind keine acht messbaren Anti-Aging-Scores und dürfen nicht als Jahresstatistik interpretiert werden.`)}`));}
+
  }
  // Finance: multi-panel + large sankey + monthly flow visualizations. No transfers as expense.
  const tx=settings.finance?inWindow(state.financeTransactions,w):[];
@@ -171,10 +222,21 @@ export function annualDocument(state={},settings={}){
   const vm=financeViewModel(tx,'all'),fm=financeMonthlySeries(tx,'all');
   const months=fm.map(m=>({label:m.month.slice(2),value:m.expenseCents/100}));
   S.push(page('VI / THE FINANCIAL YEAR',`${title(6,'MONEY FLOW','Ausgaben im Jahresverlauf','Monatsbalken zeigen ausschließlich klassifizierte Konsumausgaben.')}<div class="av19-stats">${card('Buchungen',String(tx.length),'Erfasster Kontenbestand')}${card('Konsumausgaben',`${fmt(vm.expenseCents/100)} €`,'Ohne interne Transfers')}${card('Zu klären',String(vm.pending.length),'Noch nicht klassifiziert')}</div>${fig('Konsumausgaben · Monatsvergleich',annualBars(months,{label:'Monatliche Ausgaben',format:'€'}),'Unvollständige Monate sind nicht mit vollständigen Monaten gleichzusetzen.')}${fig('Spending Calendar · Originalgrafik',cvGraph(spendingCalendar(tx)),'Tage ohne Bankumsatz sind nicht automatisch konsumfreie Tage.')}`));
+  const spending=annualFinanceCategories(tx),merchantRank=annualMerchantRanking(tx);
+  if(spending.groups.length){
+   const share=spending.topShare;
+   S.push(page('VI / EXPENDITURE ANATOMY',`${title(6,'CATEGORY SPENDING','Wohin dein Geld tatsächlich floss','Die Hauptkategorien in Euro und Prozent. Nur geprüfte Konsumausgaben – keine Eigenüberträge, Abhebungen oder ungeklärte Buchungen.')}<div class="av19-stats">${card('Konsum',`${fmt(spending.total/100,0)} €`,'Nur klassifizierte Ausgaben')}${card('Größte Kategorie',H(spending.groups[0].name),`${fmt(share*100)} % der klassifizierten Ausgaben`)}${card('Kategorien',String(spending.groups.length),'Keine Transferkategorien')}</div>${fig('Die Ausgaben nach Hauptkategorie',annualCategoryBars(spending),'Länge und Betrag zeigen den Anteil an den klassifizierten Konsumausgaben.')}${essay('Was aus der Verteilung hervorsticht',`Die größte erfasste Ausgabenkategorie ist „${spending.groups[0].name}“ mit ${fmt(spending.groups[0].cents/100,0)} € bzw. ${fmt(share*100)} % der klassifizierten Konsumausgaben. Ob das viel oder wenig ist, erfordert einen Vergleichszeitraum und deine persönliche Einordnung.`,`${tx.length} Bankbuchungen im ausgewählten Zeitraum; ungeklärte und unvollständige Konten separat zu prüfen.`)}`));
+   S.push(page('VI / UNDER THE SURFACE',`${title(6,'SUBCATEGORY LEDGER','Wohin das Geld innerhalb der Kategorien floss','Konkrete Unterkategorien, keine abstrakten Farbringe. Die Summen folgen der bestehenden Compass-Finanzklassifikation.')}<div class="av22-ledger">${annualCategoryRows(spending,7)}</div>${essay('Lesehilfe','Die Anteile beziehen sich auf die gesamten klassifizierten Konsumausgaben. Händler, die über Zahlungsdienste oder ungeklärte Buchungen laufen, können nur eingeschränkt zugeordnet werden.')}`));
+   const radial=guard(()=>cvGraph(radialSankey(tx)));
+   if(radial)S.push(page('VI / THE CATEGORY ATLAS',`${title(6,'RADIAL FLOWS','Der Konsum im Radialdiagramm','Innere und äußere Ringe zeigen dieselben echten Kategorien und Unterkategorien in der Compass-Visualisierung.')}<div class="av22-large-chart">${fig('Compass · Radial-Sankey nach Kategorien',radial,'Die Ringflächen zeigen klassifizierte Ausgaben; die präzisen Beträge stehen auf den vorhergehenden Seiten.',{wide:true})}</div>`));
+   const voronoi=guard(()=>cvGraph(voronoiTreemap(tx)));
+   if(voronoi)S.push(page('VI / THE CATEGORY LANDSCAPE',`${title(6,'VORONOI','Die Ausgaben als Flächen','Die originalen Compass-Voronoi-Zellen zeigen die Größenordnung der Hauptkategorien auf einen Blick.')}<div class="av22-large-chart">${fig('Compass · gewichtete Voronoi-Treemap',voronoi,'Die Zellflächen approximieren Anteile; exakte Beträge siehe Kategorienregister.',{wide:true})}</div>`));
+   if(merchantRank.length){S.push(page('VI / THE MERCHANT INDEX',`${title(6,'FINANCIAL DETAIL','Bei welchen Händlern du Geld ausgegeben hast','Die wichtigsten ausgewerteten Zahlungspartner. Kein Kaufurteil – und Zahlungsdienste können verschiedene Zwecke bündeln.')}<table class="av19-table av22-merchant-table"><thead><tr><th>Händler / Zahlungspartner</th><th>Betrag</th><th>Anteil</th></tr></thead><tbody>${merchantRank.map(m=>`<tr><td>${H(m.name)}</td><td>${H(fmt(m.cents/100,2))} €</td><td>${H(fmt(m.cents/Math.max(1,spending.total)*100))} %</td></tr>`).join('')}</tbody></table>`));}
+  }
   const sankey=guard(()=>cvGraph(hierarchicalSankey(tx,'all'))||cvGraph(expenseSankey(vm)));
   if(sankey)S.push(page('VI / FULL BLEED FINANCIAL ANATOMY',`${title(6,'FINANCIAL ANATOMY','Die Wege des Geldes','Detaillierter Sankey mit allen erfassten Wegen; keine Kategorie wird abgeschnitten.')}${fig('Geldströme · detaillierter Sankey',sankey,'Klassifizierte Ausgaben von Konten zu Kategorien und Zahlungspartnern. Im A4-Archiv vollständig; für feinere Beschriftungen die interaktive Finanzgrafik separat groß drucken.',{wide:true})}`,{wide:true}));
   const sunburst=guard(()=>cvGraph(signedSunburst(tx)));
-  if(sunburst)S.push(page('VI / CATEGORY ANATOMY',`${title(6,'SPENDING STRUCTURE','Wofür das Geld eingesetzt wurde','Klassifizierte Ausgabenkategorien in der originalen Compass-Hierarchie.')}<div class="av19-hero-figure">${fig('Sunburst · Ausgabenkategorien',sunburst,'Die Größen beziehen sich auf tatsächlich erfasste Konsumausgaben. Transfers sind keine Konsumausgaben.',{wide:true})}</div>`));
+  if(sunburst)S.push(page('VI / CATEGORY ANATOMY',`${title(6,'SPENDING STRUCTURE','Wofür das Geld eingesetzt wurde','Klassifizierte Ausgabenkategorien in der originalen Compass-Hierarchie.')}<div class="av19-hero-figure">${fig('Sunburst · Ausgabenkategorien',sunburst,'Signierter Sunburst mit Abgängen und Zuflüssen; Transferanteile sind in dieser Grafik separat gekennzeichnet und ausdrücklich kein Konsum.',{wide:true})}</div>`));
   const stream=guard(()=>cvGraph(spendingStreamgraph(tx)));
   if(stream)S.push(page('VI / COMPOSITION',`${title(6,'SPENDING PATTERNS','Wofür das Geld eingesetzt wurde','Die Verteilung der erfassten Ausgaben über die Zeit.')}${fig('Streamgraph · Ausgabenkategorien',stream,'Bestehender Compass-Streamgraph. Keine Kausalität oder Bewertung des Konsums.')}`));
  }
@@ -198,7 +260,17 @@ export function annualDocument(state={},settings={}){
  const corr=pairedCorrelation(sleep,hrv),cross=[];
  if(corr.valid)cross.push({title:'Schlaf und HRV',finding:`r = ${fmt(corr.r)} bei ${corr.n} gepaarten Messtagen`,note:'Deskriptiver Pearson-Zusammenhang, keine Kausalität. Dritte Einflüsse nicht kontrolliert.'});
  if(wd.length&&sleep.length){const workWeeks=new Map();for(const row of wd){const d=new Date(`${row.day}T12:00:00Z`),offset=(d.getUTCDay()+6)%7,k=dayShift(row.day,-offset);workWeeks.set(k,(workWeeks.get(k)||0)+row.hours);}const paired=[];for(const [week,h] of workWeeks){const end=dayShift(week,6),values=sleep.filter(x=>x.day>=week&&x.day<=end).map(x=>x.value);if(values.length>=3)paired.push({day:week,work:h,sleep:mean(values)});}const c=pairedCorrelation(paired.map(x=>({day:x.day,value:x.work})),paired.map(x=>({day:x.day,value:x.sleep})),{minPairs:8});if(c.valid)cross.push({title:'Arbeitsbelastung und Schlaf',finding:`r = ${fmt(c.r)} bei ${c.n} Wochen mit ≥ 3 Schlafnächten`,note:'Gleichzeitiger Wochenvergleich, ohne externe Einflussgrößen. Korrelation erklärt keine Ursachen.'});}
- S.push(page('X / LONGITUDINAL INTELLIGENCE',`${title(10,'INSIGHTS','Trends & Zusammenhänge','Nur statistisch ausreichend gedeckte Paarungen werden als Zusammenhänge bezeichnet.')}<div class="av19-discoveries">${cross.map((x,i)=>`<article><span>DISCOVERY ${String(i+1).padStart(2,'0')}</span><h3>${H(x.title)}</h3><strong>${H(x.finding)}</strong><p>${H(x.note)}</p></article>`).join('')||'<p>Im gewählten Zeitraum gibt es noch zu wenige hinreichend gepaarte Messwerte für eine überprüfbare übergreifende Korrelation.</p>'}</div>${essay('Die Grenze jeder Erkenntnis','Zeitliche Nähe, Unterschiede zwischen Quartalen und Korrelationen liefern Fragen für das nächste Jahr. Sie beweisen keine Ursache und ersetzen keine medizinische oder finanzielle Beratung.')}`));
+ if(wd.length>=10){const num=worktimeWeeks(wd,Number(w.end.slice(0,4))),high=num.filter(x=>x.hours>45).length;
+  if(num.length>=8)cross.push({title:'Arbeitsbelastung · dokumentierte Wochen',finding:`${high} von ${num.length} Kalenderwochen über 45 h`,note:'Der Anteil bezieht sich nur auf Wochen mit erfasster Excel-Arbeitszeit; nicht erfasste Wochen bleiben unbekannt. Vergleiche Schlaf- und Erholungskurven zeitlich, ohne Ursachen zu behaupten.'});}
+ if(tx.length&&settings.finance){const cat=annualFinanceCategories(tx);if(cat.total>0&&cat.groups.length){const major=cat.groups[0];cross.push({title:'Ausgabenstruktur · wichtigste Kategorie',finding:`${major.name}: ${fmt(major.cents/100,0)} € (${fmt(major.cents/cat.total*100)} % des Konsums)`,note:'Anteil an bestätigten Ausgaben; Transfers und ungeklärte Buchungen nicht enthalten. Kein normatives Sparurteil.'});}}
+ if(bmi.fitdays.length>=3){const first=bmi.weight?.first?.value,last=bmi.weight?.last?.value;if(Number.isFinite(first)&&Number.isFinite(last))cross.push({title:'Körpergewicht · dokumentierte Entwicklung',finding:`${fmt(first)} kg → ${fmt(last)} kg (${last>=first?'+':''}${fmt(last-first)} kg)`,note:'Fitdays-Messpunkte; BIA-Muskel-/Fettanteile benötigen gleiche Messbedingungen und mehrere Vergleichsmessungen.'});}
+ if(dozen.days>=5){const low=dozen.items.filter(x=>x.ratio<.25).map(x=>x.label).slice(0,3);if(low.length)cross.push({title:'Ernährungstagebuch · Dokumentationsmuster',finding:`Selten zugeordnet: ${low.join(', ')}`,note:`Nur ${dozen.days} erfasste Ernährungstage. Eine fehlende Zuordnung beweist keinen tatsächlichen Mangel.`});}
+ const discoveryBatches=cross.length?Array.from({length:Math.ceil(cross.length/3)},(_,i)=>cross.slice(i*3,i*3+3)):[[]];
+ for(const [batchNo,batch] of discoveryBatches.entries()){
+  const offset=batchNo*3;
+  const content=batch.map((x,i)=>`<article><span>DISCOVERY ${String(offset+i+1).padStart(2,'0')}</span><h3>${H(x.title)}</h3><strong>${H(x.finding)}</strong><p>${H(x.note)}</p></article>`).join('')||'<p>Im gewählten Zeitraum gibt es noch zu wenige hinreichend gepaarte Messwerte für eine überprüfbare übergreifende Korrelation.</p>';
+  S.push(page('X / LONGITUDINAL INTELLIGENCE',`${title(10,'INSIGHTS',batchNo?'Weitere geprüfte Beobachtungen':'Trends & Zusammenhänge','Nur zeitlich und fachlich gedeckte Beobachtungen werden als Zusammenhänge bezeichnet.')}<div class="av19-discoveries">${content}</div>${batchNo===discoveryBatches.length-1?essay('Die Grenze jeder Erkenntnis','Zeitliche Nähe, Unterschiede zwischen Quartalen und Korrelationen liefern Fragen für das nächste Jahr. Sie beweisen keine Ursache und ersetzen keine medizinische oder finanzielle Beratung.'):''}`));
+ }
  const suggestions=guidance.map((g,i)=>`<article class="av19-advice"><small>BELEG ${String(i+1).padStart(2,'0')} · ${H(g.area)}</small><h3>${H(g.observation)}</h3><p><b>Möglicher nächster Schritt:</b> ${H(g.suggestion)}</p><footer>${H(g.method)}</footer></article>`).join('');
  S.push(page('X / PERSONAL GUIDANCE',`${title(10,'THE YEAR AHEAD','Was ich ausprobieren könnte','Persönliche, datenbasierte Handlungsideen mit jeweils überprüfbarer Beobachtung.')}<div class="av19-advice-list">${suggestions||'<p>Die Voraussetzungen für individualisierte Empfehlungen sind noch nicht erfüllt. Compass erfindet keine Ratschläge aus Datenlücken.</p>'}</div>`));
  const sources=inv.sources.map(x=>`<tr><th>${H(x.label)}</th><td>${fmt(x.count,0)}</td><td>${H(x.last||'—')}</td><td>${x.stale?'Importstand prüfen':'Zeitnaher erfasster Stand'}</td></tr>`).join('');
@@ -218,5 +290,27 @@ export const ANNUAL_PRINT_CSS=`
 .av19-actions{position:sticky;top:0;z-index:9;display:flex;align-items:center;gap:17px;flex-wrap:wrap;background:#fff;padding:12px 28px;font:12px system-ui,sans-serif;color:#3c5047}.av19-actions button{background:#12372c;color:#fff;border:0;padding:11px 16px;border-radius:7px;cursor:pointer}.av19-actions span{flex:1}
 .av19-document{margin:20px auto;width:210mm;box-shadow:0 10px 34px #0002}.av19-page{page-break-after:always;break-after:page;position:relative;width:210mm;height:297mm;padding:14mm 21mm 13mm;background:#fff;overflow:hidden;display:flex;flex-direction:column;gap:4mm}.av19-page:last-child{break-after:auto}.av19-landscape{width:210mm;height:297mm;padding:14mm 21mm 13mm}.av19-running{display:flex;justify-content:space-between;font:9px/1.2 system-ui,sans-serif;letter-spacing:.20em;color:#708078;border-bottom:1px solid #dce5df;padding-bottom:5mm}.av19-running span{color:#ae9466}.av19-kicker,.av19-overline{font:10px/1.2 system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#aa8a5d}.av19-kicker{margin-top:0}.av19-heading h2{font-size:29px;font-weight:400;line-height:1.22;color:#183c33;margin:7px 0 9px}.av19-heading p{font:12px/1.65 system-ui,sans-serif;color:#64746b;margin:0;max-width:145mm}.av19-figure{width:100%;margin:0;display:flex;flex-direction:column;gap:3mm;break-inside:avoid;min-width:0}.av19-figure figcaption{font:600 11px/1.3 system-ui,sans-serif;letter-spacing:.03em;color:#2f5d4c}.av19-figure svg{width:100%;max-width:100%;height:auto;max-height:100mm;display:block;overflow:hidden;color:#324e43}.av19-figure svg text{font-family:'Helvetica Neue',Arial,sans-serif}.av19-figure p{font:9px/1.55 system-ui,sans-serif;color:#758079;margin:1px 0}.av19-figure-wide svg{max-height:165mm}.av19-landscape .av19-heading p{max-width:160mm}.av19-landscape .av19-figure svg{max-height:165mm}
 .av21-muscle-maps{display:grid;grid-template-columns:1fr 1fr;gap:8mm;align-items:start}.av21-muscle-maps .av19-figure svg{height:135mm;max-height:135mm;max-width:100%;width:auto;margin:0 auto}.av21-muscle-maps .av19-figure{align-items:center;text-align:center}.av19-stack{display:grid;gap:8mm}.av19-stack .av19-figure svg{max-height:57mm}.av19-quad{display:grid;grid-template-columns:1fr 1fr;gap:9mm 5mm}.av19-quad .av19-figure svg{max-height:65mm}.av19-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}.av19-stat{border-top:1px solid #c7d7ca;padding:3mm 0 2mm;min-width:0}.av19-stat small{font:10px/1.25 system-ui,sans-serif;color:#6c8076;display:block}.av19-stat b{font:400 24px/1.3 Georgia,serif;color:#154633;display:block;letter-spacing:-.02em}.av19-stat span{font:9px/1.45 system-ui,sans-serif;color:#8b938e;display:block}.av19-comment{margin-top:auto;background:#f4f7f4;border-left:2px solid #c7a772;padding:5mm 6mm}.av19-comment strong{font-size:14px;font-weight:400;color:#284b3b}.av19-comment p{font-size:12px;line-height:1.65;margin:2mm 0}.av19-comment small{font:9px/1.5 system-ui,sans-serif;color:#74877c}.av19-cover{background:#0c2d25;color:#faf5e9;justify-content:space-between;padding:20mm 23mm}.av19-brand{display:flex;gap:13px;align-items:center;font-size:39px;color:#cdb27b}.av19-brand span{font:10px system-ui,sans-serif;letter-spacing:.18em}.av19-cover-middle{margin-bottom:23mm}.av19-cover-middle small{font:10px system-ui,sans-serif;letter-spacing:.3em;color:#dfcf9d}.av19-cover-middle h1{font:400 66px/1.1 Georgia,serif;letter-spacing:-.04em;margin:17px 0}.av19-cover-middle p{font-size:21px;font-style:italic;color:#ddc18b}.av19-cover-rule{border-top:1px solid #87764f;margin:25mm 0 9mm}.av19-cover-middle em{font:12px system-ui,sans-serif;color:#e1d7b8}.av19-cover-bottom{display:flex;justify-content:space-between;border-top:1px solid #87764f;padding-top:7mm;font:9px system-ui,sans-serif;letter-spacing:.16em;color:#bfa878}.av19-chapter{justify-content:center;background:#f5f4ef}.av19-chapter-label{font:14px system-ui,sans-serif;letter-spacing:.2em;color:#b69663}.av19-chapter h1{font:400 54px/1.1 Georgia,serif;margin:5mm 0;color:#183d32}.av19-chapter .av19-lead{font-size:20px;line-height:1.6;color:#6c7769;max-width:115mm}.av19-ornament{font-size:51px;color:#b6a079;margin-top:12mm}.av19-fact-list{display:grid;gap:5mm}.av19-fact-list article{display:flex;gap:5mm;border-bottom:1px solid #e7eee8;padding-bottom:4mm}.av19-fact-list article>span{font:12px system-ui,sans-serif;color:#bf9d6f}.av19-fact-list b{font-weight:400;font-size:13px}.av19-fact-list small{display:block;margin-top:2mm;font:10px system-ui,sans-serif;color:#789080}.av19-discoveries{display:grid;gap:7mm}.av19-discoveries article,.av19-advice{border-left:2px solid #beab7a;padding:3mm 5mm;background:#f6f7f2}.av19-discoveries article>span,.av19-advice small{font:9px system-ui,sans-serif;letter-spacing:.16em;color:#9b7e55}.av19-discoveries h3,.av19-advice h3{font:400 22px Georgia,serif;color:#173d32;margin:4mm 0}.av19-discoveries strong{font:17px Georgia,serif}.av19-discoveries p,.av19-advice p{font:12px/1.6 system-ui,sans-serif}.av19-advice-list{display:grid;gap:5mm}.av19-advice{break-inside:avoid}.av19-advice h3{font-size:16px;margin:2mm 0}.av19-advice footer{font:9px/1.5 system-ui,sans-serif;color:#728479}.av19-table{border-collapse:collapse;width:100%;font:10px/1.5 system-ui,sans-serif}.av19-table th,.av19-table td{padding:6px 4px;text-align:left;border-bottom:1px solid #e0e8e1;overflow-wrap:anywhere}.av19-table th{color:#396050}.av19-page>h3{font-weight:400;color:#375a48;margin:3mm 0 0}.av19-endmark{margin-top:50mm;font-size:60px;color:#bda878}.av19-colophon{font:400 50px Georgia,serif;margin:0}.av19-colophon-sub{font-style:italic;font-size:19px;color:#a48650}.av19-close-rule{border-top:1px solid #b5a075;margin:20mm 0 5mm}.av19-note{font:11px/1.9 system-ui,sans-serif;color:#84918c;margin-top:auto}.av19-setup .av19-private{border:1px solid #d7e4dc;border-radius:12px;padding:13px;margin-top:12px}.av19-private label{display:flex;gap:8px;align-items:center;margin:9px 0}.av19-private p{color:#718476;font-size:12px}
+
+.av22-muscle-maps .av19-figure svg.av22-anatomy-detailed{height:155mm;max-height:155mm;max-width:100%;width:100%;object-fit:contain}
+.av22-muscle-maps .av19-figure figcaption{font-size:12px}
+.av22-finance-category-chart{width:100%;height:auto;max-height:155mm!important}
+.av22-ledger{flex:1;min-height:0;overflow:hidden}
+.av22-subcategory-table{font-size:10px;line-height:1.3}
+.av22-subcategory-table td,.av22-subcategory-table th{padding:4px 5px}
+.av22-subcategory-table .av22-parent{background:#edf4ef;color:#183a30;font-weight:bold}
+.av22-subcategory-table td:nth-child(n+2),.av22-subcategory-table th:nth-child(n+2){white-space:nowrap;text-align:right}
+.av22-large-chart{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.av22-large-chart .av19-figure{width:100%;max-height:205mm}
+.av22-large-chart .av19-figure svg{width:100%;height:auto;max-height:190mm}
+.av22-eight-grid{display:grid;grid-template-columns:1fr 1fr;gap:4mm;min-height:0}
+.av22-eight-item{border-top:1px solid #cddbd1;padding:3mm 1mm;min-width:0}
+.av22-eight-head{display:flex;justify-content:space-between;align-items:baseline;gap:2mm}
+.av22-eight-head strong{font:15px Georgia,serif;color:#234a3e}
+.av22-eight-head span{font:8px system-ui,sans-serif;color:#9f8057;white-space:nowrap}
+.av22-eight-item p{font:11px/1.45 system-ui,sans-serif;color:#385c51;margin:2mm 0}
+.av22-eight-item small{font:9px/1.45 system-ui,sans-serif;color:#75877c}
+.av22-merchant-table{font-size:13px;line-height:1.5}
+.av22-merchant-table td,.av22-merchant-table th{padding:9px 5px}
+.av22-merchant-table td:nth-child(n+2),.av22-merchant-table th:nth-child(n+2){text-align:right}
 @media print{html,body{background:#fff}.av19-actions{display:none}.av19-document{margin:0;width:auto;box-shadow:none}.av19-page{margin:0}}
 `;

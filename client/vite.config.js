@@ -68,6 +68,7 @@ import { compass594018LifeReportRelease } from './compass594018-life-report-rele
 import { compass594019AnnualRelease } from './compass594019-annual-release.js';
 import { compass594020AnnualWorkmapRelease } from './compass594020-annual-workmap-hotfix.js';
 import { compass594021AnnualPrintFix } from './compass594021-annual-print-fix.js';
+import { compass594022AnnualPremiumReport } from './compass594022-annual-premium-report.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -153,5 +154,5 @@ compassConfig.plugins.push(compass594016FoodBasicsRelease());
 compassConfig.plugins.push(compass594017NutritionFocusRelease());
 compassConfig.plugins.push(compass594018LifeReportRelease());
 compassConfig.plugins.push(compass594019AnnualRelease());
-compassConfig.plugins.push(compass594020AnnualWorkmapRelease(),compass594021AnnualPrintFix());
+compassConfig.plugins.push(compass594020AnnualWorkmapRelease(),compass594021AnnualPrintFix(),compass594022AnnualPremiumReport());
 export default compassConfig;
