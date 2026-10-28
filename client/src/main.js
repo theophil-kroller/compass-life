@@ -39,6 +39,7 @@ import {deadlineSuggestions,contactSuggestions} from './calendar-intelligence-v5
 import {RELATION_KINDS,GENDER_MARKERS,CADENCE_DAYS,preference,contactImpulse,impulseQueue,pauseContact,mapPosition,mapDrop,safePersonDetails,relatedProjectIds,contactWeight} from './relationship-radar-v564.js';
 import {REVIEW_STEPS,newReview,validReview,reviewQueue,projectReviewSummary,nextReviewStep,reviewedStep} from './guided-review.js';
 import {buildPersonAgendaIndex,sortPeopleByOpenItems} from './people-agenda-index-v57717.js';
+import {colleaguesForWatch,schoolDeadlinesForWatch} from './watch-projection-v5125.js';
 import {PEOPLE_SCOPES,peopleInScope,peopleScopeCounts} from './people-scope-v57720.js';
 import {peopleRecoveryPanel5933} from './people-mobile-recovery-v5775933.js';
 import './people-mobile-recovery-v5775933.css';
@@ -490,15 +491,12 @@ function restoreCalendarFromVault(st){
 let watchCalendarUploadTimer=null,watchCalendarLastKey='';
 function scheduleWatchCalendarSnapshot(){
  clearTimeout(watchCalendarUploadTimer);
- if(!state||!authToken||!navigator.onLine||!state.calendarArchive)return;
+ if(!state||!authToken||!navigator.onLine)return;
  watchCalendarUploadTimer=setTimeout(()=>uploadWatchCalendarSnapshot().catch(()=>{}),1500);
 }
 async function uploadWatchCalendarSnapshot(){
- if(!state?.calendarArchive||!authToken||!config.apiUrl||!navigator.onLine)return;
+ if(!state||!authToken||!config.apiUrl||!navigator.onLine)return;
  const day=localDate(), archive=normalizeCalendarArchive(state.calendarArchive);
- const personFingerprint=state?.watchPeopleEnabled===true?JSON.stringify([Object.values(state?.people||{}).map(p=>[p.id,p.name,p.tag]),Object.values(state?.tasks||{}).filter(t=>!t.archived&&!t.completed&&(t.tags||[]).length).map(t=>[t.id,t.title,t.updatedAt])]):'';
- const key=day+'|'+archive.updatedAt+'|'+shoppingSelectedId+'|'+personFingerprint;
- if(watchCalendarLastKey===key)return;
  const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Vienna';
  const local=new Intl.DateTimeFormat('sv-SE',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
  const parts=dt=>{
@@ -509,22 +507,10 @@ async function uploadWatchCalendarSnapshot(){
  // CompassWatch is a compact 12-hour meeting dial, not a time-sheet.
  // Skip generic busy/work blocks and appointments shorter than one hour.
  const isGenericWatchSlot=title=>/^(?:work|working|work block|work time|arbeit|arbeitszeit|arbeitsblock|fokus|focus|focus time|fokuszeit|busy|beschäftigt|blocked|blockiert)$/i.test(String(title||'').trim().replace(/\s+/g,' '));
- const events=[],familyDeadlines=[];
- const nextDayLimit=new Date(Date.parse(day+'T12:00:00Z')+10*86400000).toISOString().slice(0,10);
- const familySeen=new Set();
+ const events=[];
+ const allCalendar=visibleCachedCalendar(archive);
+ const familyDeadlines=schoolDeadlinesForWatch(allCalendar,day,dt=>parts(dt)?.day||'');
  for(const event of visibleCachedCalendar(archive)){
-   // School deadlines are calendar dates (including all-day Schularbeiten),
-   // not duration-qualified clock appointments.
-   const originalTitle=String(event.summary||'').trim();
-   const member=/^(?:Nathanael(?:\s+Kroller)?|N)\s*:\s*(.+)$/i.exec(originalTitle);
-   if(member&&/schularbeit|prüfung|test|referat|klausur/i.test(member[1])){
-     const dateValue=event.start?.date || (event.start?.dateTime && parts(event.start.dateTime)?.day);
-     const clean=member[1].trim();const k=dateValue+'|'+clean.toLocaleLowerCase('de');
-     if(dateValue>=day&&dateValue<nextDayLimit&&clean&&!familySeen.has(k)&&familyDeadlines.length<16){
-       familySeen.add(k);familyDeadlines.push({date:dateValue,title:'N: '+clean.slice(0,65)});
-     }
-   }
-
    // All-day records are deliberately excluded from the clock ring.
    if(event.transparency==='transparent'||!event.start?.dateTime||!event.end?.dateTime)continue;
    const a=parts(event.start.dateTime),b=parts(event.end.dateTime);
@@ -536,18 +522,14 @@ async function uploadWatchCalendarSnapshot(){
    // Keep scanning the calendar for future family examinations after today's 24 event slots.
  }
  events.sort((a,b)=>a.start.localeCompare(b.start));
- // Person names and agenda titles are intentionally opt-in: private by default.
- // Do not publish notes, relationship metrics, email addresses or contacts history.
- const people=[];
- if(state.watchPeopleEnabled===true){
-   const index=buildPersonAgendaIndex(Object.values(state.people||{}),state.tasks,rows(),state.projects);
-   for(const person of sortPeopleByOpenItems(Object.values(state.people||{}),index).slice(0,24)){
-     const r=index.get(person.id)||{tasks:[],inbox:[]};
-     const points=[...r.tasks,...r.inbox].slice(0,4).map(x=>String(x.title||'').slice(0,65)).filter(Boolean);
-     people.push({name:String(person.name||'').slice(0,55),points});
-   }
- }
- await request(config.apiUrl,authToken,'/api/watch/calendar-snapshot',{method:'POST',body:JSON.stringify({day,events:events.slice(0,24),familyDeadlines,shoppingProjectId:shoppingSelectedId||null,people})});
+ // Automatically publish only work-colleague agendas from the unlocked vault.
+ // No notes, emails, contact history, private relationship records or other people.
+ const agendaIndex=buildPersonAgendaIndex(Object.values(state.people||{}),state.tasks,rows(),state.projects);
+ const people=colleaguesForWatch(Object.values(state.people||{}),agendaIndex,events,day,new Date().getHours()*60+new Date().getMinutes());
+ const payload={day,events:events.slice(0,24),familyDeadlines,shoppingProjectId:shoppingSelectedId||null,people};
+ const key=JSON.stringify(payload);
+ if(watchCalendarLastKey===key)return;
+ await request(config.apiUrl,authToken,'/api/watch/calendar-snapshot',{method:'POST',body:JSON.stringify(payload)});
  watchCalendarLastKey=key;
 }
 function indexedCalendarDay(day){
@@ -764,6 +746,7 @@ async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=nu
     }
   }catch(ex){if(fastPlanning){restorePlanningCheckpoint(state,previous);options?.onFailed?.();}else state=previous;if(draftBackup)editDraftGuard.rollback(draftBackup);render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
   if(!skipFinalRender)render();
+  scheduleWatchCalendarSnapshot();
   if(busy)syncResyncRequested=true;
   else scheduleSync();
 }
@@ -1979,7 +1962,7 @@ function peopleScreen(){
  const contact=selected?contactSummaries.get(selected.id):null;
  const contactLabel=contact?.last?new Date(contact.last.day+'T12:00:00').toLocaleDateString('de-AT'):'Noch kein bestätigter Kontakt';
  const touchSummary=selected&&peopleRadarExpanded?touchPersonSummary(state,selected.id):{count:0,latest:null,suggestions:[]};
- return chrome(`${!counts.all?`<section class="work-card people-sync719-alert" role="status"><strong>Auf diesem Gerät sind keine Kontaktprofile im lokalen Tresor gespeichert.</strong>${typeof peopleRecoveryPanel5933==='function'?peopleRecoveryPanel5933({count:counts.all,mirrorReady:!!state?.privateDeviceMirror?.key,enabled:state?.peopleSyncEnabled===true,authenticated:!!authToken,online:navigator.onLine,syncStatus:journalSyncStatus}):'<p>Bitte den verschlüsselten Kontaktabgleich prüfen.</p>'}</section>`:''}${selected?`<section class="p717-task-strip" aria-label="Offene Punkte zu ${h(selected.name)}"><div><strong>📋 ${h(selected.name)}</strong><small>${related.length} offene Aufgaben · ${relatedInbox.length} offene Inbox-Punkte · ${waiting} Waiting For</small></div><span class="p717-task-strip-count">${related.length+relatedInbox.length} offen</span></section>`:''}<div class="people-watch-privacy"><button type="button" class="secondary-btn" data-action="watch-people-toggle">${ico('people',16)} ${state?.watchPeopleEnabled===true?'Garmin-Freigabe beenden':'Menschen für Garmin freigeben'}</button><small>${state?.watchPeopleEnabled===true?'Namen und bis zu vier offene Agendatitel pro Person werden für die gekoppelte Uhr kurzzeitig über Cloudflare übertragen.':'Standard: privat. Ohne ausdrückliche Freigabe keine Übertragung von Kontakten an die Uhr.'}</small></div><nav class="people-scope720" aria-label="Kontaktbereich auswählen">${PEOPLE_SCOPES.map(([value,label])=>`<button type="button" data-action="people-scope720" data-id="${value}" aria-pressed="${peopleScope===value}" class="${peopleScope===value?'is-active':''}">${h(label)} <span>${counts[value]}</span></button>`).join('')}</nav>${counts.all&&!people.length?'<p class="people-scope720-empty">In diesem Bereich sind noch keine Kontakte. Du kannst die Beziehungsart einer Person unter „Beziehung & Nähe“ ändern.</p>':''}<nav class="relationship-tabs" aria-label="Menschen-Ansichten"><button type="button" data-action="people-tab" data-id="list" class="${peopleTab==='list'?'is-active':''}">☷ Kontakte</button><button type="button" data-action="people-tab" data-id="map" class="${peopleTab==='map'?'is-active':''}">◎ Beziehungslandkarte</button></nav><div class="people-grid ${peopleTab==='map'?'map-active':''}">${peopleTab==='map'?(people.length?peopleMapMarkup(people,selected):'<section class="work-card people-scope720-empty">Hier gibt es keine Kontakte für die Beziehungslandkarte. Wähle „Alle“ oder einen anderen Bereich.</section>'):`<section class="work-card"><div class="work-heading"><span>${ico('people',18)} Menschen · offene To-dos zuerst</span><span class="quiet-tag">${people.length}</span></div><details class="people-add-person"><summary>${ico('plus',14)} Person hinzufügen</summary><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Hinzufügen</button></form></details><div class="people-list">${visiblePeople.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} Aufgaben · ${inboxFor(p).length} Inbox${contactSummaries.get(p.id)?.last?' · zuletzt '+h(contactSummaries.get(p.id).last.day):''}${p.birthdayMonthDay?` · 🎂 ${h(p.birthdayMonthDay.slice(3))}.${h(p.birthdayMonthDay.slice(0,2))}.`:""}</small></button><div class="people-quick-actions"><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="call" title="Telefonat dokumentieren" aria-label="Telefonat mit ${h(p.name)} dokumentieren">☎</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="meeting" title="Persönliches Treffen dokumentieren" aria-label="Treffen mit ${h(p.name)} dokumentieren">☕</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="email" title="E-Mail dokumentieren" aria-label="E-Mail mit ${h(p.name)} dokumentieren">✉</button></div>`).join('')||'<p class="muted-line">In dieser Auswahl gibt es keine Kontakte. Wechsle zwischen Arbeitskollegen und Privat.</p>'}</div>${people.length>visiblePeople.length?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-all">Alle ${people.length} Kontakte anzeigen</button>`:peopleShowAll&&people.length>80?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-less">Nur erste 80 anzeigen</button>`:''}</section>`}
+ return chrome(`${!counts.all?`<section class="work-card people-sync719-alert" role="status"><strong>Auf diesem Gerät sind keine Kontaktprofile im lokalen Tresor gespeichert.</strong>${typeof peopleRecoveryPanel5933==='function'?peopleRecoveryPanel5933({count:counts.all,mirrorReady:!!state?.privateDeviceMirror?.key,enabled:state?.peopleSyncEnabled===true,authenticated:!!authToken,online:navigator.onLine,syncStatus:journalSyncStatus}):'<p>Bitte den verschlüsselten Kontaktabgleich prüfen.</p>'}</section>`:''}${selected?`<section class="p717-task-strip" aria-label="Offene Punkte zu ${h(selected.name)}"><div><strong>📋 ${h(selected.name)}</strong><small>${related.length} offene Aufgaben · ${relatedInbox.length} offene Inbox-Punkte · ${waiting} Waiting For</small></div><span class="p717-task-strip-count">${related.length+relatedInbox.length} offen</span></section>`:''}<nav class="people-scope720" aria-label="Kontaktbereich auswählen">${PEOPLE_SCOPES.map(([value,label])=>`<button type="button" data-action="people-scope720" data-id="${value}" aria-pressed="${peopleScope===value}" class="${peopleScope===value?'is-active':''}">${h(label)} <span>${counts[value]}</span></button>`).join('')}</nav>${counts.all&&!people.length?'<p class="people-scope720-empty">In diesem Bereich sind noch keine Kontakte. Du kannst die Beziehungsart einer Person unter „Beziehung & Nähe“ ändern.</p>':''}<nav class="relationship-tabs" aria-label="Menschen-Ansichten"><button type="button" data-action="people-tab" data-id="list" class="${peopleTab==='list'?'is-active':''}">☷ Kontakte</button><button type="button" data-action="people-tab" data-id="map" class="${peopleTab==='map'?'is-active':''}">◎ Beziehungslandkarte</button></nav><div class="people-grid ${peopleTab==='map'?'map-active':''}">${peopleTab==='map'?(people.length?peopleMapMarkup(people,selected):'<section class="work-card people-scope720-empty">Hier gibt es keine Kontakte für die Beziehungslandkarte. Wähle „Alle“ oder einen anderen Bereich.</section>'):`<section class="work-card"><div class="work-heading"><span>${ico('people',18)} Menschen · offene To-dos zuerst</span><span class="quiet-tag">${people.length}</span></div><details class="people-add-person"><summary>${ico('plus',14)} Person hinzufügen</summary><form id="person-create-form" class="compact-stack"><label>Name<input name="name" maxlength="80" required placeholder="Name hinzufügen" /></label><button type="submit" class="primary-btn">Hinzufügen</button></form></details><div class="people-list">${visiblePeople.map(p=>`<button type="button" data-action="person-select" data-id="${h(p.id)}" class="people-item ${selected?.id===p.id?'selected':''}"><strong>${h(p.name)}</strong><small>${taskListFor(p).length} Aufgaben · ${inboxFor(p).length} Inbox${contactSummaries.get(p.id)?.last?' · zuletzt '+h(contactSummaries.get(p.id).last.day):''}${p.birthdayMonthDay?` · 🎂 ${h(p.birthdayMonthDay.slice(3))}.${h(p.birthdayMonthDay.slice(0,2))}.`:""}</small></button><div class="people-quick-actions"><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="call" title="Telefonat dokumentieren" aria-label="Telefonat mit ${h(p.name)} dokumentieren">☎</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="meeting" title="Persönliches Treffen dokumentieren" aria-label="Treffen mit ${h(p.name)} dokumentieren">☕</button><button type="button" data-action="person-quick-log" data-id="${h(p.id)}" data-kind="email" title="E-Mail dokumentieren" aria-label="E-Mail mit ${h(p.name)} dokumentieren">✉</button></div>`).join('')||'<p class="muted-line">In dieser Auswahl gibt es keine Kontakte. Wechsle zwischen Arbeitskollegen und Privat.</p>'}</div>${people.length>visiblePeople.length?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-all">Alle ${people.length} Kontakte anzeigen</button>`:peopleShowAll&&people.length>80?`<button type="button" class="secondary-btn p717-more-people" data-action="people-show-less">Nur erste 80 anzeigen</button>`:''}</section>`}
  <section class="work-card"><div class="work-heading"><span>${ico('list',18)} ${selected?h(selected.name):'Gesprächsvorbereitung'}</span>${selected?`<button class="secondary-btn" type="button" data-action="person-remove" data-id="${h(selected.id)}">Entfernen</button>`:''}</div>${selected?`<p class="muted-line">${related.length} offene Aufgaben · ${relatedInbox.length} noch in der Inbox · ${waiting} Waiting For</p>
  <section class="people-agenda-first"><div class="work-heading"><span>${ico('list',17)} Offene To-dos & Gesprächspunkte</span><span class="quiet-tag">${related.length} Aufgaben · ${relatedInbox.length} Inbox</span></div><div class="people-agendas">${related.map(t=>`<div class="person-point-row"><button type="button" class="person-quick-check" data-action="person-task-done" data-id="${h(t.id)}" aria-label="${h(t.title)} als erledigt markieren" title="Aufgabe erledigen" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)}</button><details class="person-point" data-point="task" data-id="${h(t.id)}" ${personOpenPointId===t.id?'open':''}><summary><span class="person-point-symbol">${ico('checkSquare',16)}</span><span class="person-point-title"><strong>${h(t.title)}</strong><small>${h(t.workflow==='waiting'?'Waiting For':'Aufgabe / Agenda')}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="task" data-id="${h(t.id)}"><label>Notiz zu diesem Punkt<textarea name="note" maxlength="3000" rows="3" placeholder="Was haben wir besprochen?">${h(t.note||'')}</textarea></label>${state?.taskConflicts?.[t.id]?'<p class="person-point-warning">Bearbeitungskonflikt: Bitte zuerst in der Aufgabenansicht auflösen.</p>':''}<div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>Notiz speichern</button><button type="submit" name="intent" value="done" class="primary-btn" ${state?.taskConflicts?.[t.id]?'disabled':''}>${ico('check',15)} Erledigt</button></div></form></details></div>`).join('')||'<p class="muted-line">Keine offenen Aufgaben mit diesem Personentag.</p>'}</div>${relatedInbox.length?`<section class="people-linked-inbox"><h3>${ico('inbox',16)} Noch in der Inbox · ${relatedInbox.length}</h3>${relatedInbox.map(r=>`<details class="person-point" data-point="inbox" data-id="${h(r.id)}" ${personOpenPointId===r.id?'open':''}><summary><span class="person-point-symbol">${ico('inbox',16)}</span><span class="person-point-title"><strong>${h(r.title)}</strong><small>Noch zu klären · kein erledigbarer Task</small></span>${ico('chevronDown',15)}</summary><form class="person-point-form" data-kind="inbox" data-id="${h(r.id)}"><label>Gesprächsnotiz<textarea name="note" maxlength="10000" rows="3" placeholder="Was ist dazu besprochen worden?">${h(r.note||'')}</textarea></label><div class="person-point-actions"><button type="submit" name="intent" value="save" class="secondary-btn">Notiz speichern</button><button type="submit" name="intent" value="discussed" class="primary-btn">${ico('check',15)} Besprochen &amp; archivieren</button></div><small>Archivieren ist keine Erledigung einer Aufgabe. Später kannst du aus der Inbox bei Bedarf eine Next Action erstellen.</small></form></details>`).join('')}</section>`:''}<form id="person-agenda-form" data-id="${h(selected.id)}" class="people-agenda-capture"><label>Gesprächsthema ergänzen<input name="title" required maxlength="180" placeholder="Was möchte ich mit dieser Person besprechen?"/></label><button type="submit" class="secondary-btn">${ico('plus',15)} Hinzufügen</button></form></section>
  <section class="p717-optional-relationship"><button type="button" class="secondary-btn p717-radar-toggle" data-action="people-radar-toggle" aria-expanded="${peopleRadarExpanded}">${ico('people',16)} Beziehung & Nähe ${peopleRadarExpanded?'ausblenden':'anzeigen'} ${ico('chevronDown',15)}</button>${peopleRadarExpanded?`<div class="p717-relationship-panel">${relationshipInspectorMarkup(selected,state?.projects||{},localDate())}<section class="t577-person-strip"><span>${touchSummary.count} Begegnungen erfasst${touchSummary.latest?' · zuletzt '+h(new Date(touchSummary.latest).toLocaleDateString('de-AT')):''}</span><button type="button" class="secondary-btn" data-action="t577-for-person" data-id="${h(selected.id)}">+ Nähe erfassen</button></section></div>`:''}</section>
@@ -3945,13 +3928,6 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(note.length>3000){toast('Notiz darf höchstens 3.000 Zeichen haben.',true);return;}
       await mutate(s=>{s.tasks[id].note=note;s.tasks[id].completed=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
       toast('Aufgabe erledigt.');return;
-    }
-    if(action==='watch-people-toggle'){
-      const enabled=state?.watchPeopleEnabled===true;
-      if(!enabled&&!confirm('Namen und maximal vier offene Agendatitel pro Person werden über Cloudflare für die gekoppelte Uhr bereitgestellt. Freigeben?'))return;
-      await mutate(st=>{st.watchPeopleEnabled=!enabled;});watchCalendarLastKey='';
-      await uploadWatchCalendarSnapshot().catch(ex=>toast('Garmin-Freigabe konnte nicht aktualisiert werden: '+ex.message,true));
-      toast(enabled?'Garmin-Freigabe deaktiviert.':'Garmin-Freigabe aktiviert.');return;
     }
     if(action==='people-scope720'){if(PEOPLE_SCOPES.some(([value])=>value===id)){peopleScope=id;relationshipMapFilter='all';relationshipMapFocus=false;peopleShowAll=false;selectedPersonId=null;render();}return;}
     if(action==='people-tab'){if(['list','map'].includes(id)){peopleTab=id;relationshipMapFocus=false;render();}return;}
