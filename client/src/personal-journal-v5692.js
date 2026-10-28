@@ -19,6 +19,7 @@ export const FOOD_PRESETS=[
  ['matcha-powder','🍃','MatchaTherapy 30+ Matchapulver','Zutaten','1 TL (2 g)',5,9],
  ['bio-kornbrot','🍞','Zurück zum Ursprung Bio Nur-Kornbrot','Zutaten','1 Scheibe (50 g)',134,134],
  ['butter-hofer','🧈','Hofer Bio-Butter','Zutaten','10 g',72,76],
+ ['water-glass','💧','Wasser','Getränke','1 Glas (250 ml)',0,0],
  ['smoothie','🥤','Smoothie','Getränke','1 Glas (300 ml)',120,280],['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['tea-honey','🫖','Tee mit Honig','Getränke','1 Tasse (250 ml)',20,75],
  ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke','1 Tasse (250 ml)',130,270],['coffee','☕','Kaffee','Getränke','1 Tasse (200 ml)',0,10],
  ['latella','🥛','Lattella','Getränke','500 ml',250,360],
@@ -45,6 +46,7 @@ export const FOOD_PRESETS=[
  ['dried-mango','🥭','SPAR Vital Bio-Mangohälften','Snacks','1 Packung (200 g)',590,600],
  ['spar-bio-flaxseed','🌱','SPAR Bio-Leinsamen · gekaut','Snacks','1 TL (3 g)',16,16],
  ['sbudget-topfencreme-vanilla','🍮','S-BUDGET Topfencreme Vanille','Snacks','1 Becher (180 g)',178,179],['rice-pudding','🍚','S-BUDGET Milchreis Zimt · SPAR','Snacks','1 Becher (200 g)',225,230],
+ ['apple-shortcrust-cake','🍰','Apfelkuchen mit Mürbteig','Snacks','1 Stück (125 g)',230,350],
  ['apple','🍎','Apfel','Snacks','1 Stück',60,120],['chocolate','🍫','Schokoriegel','Snacks','1 Riegel (50 g)',220,300],
  ['snickers','🍫','Snickers','Snacks','1 Riegel (50 g)',225,275],
  ['pistachio-butter-cups','🍬','Better Pistachio Butter Cups','Snacks','3 Stück (39 g)',238,242],
@@ -55,6 +57,8 @@ export const FOOD_PRESETS=[
  ['other-food','➕','Anderes','Sonstiges']
 ].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({
  id,emoji,title,group,defaultAmount,kcalLow,kcalHigh,
+ ...(id==='apple-shortcrust-cake'?{recipeNote:'1 Stück = ca. 125 g (nicht abgewogen). Referenz: Bundeslebensmittelschlüssel (BLS 4.0), Apfelkuchen gedeckt (Mürbeteig), Energieangabe je 100 g in der Referenzdatenbank; je nach Rezept/Portionsgröße starke Abweichungen möglich. Menge im Tagebuch anpassbar.'}:{}),
+ ...(id==='water-glass'?{recipeNote:'1 Glas = 250 ml Trinkwasser ohne Zusätze und ohne Energiegehalt. Auch mit Kohlensäure, sofern ungesüßt. Glasgröße im Tagebuch anpassbar.'}:{}),
  ...(id==='spar-bio-flaxseed'?{recipeNote:'1 TL ≈ 3 g, vor dem Schlucken zerkaut. ACHTUNG: Die verwendete SPAR-Packung ist mit „Nur zum Kochen und Backen – nicht roh verzehren“ gekennzeichnet. Zerkauen ersetzt Erhitzen nicht.'}:{}),
  ...(id==='pizza-margherita'||id==='krautsalat'||id==='stangenbohnensalat'||id==='champagne'||id==='chocolate-cookie'||id==='whipped-cream'||id==='chocolate-cookie-cream'?{recipeNote:'Grobe Nährwert- und Portionsschätzung, kein Herstelleretikett. Menge und Zutaten können stark abweichen.'}:{}),
  ...(id==='matcha'||id==='matcha-oat-plain'?{
@@ -147,6 +151,12 @@ export function nutritionKcalEstimate(food,amount){
  // Matcha is a recipe, not a uniform-calorie beverage: don't multiply oat milk
  // calories by total drink volume. The old 250-ml matcha logs had no breakdown,
  // so we use the same explicitly documented 75-ml estimate for those as well.
+ if(food.id==='water-glass'){
+  const m=given.match(/(\d+(?:[.,]\d+)?)\s*(ml|l(?:iter)?|glas|gläser|glaeser)\b/i);
+  if(!m&&given!==original)return null;
+  const n=m?Number(m[1].replace(',','.')):1;
+  return Number.isFinite(n)&&n>0?{low:0,high:0,kind:'Trinkwasser ohne Zusätze'}:null;
+ }
  if(food.id==='matcha'||food.id==='matcha-oat-plain'){
   const milkMatch=given.match(/(\d+(?:[.,]\d+)?)\s*ml\s*(?:hafermilch|haferdrink)\b/i);
   const milkMl=milkMatch?Number(milkMatch[1].replace(',','.')):75;

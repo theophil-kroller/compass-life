@@ -20,6 +20,8 @@ const BIOACTIVE_ICONS=Object.freeze({EGC:'🍵',EGCG:'🍃',caffeine:'☕',lThea
 export const NUTRIENT_LABELS=N;
 const profile=(name,amount,unit,values,source='Etikett',extra={},note='')=>({name,reference:{amount,unit},nutrients:values,source,extra,note,estimatedNutrients:[]});
 const LABELLED={
+ 'apple-shortcrust-cake':profile('Apfelkuchen gedeckt (Mürbeteig), BLS-Richtwert',100,'g',{kcal:219,protein:3.7,carbs:27.4,sugar:13.2,fat:9.9,fiber:2.7},'Bundeslebensmittelschlüssel BLS 4.0 · D181300',{},'Referenz: gedeckter Apfelkuchen; Rezept und Stueckgewicht individuell. 125 g je Stueck vorläufig angenommen. https://blsdb.prod.se.ble.de/food?foodId=39276&token=F390-4MAJ-U01A-X731-F9F4-GPDE-810B-O4RY'),
+ 'water-glass':profile('Trinkwasser ungesüßt',100,'ml',{kcal:0,protein:0,carbs:0,sugar:0,fat:0,saturated:0,fiber:0,salt:0},'Trinkwasser ohne Zusätze',{},'Leitungswasser, stilles oder ungesüßtes Sprudelwasser. Mineralstoffgehalte abhängig von Quelle; nicht als Null interpretiert.'),
  'pizza-margherita':profile('Pizza Margherita (generischer Richtwert)',100,'g',{kcal:250,protein:11,carbs:31,sugar:3,fat:10,saturated:4,fiber:2,salt:1.2},'Grobe Rezeptschätzung',{},'Teig, Käse, Öl und Gewicht stark unterschiedlich; 300 g nur vorläufig.'),
  'krautsalat':profile('Krautsalat mit Dressing (generisch)',100,'g',{kcal:85,protein:1,carbs:9,sugar:6,fat:5,fiber:2,salt:.7},'Grobe Rezeptschätzung',{},'Öl, Zucker und Dressing unbekannt; ohne Dressing ggf. deutlich weniger.'),
  'stangenbohnensalat':profile('Stangenbohnensalat (generisch)',100,'g',{kcal:80,protein:2,carbs:7,sugar:2.5,fat:5,fiber:3,salt:.6},'Grobe Rezeptschätzung',{},'Öl und Dressing unbekannt.'),
@@ -114,6 +116,7 @@ for(const [id,micros] of Object.entries(GENERIC_MICRONUTRIENTS)){
 }
 LABELLED.apple=profile('Apfel mit Schale · Referenzportion 100 g',100,'g',APPLE_GENERIC_100G,'USDA FDC 171688 (Durchschnitt)',{},'1 mittelgroßer Apfel ≈ 182 g essbarer Anteil; Vitamin C ≈ 8,4 mg. Sorten, Lagerung und Größe variieren.');
 LABELLED.apple.estimatedNutrients=Object.keys(APPLE_GENERIC_100G);
+LABELLED['apple-shortcrust-cake'].estimatedNutrients=['kcal','protein','carbs','sugar','fat','fiber'];
 LABELLED['matcha-powder'].estimatedNutrients=['kcal'];
 LABELLED.espresso.estimatedNutrients=['kcal'];
 LABELLED.coffee.estimatedNutrients=['kcal'];
@@ -124,6 +127,16 @@ function quantityFor(entry,food){
  const a=String(entry?.amount||food?.defaultAmount||'').toLowerCase();
  if(entry.foodId==='apple'&&!/(?:\d+(?:[.,]\d+)?\s*(?:g|gramm)\b)/i.test(a)){const m=a.match(/(\d+(?:[.,]\d+)?)\s*(?:stücke?|äpfel)/i);return {value:(m?amountNumber(m[1]):1)*182,unit:'g'};}
  if(entry.foodId==='coffee'&&!/\d+(?:[.,]\d+)?\s*ml/i.test(a))return {value:200,unit:'ml'};
+ if(entry.foodId==='apple-shortcrust-cake'){
+  const grams=a.match(/(\d+(?:[.,]\d+)?)\s*g\b/);if(grams)return {value:amountNumber(grams[1]),unit:'g'};
+  const pieces=a.match(/(\d+(?:[.,]\d+)?)\s*(?:stück(?:e)?|stueck(?:e)?)\b/);
+  if(pieces)return {value:amountNumber(pieces[1])*125,unit:'g'};
+ }
+ if(entry.foodId==='water-glass'){
+  const milliliters=a.match(/(\d+(?:[.,]\d+)?)\s*ml\b/);if(milliliters)return {value:amountNumber(milliliters[1]),unit:'ml'};
+  const liters=a.match(/(\d+(?:[.,]\d+)?)\s*l(?:iter)?\b/);if(liters)return {value:amountNumber(liters[1])*1000,unit:'ml'};
+  const glasses=a.match(/(\d+(?:[.,]\d+)?)\s*(?:glas|gläser|glaeser)\b/);if(glasses)return {value:amountNumber(glasses[1])*250,unit:'ml'};
+ }
  if(entry.foodId==='spar-bio-flaxseed'&&!/\d+(?:[.,]\d+)?\s*g\b/i.test(a)){const x=a.match(/(\d+(?:[.,]\d+)?)\s*(?:tl|teelöffel)\b/);if(x)return {value:amountNumber(x[1])*3,unit:'g'};}
  if(entry.foodId==='sbudget-topfencreme-vanilla'&&!/\d+(?:[.,]\d+)?\s*g\b/i.test(a)){const x=a.match(/(\d+(?:[.,]\d+)?)\s*becher\b/);if(x)return {value:amountNumber(x[1])*180,unit:'g'};}
  if(entry.foodId==='matcha-powder'&&!/\d+(?:[.,]\d+)?\s*(?:g|gramm)\b/i.test(a)){const m=a.match(/(\d+(?:[.,]\d+)?)\s*(?:tl|teelöffel)\b/i);if(m)return {value:amountNumber(m[1])*2,unit:'g'};}

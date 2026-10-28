@@ -15,7 +15,7 @@ const amountPieces=x=>{
 export const VERIFIED_DAILY_FOODS=Object.freeze({
  apple:'fruit', 'dried-mango':'fruit',
  peanuts:'nuts','mixed-nuts':'nuts',
- 'green-tea-chinese':'beverages','tea-unsweetened':'beverages',coffee:'beverages','matcha':'beverages','matcha-oat-plain':'beverages','oat-latte':'beverages',
+ 'water-glass':'beverages','green-tea-chinese':'beverages','tea-unsweetened':'beverages',coffee:'beverages','matcha':'beverages','matcha-oat-plain':'beverages','oat-latte':'beverages',
  'bio-kornbrot':null // Grain content cannot be inferred from its name alone.
 });
 /** Returns documented portions, explanatory provenance and partial nut grams.

@@ -78,7 +78,7 @@ export function dailyDozenIngredientEvidence404(state,day){
     const pieces=Number(a.match(/(\d+(?:[.,]\d+)?)\s*(?:scheiben?|stück)/i)?.[1]?.replace(',','.')||1);
     // Only explicit verified wholegrain products; bread-cheese/dark-bread cannot prove wholegrain.
     if(id==='bio-kornbrot'&&custom.get(id)?.wholegrain===true)add('wholegrains',pieces,'Vollkornbrot (bestätigt)',sourceId);
-  } else if(['green-tea-chinese','tea-unsweetened','coffee','matcha','matcha-oat-plain','oat-latte'].includes(id)){
+  } else if(['water-glass','green-tea-chinese','tea-unsweetened','coffee','matcha','matcha-oat-plain','oat-latte'].includes(id)){
     // Matches the old 0.5.77.59.30 volume-based progression, but no implicit smoothies.
     add('beverages',(ml(a)??(id.startsWith('matcha')?500:id==='coffee'?200:250))/350,'Dokumentiertes Getränk',sourceId);
   } else {
