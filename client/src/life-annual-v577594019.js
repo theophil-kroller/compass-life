@@ -1,9 +1,11 @@
-/** Ars Vivendi Annual 0.5.77.59.40.22 (report print / SVG QA) — chronological, evidence-first print edition.
+/** Ars Vivendi Annual 0.5.77.59.40.23 (chart atlas / additional source graphics) — chronological, evidence-first print edition.
  * Extends the 40.18 report rather than replacing its proven data audit and recommendation engine.
  * Financial, location, relationship and emotional data only after independent opt-in.
  * Never exports or uploads report payload, and never imputes missing records.
  */
 import {reportReadiness,reportEvidence,reportRecommendations,reportWindow,pairedCorrelation} from './life-report-v577594018.js';
+import {annualChartAtlas} from './annual-chart-atlas-v4023.js';
+
 import {buildLifeBalanceRadar,buildLifeBalanceHistory,lifeBalanceRadarView} from './life-balance-radar-v563.js';
 import {renderSleepYearDistribution} from './sleep-year-v552.js';
 import {worktimeWeeks,worktimeView} from './worktime-v553.js';
@@ -135,10 +137,26 @@ function Htm(s){return H(s);}
 function cvGraph(html,idx=0){return figures(html,idx+1)[idx]||'';}
 const entriesFor=(state,w)=>inWindow(state.nutritionJournal?.entries,w,'at');
 const sourceNote='Nur lokal importierte, dokumentierte Werte; fehlende Tage oder Konten werden nicht zu Nullwerten ergänzt.';
+// Registered chart atlas: every topic is a print-safe, evidence-based selection of existing Compass data models.
+function atlasPages(sections,chapterNumber){
+ const pages=[];
+ for(const item of sections){
+  // At most two vector graphics per sheet: each must remain legible on A4.
+  const plots=rows(item.plots);
+  for(let i=0;i<plots.length;i+=2){
+   const pair=plots.slice(i,i+2);
+   const main=pair.map(x=>fig(x.label,x.svg,x.caption)).join('');
+   const heading=i?`${item.heading} · Fortsetzung`:item.heading;
+   pages.push(page(item.topic,`${title(chapterNumber,item.topic,heading,item.deck)}<div class="${pair.length>1?'av19-stack':''}">${main}</div>${i+2>=plots.length?essay('Was die Grafik aussagt',item.insight,'Beobachtungsdaten aus Compass · keine Hochrechnung auf fehlende Tage'):''}`));
+  }
+ }
+ return pages;
+}
 export function annualInventory(state={},settings={}){
  const r=reportReadiness(state,settings),w=r.window,items=[];const put=(id,label,count,sensitive=false)=>items.push({id,label,count,sensitive,available:count>0});
  put('work','Arbeitszeit',inWindow(state.workTime?.days,w).length);
  put('focus','Zeiterfassung & Lebensbereiche',inWindow(state.timeJournal?.entries,w,'start').length+inWindow(state.quickWorktime?.sessions,w,'start').length);
+ put('sport','Sport & Freizeit',inWindow(state.healthImports?.garminSessions,w).length);
  put('sleep','Schlaf',inWindow(state.healthImports?.garminNights,w).length);
  put('hrv','HRV',inWindow(state.healthImports?.garminHrv,w).length);
  put('body','Fitdays Körper',inWindow(state.healthImports?.fitdays,w,'at').length);
@@ -151,6 +169,7 @@ export function annualInventory(state={},settings={}){
 }
 export function annualDocument(state={},settings={}){
  const inv=annualInventory(state,settings),w=inv.window,ev=reportEvidence(state,settings),guidance=reportRecommendations(state,settings),S=[];
+ const chartAtlas=annualChartAtlas(state,w);
  const checked=inv.items.filter(x=>x.available).length;
  const dateRange=`${date(w.start)} — ${date(w.end)}`;
  const labs=inv.items.filter(i=>i.available).map(i=>i.label);
@@ -182,6 +201,7 @@ export function annualDocument(state={},settings={}){
   S.push(page('III / SLEEP',`${title(3,'REST & RECOVERY','Die dokumentierten Nächte','Schlafdauer in Minuten: vorhandene Nächte als einzelne Messpunkte – ohne künstliche Glättung.')}<div class="av19-stats">${card('Erfasste Nächte',String(sleep.length),`${w.days} Tage im Fenster`)}${card('Mittel der Messungen',mean(sleep.map(x=>x.value))!==null?`${fmt(mean(sleep.map(x=>x.value))/60,2)} h`:'—','Vor klinischer Interpretation Import prüfen')}</div>${fig('Schlaf-Dot-Plot · gesamter Berichtszeitraum',annualDots(sleep,w,{label:'Schlafdauer',unit:'min'}),'Punkte sind echte Nächte; die X-Achse umfasst den gesamten Zeitraum.')}${sleepOriginal?fig('Compass-Schlafjahr · Originalvisualisierung',sleepOriginal,'Die bestehende Compass-Schlafgrafik bleibt im Jahresbericht erhalten.'):''}`));
   if(hrv.length||stress.length)S.push(page('III / HRV & STRESS',`${title(3,'AUTONOMIC RECOVERY','HRV & Belastung','Zwei eigenständige Messgrößen – keine Verwechslung von Stressindex und Schlafwert.')}${fig('Nächtliche HRV',annualDots(hrv,w,{label:'HRV',unit:'ms',color:'#527da2'}),`${hrv.length} dokumentierte HRV-Messungen; Interpretation nur innerhalb des persönlichen Zeitverlaufs.`)}${fig('Garmin-Stress · Tagesmittel dokumentierter Messungen',annualDots(stress,w,{label:'Stress',unit:'Index',color:'#bd8469',min:0,max:100}),`${stress.length} Tage mit Messungen aus ${stressRaw.length} dokumentierten Stress-Messpunkten; Tagesmittel, kein lückenloses Stressprofil.`)}`));
  }
+ S.push(...atlasPages(chartAtlas.health,3));
  // Body composition BIA: the original three graphics and no invented physiology.
  const bmi=bodyTransformationModel(state,{today:w.end,range:w.days>90?'365':'90'}),fit=bodyTransformationView(state,{today:w.end,range:w.days>90?'365':'90'}),bodySvgs=figures(fit,5);
  if(bmi.fitdays.length){S.push(chapter(4,'BODY & STRENGTH','Mein Körper','Gewicht, Körperfett und Muskelmasse als getrennte Veränderungen – keine erfundene Muskelzunahme.'));
@@ -199,6 +219,7 @@ export function annualDocument(state={},settings={}){
   S.push(page('IV / MUSCLE & STRENGTH',`${title(4,'STRENGTH INSIGHTS','Training & Muskelbalance','Aus bestätigten Garmin-/Coach-Sätzen berechnet. Originale Compass-Premium-Anatomie, statisch und druckfähig.')}<div class="av19-stats">${card('Trainingstage',String(strengthModel.trainingDays),'Garmin + Coach')}${card('Sätze mit Muskelzuordnung',String(strengthModel.knownSets),'Nur dokumentierte Sets')}${card('Offene Zuordnung',String(strengthModel.unassigned),'Unbekannt bleibt unbekannt')}</div><div class="av21-muscle-maps av22-muscle-maps">${fig('Vorderseite · Originalanatomie',fronts,'Rot: Hauptsätze · Gold: Nebenbeteiligung · Grau: nicht zugeordnet.')}${fig('Rückseite · Originalanatomie',backs,'Die Farbe beschreibt Satzbeteiligung, nicht Muskelwachstum oder EMG.')}</div>`,{}));
   if(strengthDots||groupBars)S.push(page('IV / STRENGTH PROGRESSION',`${title(4,'STRENGTH INSIGHTS','Training im Zeitverlauf','Dokumentierte Trainingstage und Hauptsatzverteilung; ohne Ergänzung fehlender Übungen.')}<div class="av19-stack">${fig('Trainingstage · Original-Dot-Plot',strengthDots,'Garmin und bestätigte Coach-Sätze.')}${fig('Muskelgruppen · klassifizierte Hauptsätze',groupBars,'Die Grafik enthält nur zugeordnete Sätze. Details siehe Trainingsjournal in Compass.')}</div>`));
  }
+ S.push(...atlasPages(chartAtlas.sports,4));
  // Nutrition: 5 deliberately separated designed spreads, all based on actual journal.
  const food=entriesFor(state,w),dozen=annualDailyDozen(state,w);
  if(food.length){S.push(chapter(5,'NUTRITION & LONGEVITY','Meine Ernährung','Welche Ernährungsrhythmen und Nährstoffmuster sind in den dokumentierten Einträgen tatsächlich sichtbar?'));
@@ -216,6 +237,7 @@ export function annualDocument(state={},settings={}){
    S.push(page('V / ANTI-AGING EIGHT',`${title(5,'LONGEVITY','Anti-Aging Eight · acht konkrete Themen','Dokumentierte pflanzliche Ernährung und vorsichtige Orientierung nach Dr. Greger. Keine Biomarker- oder Lebensdauerprognose.')}<div class="av22-eight-grid">${aa.rows.map(x=>`<article class="av22-eight-item"><div class="av22-eight-head"><strong>${H(x.title)}</strong><span>${x.status==='observed'?'Dokumentiert':x.status==='partial'?'Teilinformation':x.status==='unmeasurable'?'Nicht messbar':'Nicht belegt'}</span></div><p>${H(x.value)}</p><small>${H(x.reason)}</small></article>`).join('')}</div>${essay('Beobachtung, keine medizinische Prognose',`Diese acht Themen wurden für den letzten erfassten Tag (${w.end}) geprüft. Sie sind keine acht messbaren Anti-Aging-Scores und dürfen nicht als Jahresstatistik interpretiert werden.`)}`));}
 
  }
+ S.push(...atlasPages(chartAtlas.nutrition,5));
  // Finance: multi-panel + large sankey + monthly flow visualizations. No transfers as expense.
  const tx=settings.finance?inWindow(state.financeTransactions,w):[];
  if(tx.length){S.push(chapter(6,'THE FINANCIAL LIFE','Mein Geld','Wohin Geld geflossen ist – und was echte Ausgaben, Transfers oder Investitionen waren.'));
