@@ -10,19 +10,19 @@ const D='2026-10-27';
 const row=(foodId,recipe,at=D+'T08:18:00')=>({id:'smoothie1',foodId,recipe,amount:'1 Portion',at});
 const state=(entries)=>({nutritionJournal:{entries,customFoods:[]}});
 const category=(model,key)=>model.rows.find(x=>x.id===key);
-test('Personal smoothie adds berries, banana, nuts plus black sesame and spices in one background projection',()=>{
+test('Personal smoothie counts berries, banana, black sesame and spices without invented nuts',()=>{
  const s=state([row('smoothie-personal',smoothieRecipe())]);
  const ledger=dailyDozenIngredientEvidence404(s,D);
  assert.equal(ledger.totals.berries,1);
  assert.equal(ledger.totals.fruit,1);
- assert.equal(ledger.nutGrams,45); // 30 g nuts + 15 g sesame
- assert.equal(ledger.totals.nuts,1.5);
+ assert.equal(ledger.nutGrams,15); // 15 g black sesame; optional nuts are zero
+ assert.equal(ledger.totals.nuts,0.5);
  assert.equal(ledger.totals.spices,1);
  assert.equal(ledger.totals.beverages,0); // food ingredients are not counted as water
  const chart=dailyDozen5930(s,{day:D});
  assert.equal(category(chart,'berries').observed,1);
  assert.equal(category(chart,'fruits').observed,1);
- assert.equal(category(chart,'nuts').observed,1);
+ assert.equal(category(chart,'nuts').observed,0.5);
  assert.equal(category(chart,'spices').observed,1);
  assert.equal(chart.entries,1);
  assert.equal(chart.mapped,1);

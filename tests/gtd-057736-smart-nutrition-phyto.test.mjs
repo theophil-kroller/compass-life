@@ -36,14 +36,14 @@ test('editing individual grams preserves defaults for absent fields and actual z
  assert.match(smoothieEditFields({recipe:rec}),/Schöpfer/);
  assert.match(smoothieEditFields({recipe:rec}),/name="smoothie-sesame"/);
 });
-test('per ingredient macro and micronutrients and missing bee-pollen data are not fabricated',()=>{
- const p=smoothieParts();assert.equal(p.length,9);
+test('per ingredient macro and micronutrients include a labelled bee pollen energy estimate',()=>{
+ const p=smoothieParts();assert.equal(p.length,7);
  assert.ok(p.find(x=>x.name.startsWith('Banane')).values.potassium>300);
  assert.ok(p.find(x=>x.name.includes('Blaubeeren')).values.vitaminC>0);
- assert.deepEqual(p.find(x=>x.name.includes('Blütenpollen')).values,{});
+ assert.deepEqual(p.find(x=>x.name.includes('Blütenpollen')).values,{kcal:17.5});
  assert.ok(p.every(x=>x.estimatedKeys?.length===Object.keys(x.values).length));
  const total=p.reduce((n,x)=>n+(x.values.kcal||0),0);
- assert.ok(total>350&&total<550,`unrealistic subtotal ${total}`);
+ assert.ok(total>250&&total<270,`unrealistic subtotal ${total}`);
 });
 test('new source bridge rejects missing anchors rather than silently creating broken versions',()=>{
  assert.throws(()=>apply('invalid','main.js'),/Integrationsanker/);
