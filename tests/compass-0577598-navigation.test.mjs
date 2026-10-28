@@ -11,7 +11,7 @@ const vite=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf
 test('Overview & Intelligence starts with Life Balance rather than Cockpit',()=>{
  const group=INSIGHTS750_GROUPS.find(g=>g.id==='intelligence');
  assert.equal(group.default,'balance');
- assert.deepEqual(group.tabs.map(x=>x[0]),['balance','weekly','capacity','connections','explore']);
+ assert.deepEqual(group.tabs.map(x=>x[0]),['balance','weekly','capacity','connections','explore','report']);
  assert.equal(group.tabs.some(([id])=>id==='intelligence'),false);
  const tabs=insights750Subtabs('insights','balance');
  assert.match(tabs,/Life Balance/);

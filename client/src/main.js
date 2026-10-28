@@ -131,6 +131,8 @@ import {insightsStressView,insightsEnergyView} from './insights-wellness.js';
 import {fitnessInsightsView} from './insights-fitness.js';
 import {buildProductivityInsights,productivityInsightsView} from './insights-productivity.js';
 import {inspectTimelineFiles,manualPlaceVisit,mergePlaces,placesInsightsView} from './insights-places.js';
+import {reportSetupView,reportDocument,reportEvidence,reportRecommendations,rankEvidenceLocally} from './life-report-v577594018.js';
+import './life-report-v577594018.css';
 import {reviewImportHub} from './review-import-hub.js';
 import {smartImportHubView,inspectSmartFiles,collectFolderFiles,committedSmartImport,recheckHealthArchiveEntries,smartImportGroups,SMART_IMPORT_KINDS,SMART_IMPORT_SOURCES} from './smart-import-hub-v49.js';
 import {sportsInsightsView,sportsPeriodWindow,sportsShiftAnchor,SPORTS_MODES} from './sports-insights.js';
@@ -427,6 +429,7 @@ const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.c
 if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','shopping','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
 if(!bootView&&!bootCapture&&calmLastView?.insight&&(calmLastView.insight==='touch'||INSIGHT_TABS.some(v=>v.id===calmLastView.insight)))insightTab=calmLastView.insight;
 if(!bootView&&!bootCapture&&calmLastView?.finance&&FINANCE_TABS.some(v=>v.title===calmLastView.finance))financePane=calmLastView.finance;
+let lifeReportSettings={period:'year',finance:false,places:false,rankedIds:[],aiStatus:''};
 let calmNavGroup=['shopping','templates','projects','overview','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'||tab==='recovery'?'insights':tab==='finance'?'finance':'';
 let financeSankeyFocus='all',financeMerchantSelected='';
 let financePaceCompare='previous',financeBudgetMonth=new Date().toLocaleDateString('sv-SE').slice(0,7);
@@ -2073,7 +2076,7 @@ function insightsScreen(){
  const model=(insightTab==='sleep'||insightTab==='places')?cachedSleepInsights(state?.healthImports||{},today,insightPeriod):null;
  const healthIds=['sleep','energy','stress','body'];
  const healthMode=healthIds.includes(insightTab);
- const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['timejournal','Zeitjournal','clock'],['nutrition','Ernährung','food'],['touch','Berührung','heart'],['habits','Habits','checkSquare'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark']];
+ const compactInsights=[['balance','Balance Radar','compass'],['feelings','Gefühlswelt','heart'],['timejournal','Zeitjournal','clock'],['nutrition','Ernährung','food'],['touch','Berührung','heart'],['habits','Habits','checkSquare'],['connections','Zusammenhänge','spark'],['sleep','Gesundheit','heart'],['activity','Aktivität','activity'],['places','Orte','compass'],['focus','Produktivität','target'],['worktime','Arbeitszeit','clock'],['explore','Explore','spark'],['report','Life Report','layers']];
  const tabs=compactInsights.map(([id,label,icon])=>`<button type="button" class="calm-insight-tab ${(id==='sleep'?healthMode:insightTab===id)?'selected':''}" data-action="insights-tab" data-id="${id}" aria-pressed="${id==='sleep'?healthMode:insightTab===id}">${ico(icon,16)}<span>${label}</span></button>`).join('');
  const healthChoices=healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
@@ -2297,6 +2300,12 @@ function render(){
  if(performanceTrace.enabled&&typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(()=>performanceTrace.end('Render bis Darstellung',tab,renderMeasurement)));
 }
 function bind() {
+ const reportPeriodControl=app.querySelector('#clp-period');
+ if(reportPeriodControl)reportPeriodControl.onchange=()=>{lifeReportSettings.period=reportPeriodControl.value;lifeReportSettings.rankedIds=[];render();};
+ const reportFinanceControl=app.querySelector('#clp-finance');
+ if(reportFinanceControl)reportFinanceControl.onchange=()=>{lifeReportSettings.finance=reportFinanceControl.checked;lifeReportSettings.rankedIds=[];render();};
+ const reportPlacesControl=app.querySelector('#clp-places');
+ if(reportPlacesControl)reportPlacesControl.onchange=()=>{lifeReportSettings.places=reportPlacesControl.checked;lifeReportSettings.rankedIds=[];render();};
  const quickCategory=app.querySelector('#pj92-current-category');if(quickCategory)quickCategory.onchange=()=>{worktimeSelectedCategory=quickCategory.value;};
  const timeForm=app.querySelector('#pj92-time-form');if(timeForm)timeForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(timeForm);const conv=v=>new Date(String(v)).toISOString();const entry=validTimeEntry({id:fd.get('id')||undefined,start:conv(fd.get('start')),end:conv(fd.get('end')),category:String(fd.get('category')),title:fd.get('title'),project:fd.get('project'),updatedAt:stamp()});journalSyncStatus='lokal';await mutate(s=>putTimeEntry(s,entry));timeJournalShowForm=false;timeJournalEditId='';toast('Zeitintervall gespeichert.');}catch(ex){toast(ex.message,true);}};
  const energyGoalForm=app.querySelector('#pj575-energy-form');if(energyGoalForm)energyGoalForm.onsubmit=async ev=>{
@@ -3339,6 +3348,43 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
+ if(action==='clp-preview'){
+  if(!state)return;
+  const params={...lifeReportSettings,now:localDate()};
+  const facts=reportEvidence(state,params).facts;
+  const guidance=reportRecommendations(state,params).map(a=>({id:a.id,text:a.observation,detail:a.suggestion}));
+  const evidence=[...facts,...guidance];
+  const allow=lifeReportSettings.rankedIds?.length===evidence.length&&evidence.every(f=>lifeReportSettings.rankedIds.includes(f.id));
+  // Open synchronously from the user click to avoid the popup blocker.
+  const reportWindow=window.open('','_blank');
+  if(!reportWindow){toast('Druckvorschau blockiert. Bitte Pop-ups für Compass erlauben.',true);return;}
+  try{
+   reportWindow.opener=null;
+   reportWindow.document.open();
+   reportWindow.document.write(reportDocument(state,{...lifeReportSettings,rankedIds:allow?lifeReportSettings.rankedIds:[],now:localDate()}));
+   reportWindow.document.close();
+  }catch(ex){reportWindow.close();toast('Report konnte nicht erstellt werden: '+ex.message,true);}
+  return;
+ }
+ if(action==='clp-ai'){
+  if(!state)return;
+  const params={...lifeReportSettings,now:localDate()};
+  const facts=reportEvidence(state,params).facts;
+  const guidance=reportRecommendations(state,params).map(a=>({id:a.id,text:a.observation,detail:a.suggestion}));
+  const evidence=[...facts,...guidance];
+  if(!evidence.length){lifeReportSettings.aiStatus='Noch keine belegten Beobachtungen.';render();return;}
+  if(!confirm('Nur die belegten, aggregierten Beobachtungen und daraus abgeleiteten Empfehlungen an LM Studio auf diesem Gerät (127.0.0.1) senden? Die lokale KI darf priorisieren, keine neuen Fakten oder Ratschläge erzeugen.'))return;
+  lifeReportSettings.aiStatus='Lokale KI prüft die Reihenfolge der vorhandenen Fakten.';render();
+  try{lifeReportSettings.rankedIds=await rankEvidenceLocally(evidence);lifeReportSettings.aiStatus='Beobachtungen und Empfehlungen lokal priorisiert. Keine neuen Aussagen erzeugt.';}
+  catch(ex){lifeReportSettings.rankedIds=[];lifeReportSettings.aiStatus='Lokale Priorisierung nicht verfügbar: '+ex.message+'. Regelbasierte Reihenfolge bleibt erhalten.';}
+  render();return;
+ }
+ if(action==='clp-refresh'){
+   lifeReportSettings.aiStatus='Compass-Daten werden nach bestehenden Verbindungen aktualisiert. Für Garmin/Fitdays ggf. manuell importieren.';render();
+   try{if(authToken){await reloadHealth();await reloadWatchSessions();}lifeReportSettings.aiStatus='Bestehende Compass-Verbindungen geprüft. Garmin-, Fitdays-, Bank- und Timeline-Importe können weiterhin fehlen.';}
+   catch(ex){lifeReportSettings.aiStatus='Nicht alle Verbindungen erreichbar: '+ex.message;}
+   render();return;
+ }
  if(action==='outlook724-fetch'){
   const key=app.querySelector('#outlook724-key');if(key)outlook724Token=key.value.trim();
   const port=app.querySelector('#outlook724-port');if(port)outlook724Port=Number(port.value)||8765;

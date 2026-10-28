@@ -4,7 +4,7 @@
  */
 export const INSIGHTS750_GROUPS=Object.freeze([
  {id:'intelligence',title:'Übersicht & Intelligence',icon:'layers',default:'balance',tabs:[
-  ['balance','Life Balance'],['weekly','Wochenkompass'],['capacity','Fristen & Kapazität'],['connections','Zusammenhänge'],['explore','Explore']]},
+  ['balance','Life Balance'],['weekly','Wochenkompass'],['capacity','Fristen & Kapazität'],['connections','Zusammenhänge'],['explore','Explore'],['report','Life Report']]},
  {id:'health',title:'Gesundheit & Körper',icon:'heart',default:'sleep',tabs:[
   ['sleep','Schlaf'],['energy','Body Battery'],['stress','Stress'],['body','Körperanalyse'],['strength','Krafttraining'],['nutrition','Ernährung'],['activity','Aktivitäten']]},
  {id:'life',title:'Leben & Orte',icon:'compass',default:'feelings',tabs:[

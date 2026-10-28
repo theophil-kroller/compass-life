@@ -64,6 +64,7 @@ import { compass594014FlaxTileRelease } from './compass594014-flax-tile-release.
 import { compass594015SmoothieEnergyRelease } from './compass594015-smoothie-energy-release.js';
 import { compass594016FoodBasicsRelease } from './compass594016FoodBasicsRelease.js';
 import { compass594017NutritionFocusRelease } from './compass594017-nutrition-focus-release.js';
+import { compass594018LifeReportRelease } from './compass594018-life-report-release.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -147,4 +148,5 @@ compassConfig.plugins.push(compass594014FlaxTileRelease());
 compassConfig.plugins.push(compass594015SmoothieEnergyRelease());
 compassConfig.plugins.push(compass594016FoodBasicsRelease());
 compassConfig.plugins.push(compass594017NutritionFocusRelease());
+compassConfig.plugins.push(compass594018LifeReportRelease());
 export default compassConfig;
