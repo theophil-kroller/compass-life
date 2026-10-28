@@ -39,13 +39,17 @@ export function annualWellnessAtlas(state,w){
   if(valid(p.stress)&&p.stress>=0&&p.stress<=100){z.stress+=p.stress;z.sN++;zones[p.stress<25?0:p.stress<50?1:p.stress<75?2:3]++;}
  }
  const days=[...groups.values()].sort((a,b)=>a.day.localeCompare(b.day)),battery=days.filter(x=>x.hi!==null),outputs=[];
- if(battery.length>=3){const left=60,right=970,top=30,bottom=270,barW=Math.max(1,(right-left)/battery.length);
-  let body='';battery.forEach((x,i)=>{const xx=left+i*barW+barW*.15,ww=Math.max(.7,barW*.68),yy=bottom-x.hi*(bottom-top)/100;
-   body+=paint(xx,yy,ww,bottom-yy,'#8dc7b2',0);body+=`<circle cx="${xx+ww/2}" cy="${yy}" r="${Math.min(3,barW/2)}" fill="#2d826e"/>`;body+=`<circle cx="${xx+ww/2}" cy="${bottom-x.lo*(bottom-top)/100}" r="${Math.min(3,barW/2)}" fill="#b87c5b"/>`;});
-  body+=line(left,bottom,right,bottom)+txt(left,290,battery[0].day,12)+txt(right,290,battery.at(-1).day,12,'#426356','end');
-  [0,25,50,75,100].forEach(v=>body+=txt(12,bottom-v*(bottom-top)/100+4,String(v),12)+line(left,bottom-v*(bottom-top)/100,right,bottom-v*(bottom-top)/100,'#e8efeb'));
-  // Grid belongs behind marks visually; draw the baseline again.
-  outputs.push({label:'Body Battery · Tageshöchst- und Tiefstwerte',svg:chart(body,`Body Battery für ${battery.length} dokumentierte Tage`,980,320),caption:`${battery.length} Tage mit Garmin-Body-Battery-Werten. Hellgrün: Tageshoch, Rost: Tagestief; keine Interpolation.`});}
+ if(battery.length>=3){const left=60,right=970,top=33,bottom=263;
+  const first=Date.parse(w.start+'T12:00:00Z'),end=Date.parse(w.end+'T12:00:00Z'),span=Math.max(1,end-first),X=day=>left+(Date.parse(day+'T12:00:00Z')-first)/span*(right-left),barW=Math.max(1,Math.min(4,(right-left)/(Math.max(1,battery.length))*.72));
+  let grid='';for(const level of [0,25,50,75,100]){const y=bottom-level*(bottom-top)/100;grid+=line(left,y,right,y,'#e8efeb')+txt(12,y+4,String(level),12);}
+  let cursor=w.start.slice(0,7)+'-01';if(cursor<w.start){const d=new Date(cursor+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+1);cursor=d.toISOString().slice(0,10);}
+  const monthNames=['Jän','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  while(cursor<=w.end){const x=X(cursor);grid+=line(x,top,x,bottom,'#cddfd2')+txt(x+3,280,`${monthNames[Number(cursor.slice(5,7))-1]} ${cursor.slice(2,4)}`,12);const d=new Date(cursor+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+1);cursor=d.toISOString().slice(0,10);}
+  let marks='';battery.forEach(x=>{const xx=X(x.day),hiY=bottom-x.hi*(bottom-top)/100,loY=bottom-x.lo*(bottom-top)/100;
+   marks+=line(xx,hiY,xx,loY,'#8dc7b2')+`<circle cx="${xx.toFixed(2)}" cy="${hiY.toFixed(2)}" r="2.5" fill="#2d826e"/>`+`<circle cx="${xx.toFixed(2)}" cy="${loY.toFixed(2)}" r="2.5" fill="#b87c5b"/>`;});
+  const avgHi=battery.reduce((s,x)=>s+x.hi,0)/battery.length,avgLo=battery.reduce((s,x)=>s+x.lo,0)/battery.length;
+  const legend=txt(left,321,`Ø Tageshoch ${fmt(avgHi)} / 100 · Ø Tagestief ${fmt(avgLo)} / 100 · ${battery.length} Tage`,17,'#3e6b5c');
+  outputs.push({label:'Body Battery · Jahresverlauf mit Monatsgrenzen',svg:chart(grid+marks+line(left,bottom,right,bottom)+legend,`Body Battery mit Monatsgrenzen, ${battery.length} Tage`,980,350),caption:`Garmin-Body-Battery-Tageshoch und -tief als persönliche Zeitreihe. Ø Tageshoch ${fmt(avgHi)}, Ø Tagestief ${fmt(avgLo)}; Nachtaufladung erfordert separate Schlaf/Wach-Phasenwerte.`});}
  const total=zones.reduce((a,b)=>a+b,0);
  if(total>=10){const zNames=['Ruhe','Niedrig','Mittel','Hoch'],zColor=['#438d80','#a6c9a5','#dcb36a','#c8766b'];
   let left=65;const bars=zones.map((n,i)=>{const width=n/total*845,x=left;left+=width;return paint(x,80,width,58,zColor[i],0)}).join('');
