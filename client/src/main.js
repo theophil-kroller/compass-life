@@ -133,6 +133,7 @@ import {buildProductivityInsights,productivityInsightsView} from './insights-pro
 import {inspectTimelineFiles,manualPlaceVisit,mergePlaces,placesInsightsView} from './insights-places.js';
 import {reportSetupView,reportDocument,reportEvidence,reportRecommendations,rankEvidenceLocally} from './life-report-v577594018.js';
 import './life-report-v577594018.css';
+import {annualDocument,annualSetupView} from './life-annual-v577594019.js';
 import {reviewImportHub} from './review-import-hub.js';
 import {smartImportHubView,inspectSmartFiles,collectFolderFiles,committedSmartImport,recheckHealthArchiveEntries,smartImportGroups,SMART_IMPORT_KINDS,SMART_IMPORT_SOURCES} from './smart-import-hub-v49.js';
 import {sportsInsightsView,sportsPeriodWindow,sportsShiftAnchor,SPORTS_MODES} from './sports-insights.js';
@@ -429,7 +430,7 @@ const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.c
 if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','shopping','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
 if(!bootView&&!bootCapture&&calmLastView?.insight&&(calmLastView.insight==='touch'||INSIGHT_TABS.some(v=>v.id===calmLastView.insight)))insightTab=calmLastView.insight;
 if(!bootView&&!bootCapture&&calmLastView?.finance&&FINANCE_TABS.some(v=>v.title===calmLastView.finance))financePane=calmLastView.finance;
-let lifeReportSettings={period:'year',finance:false,places:false,rankedIds:[],aiStatus:''};
+let lifeReportSettings={period:'year',finance:false,places:false,people:false,feelings:false,rankedIds:[],aiStatus:''};
 let calmNavGroup=['shopping','templates','projects','overview','next','forecast','radar','flagged','hold','someday'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'||tab==='recovery'?'insights':tab==='finance'?'finance':'';
 let financeSankeyFocus='all',financeMerchantSelected='';
 let financePaceCompare='previous',financeBudgetMonth=new Date().toLocaleDateString('sv-SE').slice(0,7);
@@ -2306,6 +2307,7 @@ function bind() {
  if(reportFinanceControl)reportFinanceControl.onchange=()=>{lifeReportSettings.finance=reportFinanceControl.checked;lifeReportSettings.rankedIds=[];render();};
  const reportPlacesControl=app.querySelector('#clp-places');
  if(reportPlacesControl)reportPlacesControl.onchange=()=>{lifeReportSettings.places=reportPlacesControl.checked;lifeReportSettings.rankedIds=[];render();};
+ for(const key of ['people','feelings']){const control=app.querySelector('#clp-'+key);if(control)control.onchange=()=>{lifeReportSettings[key]=control.checked;lifeReportSettings.rankedIds=[];render();};}
  const quickCategory=app.querySelector('#pj92-current-category');if(quickCategory)quickCategory.onchange=()=>{worktimeSelectedCategory=quickCategory.value;};
  const timeForm=app.querySelector('#pj92-time-form');if(timeForm)timeForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(timeForm);const conv=v=>new Date(String(v)).toISOString();const entry=validTimeEntry({id:fd.get('id')||undefined,start:conv(fd.get('start')),end:conv(fd.get('end')),category:String(fd.get('category')),title:fd.get('title'),project:fd.get('project'),updatedAt:stamp()});journalSyncStatus='lokal';await mutate(s=>putTimeEntry(s,entry));timeJournalShowForm=false;timeJournalEditId='';toast('Zeitintervall gespeichert.');}catch(ex){toast(ex.message,true);}};
  const energyGoalForm=app.querySelector('#pj575-energy-form');if(energyGoalForm)energyGoalForm.onsubmit=async ev=>{
