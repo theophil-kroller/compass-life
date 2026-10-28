@@ -1,0 +1,5 @@
+/* Visible mobile shortcuts to lifecycle views created by the .40.8 release plugin. */
+.mobile-lifecycle-links{display:none;gap:6px;width:100%;order:10}
+.mobile-lifecycle-links button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;padding:8px 6px;border:1px solid #cbd9d1;border-radius:9px;background:#f5f8f6;color:#4f6f5b;font-size:12px;min-height:39px}
+.mobile-lifecycle-links button:last-child{background:#faf3f1;border-color:#e6d3ce;color:#946157}
+@media(max-width:760px){.tree-toolbar-actions{flex-wrap:wrap}.mobile-lifecycle-links{display:flex}.p48-destinations{display:flex;flex-wrap:wrap}.p48-destinations button{flex:1}}

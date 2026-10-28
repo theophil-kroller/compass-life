@@ -15,8 +15,19 @@ export function projectIsActive(state,projectId){const seen=new Set();let id=pro
 export function taskChildren(state,projectId,parentTaskId=null){return ordered(Object.values(state?.tasks||{}).filter(t=>!t.archived&&t.projectId===projectId&&(t.parentTaskId||null)===(parentTaskId||null)));}
 export function validTaskParent(state,taskId,projectId,parentTaskId){if(!parentTaskId)return true;const parent=state?.tasks?.[parentTaskId];if(!parent||parent.archived||parent.projectId!==projectId||taskId===parentTaskId)return false;const seen=new Set([taskId]);let next=parent;while(next){if(seen.has(next.id))return false;seen.add(next.id);next=next.parentTaskId?state.tasks[next.parentTaskId]:null;}return true;}
 export function hierarchicalProjectTasks(state,id){const result=[],seen=new Set();const items=projectTasks(state,id);const children=(parent)=>ordered(items.filter(t=>(t.parentTaskId||null)===parent));const visit=(t,depth)=>{if(seen.has(t.id))return;seen.add(t.id);result.push({...t,depth});for(const child of children(t.id))visit(child,depth+1)};for(const t of children(null))visit(t,0);for(const t of ordered(items))visit(t,0);return result;}
+/** Shopping-list entries are checklist data, never GTD Next Actions. */
+export function isShoppingItem(state,task){
+ let id=task?.projectId,seen=new Set();
+ while(id && !seen.has(id)){
+  seen.add(id);const p=state?.projects?.[id];if(!p)break;
+  if(p.kind==='folder' && /^(?:einkaufslisten?|shopping lists?)$/i.test(String(p.title||'').trim()))return true;
+  if(p.kind==='project' && /einkauf|shopping/i.test(String(p.title||'')))return true;
+  id=p.parentId||null;
+ }
+ return false;
+}
 export function isActionAvailable(state,t,day=localDate()){
- if(t.archived||t.completed||isTemplateTask(state,t)||(t.workflow||'next')!=='next'||(t.deferUntil&&t.deferUntil>day))return false;
+ if(t.archived||t.completed||isTemplateTask(state,t)||isShoppingItem(state,t)||(t.workflow||'next')!=='next'||(t.deferUntil&&t.deferUntil>day))return false;
  if(t.projectId&&!projectIsActive(state,t.projectId))return false;
  if(t.parentTaskId){const parent=state?.tasks?.[t.parentTaskId];if(parent&&(!parent.projectId||parent.projectId!==t.projectId||parent.completed||parent.archived))return false;}
  if(Object.values(state?.tasks||{}).some(child=>!child.archived&&!child.completed&&child.parentTaskId===t.id))return false;
@@ -44,8 +55,8 @@ export function validLocalTask(t){return Boolean(taskCounterValid(t)&&t&&typeof 
 export const taskPlain=t=>({id:t.id,title:t.title,note:t.note||'',plannedDate:t.plannedDate||null,dueDate:t.dueDate||null,category:t.category,completed:!!t.completed,archived:!!t.archived,workflow:t.workflow||'next',flagged:!!t.flagged,projectId:t.projectId||null,tags:t.tags||[],deferUntil:t.deferUntil||null,contextTags:t.contextTags||[],estimateMinutes:t.estimateMinutes??null,parentTaskId:t.parentTaskId||null,sortOrder:t.sortOrder??0,progressCurrent:t.progressCurrent??0,progressTarget:t.progressTarget??null});
 export const sameTask=(a,b)=>Boolean(a&&b&&JSON.stringify(taskPlain(a))===JSON.stringify(taskPlain(b)));
 export function localDate(d=new Date()){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
-export function tasksForDay(state,day){return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&(t.plannedDate===day||t.dueDate===day)).sort((a,b)=>Number(a.completed)-Number(b.completed)||a.title.localeCompare(b.title,'de'));}
-export function dueTasks(state,limit=120){return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!t.completed&&t.dueDate).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)||a.title.localeCompare(b.title,'de')).slice(0,limit);}
+export function tasksForDay(state,day){return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!isShoppingItem(state,t)&&(t.plannedDate===day||t.dueDate===day)).sort((a,b)=>Number(a.completed)-Number(b.completed)||a.title.localeCompare(b.title,'de'));}
+export function dueTasks(state,limit=120){return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!isShoppingItem(state,t)&&!t.completed&&t.dueDate).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)||a.title.localeCompare(b.title,'de')).slice(0,limit);}
 export function nextActions(state,day=localDate()){return Object.values(state?.tasks||{}).filter(t=>isActionAvailable(state,t,day)).sort((a,b)=>Number(!!b.flagged)-Number(!!a.flagged)||(a.dueDate||'9999').localeCompare(b.dueDate||'9999')||a.title.localeCompare(b.title,'de'));}
 export function flaggedTasks(state){return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!t.completed&&t.flagged===true).sort((a,b)=>a.title.localeCompare(b.title,'de'));}
 export function heldTasks(state){return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!t.completed&&['hold','waiting'].includes(t.workflow)).sort((a,b)=>a.title.localeCompare(b.title,'de'));}
