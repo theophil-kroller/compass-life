@@ -1,4 +1,4 @@
-/** Ars Vivendi Annual 0.5.77.59.40.19 — chronological, evidence-first print edition.
+/** Ars Vivendi Annual 0.5.77.59.40.20 (time-journal hotfix) — chronological, evidence-first print edition.
  * Extends the 40.18 report rather than replacing its proven data audit and recommendation engine.
  * Financial, location, relationship and emotional data only after independent opt-in.
  * Never exports or uploads report payload, and never imputes missing records.
@@ -113,7 +113,7 @@ export function annualDocument(state={},settings={}){
  // Time Journal: work versus leisure only on explicitly categorized sessions (not all free time).
  const logs=[...rows(state.timeJournal?.entries),...rows(state.quickWorktime?.sessions)].filter(x=>x&&!x.deleted&&day(x.start)>=w.start&&day(x.start)<=w.end&&Number.isFinite(Date.parse(x.start))&&Number.isFinite(Date.parse(x.end))&&Date.parse(x.end)>Date.parse(x.start));
  const journalByMonth=new Map();for(const e of logs){const length=(Date.parse(e.end)-Date.parse(e.start))/3600000;if(length>48)continue;const key=day(e.start).slice(0,7);const r=journalByMonth.get(key)||{work:0,rest:0,other:0};r[e.category==='work'?'work':['health','leisure','family'].includes(e.category)?'rest':'other']+=length;journalByMonth.set(key,r);}
- if(logs.length){const labels=[...journalByMonth].sort(),hours=sum=>labels.map(k=>({label:k.slice(2),value:journalByMonth.get(k)[sum]}));
+ if(journalByMonth.size){const labels=[...journalByMonth.keys()].sort(),hours=sum=>labels.map(k=>({label:k.slice(2),value:journalByMonth.get(k)?.[sum]??0}));
   S.push(page('II / RECORDED LIFE AREAS',`${title(2,'TIME ALLOCATION','Arbeit, Aktivitäten & Erholung','Diese Visualisierung zählt nur ausdrücklich erfasste Zeiteinträge; freie Zeit ohne Eintrag wird nicht bewertet.')}<div class="av19-stats">${card('Zeit-Einträge',String(logs.length),'Unabhängig von Excel-Arbeitszeit')}${card('Erfasste Arbeit',`${fmt(hours('work').reduce((a,b)=>a+b.value,0))} h`,'Nur Arbeitskategorie')}${card('Erfasste Freizeit/Erholung',`${fmt(hours('rest').reduce((a,b)=>a+b.value,0))} h`,'Sport, Familie, Gesundheit')}</div>${fig('Dokumentierte Arbeitszeit nach Monat',annualBars(hours('work'),{label:'Zeitjournal Arbeit',format:'Stunden'}),'Zeitjournal-Kategorien; nicht mit Excel-Zeiterfassung zu addieren.')}${fig('Dokumentierte Freizeit und Erholung nach Monat',annualBars(hours('rest'),{label:'Zeitjournal Freizeit',format:'Stunden',color:'#b39c68'}),'Nur aktiv protokollierte Sessions, kein Anspruch auf Vollständigkeit.')}`));
  }
  // Garmin: last year's nightly dots, HRV and stress.

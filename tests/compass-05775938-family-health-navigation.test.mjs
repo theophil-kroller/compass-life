@@ -75,13 +75,13 @@ test('new release transforms the real complete Vite chain, retains old shortcuts
  const cfg=readFileSync(resolve(root,'client/vite.config.js'),'utf8');
  const files=new Map([...cfg.matchAll(/import\s*\{\s*(\w+)\s*\}\s*from\s*'\.\/(.+?\.js)'/g)].map(m=>[m[1],m[2]]));
  const names=[...cfg.matchAll(/\b([a-zA-Z]\w*(?:Bridge|Release))\(\)/g)].map(m=>m[1]);
- assert.equal(names.at(-1),'compass594019AnnualRelease');
+ assert.equal(names.at(-1),'compass594020AnnualWorkmapRelease');
  let main=readFileSync(resolve(root,'client/src/main.js'),'utf8');
  let lock=readFileSync(resolve(root,'client/src/ars-vivendi-lock-v5775922.js'),'utf8');
  for(const name of names){const api=await import(pathToFileURL(resolve(root,'client',files.get(name))).href);const plugin=api[name]();
   for(const [where,source] of [['main',main],['lock',lock]]){const changed=plugin.transform(source,resolve(root,'client/src',where==='main'?'main.js':'ars-vivendi-lock-v5775922.js'));if(changed){if(where==='main')main=changed.code;else lock=changed.code;}}
  }
- for(const x of ['daynav38','balancePerspective38','fr371-plan','fr38-routine-save',"COMPASS_CLIENT_VERSION='0.5.77.59.40.19'"])assert.ok(main.includes(x),x);
+ for(const x of ['daynav38','balancePerspective38','fr371-plan','fr38-routine-save',"COMPASS_CLIENT_VERSION='0.5.77.59.40.20'"])assert.ok(main.includes(x),x);
  assert.match(lock,/Build 0\.5\.77\.59\.40/);
  execFileSync(process.execPath,['--input-type=module','--check'],{input:main});
 });

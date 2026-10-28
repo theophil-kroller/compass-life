@@ -231,7 +231,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.59.40.19';
+const COMPASS_CLIENT_VERSION='0.5.77.59.40.20';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -1120,7 +1120,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <h1 class="sr-only">${h(title)}</h1>${tab==='today'?`<div class="ctx42-date-row"><nav class="daynav38" aria-label="Tag auswählen"><button type="button" data-action="daynav38" data-id="previous" title="Vorheriger Tag" aria-label="Vorheriger Tag">‹</button><button type="button" data-action="daynav38" data-id="today" title="Zu Heute springen" aria-label="Heute anzeigen">${h(title)}</button><button type="button" data-action="daynav38" data-id="next" title="Nächster Tag" aria-label="Nächster Tag">›</button></nav>${locationCycle46(state)}</div>`:''}
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.19 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.20 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
 }
 
 
