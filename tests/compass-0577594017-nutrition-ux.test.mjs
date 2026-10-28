@@ -57,7 +57,7 @@ test('food editing opens expanded journal and synced view remains available',()=
 test('guarded transform changes versions, removes global Daily Dozen preface, retains existing views',()=>{
  const source=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
  const transformed=readFileSync(new URL('../transformed-main-preview.js',import.meta.url),'utf8');
- assert.ok(transformed.includes("const COMPASS_CLIENT_VERSION='0.5.77.59.40.23'"));
+ assert.ok(transformed.includes("const COMPASS_CLIENT_VERSION='0.5.77.59.40.24'"));
  assert.ok(transformed.includes('nutritionWorkspace4017(state'));
  assert.ok(!transformed.includes("return chrome((compass55Mode==='extended'&&insightTab==='nutrition'?dailyDozen5930View"));
  assert.ok(transformed.includes("kind==='fats'?nutritionFatView"));

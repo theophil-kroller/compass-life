@@ -5,6 +5,7 @@
  */
 import {reportReadiness,reportEvidence,reportRecommendations,reportWindow,pairedCorrelation} from './life-report-v577594018.js';
 import {annualChartAtlas} from './annual-chart-atlas-v4023.js';
+import {annualFatKnowledge,annualNutritionKnowledge,annualBodyKnowledge,annualFinanceKnowledge,ANNUAL_KNOWLEDGE_CSS} from './annual-knowledge-v4024.js';
 
 import {buildLifeBalanceRadar,buildLifeBalanceHistory,lifeBalanceRadarView} from './life-balance-radar-v563.js';
 import {renderSleepYearDistribution} from './sleep-year-v552.js';
@@ -219,6 +220,7 @@ export function annualDocument(state={},settings={}){
   S.push(page('IV / MUSCLE & STRENGTH',`${title(4,'STRENGTH INSIGHTS','Training & Muskelbalance','Aus bestätigten Garmin-/Coach-Sätzen berechnet. Originale Compass-Premium-Anatomie, statisch und druckfähig.')}<div class="av19-stats">${card('Trainingstage',String(strengthModel.trainingDays),'Garmin + Coach')}${card('Sätze mit Muskelzuordnung',String(strengthModel.knownSets),'Nur dokumentierte Sets')}${card('Offene Zuordnung',String(strengthModel.unassigned),'Unbekannt bleibt unbekannt')}</div><div class="av21-muscle-maps av22-muscle-maps">${fig('Vorderseite · Originalanatomie',fronts,'Rot: Hauptsätze · Gold: Nebenbeteiligung · Grau: nicht zugeordnet.')}${fig('Rückseite · Originalanatomie',backs,'Die Farbe beschreibt Satzbeteiligung, nicht Muskelwachstum oder EMG.')}</div>`,{}));
   if(strengthDots||groupBars)S.push(page('IV / STRENGTH PROGRESSION',`${title(4,'STRENGTH INSIGHTS','Training im Zeitverlauf','Dokumentierte Trainingstage und Hauptsatzverteilung; ohne Ergänzung fehlender Übungen.')}<div class="av19-stack">${fig('Trainingstage · Original-Dot-Plot',strengthDots,'Garmin und bestätigte Coach-Sätze.')}${fig('Muskelgruppen · klassifizierte Hauptsätze',groupBars,'Die Grafik enthält nur zugeordnete Sätze. Details siehe Trainingsjournal in Compass.')}</div>`));
  }
+ if(bmi.fitdays.length)S.push(...annualBodyKnowledge(bmi));
  S.push(...atlasPages(chartAtlas.sports,4));
  // Nutrition: 5 deliberately separated designed spreads, all based on actual journal.
  const food=entriesFor(state,w),dozen=annualDailyDozen(state,w);
@@ -237,6 +239,8 @@ export function annualDocument(state={},settings={}){
    S.push(page('V / ANTI-AGING EIGHT',`${title(5,'LONGEVITY','Anti-Aging Eight · acht konkrete Themen','Dokumentierte pflanzliche Ernährung und vorsichtige Orientierung nach Dr. Greger. Keine Biomarker- oder Lebensdauerprognose.')}<div class="av22-eight-grid">${aa.rows.map(x=>`<article class="av22-eight-item"><div class="av22-eight-head"><strong>${H(x.title)}</strong><span>${x.status==='observed'?'Dokumentiert':x.status==='partial'?'Teilinformation':x.status==='unmeasurable'?'Nicht messbar':'Nicht belegt'}</span></div><p>${H(x.value)}</p><small>${H(x.reason)}</small></article>`).join('')}</div>${essay('Beobachtung, keine medizinische Prognose',`Diese acht Themen wurden für den letzten erfassten Tag (${w.end}) geprüft. Sie sind keine acht messbaren Anti-Aging-Scores und dürfen nicht als Jahresstatistik interpretiert werden.`)}`));}
 
  }
+ S.push(...annualFatKnowledge(state,w));
+ S.push(...annualNutritionKnowledge(state,w));
  S.push(...atlasPages(chartAtlas.nutrition,5));
  // Finance: multi-panel + large sankey + monthly flow visualizations. No transfers as expense.
  const tx=settings.finance?inWindow(state.financeTransactions,w):[];
@@ -262,6 +266,7 @@ export function annualDocument(state={},settings={}){
   const stream=guard(()=>cvGraph(spendingStreamgraph(tx)));
   if(stream)S.push(page('VI / COMPOSITION',`${title(6,'SPENDING PATTERNS','Wofür das Geld eingesetzt wurde','Die Verteilung der erfassten Ausgaben über die Zeit.')}${fig('Streamgraph · Ausgabenkategorien',stream,'Bestehender Compass-Streamgraph. Keine Kausalität oder Bewertung des Konsums.')}`));
  }
+ if(tx.length&&settings.finance)S.push(...annualFinanceKnowledge(tx,w));
  // Sensitive person and feeling domains; never auto-included.
  const people=settings.people?Object.values(state.people||{}).filter(x=>x?.id&&x?.name):[];
  if(people.length){S.push(chapter(7,'HUMAN CONNECTIONS','Meine Menschen','Die Beziehungslandkarte dokumentiert Nähe-Einschätzungen. Sie bewertet keine Beziehungen.'));
@@ -299,7 +304,7 @@ export function annualDocument(state={},settings={}){
  const domains=inv.items.map(i=>`<tr><th>${H(i.label)}</th><td>${fmt(i.count,0)}</td><td>${i.sensitive?'Nur bei Freigabe':'Automatisch'}</td><td>${i.available?'Dokumentiert':'Nicht im Report / keine Werte'}</td></tr>`).join('');
  S.push(page('APPENDIX / EVIDENCE LEDGER',`${title(11,'METHOD & SOURCES','Methodik & Datenqualität','Vollständigkeit ist etwas anderes als Aktualität. Für externe Quellen existiert keine automatische Garantie des neuesten Stands.')}<h3>Datenquellen & Aktualität</h3><table class="av19-table"><thead><tr><th>Quelle</th><th>Datensätze</th><th>Letzter Wert</th><th>Prüfhinweis</th></tr></thead><tbody>${sources}</tbody></table><h3>Kapitelinventar</h3><table class="av19-table"><thead><tr><th>Bereich</th><th>Anzahl</th><th>Freigabe</th><th>Status</th></tr></thead><tbody>${domains}</tbody></table>${essay('Datenstand',`Berichtszeitraum: ${w.start} bis ${w.end}. Erstellt ${new Date().toLocaleString('de-AT')}. Keine unprotokollierte Garmin-, Fitdays-, Banken- oder Standort-Synchronisierung wird angenommen.`)}`));
  S.push(page('COLOPHON / PRIVATE EDITION',`<div class="av19-endmark">◈</div><h2 class="av19-colophon">Ars Vivendi</h2><p class="av19-colophon-sub">A record of moments. A record of choices. A record of a life.</p><div class="av19-close-rule"></div><p>Compass Life · ${H(dateRange)}</p><p class="av19-note">Dieser persönliche Report wurde lokal im entsperrten Browser erstellt. Ausdrucke und PDFs enthalten vertrauliche Informationen. Berechnete Auswertungen sind auf den dokumentierten Datenstand begrenzt. Die originale Grafikbibliothek bleibt für die einzelnen Fachperspektiven erhalten.</p>`));
- return `<!doctype html><html lang="de"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Compass · Ars Vivendi Annual · ${H(w.end)}</title><style>${ANNUAL_PRINT_CSS}</style></head><body><div class="av19-actions"><strong>ARS VIVENDI · PRIVATE ANNUAL</strong><span>Jahreschronik mit ${S.length} gestalteten Reportbögen</span><button type="button" id="av21-print" onclick="window.print()">Als PDF drucken</button><button type="button" onclick="(function(){const b=new Blob(['<!doctype html>'+document.documentElement.outerHTML],{type:'text/html;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='Compass-Ars-Vivendi-${H(w.end)}.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)})()">Offline-HTML sichern</button><small>Bei blockiertem Druckdialog: erst HTML lokal sichern und separat öffnen. Beim Drucken Kopf-/Fußzeilen aus, Hintergrundgrafiken an.</small></div><main class="av19-document">${S.join('')}</main></body></html>`;
+ return `<!doctype html><html lang="de"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Compass · Ars Vivendi Annual · ${H(w.end)}</title><style>${ANNUAL_PRINT_CSS+ANNUAL_KNOWLEDGE_CSS}</style></head><body><div class="av19-actions"><strong>ARS VIVENDI · PRIVATE ANNUAL</strong><span>Jahreschronik mit ${S.length} gestalteten Reportbögen</span><button type="button" id="av21-print" onclick="window.print()">Als PDF drucken</button><button type="button" onclick="(function(){const b=new Blob(['<!doctype html>'+document.documentElement.outerHTML],{type:'text/html;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='Compass-Ars-Vivendi-${H(w.end)}.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)})()">Offline-HTML sichern</button><small>Bei blockiertem Druckdialog: erst HTML lokal sichern und separat öffnen. Beim Drucken Kopf-/Fußzeilen aus, Hintergrundgrafiken an.</small></div><main class="av19-document">${S.join('')}</main></body></html>`;
 }
 export function annualSetupView(state={},settings={}){
  const inv=annualInventory(state,settings);
