@@ -72,6 +72,7 @@ import { compass594022AnnualPremiumReport } from './compass594022-annual-premium
 import { compass594023AnnualChartAtlas } from './compass594023-annual-chart-atlas.js';
 import { compass594024AnnualKnowledge } from './compass594024-annual-knowledge.js';
 import { compass594025EditorialAnnual } from './compass594025-editorial-annual.js';
+import { compass5940251SolarCoverHotfix } from './compass5940251-solar-cover-hotfix.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -157,5 +158,5 @@ compassConfig.plugins.push(compass594016FoodBasicsRelease());
 compassConfig.plugins.push(compass594017NutritionFocusRelease());
 compassConfig.plugins.push(compass594018LifeReportRelease());
 compassConfig.plugins.push(compass594019AnnualRelease());
-compassConfig.plugins.push(compass594020AnnualWorkmapRelease(),compass594021AnnualPrintFix(),compass594022AnnualPremiumReport(),compass594023AnnualChartAtlas(),compass594024AnnualKnowledge(),compass594025EditorialAnnual());
+compassConfig.plugins.push(compass594020AnnualWorkmapRelease(),compass594021AnnualPrintFix(),compass594022AnnualPremiumReport(),compass594023AnnualChartAtlas(),compass594024AnnualKnowledge(),compass594025EditorialAnnual(),compass5940251SolarCoverHotfix());
 export default compassConfig;
