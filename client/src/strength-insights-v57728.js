@@ -289,3 +289,9 @@ export function strengthInsightsView(state,{range='28',side='front',today=day(ne
  <section class="work-card"><div class="work-heading"><span>🗓️ Trainingsjournal</span><small>${m.sessions.length} Trainingseinheiten</small></div>${activityTable(m)}<p class="str728-note">Erneute Garmin-Imports ergänzen Einheiten ohne Doppelzählung: Für dieselbe Aktivität werden FIT-Einzelsätze und die CSV-Zusammenfassung anhand des Startzeitpunkts zusammengeführt. An einem noch laufenden Tag gelten alle Ergebnisse als Zwischenstand; Exakt zugeordnete Coach-/Garmin-Satzpaare zählen nicht doppelt; unsichere Überschneidungen bleiben sichtbar.</p></section>
  </div>`;
 }
+
+/** Ars Vivendi archival SVG: bypasses async premium-anatomy replacement. */
+export function strengthPrintBodySvg(state,{range='365',today=day(new Date()),side='front'}={}){
+ const m=strengthPeriod(state,{range,today});
+ return bodySvg(m,side==='back'?'back':'front');
+}

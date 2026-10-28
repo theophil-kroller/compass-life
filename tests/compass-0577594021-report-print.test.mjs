@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {annualDocument,dailyMetricMeans} from '../client/src/life-annual-v577594019.js';
+import {strengthPrintBodySvg} from '../client/src/strength-insights-v57728.js';
+const dates=Array.from({length:1000},(_,i)=>({at:`2026-10-${String(i%28+1).padStart(2,'0')}T08:00:00Z`,stress:32+(i%17)}));
+const work=[...Array.from({length:20},(_,i)=>({day:`2026-10-${String(i+1).padStart(2,'0')}`,hours:7+i%4}))];
+const state={healthImports:{garminWellness:dates,garminNights:[{day:'2026-10-01',sleepMinutes:441}]},workTime:{days:work},strengthImports:{sessions:[]},timeJournal:{entries:[{id:'a',start:'2026-10-03T08:00:00Z',end:'2026-10-03T12:00:00Z',category:'work'}]}};
+const settings={period:'month',now:'2026-10-28'};
+test('Stress is aggregated by actual date (no 1000-node SVG) and retains source count',()=>{const html=annualDocument(state,settings);assert.match(html,/1000 dokumentierten Stress-Messpunkten/);assert.match(html,/Tagesmittel/);assert.ok((html.match(/<circle /g)||[]).length<150);});
+test('The work chart is selected by its plot label instead of the 24x24 clock icon',()=>{const html=annualDocument(state,settings);const section=html.match(/Compass · Arbeitszeit-Jahresgrafik[\s\S]{0,400}/)?.[0]||'';assert.match(section,/Wochenstunden/);assert.doesNotMatch(section,/viewBox=\"0 0 24 24\"/);});
+test('Private print view has a local HTML fallback if browser print is blocked',()=>{const html=annualDocument(state,settings);assert.match(html,/Offline-HTML sichern/);assert.match(html,/URL.createObjectURL/);assert.match(html,/@media print/);});
+test('The static muscle anatomy is never a loading placeholder',()=>{const svg=strengthPrintBodySvg({},{range:'28',today:'2026-10-28'});assert.match(svg,/<svg/);assert.match(svg,/<path /);assert.doesNotMatch(svg,/Anatomie wird geladen/);});
+test('Source release chain includes new 40.21 plugin',()=>{const vite=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');assert.match(vite,/compass594021AnnualPrintFix/);});
+test('Daily aggregation is deterministic and preserves observed day only',()=>{assert.deepEqual(dailyMetricMeans([{day:'2026-10-01',value:10},{day:'2026-10-01',value:30},{day:'2026-10-03',value:60}]),[{day:'2026-10-01',value:20,count:2},{day:'2026-10-03',value:60,count:1}]);});
