@@ -8,11 +8,12 @@ import {compass594013FlaxRelease} from '../client/compass594013-flax-release.js'
 const day='2026-10-27';
 const entry=(amount='1 TL (3 g)',note='Vor dem Schlucken gekaut (roh)')=>({id:'flax-1',foodId:'spar-bio-flaxseed',at:'2026-10-27T17:00:00',amount,note});
 const st=(entries=[])=>({nutritionJournal:{entries,customFoods:[]}});
-test('flax is a quick food tile with labelled 3g, 16kcal and yesterday timestamp action',()=>{
+test('flax is a reusable normal food tile with labelled 3g and 16kcal',()=>{
  const f=FOOD_PRESETS.find(f=>f.id==='spar-bio-flaxseed');
  assert.equal(f.group,'Snacks');assert.equal(f.defaultAmount,'1 TL (3 g)');
- assert.match(nutritionQuickView(st(),{}),/data-action="pj92-flax-yesterday" data-id="spar-bio-flaxseed"/);
- assert.match(nutritionQuickView(st(),{}),/nicht roh verzehren/);
+ assert.match(nutritionQuickView(st(),{}),/data-action="pj92-food-tap" data-id="spar-bio-flaxseed"/);
+ assert.doesNotMatch(nutritionQuickView(st(),{}),/pj92-flax-yesterday|pj92-flax-quick/);
+ assert.match(nutritionQuickView(st(),{}),/SPAR Bio-Leinsamen/);
  assert.deepEqual(nutritionKcalEstimate(f,'1 TL (3 g)'),{low:16,high:16,kind:'Schätzung'});
 });
 test('logged chewed 3g is 0.43 portion and not an intact full serving',()=>{
@@ -28,10 +29,11 @@ test('7g explicitly chewed counts one documented serving; timestamps not invente
  assert.equal(x.nutritionJournal.entries[0].at,'2026-10-27T17:00:00');
  assert.equal(nutrientEntry(nutritionFoods(x).find(f=>f.id==='spar-bio-flaxseed'),entry()).values.kcal,15.99);
 });
-test('runtime source has yesterday exact time interaction and partial progress label',()=>{
+test('runtime source has repeatable tile tap and generic journal timestamp editor',()=>{
  const main=readFileSync(new URL('../client/src/main.js',import.meta.url),'utf8');
- assert.match(main,/action==='pj92-flax-yesterday'/);
- assert.match(main,/window\.prompt\('Gestern: Um welche Uhrzeit/);
+ assert.match(main,/action==='pj92-food-tap'/);
+ assert.doesNotMatch(main,/pj92-flax-yesterday/);
+ assert.match(readFileSync(new URL('../client/src/personal-journal-v5692.js',import.meta.url),'utf8'),/name="at"/);
  const dozen=readFileSync(new URL('../client/src/daily-dozen-v57733.js',import.meta.url),'utf8');
  assert.match(dozen,/Teilportion:/);
  const p=compass594013FlaxRelease();

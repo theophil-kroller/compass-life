@@ -3432,19 +3432,10 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
   catch(ex){toast('Kopieren nicht möglich. Browser-Zwischenablage bitte erlauben.',true);}
   return;
  }
- if(action==='pj92-food-tap'||action==='pj92-flax-yesterday'){
+ if(action==='pj92-food-tap'){
   try{
-   const isFlax=id==='spar-bio-flaxseed'||action==='pj92-flax-yesterday';
-   if(action==='pj92-flax-yesterday'&&id!=='spar-bio-flaxseed')return;
-   let at=stamp();
-   if(action==='pj92-flax-yesterday'){
-    const entered=window.prompt('Gestern: Um welche Uhrzeit hast du die Leinsamen gegessen? (HH:MM)');
-    if(entered===null)return;
-    const match=/^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(entered).trim());
-    if(!match)return toast('Bitte die tatsächliche Uhrzeit als HH:MM eingeben.',true);
-    const previous=new Date();previous.setDate(previous.getDate()-1);previous.setHours(Number(match[1]),Number(match[2]),0,0);at=previous.toISOString();
-   }
-   const item={id:crypto.randomUUID(),foodId:isFlax?'spar-bio-flaxseed':id,at,...(isFlax?{amount:'1 TL (3 g)',note:'Vor dem Schlucken gekaut (roh). Packungswarnung: nur zum Kochen/Backen.'}:{})};
+   const isFlax=id==='spar-bio-flaxseed';
+   const item={id:crypto.randomUUID(),foodId:id,at:stamp(),...(isFlax?{amount:'1 TL (3 g)',note:'Vor dem Schlucken gekaut (roh). Packungswarnung: nur zum Kochen/Backen.'}:{})};
    if(!state){await vault.appendSealedNutrition(item);foodQueuedCount++;nutritionQuickOpen=false;toast('Ernährung verschlüsselt vorgemerkt.');}
    else{journalSyncStatus='lokal';await mutate(s=>addNutrition(s,item));nutritionQuickOpen=false;
      const goal=dayEnergyStatus(state,{foods:nutritionFoods(state),estimate:nutritionKcalEstimate});

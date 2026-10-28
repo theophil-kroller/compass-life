@@ -39,8 +39,3 @@
 .t577-person-strip button{flex-shrink:0;}
 .t577-top-trigger{font-size:17px;}
 @media(max-width:560px){.t577-multi-grid{grid-template-columns:repeat(3,minmax(0,1fr));}.t577-person-strip{align-items:flex-start;flex-direction:column;}}
-
-/* .40.13 · selected flaxseed: capture and retroactive exact time */
-.pj92-flax-quick{display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px;padding:5px 7px 9px;font-size:11px;color:#556f5e}
-.pj92-flax-quick button{border:1px solid #c9dece;background:#eef5ef;color:#315c43;border-radius:7px;padding:5px 8px;cursor:pointer;font:inherit}
-.pj92-flax-quick small:last-child{flex-basis:100%;color:#8a5846}
