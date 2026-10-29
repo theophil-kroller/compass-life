@@ -97,6 +97,19 @@ let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLast
    return {code:s,map:null};
   }
   if(path.endsWith('/client/src/personal-journal-v5692.js')){
+   // The full-source security release integrates these merges directly into the
+   // imported source. Historic transform-chain tests also run this bridge.
+   // Recognize a *complete* prior integration; never duplicate it or silently
+   // accept a partially integrated journal (which could discard user data).
+   const priorMarkers=[
+    "import {mergeDreamJournals} from './dream-journal-v57743.js';",
+    "import {mergeReceiptJournals} from './receipt-gpt-v57743.js';",
+    'dreamJournal:mergeDreamJournals(lc.dreamJournal,rc.dreamJournal),',
+    'receiptJournal:mergeReceiptJournals(lc.receiptJournal,rc.receiptJournal),'
+   ];
+   const present=priorMarkers.map(marker=>s.split(marker).length-1);
+   if(present.every(count=>count===1))return null;
+   if(present.some(count=>count!==0))throw Error('Compass .43: partial or duplicate E2EE journal merge integration; refusing unsafe transform');
    ch("import {mergeStrengthJournal} from './strength-device-sync-v57742.js';","import {mergeStrengthJournal} from './strength-device-sync-v57742.js';\nimport {mergeDreamJournals} from './dream-journal-v57743.js';\nimport {mergeReceiptJournals} from './receipt-gpt-v57743.js';",'journal merge imports');
    ch('strengthJournal:mergeStrengthJournal(lc.strengthJournal,rc.strengthJournal),',
       'strengthJournal:mergeStrengthJournal(lc.strengthJournal,rc.strengthJournal),\n  dreamJournal:mergeDreamJournals(lc.dreamJournal,rc.dreamJournal),\n  receiptJournal:mergeReceiptJournals(lc.receiptJournal,rc.receiptJournal),','E2EE merge with tombstones');
