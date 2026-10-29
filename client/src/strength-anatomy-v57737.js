@@ -61,7 +61,25 @@ export const EXERCISE_ANATOMY=Object.freeze({
  'close-grip-bench':r(['triceps'],['pectoral_lower','deltoid_front']),
  'reverse-curl':r(['brachialis','forearm_ext'],['biceps']),
  'concentration-curl':r(['biceps'],['brachialis']),
- 'seated-dumbbell-press':r(['deltoid_front'],['deltoid_side','triceps','trapezius_upper'])
+ 'seated-dumbbell-press':r(['deltoid_front'],['deltoid_side','triceps','trapezius_upper']),
+ 'ab-wheel-kneeling':r(['rectus_abdominis','obliques'],['deltoid_front','latissimus']),
+ 'dumbbell-floor-press':r(['pectoral_lower'],['triceps','deltoid_front']),
+ 'dumbbell-pullover':r(['latissimus'],['pectoral_lower','triceps']),
+ 'dumbbell-lateral-raise':r(['deltoid_side'],['trapezius_upper']),
+ 'goblet-squat':r(['quadriceps','glute_max'],['rectus_abdominis','adductors']),
+ 'dumbbell-romanian-deadlift':r(['hamstrings','glute_max'],['erector_spinae']),
+ 'dumbbell-shoulder-press':r(['deltoid_front'],['deltoid_side','triceps']),
+ 'barbell-overhead-press':r(['deltoid_front'],['triceps','deltoid_side','rectus_abdominis']),
+ 'cable-straight-arm-pulldown':r(['latissimus'],['triceps']),
+ 'cable-single-arm-row':r(['latissimus','rhomboids'],['biceps','deltoid_rear']),
+ 'cable-lateral-raise':r(['deltoid_side'],['trapezius_upper']),
+ 'cable-rear-delt-fly':r(['deltoid_rear'],['rhomboids','trapezius_mid']),
+ 'cable-crunch':r(['rectus_abdominis'],['obliques']),
+ 'cable-woodchop':r(['obliques'],['rectus_abdominis']),
+ 'decline-pushup':r(['pectoral_upper'],['triceps','deltoid_front','rectus_abdominis']),
+ 'incline-pushup':r(['pectoral_lower'],['triceps','deltoid_front']),
+ 'pike-pushup':r(['deltoid_front'],['triceps','deltoid_side']),
+ 'prone-y-raise':r(['trapezius_mid'],['deltoid_rear','rhomboids'])
 });
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n.toLocaleString('de-AT',{maximumFractionDigits:1});

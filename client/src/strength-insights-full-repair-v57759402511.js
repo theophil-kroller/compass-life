@@ -19,17 +19,18 @@ export function strengthInsightsView(state,opts={}){
  // renders both sides and offers individual muscle details on hover/focus.
  const atlas=strengthPremiumMap(period,null,'strength',side);
  const withoutSilhouette=html.slice(0,from)+atlas+'\n '+html.slice(to);
- // Keep legacy imports byte-for-byte unchanged: old bridge contract tests depend
- // on the original module. Upgrade the read-only CSV journal rows only here.
- const csvRows=[...period.sessions].reverse().slice(0,40).filter(s=>s.summaryOnly);
- let csvIndex=0;
+ // Historic CSV, Garmin/FIT and coach sessions use the SAME saved session ID.
+ // A pencil is attached to every rendered row, not only the newest CSV import.
+ const journalSessions=[...period.sessions].reverse().slice(0,40);
+ let rowIndex=0;
  const escapedId=x=>String(x??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
- const journalAction=withoutSilhouette.replace(/<p class="str728-note">Für Muskelgruppen und Einzelgewichte die Original-FIT-Datei dieser Aktivität exportieren\.<\/p><\/section>/g,()=>{
-  const entry=csvRows[csvIndex++];
-  if(!entry)throw Error('CSV-Editor: Inkonsistente Session-Vorschau.');
-  return `<p class="str728-note">Übungen, Wiederholungen und Gewichte kannst du hier manuell nachtragen – ohne weiteren FIT-Export.</p><button type="button" class="secondary-btn str732-quick-edit" data-action="str732-edit" data-id="${escapedId(entry.id)}">✎ Übungen &amp; Gewichte nachtragen</button></section>`;
- });
- if(csvIndex!==csvRows.length)throw Error('CSV-Editor: Die Journal-Zuordnung ist nicht eindeutig.');
+ const journalAction=withoutSilhouette.replace(/(<section class="str728-session"><header>[\s\S]*?)(<\/header>)/g,(_full,head,tail)=>{
+  const session=journalSessions[rowIndex++];
+  if(!session)throw Error('Trainingsjournal: Session-Zuordnung beim Bearbeiten inkonsistent.');
+  return head+`<button type="button" class="str732-session-pencil" data-action="str732-edit" data-id="${escapedId(session.id)}" aria-label="Training vom ${escapedId(session.day)} bearbeiten" title="Übungen und Gewichte bearbeiten">✎</button>`+tail;
+ }).replaceAll('Für Muskelgruppen und Einzelgewichte die Original-FIT-Datei dieser Aktivität exportieren.',
+  'Übungen, Wiederholungen und Gewichte kannst du mit dem Stift direkt nachtragen.');
+ if(rowIndex!==journalSessions.length)throw Error('Trainingsjournal: Anzahl der bearbeitbaren Sessions stimmt nicht überein.');
  // The frozen full-source entry bypassed the historical bridge that mounted
  // the existing per-set editor. Restore it *without* modifying Garmin imports.
  // Keep it above the large atlas so newly imported CSV-only sessions remain

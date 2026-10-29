@@ -21,3 +21,9 @@
 /* .40.25.15: repair direct editable CSV session CTA */
 .str728-session .str732-quick-edit{margin-top:10px;max-width:100%;white-space:normal;text-align:left}
 .str728-root .str732-editor{scroll-margin-top:110px}
+
+/* .40.25.16: edit EACH Garmin / Coach / historical journal session in place. */
+.str728-session header .str732-session-pencil{flex:0 0 36px;min-width:36px;min-height:34px;border:1px solid #c9d8d4;border-radius:9px;background:#edf5f1;color:#205c4f;font-size:1.12rem;font-weight:700;cursor:pointer;line-height:1}
+.str728-session header .str732-session-pencil:hover,.str728-session header .str732-session-pencil:focus-visible{background:#cfe9e1;outline:2px solid #69a795;outline-offset:1px}
+.str728-session header{align-items:center}
+.str732-set select{min-height:44px}

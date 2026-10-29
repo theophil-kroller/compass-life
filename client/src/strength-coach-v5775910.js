@@ -5,7 +5,7 @@
 import {strengthPeriod} from './strength-insights-v57728.js';
 import {strengthCoachHealthContext} from './strength-coach-recovery-v5775926.js';
 import {detailedMuscleData} from './strength-anatomy-v57737.js';
-import {EXERCISES} from './strength-editor-v57732.js';
+import {EXERCISES,strengthExerciseLabel} from './strength-editor-v57732.js';
 import './strength-coach-v5775910.css';
 import {resumableGuidedSession,guidedPlanFromSession} from './strength-workout-resume-v57759405.js';
 import './strength-workout-resume-v57759405.css';
@@ -81,7 +81,7 @@ export function proposeStrengthTraining(state,{goal='balance',equipment='home',t
    const daysSince=last[muscle]&&/^\d{4}-\d{2}-\d{2}$/.test(last[muscle])?Math.max(0,Math.round((Date.parse((today||new Date().toISOString().slice(0,10))+'T12:00:00Z')-Date.parse(last[muscle]+'T12:00:00Z'))/86400000)):null;
    const recency=mapped>0&&daysSince!==null?(daysSince>=7?1:daysSince<=1?-1:0):0;
    const fine=anatomy.regions?.[muscle==='back'?'latissimus':muscle==='shoulders'?'deltoid_side':'rectus_abdominis']?.primary||0;
-   return {id,title:item.name,muscle,place,kind,cue,priority,score:priority+focus+balance+recency-Math.min(4,fine*.25)-i*.01,
+   return {id,title:typeof strengthExerciseLabel==='function'?strengthExerciseLabel(id):item.name,muscle,place,kind,cue,priority,score:priority+focus+balance+recency-Math.min(4,fine*.25)-i*.01,
     explanation:mapped>0?`${GROUPS[muscle]}: ${exposure} selbst zugeordnete Hauptsätze in 28 Tagen${daysSince!==null?` · zuletzt vor ${daysSince} Tagen`:''}. Nicht erfasste Einheiten bleiben unbekannt.`:`Für ${profile.label} geeignet; noch keine ausreichende Muskelhistorie zum Vergleich.`};
  }).sort((a,b)=>b.score-a.score);
  const selected=[],byMuscle=new Map();
@@ -298,7 +298,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   const rirModel=typeof rirProgression46==='function'?rirProgression46(state,id,{today:todayValue,reps,plannedSets:typeof adjustedSets==='number'?adjustedSets:sets,lastKg:progression.lastKg,equipment:location,goal:selectedGoal,strongLifts,healthAttention:health?.attention===true,deload:cycle?.deloadActive===true,weightStepKg:location==='gym'?2.5:2}):null;
   const corrected=rirModel?{...progression,action:rirModel.action,suggestedKg:rirModel.suggestedKg,message:rirModel.message}:progression;
   if(rirModel)reason+=' RIR-Progression auf bestätigten Arbeitssätzen; Vorschlag jederzeit anpassbar.';
-  return {id,title:item.name||id,primary,kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets,reps,restSeconds,ageDays:age,sevenSets:seven,
+  return {id,title:typeof strengthExerciseLabel==='function'?strengthExerciseLabel(id):(item.name||id),primary,kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets,reps,restSeconds,ageDays:age,sevenSets:seven,
    lastKg:corrected.lastKg,suggestedKg:corrected.suggestedKg,progressionAction:corrected.action,progressionHint:corrected.message,targetReps:rirModel?.targetReps||null,rirConfidence:rirModel?.confidence||null,
    reason,order:index+1};
  });
