@@ -41,6 +41,6 @@ test('Missing values have no artificial medical diagnosis or Body Type classific
 });
 test('new interpretation view is additive to body transformation and genuine Fitdays figure',()=>{
  const main=readFileSync(new URL('../client/src/main-full-v57759402510.js',import.meta.url),'utf8');
- assert.match(main,/bodyTransformationView\(state,[\s\S]+?\+fitdaysInterpretationView\([\s\S]+?\+healthBodyView\(/);
+ assert.match(main,/fitdaysInterpretationView\([\s\S]+?\+bodyTransformationView\(state,[\s\S]+?\+healthBodyView\(/);
  assert.match(main,/fitdaysInterpretationView/);assert.match(main,/insightTab==='strength'/);
 });
