@@ -5,6 +5,7 @@
  */
 import {strengthInsightsView as strengthLegacyView,strengthPeriod} from './strength-insights-v57728.js';
 import {strengthPremiumMap} from './strength-premium-v57738.js';
+import {strengthEditorView} from './strength-editor-v57732.js';
 
 export function strengthInsightsView(state,opts={}){
  const {range='28',today,side='front'}=opts;
@@ -18,7 +19,27 @@ export function strengthInsightsView(state,opts={}){
  // renders both sides and offers individual muscle details on hover/focus.
  const atlas=strengthPremiumMap(period,null,'strength',side);
  const withoutSilhouette=html.slice(0,from)+atlas+'\n '+html.slice(to);
+ // Keep legacy imports byte-for-byte unchanged: old bridge contract tests depend
+ // on the original module. Upgrade the read-only CSV journal rows only here.
+ const csvRows=[...period.sessions].reverse().slice(0,40).filter(s=>s.summaryOnly);
+ let csvIndex=0;
+ const escapedId=x=>String(x??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+ const journalAction=withoutSilhouette.replace(/<p class="str728-note">Für Muskelgruppen und Einzelgewichte die Original-FIT-Datei dieser Aktivität exportieren\.<\/p><\/section>/g,()=>{
+  const entry=csvRows[csvIndex++];
+  if(!entry)throw Error('CSV-Editor: Inkonsistente Session-Vorschau.');
+  return `<p class="str728-note">Übungen, Wiederholungen und Gewichte kannst du hier manuell nachtragen – ohne weiteren FIT-Export.</p><button type="button" class="secondary-btn str732-quick-edit" data-action="str732-edit" data-id="${escapedId(entry.id)}">✎ Übungen &amp; Gewichte nachtragen</button></section>`;
+ });
+ if(csvIndex!==csvRows.length)throw Error('CSV-Editor: Die Journal-Zuordnung ist nicht eindeutig.');
+ // The frozen full-source entry bypassed the historical bridge that mounted
+ // the existing per-set editor. Restore it *without* modifying Garmin imports.
+ // Keep it above the large atlas so newly imported CSV-only sessions remain
+ // actionable and visible instead of forcing users to scroll through charts.
+ const kpiAnchor='<div class="str728-stats">';
+ if(journalAction.split(kpiAnchor).length!==2)
+  throw Error('Krafttraining-Editor: KPI-Integrationsstelle nicht eindeutig.');
+ const editor=period.sessions.length?strengthEditorView(state,period.sessions,opts.editingId||''):'';
+ const withEditor=journalAction.replace(kpiAnchor,editor+'\n '+kpiAnchor);
  // Two maps are visible together: the old one-side-only toggle is misleading.
- return withoutSilhouette.replace(/<div class="str728-ranges" role="group" aria-label="Körperansicht">[\s\S]*?<\/div>/,
+ return withEditor.replace(/<div class="str728-ranges" role="group" aria-label="Körperansicht">[\s\S]*?<\/div>/,
   '<span class="c4011-both-sides">Vorder- und Rückseite gleichzeitig</span>');
 }

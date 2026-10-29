@@ -4463,7 +4463,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
   nutritionConnRange727=id;refreshNutritionConnectionsPanel();return;
  }
  // Manual muscle map: all edits local, original Garmin data never changed.
- if(action==='str732-edit'){strengthEditId732=id;refreshStrength728();return;}
+ if(action==='str732-edit'){strengthEditId732=id;refreshStrength728();app.querySelector('.str732-editor')?.scrollIntoView?.({behavior:'smooth',block:'start'});return;}
  if(action==='str732-cancel'){strengthEditId732='';refreshStrength728();return;}
  if(action==='str732-add-set'){
   const form=app.querySelector('#str732-form'),rows=form?.querySelector('.str732-rows');if(!rows)return;

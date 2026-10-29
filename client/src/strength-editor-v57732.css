@@ -17,3 +17,7 @@
  .str732-editor .str732-buttons button{min-height:48px;flex:1 1 170px;white-space:normal}
  .str732-editor .str732-session-choice{min-height:48px}
 }
+
+/* .40.25.15: repair direct editable CSV session CTA */
+.str728-session .str732-quick-edit{margin-top:10px;max-width:100%;white-space:normal;text-align:left}
+.str728-root .str732-editor{scroll-margin-top:110px}
