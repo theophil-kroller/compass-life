@@ -69,7 +69,7 @@ test('guarded transform changes versions, removes global Daily Dozen preface, re
   const result=await plugin.transform?.(transformed,join(root,'client/src/main.js'));
   if(result?.code)transformed=result.code;
  }
- assert.ok(transformed.includes("const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.2'"));
+ assert.ok(transformed.includes("const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.3'"));
  assert.ok(transformed.includes('nutritionWorkspace4017(state'));
  assert.ok(!transformed.includes("return chrome((compass55Mode==='extended'&&insightTab==='nutrition'?dailyDozen5930View"));
  assert.ok(transformed.includes("kind==='fats'?nutritionFatView"));

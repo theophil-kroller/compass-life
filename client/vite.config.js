@@ -74,6 +74,7 @@ import { compass594024AnnualKnowledge } from './compass594024-annual-knowledge.j
 import { compass594025EditorialAnnual } from './compass594025-editorial-annual.js';
 import { compass5940251SolarCoverHotfix } from './compass5940251-solar-cover-hotfix.js';
 import { compass5940252PersonalPatterns } from './compass5940252-personal-patterns.js';
+import { compass5940253PwaDeployFix } from './compass5940253-pwa-deploy-fix.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -99,6 +100,10 @@ const compassConfig=defineConfig({
       ]
     },
     workbox: {
+      // The annual report adds source code to the main bundle. Workbox defaults to 2 MiB,
+      // which rejected the 2,098,390-byte main asset on GitHub Actions #309.
+      // The limit controls offline precaching only; it does not modify user data.
+      maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       navigateFallback: `${base}index.html`,
       globPatterns: ['**/*.{js,css,html,svg,png,json,webmanifest}'],
       globIgnores: ['**/*makko-ho-guide-v5775910*','**/*strength-coach-v5775910*'],
@@ -159,5 +164,5 @@ compassConfig.plugins.push(compass594016FoodBasicsRelease());
 compassConfig.plugins.push(compass594017NutritionFocusRelease());
 compassConfig.plugins.push(compass594018LifeReportRelease());
 compassConfig.plugins.push(compass594019AnnualRelease());
-compassConfig.plugins.push(compass594020AnnualWorkmapRelease(),compass594021AnnualPrintFix(),compass594022AnnualPremiumReport(),compass594023AnnualChartAtlas(),compass594024AnnualKnowledge(),compass594025EditorialAnnual(),compass5940251SolarCoverHotfix(),compass5940252PersonalPatterns());
+compassConfig.plugins.push(compass594020AnnualWorkmapRelease(),compass594021AnnualPrintFix(),compass594022AnnualPremiumReport(),compass594023AnnualChartAtlas(),compass594024AnnualKnowledge(),compass594025EditorialAnnual(),compass5940251SolarCoverHotfix(),compass5940252PersonalPatterns(),compass5940253PwaDeployFix());
 export default compassConfig;
