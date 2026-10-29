@@ -28,12 +28,21 @@ export function moveProjectHierarchy(state,id,targetId=null,where='inside'){
 }
 
 export function taskDescendants(state,id){
- const out=[],visited=new Set([id]);
- const visit=(parent)=>{for(const t of Object.values(state?.tasks||{})){
-  if(t.archived||t.parentTaskId!==parent||visited.has(t.id))continue;
-  visited.add(t.id);out.push(t.id);visit(t.id);
- }};
- visit(id);return out;
+ const byParent=new Map();
+ for(const t of Object.values(state?.tasks||{})){
+  if(!t||t.archived||!t.parentTaskId)continue;
+  const group=byParent.get(t.parentTaskId)||[];group.push(t);byParent.set(t.parentTaskId,group);
+ }
+ // Preserve the original depth-first order while avoiding O(N²) rescans.
+ const out=[],seen=new Set([id]),stack=[(byParent.get(id)||[])[Symbol.iterator]()];
+ while(stack.length){
+  const step=stack[stack.length-1].next();
+  if(step.done){stack.pop();continue;}
+  const t=step.value;if(seen.has(t.id))continue;
+  seen.add(t.id);out.push(t.id);
+  stack.push((byParent.get(t.id)||[])[Symbol.iterator]());
+ }
+ return out;
 }
 
 export function moveTaskHierarchy(state,id,targetType,targetId,where='inside'){
