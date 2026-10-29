@@ -257,8 +257,20 @@ export function editorialAnnualPages(pages,state,w,settings={}){
  move('Vitamine &amp; Mineralstoffe','Nährstoffatlas');
  move('Antioxidantien, Matcha','Pflanzenstoffe &amp; Antioxidantien');
  if(at('Anti-Aging Eight')>=0)before('Anti-Aging Eight',antiKnowledge());
- const f=at('Ausgaben im Jahresverlauf');
- if(f>=0){output.splice(f,0,moneyKnowledge(),...moneyYear(state,w),...annualFinancePatternPages(state,w,settings));}
+ // The personal spending atlas is a first-class financial chapter, not an optional
+ // side effect of matching a particular translated title. Financial opt-in stays
+ // mandatory. If no approved expenses exist, the print renderer explains that
+ // state rather than silently omitting the entire section.
+ if(settings.finance){
+  const patterns=annualFinancePatternPages(state,w,settings);
+  if(!patterns.length)throw Error('Ars Vivendi: Finanzmuster-Kapitel fehlt trotz Finanzfreigabe.');
+  const financialYear=output.findIndex(p=>p.includes('VI / THE FINANCIAL YEAR'));
+  const firstFinance=output.findIndex(p=>/class="av19-kicker">VI \/|class="av19-kicker">VI ·/.test(p));
+  const insertAt=financialYear>=0?financialYear:firstFinance>=0?firstFinance:Math.max(0,output.findIndex(p=>p.includes('COLOPHON / PRIVATE EDITION')));
+  output.splice(insertAt,0,moneyKnowledge(),...moneyYear(state,w),...patterns);
+  if(!output.some(p=>p.includes('class="av252-grid"')||p.includes('av252-no-data')))
+   throw Error('Ars Vivendi: Der Ausgabenkorridor wurde nicht in die Druckseiten eingefügt.');
+ }
  // Wealth is a private domain even if holding files are present.
  before('Wohnen, Lebenshaltung',wealthEditorial(state,w,settings));
  if(at('Gefühle im Rückblick')>=0)before('Gefühle im Rückblick',emotionalKnowledge());
