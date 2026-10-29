@@ -67,6 +67,6 @@ test('transform defers family but keeps birthdays on first paint and clears on l
  assert.match(src,/core259FamilyCache\.clear\(\);core259FamilyKey=null;/);
  assert.match(src,/Heute: Geburtstage sofort/);
  assert.match(src,/Heute: Familienradar Worker fertig/);
- assert.match(config,/compass5940258CorePerformance\(\),compass5940259TodayDeferred\(\)\)/);
+ assert.match(config,/compass5940258CorePerformance\(\),compass5940259TodayDeferred\(\),compass59402510FocusWorktime\(\)\)/);
  assert.equal(compass5940259TodayDeferred().name,'compass-5940259-today-deferred');
 });
