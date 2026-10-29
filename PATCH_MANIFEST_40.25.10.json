@@ -1,0 +1,128 @@
+{
+  "base_web": "0.5.77.59.40.25.9",
+  "base_garmin": "0.5.12.6",
+  "target_web": "0.5.77.59.40.25.10",
+  "target_garmin": "0.5.12.7",
+  "files": [
+    {
+      "path": ".github/workflows/deploy-pages.yml",
+      "sha256": "be9c61500d65c6253564a14e88b655a5d60127ed3cf06e85734031b4cf57c14b",
+      "bytes": 1552
+    },
+    {
+      "path": "README_FULL_SOURCE_40.25.10.md",
+      "sha256": "61068a82adbae35277fd605af32e905949d1f8b07f588dc8e1251546bf37a13f",
+      "bytes": 4314
+    },
+    {
+      "path": "RELEASE_0.5.77.59.40.25.10.md",
+      "sha256": "1a53d15b503c05f2d97de9ef35b669d17ac7160eef7a087e0efdbae24c5f0868",
+      "bytes": 3870
+    },
+    {
+      "path": "client/compass59402510-focus-worktime.js",
+      "sha256": "dc68b9ed9ad4848a3d429a388b5281ddee11647f1ae817c8bc1a9a30eeb58277",
+      "bytes": 6613
+    },
+    {
+      "path": "client/package.json",
+      "sha256": "a3ff9ed18e45f867158fb82cc9d07699c84b2575f4fa94308d03db1f3443c0f0",
+      "bytes": 461
+    },
+    {
+      "path": "client/src/activity-management.js",
+      "sha256": "da1c310193b07caa1f60ba430f8906dbb091f2da3c5b68e9cc06d93473dcc1ee",
+      "bytes": 5232
+    },
+    {
+      "path": "client/src/ars-vivendi-lock-full-v5775922.js",
+      "sha256": "b3769968bbd0b654ac26733bc5f75130afda17a93d00477eb0fd7af087351dbd",
+      "bytes": 6145
+    },
+    {
+      "path": "client/src/focus-productivity-v57759402510.css",
+      "sha256": "ea4d6e74096d74f06dd1d071f7e2ed958fd090f7762b67e203e58657c33bfc4e",
+      "bytes": 2304
+    },
+    {
+      "path": "client/src/focus-productivity-v57759402510.js",
+      "sha256": "d3c8050be9f545ff22627a27f54bffc8080b4e26570ec317e45dd4dbe38e9769",
+      "bytes": 6039
+    },
+    {
+      "path": "client/src/insights-productivity.js",
+      "sha256": "4658392c475e492c1db10703e50db64e0a822ab6c43ec45d12e429ba93c8659c",
+      "bytes": 17256
+    },
+    {
+      "path": "client/src/main-full-v57759402510.js",
+      "sha256": "6acaef3eb0daf8607d5c71b81d9f9edd47c1c9ba623fb54e45747d6464bd9828",
+      "bytes": 713703
+    },
+    {
+      "path": "client/src/personal-journal-v5692.js",
+      "sha256": "96cac6031b987d91f1ac35401c56d5630825b92f405af3735d99c00053f9295a",
+      "bytes": 36813
+    },
+    {
+      "path": "client/vite.config.js",
+      "sha256": "5fd2f824b0403c6819fab29177256935d7c9ecc4ee42c1e9a59bbe2a6d0294a4",
+      "bytes": 12988
+    },
+    {
+      "path": "client/vite.fullsource.config.js",
+      "sha256": "07813f30a4a0001729e8c8da69a11ebe5ca655236a878363febc0165d062f0d5",
+      "bytes": 3746
+    },
+    {
+      "path": "garmin/CompassWatch/README_05127.md",
+      "sha256": "cf0317b901192c2cc6698a36de8ee405d2d9f7763d2cda2bb7347a59c8101171",
+      "bytes": 1690
+    },
+    {
+      "path": "garmin/CompassWatch/source/CompassApp.mc",
+      "sha256": "c51c542e8e60426e2ec3052a785d57d77aa4b9a9bbbc58615c3af1e52be90a14",
+      "bytes": 120973
+    },
+    {
+      "path": "package.json",
+      "sha256": "9fabe278ceb09e2b9adab40253fab8fc85ef348700aedc7cf3ee3c47a5c8734b",
+      "bytes": 979
+    },
+    {
+      "path": "tests/compass-057759402510-unified-focus.test.mjs",
+      "sha256": "02a3b06b8baef15f7daebb2a1cec10083bae18e0642099ff412bad44d831c0f4",
+      "bytes": 6365
+    },
+    {
+      "path": "tests/compass-057759402510-watch-sql.test.mjs",
+      "sha256": "3d2a3396fc79eb0ee0d346b6ef1bb63ae70e54e287ab1f25b222ecbd524d3422",
+      "bytes": 3560
+    },
+    {
+      "path": "tests/compass-fullsource-25-10-deploy.test.mjs",
+      "sha256": "a0fb87a8b2b2fdf9f6db66c95cacf3275446bfa553c3084cf91545b195886d89",
+      "bytes": 3260
+    },
+    {
+      "path": "tests/gtd-0410-worker-purge.test.mjs",
+      "sha256": "36554cbcf28717441725acdf8d104227e6387d5e77be7e652fe67d8d9edaf85b",
+      "bytes": 3627
+    },
+    {
+      "path": "worker/migrations/0020_watch_session_revision.sql",
+      "sha256": "e51814e8c3d620064a2b8a8a01f2b0f093efda10eb569caf93a356e5a7de0e1b",
+      "bytes": 537
+    },
+    {
+      "path": "worker/src/index.js",
+      "sha256": "181cbe9fe6995711a26120bae05ed178e6b5a0c4adc8636e746520fbc105c997",
+      "bytes": 14987
+    },
+    {
+      "path": "worker/src/watch.js",
+      "sha256": "1ffd134461141fba024d1219097d2ec358ce94d2002e11e2d7844a2049dcfb36",
+      "bytes": 11907
+    }
+  ]
+}
