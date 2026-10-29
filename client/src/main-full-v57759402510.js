@@ -209,6 +209,8 @@ import {taskSupportPrompt} from './task-gpt-handoff-v57712.js';
 import {TOUCH_KINDS,touchHistoryView,putTouch,deleteTouch,touchQuickView,touchPersonSummary} from './touch-journal-v577.js';
 import './nutrition-touch-v577.css';
 import {TIME_AREAS,FOOD_PRESETS,timeCategoryOptions,timeLabel,ensureJournal,validTimeEntry,timeEntries,putTimeEntry,deleteTimeEntry,addNutrition,addCustomFood,nutritionFoods,nutritionKcalEstimate,nutritionEntries,timeJournalView,nutritionQuickView,nutritionInsightsView,mergeJournalData} from './personal-journal-v5692.js';
+import './mensa-catalog-v57759402512.css';
+import {mensaOffer,mensaConsumed,mensaTodayButton,logMensaMeal} from './mensa-journal-v57759402512.js';
 import {energyGoalSettings,dayEnergyStatus} from './energy-goal-v575.js';
 import {quickEnergyMeter} from './nutrition-quick-meter-v576.js';
 import {mergeHabitQuick} from './habit-device-sync-v5731.js';
@@ -403,6 +405,7 @@ let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let touchPeriod=30,touchEditingId='',touchQuickOpen=false,touchDefaultPersonId='';
 let mealComposeText='',mealComposeModel=null;
+let mensaApi=null,mensaLoadPending=null,mensaImportDraft=null,mensaMessage='';
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',nutritionView712='journal',nutritionTimingMode725='week',nutritionTimingAnchor725=localDateString(new Date()),nutritionTimingSelected725='',nutritionTrendsMode726='week',nutritionTrendsAnchor726=localDateString(new Date()),nutritionTrendsMetric726='protein',nutritionDay712=localDateString(new Date()),nutritionProduct712='matcha-powder',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
 let nutritionConnInput727='lastMeal',nutritionConnOutcome727='sleep',nutritionConnRange727='90';
 let strengthRange728='28',strengthSide728='front',strengthActivity737='combined';
@@ -424,7 +427,7 @@ if(typeof window!=='undefined'){
 if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')automaticJournalResume743();});
 let weeklyOffset746=0;
 let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLastConfirmedAt=0;
-function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.strengthJournal||null,s?.dreamJournal||null,s?.receiptJournal||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.familyRadar||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
+function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.strengthJournal||null,s?.dreamJournal||null,s?.receiptJournal||null,s?.mensaCatalog||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.familyRadar||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
 function scheduleJournalSync(delay=0){
  clearTimeout(journalSyncTimer);journalSyncTimer=null;
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
@@ -2055,8 +2058,30 @@ function compass56TodayWorkspace(){
  </div>`;
 }
 
+
+// Menu catalog module + GPT prompt are loaded ONLY after entering Insights → Ernährung.
+function ensureMensaForNutrition(){
+ if(mensaApi||mensaLoadPending||!state||tab!=='insights'||insightTab!=='nutrition')return;
+ mensaLoadPending=import('./mensa-catalog-v57759402512.js').then(async mod=>{
+  mensaApi=mod;
+  if(!state.mensaCatalog?.seedImported){
+   await mutate(st=>{mod.installMensaSeed(st);},null,true);
+  }
+  if(state?.privateDeviceMirror?.key&&authToken&&navigator.onLine){
+   // Only the Nutrition workspace initiates the on-demand Mensa catalogue refresh.
+   await syncPersonalJournal().catch(ex=>{mensaMessage='Journal-Abgleich nicht bestätigt: '+ex.message;});
+  }
+  if(state&&tab==='insights'&&insightTab==='nutrition')render();
+ }).catch(ex=>{mensaMessage='Mensa-Katalog konnte nicht geladen werden: '+ex.message;render();}).finally(()=>{mensaLoadPending=null;});
+}
+const mensaLocalDay=()=>localDateString(new Date());
+function mensaQuickStatus(){
+ const day=mensaLocalDay(),offer=mensaOffer(state,day),eaten=mensaConsumed(state,day);
+ return {day,offer,eaten};
+}
+function mensaTodayCompact(){return state?mensaTodayButton(state,new Date()):'';}
 function todayScreen(){const coreStarted=performanceTrace.start();const workspace=compass56TodayWorkspace();performanceTrace.end('Heute: Aufgaben und Kalender',tab,coreStarted);
-   const chromeStarted=performanceTrace.start();const html=chrome(workspace);performanceTrace.end('Heute: Shell und Hinweise',tab,chromeStarted);return html;}
+   const chromeStarted=performanceTrace.start();const html=chrome(mensaTodayCompact()+workspace);performanceTrace.end('Heute: Shell und Hinweise',tab,chromeStarted);return html;}
 function homeScreen(){
  const k=state?.krakenPortfolio,valuation=k?.balances?krakenWealthSummary(k):null;
  const kraken=valuation?`<section class="work-card compass-kraken-home"><div><span class="page-overline">WEALTH / KRAKEN</span><strong>${valuation.covered?((valuation.totalEur).toLocaleString('de-AT',{style:'currency',currency:'EUR'})):'Noch nicht bewertet'}</strong><small>${valuation.complete?'Kraken Spot · EUR-Marktwert':'Nur teilweise bewertete Kraken-Positionen · keine Gesamtvermögenssumme'}</small></div><button type="button" data-tab="finance" class="secondary-btn">Finanz-Dashboard öffnen →</button></section>`:'';
@@ -2194,8 +2219,8 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
-function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.feelingCheckins=m.feelingCheckins;if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},mensaCatalog:st.mensaCatalog||{schemaVersion:1,entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.mensaCatalog=m.mensaCatalog;st.feelingCheckins=m.feelingCheckins;if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
 async function syncPersonalJournal(){
  // One E2EE journal flight per device. Mutations during flight queue an immediate
  // follow-up instead of being hidden by a generic "synced" status.
@@ -2556,7 +2581,7 @@ function cachedSleepInsights(data,today,period){
  const value=buildSleepInsights(data,today,period);sleepMemo={data,period,today,value};return value;
 }
 function invalidateDerivedInsights(){sleepMemo.data=null;sleepMemo.value=null;}
-function insightsScreen(){if(insightTab!=='dreamworld'&&!compass54Ready('insights'))return compass54LoadingScreen('insights');
+function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensaForNutrition);if(insightTab!=='dreamworld'&&!compass54Ready('insights'))return compass54LoadingScreen('insights');
  const tabDef=insightTab==='report'?{label:'Ars Vivendi',subtitle:'Compass Life Report'}:insightTab==='intelligence'?{label:'Intelligence-Cockpit',subtitle:'Übersichten, Muster und nächste Schritte'}:insightTab==='capacity'?{label:'Fristen & Kapazität',subtitle:'Aktueller GTD-Stand · bewusst geschätzte Arbeitskapazität'}:insightTab==='weekly'?{label:'Wochenkompass',subtitle:'Letzte vollständig vergangene Tage · Datenstand je Quelle'}:insightTab==='dreamworld'?{label:'Traumwelt',subtitle:'Nachtträume, Tagträume und Fantasien'}:insightTab==='touch'?{label:'Berührung & Nähe',subtitle:'Freiwillig dokumentierte körperliche Nähe'}:(INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0]);
  const today=localDate();
  const model=(insightTab==='sleep'||insightTab==='places')?cachedSleepInsights(state?.healthImports||{},today,insightPeriod):null;
@@ -2573,6 +2598,7 @@ function insightsScreen(){if(insightTab!=='dreamworld'&&!compass54Ready('insight
    renderHistory:()=>nutritionHistoryView(state,{period:nutritionPeriod}),
    renderManualDozen:()=>dailyDozenView(state,{day:dailyDozenDay733,today:localDate()}),
    renderSync:()=>journalSyncPanel(),
+   renderMensa:()=>mensaApi?mensaApi.mensaCatalogPanel(state,{draft:mensaImportDraft,day:today,status:mensaMessage}):'<p>Mensa-Datenbank wird geladen …</p>',
    renderSection:kind=>kind==='daily-dozen'?dailyDozen5930View(dailyDozen5930(state,{day:today}))
     :kind==='nutrients'?nutritionIntelligenceView(state,{day:nutritionDay712,detail:nutritionProduct712})
     :kind==='timing'?nutritionTimingView(state,{mode:nutritionTimingMode725,anchor:nutritionTimingAnchor725,selectedId:nutritionTimingSelected725})
@@ -3284,6 +3310,11 @@ function bind() {
     if(!validCalendarRule(rule)){toast('Bitte die Regel-Felder prüfen.',true);return;}
     await mutate(s=>{s.calendarRules=effectiveCalendarRules(s).map(r=>r.id===id?rule:r);});toast('Kalenderregel gespeichert.');
   });
+   const mensaForm=app.querySelector('#mensa-import-form');if(mensaForm)mensaForm.onsubmit=ev=>{
+     ev.preventDefault();if(!mensaApi)return;
+     try{mensaImportDraft=mensaApi.parseMensaJSON(String(new FormData(mensaForm).get('json')||''));mensaMessage=`${mensaImportDraft.length} Menüs geprüft – noch nicht gespeichert.`;render();}
+     catch(ex){toast('Mensa-JSON: '+ex.message,true);}
+   };
   const activityForm=app.querySelector('#activity-edit-form');if(activityForm)activityForm.onsubmit=async ev=>{
     ev.preventDefault();const id=activityForm.dataset.id;const d=new FormData(activityForm);
     const data={title:String(d.get('title')||'').trim(),category:String(d.get('category')||''),startedAt:String(d.get('startedAt')||''),durationMinutes:Number(d.get('durationMinutes')),distanceKm:String(d.get('distanceKm')||'').trim()===''?null:Number(d.get('distanceKm')),note:String(d.get('note')||''),projectId:String(d.get('projectId')||''),activityType:String(d.get('activityType')||'')};
@@ -4382,6 +4413,13 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
   catch(ex){toast('Kopieren nicht möglich. Browser-Zwischenablage bitte erlauben.',true);}
   return;
  }
+ if(action==='pj92-food-tap'&&id==='mensa-study-veggie'){
+  if(!state)return toast('Bitte Tresor entsperren, damit der Study-Teller eindeutig erfasst wird.',true);
+  try{const {day,offer}=mensaQuickStatus();if(!offer)return toast('Heute kein Mensa-Menü gespeichert. Unter Insights → Ernährung → Mensa recherchieren und importieren.',true);
+   let result;await mutate(st=>{result=logMensaMeal(st,day);},null,true);
+   nutritionQuickOpen=false;render();toast(result.added?'Study-Teller für heute erfasst.':'Study-Teller ist heute bereits erfasst.');return;
+  }catch(ex){toast('Mensa-Teller: '+ex.message,true);return;}
+ }
  if(action==='pj92-food-tap'){
   try{
    const isFlax=id==='spar-bio-flaxseed';
@@ -4395,7 +4433,25 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  }
  if(action==='pj92-open-timejournal'){tab='insights';insightTab='timejournal';calmNavGroup='insights';render();if(state?.privateDeviceMirror?.key&&authToken)syncPersonalJournal().catch(ex=>toast('Journal-Abgleich: '+ex.message,true));return;}
  if(action==='pj92-period'){timeJournalPeriod=Number(id)||7;render();return;}
- if(action==='ni712-view'){if(!['journal','nutrients','timing','trends','connections','fats','daily-dozen','anti-aging','phyto'].includes(id))return;nutritionView712=id;if(id==='nutrients')nutritionDay712=localDateString(new Date());render();return;}
+ if(action==='mensa-open-insights'){nutritionQuickOpen=false;tab='insights';insightTab='nutrition';nutritionView712='mensa';calmNavGroup='insights';render();return;}
+ if(action==='mensa-eat-today'){
+  if(!state)return;const {day,offer}=mensaQuickStatus();if(!offer)return toast('Noch kein Menü für heute vorhanden.',true);
+  try{let outcome;
+   await mutate(st=>{outcome=logMensaMeal(st,day);});toast(outcome.added?'Study-Teller für heute erfasst.':'Heute bereits erfasst.');}
+  catch(ex){toast('Mensa: '+ex.message,true);}return;
+ }
+ if(action==='mensa-copy-prompt'){
+  if(!mensaApi)return;try{await navigator.clipboard.writeText(mensaApi.MENSA_GPT_PROMPT);toast('GPT-Rechercheprompt kopiert.');}
+  catch{const box=app.querySelector('#mensa-gpt-prompt');box?.select();toast('Prompt markieren und kopieren.');}return;
+ }
+ if(action==='mensa-cancel-import'){mensaImportDraft=null;render();return;}
+ if(action==='mensa-confirm-import'){
+  if(!mensaApi||!mensaImportDraft?.length)return;
+  try{let result;await mutate(st=>{result=mensaApi.importMensaOffers(st,mensaImportDraft);},null,true);mensaImportDraft=null;
+    mensaMessage=`${result.added} neue Menüs · ${result.updated} aktualisiert · ${result.unchanged} unverändert. Verschlüsselt gespeichert.`;render();toast(mensaMessage);}
+  catch(ex){toast('Mensa-Import: '+ex.message,true);}return;
+ }
+ if(action==='ni712-view'){if(!['journal','nutrients','timing','trends','connections','fats','daily-dozen','anti-aging','phyto','mensa'].includes(id))return;nutritionView712=id;if(id==='nutrients')nutritionDay712=localDateString(new Date());render();return;}
  // Nutrition 3: independent, read-only scatter series and light-weight subpanel updates.
  if(action==='ni727-input'){
   if(!['lastMeal','kcal','protein','caffeine'].includes(id))return;

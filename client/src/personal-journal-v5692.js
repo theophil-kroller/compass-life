@@ -5,6 +5,7 @@ import {mergeCalendarArchives} from './calendar-cache-v574.js';
 import {mergeStrengthJournal} from './strength-device-sync-v57742.js';
 import {mergeDreamJournals} from './dream-journal-v57743.js';
 import {mergeReceiptJournals} from './receipt-gpt-v57743.js';
+import {mergeMensaCatalog} from './mensa-journal-v57759402512.js';
 import {energyGoalSettings,energyGoalView} from './energy-goal-v575.js';
 /** Compass 0.5.69.2 – Personal Time Journal + nutrition; pure data transformations. */
 export const TIME_AREAS=[
@@ -302,6 +303,7 @@ export function mergeJournalData(local,remote){
   strengthJournal:mergeStrengthJournal(lc.strengthJournal,rc.strengthJournal),
   dreamJournal:mergeDreamJournals(lc.dreamJournal,rc.dreamJournal),
   receiptJournal:mergeReceiptJournals(lc.receiptJournal,rc.receiptJournal),
+  mensaCatalog:mergeMensaCatalog(lc.mensaCatalog,rc.mensaCatalog),
   quickWorktime:mergeQuickWorktime(localWork,remoteWork),
   feelingCheckins:mergeFeelingCheckins(lc.feelingCheckins,rc.feelingCheckins),
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),

@@ -9,7 +9,7 @@ const h=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
 const dayFor=at=>{const d=new Date(at);return Number.isFinite(+d)?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'';};
 const format=n=>Number(n).toLocaleString('de-AT',{maximumFractionDigits:0});
 const detailViews=Object.freeze(['timing','trends','connections','fats','anti-aging','phyto']);
-const mainTabs=Object.freeze([['journal','Heute'],['daily-dozen','Daily Dozen'],['nutrients','Nährstoffe'],['timing','Trends']]);
+const mainTabs=Object.freeze([['journal','Heute'],['daily-dozen','Daily Dozen'],['nutrients','Nährstoffe'],['timing','Trends'],['mensa','Mensa']]);
 const trendTabs=Object.freeze([['timing','Essenszeiten'],['trends','Nährstoff-Trends'],['connections','Zusammenhänge'],['fats','Fettqualität'],['anti-aging','Anti-Aging Eight'],['phyto','Pflanzenstoffe']]);
 export function nutritionFocusDay4017(state,day){
  const foods=new Map(nutritionFoods(state).map(f=>[f.id,f]));
@@ -50,10 +50,10 @@ function recentRows(model){
  const rows=model.entries.slice(-6).reverse();
  return `<section class="nf4017-recent"><div class="nf4017-section-heading"><h3>Zuletzt erfasst</h3><button type="button" class="nf4017-link" data-action="pj92-nutrition-add">+ Lebensmittel erfassen</button></div>${rows.length?`<div class="nf4017-recent-list">${rows.map(e=>`<button type="button" class="nf4017-recent-row" data-action="pj92-food-edit" data-id="${h(e.id)}" aria-label="${h(e.title)} bearbeiten"><span class="nf4017-recent-emoji" aria-hidden="true">${h(e.emoji)}</span><span class="nf4017-recent-title"><strong>${h(e.title)}</strong><small>${e.time.toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'})}${e.amount?' · '+h(e.amount):''}</small></span><span class="nf4017-recent-energy">${e.known?`≈ ${format(e.kcal)} kcal`:'kcal offen'}</span></button>`).join('')}</div>`:'<p class="nf4017-empty">Dein erster Eintrag erscheint direkt hier.</p>'}</section>`;
 }
-export function nutritionWorkspace4017(state,{day,view='journal',editingId='',renderSection,renderHistory,renderJournal,renderManualDozen,renderSync}={}){
+export function nutritionWorkspace4017(state,{day,view='journal',editingId='',renderSection,renderHistory,renderJournal,renderManualDozen,renderSync,renderMensa}={}){
  if(typeof renderSection!=='function'||typeof renderHistory!=='function'||typeof renderJournal!=='function'||typeof renderManualDozen!=='function'||typeof renderSync!=='function')throw Error('Nutrition .40.17: missing view renderers');
  const active=detailViews.includes(view)?'timing':view;
- const nav=`<nav class="nf4017-nav" aria-label="Ernährung: vier Hauptbereiche">${mainTabs.map(([id,label])=>`<button type="button" data-action="ni712-view" data-id="${id}" class="${active===id?'selected':''}" aria-current="${active===id?'page':'false'}">${label}</button>`).join('')}</nav>`;
+ const nav=`<nav class="nf4017-nav" aria-label="Ernährung: fünf Hauptbereiche">${mainTabs.map(([id,label])=>`<button type="button" data-action="ni712-view" data-id="${id}" class="${active===id?'selected':''}" aria-current="${active===id?'page':'false'}">${label}</button>`).join('')}</nav>`;
  const header=`<div class="nf4017-header"><div><small>ERNÄHRUNG · DEIN TAGEBUCH</small><h2>Ernährung</h2><p>Heute erfassen, visuell verstehen und bei Bedarf tiefer analysieren.</p></div><button type="button" class="nf4017-primary" data-action="pj92-food-open">+ Erfassen</button></div>`;
  let body='';
  if(active==='journal'){
@@ -63,6 +63,8 @@ export function nutritionWorkspace4017(state,{day,view='journal',editingId='',re
   body=`<p class="nf4017-explain">Tagesverteilung deiner dokumentierten Lebensmittel. Fehlende Einträge sind keine Aussage über tatsächliche Ernährung.</p>${renderSection('daily-dozen')}<details class="nf4017-detail"><summary>Manuelle Checkliste und Korrekturen</summary>${renderManualDozen()}</details>`;
  }else if(active==='nutrients'){
   body=renderSection('nutrients');
+ }else if(active==='mensa'){
+  body=typeof renderMensa==='function'?renderMensa():'<p>Mensa-Katalog wird geladen …</p>'; 
  }else{
   body=`<nav class="nf4017-subnav" aria-label="Erweiterte Ernährungsanalysen">${trendTabs.map(([id,label])=>`<button type="button" data-action="ni712-view" data-id="${id}" class="${view===id?'selected':''}" aria-pressed="${view===id}">${label}</button>`).join('')}</nav>${renderSection(view)}`;
  }
