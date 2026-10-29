@@ -38,7 +38,10 @@ test('Vite full-release entry rewrites HTML to snapshot without duplicate script
  let script=cfg.replaceAll("import { defineConfig } from 'vite';",'').replaceAll("import { VitePWA } from 'vite-plugin-pwa';",'').replace('export default defineConfig(', 'globalThis.exported=defineConfig(');
  const context={process:{env:{VITE_BASE_PATH:'/compass-life/'}},defineConfig:v=>v,VitePWA:o=>({name:'pwa-stub',...o})};
  vm.runInNewContext(script,context);
- const result=context.exported.plugins[0].transformIndexHtml(html);
+ const hook=context.exported.plugins[0].transformIndexHtml;
+ assert.equal(hook.order,'pre','Vite must transform snapshot imports BEFORE bundling');
+ const result=hook.handler(html);
+ assert.equal(hook.handler(result),result,'HTML replacement must be idempotent');
  assert.match(result,/src="\/src\/main-full-v57759402510\.js"/);
  assert.match(result,/src="\/src\/ars-vivendi-lock-full-v5775922\.js"/);
  assert.equal((result.match(/src="\/src\/main-full-v57759402510\.js"/g)||[]).length,1);

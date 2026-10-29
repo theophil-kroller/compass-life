@@ -5,14 +5,19 @@ import { VitePWA } from 'vite-plugin-pwa';
  * would double patch hooks. Historic vite.config.js remains for audit/tests. */
 const base=process.env.VITE_BASE_PATH || '/';
 const snapshotEntry={
- name:'compass-full-25-10-entry',enforce:'pre',
- transformIndexHtml(html){
+ name:'compass-full-25-10-entry',
+ // Explicit HTML pre-hook: ordinary `enforce: pre` does NOT run a
+ // transformIndexHtml function before Vite resolves its module scripts.
+ transformIndexHtml:{order:'pre',handler(html){
   const oldMain='<script type="module" src="/src/main.js"></script>';
   const oldLock='<script type="module" src="/src/ars-vivendi-lock-v5775922.js"></script>';
-  if(!html.includes(oldMain)||!html.includes(oldLock))throw Error('Full snapshot entry: unexpected HTML');
-  return html.replace(oldMain,'<script type="module" src="/src/main-full-v57759402510.js"></script>')
-    .replace(oldLock,'<script type="module" src="/src/ars-vivendi-lock-full-v5775922.js"></script>');
- }
+  const newMain='<script type="module" src="/src/main-full-v57759402510.js"></script>';
+  const newLock='<script type="module" src="/src/ars-vivendi-lock-full-v5775922.js"></script>';
+  if(html.includes(newMain)&&html.includes(newLock)&&!html.includes(oldMain)&&!html.includes(oldLock))return html;
+  if(!html.includes(oldMain)||!html.includes(oldLock)||html.includes(newMain)||html.includes(newLock))
+    throw Error('Full snapshot entry: unexpected original HTML scripts');
+  return html.replace(oldMain,newMain).replace(oldLock,newLock);
+ }}
 };
 export default defineConfig({base,plugins:[snapshotEntry,
 VitePWA({
