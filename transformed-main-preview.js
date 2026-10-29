@@ -1,5 +1,7 @@
 import {capacityForecast,capacitySettings} from './capacity-engine-v44.js';
 import {familyEvents,familySuggestions,familyRules,familyPersonPanel,familyTodayPanel,familyTodayObservations,familyAccept,familyAcceptProject,familyChoose} from './family-radar-v5775931.js';
+import {todayBirthdayHighlights,todayBirthdayPanel} from './today-birthdays-v5775940255.js';
+import './today-birthdays-v5775940255.css';
 import './family-radar-v5775931.css';
 import {familyForecastEntries37,familyForecastPanel37,familyStudySlots37,familyCreateStudy37} from './family-planning-v5775937.js';
 import './family-planning-v5775937.css';
@@ -231,7 +233,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.4';
+const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.5';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -1046,7 +1048,10 @@ function chrome(content){
   const familyVisible=calendarEvents.filter(e=>e.status!=='cancelled'&&String(e.summary||'').includes(':')&&(!eventAppearance(e).hidden||showHiddenCalendarEvents));
   const familyNow=localDate();
   const familyProposals=familySuggestions(familyVisible,familyPeople,state,{today:familyNow});
-  if(tab==='today')content=familyTodayPanel(familyProposals,familyTodayObservations(familyVisible,familyPeople,state,{today:familyNow}))+content;
+  if(tab==='today'){
+   const birthdays=todayBirthdayHighlights(calendarEvents,e=>eventAppearance(e),familyPeople,familyNow);
+   content=todayBirthdayPanel(birthdays)+familyTodayPanel(familyProposals,familyTodayObservations(familyVisible,familyPeople,state,{today:familyNow}))+content;
+  }
   if(tab==='people'&&familyRadarJumpPersonId401){
    const options=peopleInScope(Object.values(familyPeople),peopleScope);
    const familySelected=options.find(p=>p.id===selectedPersonId)||options[0];
@@ -1120,7 +1125,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <h1 class="sr-only">${h(title)}</h1>${tab==='today'?`<div class="ctx42-date-row"><nav class="daynav38" aria-label="Tag auswählen"><button type="button" data-action="daynav38" data-id="previous" title="Vorheriger Tag" aria-label="Vorheriger Tag">‹</button><button type="button" data-action="daynav38" data-id="today" title="Zu Heute springen" aria-label="Heute anzeigen">${h(title)}</button><button type="button" data-action="daynav38" data-id="next" title="Nächster Tag" aria-label="Nächster Tag">›</button></nav>${locationCycle46(state)}</div>`:''}
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.25.4 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.25.5 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
 }
 
 
@@ -2748,6 +2753,7 @@ function render(){
  morningSaveNoteFromScreen();
  if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[],{inputMode:feelingInputMode,captureReady:sealedCaptureAvailable}):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);editDraftGuard.afterRender(editDraftFocus);lastEditRenderSignature=editRenderSignature();return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
+ const screenMeasurement=performanceTrace.start();
  let html;
  try{html=tab==='activity'?activityScreen():tab==='people'?peopleScreen():tab==='progress'?progressScreen():tab==='finance'?financeScreen():tab==='insights'?insightsScreen():tab==='recovery'?recoveryScreen():tab==='system'?systemScreen():tab==='inbox'?inboxScreen():tab==='overview'?homeScreen():tab==='forecast'?forecastScreen():tab==='radar'?radarScreen():tab==='someday'?somedayScreen():tab==='review'?reviewScreen():tab==='shopping'?shoppingScreen():['projects','templates'].includes(tab)?projectScreen():['next','flagged','hold'].includes(tab)?workflowScreen(tab):todayScreen();}
  catch(ex){if(tab!=='projects'&&tab!=='templates')throw ex;
@@ -2757,7 +2763,11 @@ function render(){
    const rows=Object.values(state?.projects||{}).filter(p=>p&&!p.isTemplate).slice(0,200);
    html=chrome(`<section class="work-card" role="alert"><h2>Projektansicht eingeschränkt</h2><p>Beim Darstellen der Projekte ist ein Fehler aufgetreten. Deine Projektdaten wurden nicht verändert.</p><p>${rows.length} Projekte/Ordner gefunden.</p><button type="button" class="secondary-btn" data-tab="next">Next Actions öffnen</button></section>`);
  }
- app.innerHTML=html;bind();if(tab==='today'&&state){ctx42BindHover();ctx39ScheduleAuto();}void mountPremiumAnatomy(app).catch(err=>console.warn('Compass Anatomiekarte konnte nicht geladen werden:',err));editDraftGuard.afterRender(editDraftFocus);lastEditRenderSignature=editRenderSignature();restoreCaptureDraft(captureFocus);restorePeopleScroll(scrollBeforeRender);if(insightScrollBefore){const target=app.querySelector('.fw681-full-log');if(target)target.scrollTop=insightScrollBefore.log;const content=app.querySelector('.content');if(content)content.scrollTop=insightScrollBefore.content;requestAnimationFrame(()=>window.scrollTo?.({top:insightScrollBefore.page,behavior:'instant'}));}if(feelingOverlayOpen){const modal=app.querySelector('#fw65-dialog');if(modal)modal.scrollTop=feelingScrollBefore;}
+ performanceTrace.end('Ansicht berechnen',tab,screenMeasurement);
+ const domMeasurement=performanceTrace.start();
+ app.innerHTML=html;bind();if(tab==='today'&&state){ctx42BindHover();ctx39ScheduleAuto();}void mountPremiumAnatomy(app).catch(err=>console.warn('Compass Anatomiekarte konnte nicht geladen werden:',err));
+ performanceTrace.end('DOM + Events',tab,domMeasurement);
+ editDraftGuard.afterRender(editDraftFocus);lastEditRenderSignature=editRenderSignature();restoreCaptureDraft(captureFocus);restorePeopleScroll(scrollBeforeRender);if(insightScrollBefore){const target=app.querySelector('.fw681-full-log');if(target)target.scrollTop=insightScrollBefore.log;const content=app.querySelector('.content');if(content)content.scrollTop=insightScrollBefore.content;requestAnimationFrame(()=>window.scrollTo?.({top:insightScrollBefore.page,behavior:'instant'}));}if(feelingOverlayOpen){const modal=app.querySelector('#fw65-dialog');if(modal)modal.scrollTop=feelingScrollBefore;}
  if(feelingFocused){let field=feelingFocused.id?app.querySelector('#'+feelingFocused.id):null;if(!field&&feelingFocused.name)field=app.querySelector('.fw65-emotion[data-id="'+feelingFocused.name+'"]');if(field?.focus){field.focus({preventScroll:true});if(Number.isInteger(feelingFocused.start)&&Number.isInteger(feelingFocused.end)&&typeof field.setSelectionRange==='function')try{field.setSelectionRange(feelingFocused.start,feelingFocused.end);}catch{}}}
  if(tab==='finance'&&financePane==='Portfolio'&&state?.uiPreferences?.krakenPublicAuto!==false&&state?.krakenPortfolio?.balances&&document.visibilityState==='visible'&&Date.now()-krakenPublicAttempt>15*60*1000&&!krakenPublicBusy){
    requestAnimationFrame(()=>refreshPublicKrakenPrices(false));

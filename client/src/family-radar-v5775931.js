@@ -92,6 +92,9 @@ export function familyActionFor(entry,rules,today){
 export const familyDecisionKey=(e,kind)=>`${e.personId}::${e.id}::${kind}`;
 export function familySuggestions(events,people,state,{today=new Date().toISOString().slice(0,10),horizon=FAMILY_RADAR_HORIZON,includeHidden=()=>true}={}){
  const decisions=state?.familyRadar?.decisions||{};
+ // Pre-index existing accepted work once, not for every candidate birthday/exam.
+ const existingTaskKeys=new Set(Object.values(state?.tasks||{}).filter(t=>!t.archived&&t.familyRadarKey).map(t=>t.familyRadarKey));
+ const existingProjectKeys=new Set(Object.values(state?.projects||{}).filter(p=>!p.archived&&p.familyRadarKey).map(p=>p.familyRadarKey));
  const out=[];
  // One linear calendar pass. The former algorithm scanned every event again
  // for every person on each Today render (O(people × events)). Keep it pure:
@@ -117,7 +120,7 @@ export function familySuggestions(events,people,state,{today=new Date().toISOStr
    const key=familyDecisionKey(event,action.kind);
    const decision=decisions[key];
    if(decision?.status==='dismissed'||decision?.status==='accepted'||(decision?.status==='snoozed'&&decision.until>today))continue;
-   if(Object.values(state?.tasks||{}).some(t=>!t.archived&&t.familyRadarKey===key)||Object.values(state?.projects||{}).some(p=>!p.archived&&p.familyRadarKey===key))continue;
+   if(existingTaskKeys.has(key)||existingProjectKeys.has(key))continue;
    out.push({...event,action,key,daysLeft:distance(today,event.day)});
   }
  }
