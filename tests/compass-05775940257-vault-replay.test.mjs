@@ -27,20 +27,27 @@ test('actual encrypted IndexedDB journal survives lock/unlock, compacts atomical
   initial.tasks={};initial.projects={};initial.taskPending={};initial.projectPending={};
   await vault.save(initial);
   await vault.appendCoreGtdDelta({kind:'gtd',tasks:{task1:{id:'task1',progressCurrent:5}},taskPending:{task1:true},projects:{},projectPending:{}});
+  await vault.appendCoreGtdDelta({kind:'gtd',tasks:{},projects:{},taskPending:{},projectPending:{},
+    weeklyReview:{step:4,done:['collect','inbox'],updatedAt:'2026-10-29'},reviewPending:true});
   const backup=await vault.exportEncrypted();
-  assert.equal(backup.coreJournal?.length,1);
+  assert.equal(backup.coreJournal?.length,2);
   assert.equal(JSON.stringify(fake.data.get('core_gtd_journal_v1')).includes('task1'),false,'journal must not leak plaintext');
   vault.lock();
   const replay=await vault.unlock(password);
   assert.equal(replay.tasks.task1.progressCurrent,5);
   assert.equal(replay.taskPending.task1,true);
   assert.equal(replay.health.secret,'not in delta');
+  assert.equal(replay.weeklyReview.step,4);
+  assert.deepEqual(replay.weeklyReview.done,['collect','inbox']);
+  assert.equal(replay.reviewPending,true);
   await vault.save(replay);
   assert.equal(fake.data.has('core_gtd_journal_v1'),false,'full snapshot + journal deletion atomic');
   vault.lock();
   const after=await vault.unlock(password);
   assert.equal(after.tasks.task1.progressCurrent,5,'replay survives checkpoint');
   assert.equal(after.health.secret,'not in delta');
+  assert.equal(after.weeklyReview.step,4);
+  assert.equal(after.reviewPending,true);
   vault.lock();
  }finally{globalThis.indexedDB=original;}
 });

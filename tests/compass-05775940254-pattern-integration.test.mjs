@@ -44,7 +44,7 @@ test('Without finance consent, no private category chart or empty-data teaser is
 });
 test('current .40.25.4 deployment plugin remains in registered release chain in real Vite config and validates print entrypoint',()=>{
  const cfg=readFileSync(new URL('../client/vite.config.js',import.meta.url),'utf8');
- assert.match(cfg,/compass5940253PwaDeployFix\(\),compass5940254FinancePatternsPrint\(\),compass5940255BirthdaysSpeed\(\),compass5940256FastGtdActions\(\),compass5940257CoreFirst\(\)\);/);
+ assert.match(cfg,/compass5940253PwaDeployFix\(\),compass5940254FinancePatternsPrint\(\),compass5940255BirthdaysSpeed\(\),compass5940256FastGtdActions\(\),compass5940257CoreFirst\(\),compass5940258CorePerformance\(\)\);/);
  const plugin=compass5940254FinancePatternsPrint();
  const src="const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.3';\nBuild 0.5.77.59.40.25.3\nreportWindow.document.write(annualDocument(state,settings));";
  const result=plugin.transform(src,'/repo/client/src/main.js');

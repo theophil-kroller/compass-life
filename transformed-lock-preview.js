@@ -54,7 +54,7 @@ function init(){
      <div class="ars22-art" role="img" aria-label="Compass Life – Ars Vivendi: eine goldene Kompassrose vor nachtblauen Bergen und einem See; Die Kunst, bewusst zu leben.">
        <img class="ars22-image" src="${ASSET}" alt="" fetchpriority="high" decoding="async" />
        <span class="ars28-gold-rings" aria-hidden="true"><i></i><i></i><i></i></span>
-       <div class="ars28-version">Compass Life · Build 0.5.77.59.40.25.7</div>
+       <div class="ars28-version">Compass Life · Build 0.5.77.59.40.25.8</div>
        <button class="ars22-tap" type="button" data-ars22-open aria-controls="ars22-unlock-dialog" aria-expanded="false" aria-label="Compass Tresor entsperren"></button>
      </div>
      <section class="ars22-panel" id="ars22-unlock-dialog" aria-label="Compass Tresor entsperren" role="dialog" aria-modal="true" hidden>

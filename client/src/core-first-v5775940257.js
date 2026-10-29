@@ -14,6 +14,12 @@ export function gtdDelta(before,after){
  const delta={kind:'gtd',tasks:objectChanges(before.tasks,after.tasks),projects:objectChanges(before.projects,after.projects),
  taskPending:objectChanges(before.taskPending,after.taskPending),projectPending:objectChanges(before.projectPending,after.projectPending)};
  if(JSON.stringify(before.recentTags)!==JSON.stringify(after.recentTags))delta.recentTags=structuredClone(after.recentTags??[]);
+ // Optional review fields: included only for audited review checkpoints.
+ if(Object.prototype.hasOwnProperty.call(before,'weeklyReview')){
+  if(JSON.stringify(before.weeklyReview)!==JSON.stringify(after.weeklyReview))delta.weeklyReview=structuredClone(after.weeklyReview);
+  for(const field of ['reviewPending','reviewVersion','reviewConflict'])
+   if(JSON.stringify(before[field])!==JSON.stringify(after[field]))delta[field]=structuredClone(after[field]??null);
+ }
  return delta;
 }
 export function applyGtdDelta(state,delta){
@@ -25,6 +31,8 @@ export function applyGtdDelta(state,delta){
   }
  }
  if(Object.prototype.hasOwnProperty.call(delta,'recentTags'))state.recentTags=delta.recentTags;
+ for(const field of ['weeklyReview','reviewPending','reviewVersion','reviewConflict'])
+  if(Object.prototype.hasOwnProperty.call(delta,field))state[field]=delta[field];
  return state;
 }
 export function createCoreIdlePolicy({quietMs=10000, maxDelayMs=120000}={}){

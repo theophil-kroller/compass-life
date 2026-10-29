@@ -72,6 +72,7 @@ import {createPerformanceTrace} from './performance-trace-v57719.js';
 import {planningCheckpoint,restorePlanningCheckpoint,afterPlanningPaint} from './fast-planning-v57721.js';
 import {gtdCheckpoint,paintGtdProgress} from './fast-gtd-actions-v5775940256.js';
 import {gtdDelta,createCoreIdlePolicy} from './core-first-v5775940257.js';
+import {reviewCheckpoint,restoreReviewCheckpoint,createTodayPanelMemo} from './core-performance-v5775940258.js';
 import './mobile-planning-v57719.css';
 import './performance-trace-v57719.css';
 import {buildPlanTreeIndex} from './plan-tree-index-v57717.js';
@@ -235,7 +236,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.7';
+const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.8';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -888,6 +889,8 @@ function download(filename,obj) {
   setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
 let fastGtdMutationRevision=0;
+let coreTodayDataRevision=0;
+const coreTodayFamilyMemo=createTodayPanelMemo();
 async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=null) {
   let draftBackup=null;
   if(!state)throw new Error('Der Tresor muss entsperrt sein.');
@@ -895,17 +898,19 @@ async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=nu
   // Fast path only for audited create handlers which replace planning entries.
   // A finance mirror can change other state, so it always uses full rollback.
   const fastGtd=options?.fastGtd===true&&tab!=='people';
-  const fastPlanning=fastGtd||options?.fastPlanning===true&&!['source','receiver'].includes(state.privateDeviceMirror?.mode)&&tab!=='people';
+  const fastReview=options?.fastReview===true&&tab==='review';
+  const fastPlanning=fastReview||fastGtd||options?.fastPlanning===true&&!['source','receiver'].includes(state.privateDeviceMirror?.mode)&&tab!=='people';
   const actionStart=fastGtd?performanceTrace.start():null;
   const gtdTicket=fastGtd?++fastGtdMutationRevision:0;
   let gtdDurableWrite=null;
-  const previous=fastGtd?gtdCheckpoint(state,{singleTaskId:options?.singleTaskId||null}):fastPlanning?planningCheckpoint(state):structuredClone(state);
+  const previous=fastReview?reviewCheckpoint(state,{singleProjectId:options?.singleProjectId||null}):fastGtd?gtdCheckpoint(state,{singleTaskId:options?.singleTaskId||null}):fastPlanning?planningCheckpoint(state):structuredClone(state);
   // Journal fingerprinting serializes years of personal data. Without journal mirror
   // credentials there is no remote journal change to detect during task editing.
   const trackJournal=!!(state.privateDeviceMirror?.key&&authToken)&&!fastPlanning;
   const journalBefore=trackJournal?journalFingerprint(state):null;
   try {
     fn(state);invalidateDerivedInsights();
+    if(!fastPlanning)coreTodayDataRevision++;
     if(tab==='people'&&state.peopleSyncEnabled===true){
       state.peopleDeleted=markChangedPeople(previous.people||{},state.people||{},state.peopleDeleted||{},stamp());
     }
@@ -922,7 +927,7 @@ async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=nu
       if(options?.fastTodayVisual!==true&&!options?.inlineGtd)render();
       // The small encrypted journal begins BEFORE the paint wait; UI and disk
       // writes run concurrently, but sync starts only after local durability.
-      if(fastPlanning)gtdDurableWrite=vault.appendCoreGtdDelta(gtdDelta(previous,state));
+      gtdDurableWrite=vault.appendCoreGtdDelta(gtdDelta(previous,state));
       await afterPlanningPaint();
       if(fastGtd)performanceTrace.end('GTD Aktion bis Paint',tab,actionStart);
     }
@@ -939,7 +944,8 @@ async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=nu
   }catch(ex){
       // A failed earlier save must not discard a later in-flight +1 or move.
       if(!fastGtd||gtdTicket===fastGtdMutationRevision){
-        if(fastPlanning){restorePlanningCheckpoint(state,previous);options?.onFailed?.();}else state=previous;
+        if(fastReview){restoreReviewCheckpoint(state,previous);options?.onFailed?.();}
+        else if(fastPlanning){restorePlanningCheckpoint(state,previous);options?.onFailed?.();}else state=previous;
       }
       if(draftBackup)editDraftGuard.rollback(draftBackup);render();
       throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);
@@ -1090,12 +1096,21 @@ function chrome(content){
  // Family radar reuses the cached Google Calendar and person records. No extra API call.
  if(state&&(tab==='people'||tab==='today')){
   const familyPeople=state.people||{};
-  const familyVisible=calendarEvents.filter(e=>e.status!=='cancelled'&&String(e.summary||'').includes(':')&&(!eventAppearance(e).hidden||showHiddenCalendarEvents));
   const familyNow=localDate();
-  const familyProposals=familySuggestions(familyVisible,familyPeople,state,{today:familyNow});
+  let familyVisible=null, familyProposals=null;
   if(tab==='today'){
-   const birthdays=todayBirthdayHighlights(calendarEvents,e=>eventAppearance(e),familyPeople,familyNow);
-   content=todayBirthdayPanel(birthdays)+familyTodayPanel(familyProposals,familyTodayObservations(familyVisible,familyPeople,state,{today:familyNow}))+content;
+   const familyStarted=performanceTrace.start();
+   const familyMarkup=coreTodayFamilyMemo.get([coreTodayDataRevision,journalRevision,state.people,state.familyRadar,calendarEvents,calendarEvents.length,calendarUpdatedAt,showHiddenCalendarEvents,familyNow],()=>{
+    const familyVisible=calendarEvents.filter(e=>e.status!=='cancelled'&&String(e.summary||'').includes(':')&&(!eventAppearance(e).hidden||showHiddenCalendarEvents));
+    const familyProposals=familySuggestions(familyVisible,familyPeople,state,{today:familyNow});
+    const birthdays=todayBirthdayHighlights(calendarEvents,e=>eventAppearance(e),familyPeople,familyNow);
+    return todayBirthdayPanel(birthdays)+familyTodayPanel(familyProposals,familyTodayObservations(familyVisible,familyPeople,state,{today:familyNow}));
+   });
+   performanceTrace.end('Heute: Familien- und Geburtstagsradar',tab,familyStarted);
+   content=familyMarkup+content;
+  }else{
+   familyVisible=calendarEvents.filter(e=>e.status!=='cancelled'&&String(e.summary||'').includes(':')&&(!eventAppearance(e).hidden||showHiddenCalendarEvents));
+   familyProposals=familySuggestions(familyVisible,familyPeople,state,{today:familyNow});
   }
   if(tab==='people'&&familyRadarJumpPersonId401){
    const options=peopleInScope(Object.values(familyPeople),peopleScope);
@@ -1170,7 +1185,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <h1 class="sr-only">${h(title)}</h1>${tab==='today'?`<div class="ctx42-date-row"><nav class="daynav38" aria-label="Tag auswählen"><button type="button" data-action="daynav38" data-id="previous" title="Vorheriger Tag" aria-label="Vorheriger Tag">‹</button><button type="button" data-action="daynav38" data-id="today" title="Zu Heute springen" aria-label="Heute anzeigen">${h(title)}</button><button type="button" data-action="daynav38" data-id="next" title="Nächster Tag" aria-label="Nächster Tag">›</button></nav>${locationCycle46(state)}</div>`:''}
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.25.7 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.25.8 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
 }
 
 
@@ -2019,7 +2034,8 @@ function compass56TodayWorkspace(){
  </div>`;
 }
 
-function todayScreen(){return chrome(compass56TodayWorkspace());}
+function todayScreen(){const coreStarted=performanceTrace.start();const workspace=compass56TodayWorkspace();performanceTrace.end('Heute: Aufgaben und Kalender',tab,coreStarted);
+   const chromeStarted=performanceTrace.start();const html=chrome(workspace);performanceTrace.end('Heute: Shell und Hinweise',tab,chromeStarted);return html;}
 function homeScreen(){
  const k=state?.krakenPortfolio,valuation=k?.balances?krakenWealthSummary(k):null;
  const kraken=valuation?`<section class="work-card compass-kraken-home"><div><span class="page-overline">WEALTH / KRAKEN</span><strong>${valuation.covered?((valuation.totalEur).toLocaleString('de-AT',{style:'currency',currency:'EUR'})):'Noch nicht bewertet'}</strong><small>${valuation.complete?'Kraken Spot · EUR-Marktwert':'Nur teilweise bewertete Kraken-Positionen · keine Gesamtvermögenssumme'}</small></div><button type="button" data-tab="finance" class="secondary-btn">Finanz-Dashboard öffnen →</button></section>`:'';
@@ -2857,7 +2873,7 @@ function compass55BindTaskEditForm(){
     if(state.projects?.[existing.projectId]?.isTemplate)t.projectId=existing.projectId;
     if(!validLocalTask(t)||!validTaskParent(state,id,t.projectId,t.parentTaskId)){toast('Aufgabenfelder bzw. Hierarchie prüfen.',true);return;}
     if(t.projectId!==existing.projectId&&Object.values(state.tasks).some(child=>!child.archived&&child.parentTaskId===id)){toast('Unteraufgaben zuerst einzeln verschieben, bevor du das Projekt dieser Aufgabe wechselst.',true);return;}
-    await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);},taskEditForm);toast('Aufgabe aktualisiert.');
+    await mutate(s=>{s.tasks[id]=t;s.taskPending[id]=true;for(const tag of [...t.tags,...t.contextTags])rememberTag(s,tag);},taskEditForm,true,{fastGtd:true,fastPlanning:true,singleTaskId:id,onApplied:()=>{notice='Aufgabe aktualisiert.';error='';},onFailed:()=>{notice='';error='Aufgabe konnte nicht lokal gesichert werden.';}});
   };
   }
 
@@ -2900,7 +2916,10 @@ function compass55FastTaskPaint(id){
  const check=row.querySelector('[data-action="task-toggle"]');
  if(check){check.textContent=task.completed?'✓':'';check.setAttribute('aria-label',task.completed?'Wieder öffnen':'Erledigen');}
  const counter=app.querySelector('.today-tasks .work-heading .quiet-tag');
- if(counter){const rows=tasksForDay(state,selectedDay).filter(t=>!waitingSourceId(t));counter.textContent=rows.filter(t=>t.completed).length+' / '+rows.length+' erledigt';}
+ if(counter){const match=counter.textContent.match(/(\d+)\s*\/\s*(\d+)/);if(match){
+   const previouslyComplete=!task.completed;const done=Math.max(0,Math.min(Number(match[2]),Number(match[1])+(previouslyComplete?-1:1)));
+   counter.textContent=done+' / '+match[2]+' erledigt';
+  }}
  performanceTrace.end('GTD: Checkbox aktualisieren',tab,measured);
  return true;
 }
@@ -4745,12 +4764,12 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='finance-wealth-goal-remove'){if(!(state.financeWealthGoals||[]).some(x=>x.id===id))return;if(!confirm('Dieses Vermögensziel entfernen? Bestandswerte bleiben unverändert.'))return;await mutate(s=>{s.financeWealthGoals=(s.financeWealthGoals||[]).filter(x=>x.id!==id);});toast('Ziel entfernt.');return;}
     if(action==='assistant-new'){
       if(!confirm('Neuen Wochenreview starten? Der bisherige Durchgang wird als Fortschrittsstand ersetzt; die geprüften Projekte behalten ihre Reviewdaten.'))return;
-      reviewEditingTaskId=null;reviewProjectId=null;await mutate(s=>{s.weeklyReview=newReview();s.reviewPending=true;});return;
+      reviewEditingTaskId=null;reviewProjectId=null;await mutate(s=>{s.weeklyReview=newReview();s.reviewPending=true;},null,true,{fastReview:true});return;
     }
     if(action==='assistant-step'||action==='assistant-back'||action==='assistant-next'){
       captureReviewDraft();const index=action==='assistant-step'?Number(id):action==='assistant-back'?Math.max(0,state.weeklyReview.step-1):Math.min(REVIEW_STEPS.length-1,state.weeklyReview.step+1);
       if(!Number.isInteger(index)||index<0||index>=REVIEW_STEPS.length)return;
-      reviewEditingTaskId=null;await mutate(s=>{s.weeklyReview=nextReviewStep(s.weeklyReview,index);s.reviewPending=true;});return;
+      reviewEditingTaskId=null;await mutate(s=>{s.weeklyReview=nextReviewStep(s.weeklyReview,index);s.reviewPending=true;},null,true,{fastReview:true});return;
     }
     if(action==='assistant-complete-step'){
       const current=REVIEW_STEPS[state.weeklyReview.step];if(!current)return;
@@ -4758,17 +4777,17 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(current.id==='inbox'&&queue.inbox.length&&!confirm(`${queue.inbox.length} Inbox-Einträge sind noch offen. Diesen Bereich trotzdem als durchgesehen markieren?`))return;
       if(current.id==='projects'&&queue.due.some(p=>!state.weeklyReview.inspectedProjects.includes(p.id))&&!confirm('Nicht alle fälligen Projekte wurden geprüft. Trotzdem fortfahren?'))return;
       const notes=String(app.querySelector('#review-end-notes')?.value||'').slice(0,1200);
-      await mutate(s=>{s.weeklyReview=reviewedStep(s.weeklyReview,current.id);if(current.id==='finish'){s.weeklyReview.completedAt=stamp();s.weeklyReview.notes=notes;}s.reviewPending=true;});return;
+      await mutate(s=>{s.weeklyReview=reviewedStep(s.weeklyReview,current.id);if(current.id==='finish'){s.weeklyReview.completedAt=stamp();s.weeklyReview.notes=notes;}s.reviewPending=true;},null,true,{fastReview:true});return;
     }
     if(action==='assistant-project-select'){if(!state.projects?.[id])return;reviewProjectId=id;reviewEditingTaskId=null;render();return;}
     if(action==='assistant-project-reviewed'){
       if(!state.projects?.[id])return;
-      await mutate(s=>{s.projects[id].reviewedAt=stamp();s.projectPending[id]=true;s.weeklyReview.inspectedProjects=[...new Set([...s.weeklyReview.inspectedProjects,id])];s.weeklyReview.updatedAt=stamp();s.reviewPending=true;});reviewProjectId=null;toast('Projekt geprüft. Nächstes Projekt direkt hier.');return;
+      await mutate(s=>{s.projects[id].reviewedAt=stamp();s.projectPending[id]=true;s.weeklyReview.inspectedProjects=[...new Set([...s.weeklyReview.inspectedProjects,id])];s.weeklyReview.updatedAt=stamp();s.reviewPending=true;},null,true,{fastReview:true,singleProjectId:id,onApplied:()=>{reviewProjectId=null;notice='Projekt geprüft.';},onFailed:()=>{notice='';error='Projektprüfung konnte nicht lokal gesichert werden.';}});return;
     }
     if(action==='assistant-task-edit'){if(!state.tasks?.[id])return;reviewEditingTaskId=id;render();return;}
     if(action==='assistant-task-cancel'){reviewEditingTaskId=null;render();return;}
     if(action==='assistant-task-done'){
-      if(!state.tasks?.[id])return;await mutate(s=>{s.tasks[id].completed=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});reviewEditingTaskId=null;return;
+      if(!state.tasks?.[id])return;await mutate(s=>{s.tasks[id]={...s.tasks[id],completed:true,updatedAt:stamp()};s.taskPending[id]=true;},null,true,{fastGtd:true,fastPlanning:true,singleTaskId:id,onApplied:()=>{reviewEditingTaskId=null;}});return;
     }
     if(action==='assistant-inbox-remove'){
       if(!state.records?.[id]||!confirm('Inbox-Eintrag archivieren?'))return;
