@@ -61,7 +61,7 @@ test('Release chain injects birthday view and performance phase measurement afte
  const calls=[...cfg.matchAll(/\b(\w+)\(\)/g)].map(x=>x[1]).filter(x=>imports.has(x));
  let s=readFileSync(join(root,'client/src/main.js'),'utf8');
  for(const f of calls){const m=await import(pathToFileURL(join(root,'client',imports.get(f))).href);const result=await m[f]().transform(s,join(root,'client/src/main.js'));if(result?.code)s=result.code;}
- assert.match(s,/0\.5\.77\.59\.40\.25\.6/);
+ assert.match(s,/0\.5\.77\.59\.40\.25\.7/);
  assert.match(s,/todayBirthdayPanel\(birthdays\)\+familyTodayPanel/);
  assert.match(s,/performanceTrace\.end\('Ansicht berechnen'/);
  assert.match(s,/performanceTrace\.end\('DOM \+ Events'/);

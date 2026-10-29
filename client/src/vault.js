@@ -3,6 +3,11 @@ const DB_NAME='compass-vault-a1';
 const ITERATIONS=310000;
 let key=null;
 const enc=new TextEncoder();const dec=new TextDecoder();
+import {applyGtdDelta} from './core-first-v5775940257.js';
+const CORE_JOURNAL_KEY='core_gtd_journal_v1';
+let vaultWrites=Promise.resolve();
+function serialVaultWrite(work){const run=vaultWrites.catch(()=>{}).then(work);vaultWrites=run.catch(()=>{});return run;}
+export function flushCoreWrites(){return vaultWrites;}
 const to64=bytes=>{let raw='';for(let i=0;i<bytes.length;i+=8192)raw+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(raw);};
 const from64=str=>Uint8Array.from(atob(str),x=>x.charCodeAt(0));
 
@@ -59,14 +64,53 @@ export async function unlock(passphrase) {
     const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(entry.iv)},candidate,from64(entry.data));
     const state=JSON.parse(dec.decode(plain));
     if(state.format!==1 || !state.records || !Array.isArray(state.pending))throw new Error('Unbekanntes Format.');
+    // The journal and the snapshot are committed separately; replay is idempotent.
+    const journal=await kvGet(CORE_JOURNAL_KEY)||[];
+    for(const row of journal){
+      const payload=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(row.iv)},candidate,from64(row.data));
+      applyGtdDelta(state,JSON.parse(dec.decode(payload)));
+    }
     key=candidate;return state;
   } catch {throw new Error('Passphrase falsch oder Tresor beschädigt.');}
 }
-export async function save(state) {
-  if(!key)throw new Error('Tresor gesperrt.');
-  const iv=crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(state)));
-  await kvPut('payload',{iv:to64(iv),data:to64(new Uint8Array(ciphertext))});
+export function save(state) {
+  if(!key)return Promise.reject(new Error('Tresor gesperrt.'));
+  // Save and truncate the journal in ONE IndexedDB transaction. A crash cannot
+  // leave a new snapshot with an old journal, or a deleted journal with an old snapshot.
+  return serialVaultWrite(async()=>{
+    if(!key)throw new Error('Tresor gesperrt.');
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(state)));
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction('kv','readwrite');const kv=tx.objectStore('kv');
+      kv.put({iv:to64(iv),data:to64(new Uint8Array(ciphertext))},'payload');kv.delete(CORE_JOURNAL_KEY);
+      tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};
+      tx.onabort=()=>{db.close();reject(tx.error||new Error('Tresortransaktion abgebrochen'));};
+    });
+  });
+}
+/** Durable small GTD mutation. All content is AES-GCM encrypted at rest.
+ * Serializes against full snapshots, retaining replay order across app crashes.
+ */
+export function appendCoreGtdDelta(delta){
+  if(!key)return Promise.reject(new Error('Tresor gesperrt.'));
+  const json=JSON.stringify(delta);
+  if(json.length>4000000)return Promise.reject(new Error('GTD-Änderung zu groß; vollständige Speicherung erforderlich.'));
+  return serialVaultWrite(async()=>{
+    if(!key)throw new Error('Tresor gesperrt.');
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(json));
+    const entry={iv:to64(iv),data:to64(new Uint8Array(ciphertext))};
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction('kv','readwrite'), kv=tx.objectStore('kv');
+      const get=kv.get(CORE_JOURNAL_KEY);
+      get.onsuccess=()=>{const entries=get.result||[];entries.push(entry);kv.put(entries,CORE_JOURNAL_KEY);};
+      tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};
+      tx.onabort=()=>{db.close();reject(tx.error||new Error('GTD-Journaltransaktion abgebrochen'));};
+    });
+  });
 }
 // Small, separately encrypted editor drafts. Avoids re-encrypting years of
 // financial and health records merely because the user is typing a title.
@@ -94,13 +138,15 @@ export function saveEditDrafts(drafts){
 }
 export function lock(){key=null;}
 export async function exportEncrypted() {
-  return {application:'Compass',vaultVersion:1,meta:await kvGet('meta'),payload:await kvGet('payload'),sealedCapture:{publicKey:await kvGet(publicCaptureKey),privateKey:await kvGet(privateCaptureKey),queue:await kvGet(lockedQueueKey)}};
+  await flushCoreWrites();
+  return {application:'Compass',vaultVersion:1,meta:await kvGet('meta'),payload:await kvGet('payload'),coreJournal:await kvGet(CORE_JOURNAL_KEY),sealedCapture:{publicKey:await kvGet(publicCaptureKey),privateKey:await kvGet(privateCaptureKey),queue:await kvGet(lockedQueueKey)}};
 }
 export async function importEncrypted(bundle) {
   if(await exists())throw new Error('Import nur in einem neuen, leeren Browser-Tresor möglich.');
   if(bundle?.application!=='Compass'||bundle?.vaultVersion!==1||!bundle.meta?.salt||!bundle.payload?.data)
     throw new Error('Ungültiger Compass-Tresorexport.');
   await kvPut('meta',bundle.meta);await kvPut('payload',bundle.payload);
+  if(Array.isArray(bundle.coreJournal)&&bundle.coreJournal.length)await kvPut(CORE_JOURNAL_KEY,bundle.coreJournal);
   if(bundle.sealedCapture?.publicKey&&bundle.sealedCapture?.privateKey){await kvPut(privateCaptureKey,bundle.sealedCapture.privateKey);await kvPut(publicCaptureKey,bundle.sealedCapture.publicKey);if(Array.isArray(bundle.sealedCapture.queue))await kvPut(lockedQueueKey,bundle.sealedCapture.queue);}
 }
 

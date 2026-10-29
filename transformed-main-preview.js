@@ -70,6 +70,8 @@ import './people-mobile-recovery-v5775933.css';
 import {mergePeopleDirectory,markChangedPeople} from './people-sync-v57719.js';
 import {createPerformanceTrace} from './performance-trace-v57719.js';
 import {planningCheckpoint,restorePlanningCheckpoint,afterPlanningPaint} from './fast-planning-v57721.js';
+import {gtdCheckpoint,paintGtdProgress} from './fast-gtd-actions-v5775940256.js';
+import {gtdDelta,createCoreIdlePolicy} from './core-first-v5775940257.js';
 import './mobile-planning-v57719.css';
 import './performance-trace-v57719.css';
 import {buildPlanTreeIndex} from './plan-tree-index-v57717.js';
@@ -233,7 +235,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.5';
+const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.7';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -330,11 +332,33 @@ let recoveryIdeaMinutes=180,recoveryIdeaEnergy='medium',recoveryIdeaRange='trip'
 let syncResyncRequested=false;
 let syncTimer=null, lastSyncAt=0;
 const SYNC_INTERVAL_MS=15*60*1000;
-const CHANGE_DEBOUNCE_MS=7000;
+const CHANGE_DEBOUNCE_MS=12000;
+const coreIdlePolicy=createCoreIdlePolicy({quietMs:10000,maxDelayMs:120000});
+coreIdlePolicy.noteActivity(Date.now());
+let coreCompactionTimer=null,coreCompactionDue=false;
+function scheduleCoreCompaction(){
+ coreCompactionDue=true;clearTimeout(coreCompactionTimer);
+ coreCompactionTimer=setTimeout(async()=>{
+  coreCompactionTimer=null;
+  if(!state||document.visibilityState==='hidden'||Date.now()-lastActivity<10000){
+   if(state&&document.visibilityState==='visible')scheduleCoreCompaction();return;
+  }
+  try{await persist();coreCompactionDue=false;}catch(ex){console.warn('Compass local checkpoint postponed',ex);scheduleCoreCompaction();}
+ },14000);
+}
 function scheduleSync(delay=CHANGE_DEBOUNCE_MS) {
   if(!state||!authToken||!navigator.onLine||document.visibilityState==='hidden')return;
+  coreIdlePolicy.beginWait(Date.now());
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>{syncTimer=null;syncNow().catch(()=>{});},delay);
+  syncTimer=setTimeout(()=>{
+   syncTimer=null;
+   const editor=document.activeElement?.closest?.('form');
+   const editing=!!(editor&&['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName));
+   if(!coreIdlePolicy.maySync(Date.now(),{visible:document.visibilityState==='visible',online:navigator.onLine,editing})){
+    scheduleSync(Math.max(editing?2000:250,coreIdlePolicy.nextDelay(Date.now())));return;
+   }
+   coreIdlePolicy.reset();syncNow({silent:true}).catch(()=>{});
+  },Math.max(0,delay));
 }
 async function resumeSession(){
   if(!state)return;
@@ -349,7 +373,7 @@ async function resumeSession(){
     if(!navigator.onLine)return;
     const who=await request(config.apiUrl,authToken,'/api/me');
     currentUser=who.email;render();
-    await syncNow();scheduleJournalSync(0);scheduleWatchCalendarSnapshot();
+    scheduleSync();scheduleJournalSync(12000);scheduleWatchCalendarSnapshot();
   }catch(ex){
     if(ex.status===401){authToken='';currentUser='';await vault.clearSession();toast('Compass-Sitzung abgelaufen. Bitte einmalig mit Google anmelden.');}
     else {error='Verbindung derzeit nicht erreichbar. Lokale Erfassung bleibt möglich.';render();}
@@ -399,7 +423,7 @@ function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.
 function scheduleJournalSync(delay=0){
  clearTimeout(journalSyncTimer);journalSyncTimer=null;
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
- journalSyncTimer=setTimeout(()=>{journalSyncTimer=null;syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);render();});},delay);
+ journalSyncTimer=setTimeout(()=>{journalSyncTimer=null;if(Date.now()-lastActivity<10000&&document.visibilityState==='visible'){scheduleJournalSync(10000);return;}syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);});},Math.max(delay,10000));
 }
 
 
@@ -863,14 +887,19 @@ function download(filename,obj) {
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();
   setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
+let fastGtdMutationRevision=0;
 async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=null) {
   let draftBackup=null;
   if(!state)throw new Error('Der Tresor muss entsperrt sein.');
   prepareTasks(state);
   // Fast path only for audited create handlers which replace planning entries.
   // A finance mirror can change other state, so it always uses full rollback.
-  const fastPlanning=options?.fastPlanning===true&&!['source','receiver'].includes(state.privateDeviceMirror?.mode)&&tab!=='people';
-  const previous=fastPlanning?planningCheckpoint(state):structuredClone(state);
+  const fastGtd=options?.fastGtd===true&&tab!=='people';
+  const fastPlanning=fastGtd||options?.fastPlanning===true&&!['source','receiver'].includes(state.privateDeviceMirror?.mode)&&tab!=='people';
+  const actionStart=fastGtd?performanceTrace.start():null;
+  const gtdTicket=fastGtd?++fastGtdMutationRevision:0;
+  let gtdDurableWrite=null;
+  const previous=fastGtd?gtdCheckpoint(state,{singleTaskId:options?.singleTaskId||null}):fastPlanning?planningCheckpoint(state):structuredClone(state);
   // Journal fingerprinting serializes years of personal data. Without journal mirror
   // credentials there is no remote journal change to detect during task editing.
   const trackJournal=!!(state.privateDeviceMirror?.key&&authToken)&&!fastPlanning;
@@ -881,7 +910,7 @@ async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=nu
       state.peopleDeleted=markChangedPeople(previous.people||{},state.people||{},state.peopleDeleted||{},stamp());
     }
     // Expensive finance / health JSON comparisons are only needed when encrypted mirroring is active.
-    if(['source','receiver'].includes(state.privateDeviceMirror?.mode)&&privateChanged(previous,state)){
+    if(!fastGtd&&['source','receiver'].includes(state.privateDeviceMirror?.mode)&&privateChanged(previous,state)){
       if(state.privateDeviceMirror?.mode==='receiver')throw Error('Finanz- und importierte Sportdaten sind auf diesem Gerät im Lesemodus. Bitte Änderungen am Hauptgerät durchführen.');
       if(state.privateDeviceMirror?.mode==='source')state.privateDeviceMirror.dirty=true;
     }
@@ -890,15 +919,31 @@ async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=nu
     // re-encryption. No success notification or remote sync before durability.
     if(fastPlanning){
       options?.onApplied?.();
-      if(options?.fastTodayVisual!==true)render();
+      if(options?.fastTodayVisual!==true&&!options?.inlineGtd)render();
+      // The small encrypted journal begins BEFORE the paint wait; UI and disk
+      // writes run concurrently, but sync starts only after local durability.
+      if(fastPlanning)gtdDurableWrite=vault.appendCoreGtdDelta(gtdDelta(previous,state));
       await afterPlanningPaint();
+      if(fastGtd)performanceTrace.end('GTD Aktion bis Paint',tab,actionStart);
     }
-    await persist();
-    syncQuickPublicFromState();
+    if(fastPlanning){
+      const durStart=performanceTrace.start();
+      await gtdDurableWrite;
+      performanceTrace.end('GTD Journal sicher',tab,durStart);
+      scheduleCoreCompaction();
+    }else await persist();
+    if(!fastPlanning)syncQuickPublicFromState();
     if(trackJournal){
-      if(journalFingerprint(state)!==journalBefore){journalRevision++;journalSyncStatus='lokal';if(state.privateDeviceMirror?.key&&authToken&&navigator.onLine)syncPersonalJournal().catch(ex=>{console.warn('Journal-Abgleich ausstehend:',ex.message);render();});}
+      if(journalFingerprint(state)!==journalBefore){journalRevision++;journalSyncStatus='lokal';if(state.privateDeviceMirror?.key&&authToken&&navigator.onLine)scheduleJournalSync(12000);}
     }
-  }catch(ex){if(fastPlanning){restorePlanningCheckpoint(state,previous);options?.onFailed?.();}else state=previous;if(draftBackup)editDraftGuard.rollback(draftBackup);render();throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);}
+  }catch(ex){
+      // A failed earlier save must not discard a later in-flight +1 or move.
+      if(!fastGtd||gtdTicket===fastGtdMutationRevision){
+        if(fastPlanning){restorePlanningCheckpoint(state,previous);options?.onFailed?.();}else state=previous;
+      }
+      if(draftBackup)editDraftGuard.rollback(draftBackup);render();
+      throw new Error(`Lokales Speichern fehlgeschlagen: ${ex.message}`);
+    }
   if(!skipFinalRender)render();
   scheduleWatchCalendarSnapshot();
   if(busy)syncResyncRequested=true;
@@ -1125,7 +1170,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <h1 class="sr-only">${h(title)}</h1>${tab==='today'?`<div class="ctx42-date-row"><nav class="daynav38" aria-label="Tag auswählen"><button type="button" data-action="daynav38" data-id="previous" title="Vorheriger Tag" aria-label="Vorheriger Tag">‹</button><button type="button" data-action="daynav38" data-id="today" title="Zu Heute springen" aria-label="Heute anzeigen">${h(title)}</button><button type="button" data-action="daynav38" data-id="next" title="Nächster Tag" aria-label="Nächster Tag">›</button></nav>${locationCycle46(state)}</div>`:''}
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.25.5 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.25.7 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
 }
 
 
@@ -3825,7 +3870,10 @@ function bind() {
   const taskMoveForm=app.querySelector('#tree-move-task-form');if(taskMoveForm)taskMoveForm.onsubmit=async ev=>{
     ev.preventDefault();const taskId=taskMoveForm.dataset.id,to=String(new FormData(taskMoveForm).get('target')||'');const [type,targetId]=to.split(':');
     if(!['project','task'].includes(type)||!targetId)return;
-    try{await mutate(s=>moveTaskHierarchy(s,taskId,type,targetId,'inside'));selectedProjectId=state.tasks[taskId].projectId;toast('Aufgabe mit Unteraufgaben verschoben.');}catch(ex){toast(ex.message,true);}
+    try{const quick=true;
+      await mutate(s=>moveTaskHierarchy(s,taskId,type,targetId,'inside'),null,quick,quick?{fastPlanning:true,fastGtd:true,onApplied:()=>{selectedProjectId=state.tasks[taskId].projectId;}}:null);
+      if(!quick)selectedProjectId=state.tasks[taskId].projectId;
+    }catch(ex){toast(ex.message,true);}
   };
   let dragData=null;
   app.querySelectorAll('.tree-drag-handle[draggable="true"]').forEach(el=>el.ondragstart=ev=>{
@@ -3840,10 +3888,12 @@ function bind() {
     el.ondrop=async ev=>{ev.preventDefault();el.classList.remove('tree-drop-hover');const payload=dragData;dragData=null;if(!payload)return;
       const targetType=el.dataset.dropType,targetId=el.dataset.dropId||null,rect=el.getBoundingClientRect(),ratio=(ev.clientY-rect.top)/(rect.height||1);
       const where=targetType==='project-root'||payload.type==='task'&&targetType==='project'?'inside':ratio<0.23?'before':ratio>0.77?'after':'inside';
-      try{if(payload.type==='project')await mutate(s=>moveProjectHierarchy(s,payload.id,targetId,where));
-        else await mutate(s=>moveTaskHierarchy(s,payload.id,targetType,targetId,where));
-        if(payload.type==='project')selectedProjectId=payload.id;
-        else {selectedProjectId=state.tasks[payload.id].projectId;selectedTaskId=payload.id;}
+      try{const quick=true;
+        const updateSelection=()=>{if(payload.type==='project')selectedProjectId=payload.id;
+          else {selectedProjectId=state.tasks[payload.id].projectId;selectedTaskId=payload.id;}};
+        await mutate(s=>payload.type==='project'?moveProjectHierarchy(s,payload.id,targetId,where):moveTaskHierarchy(s,payload.id,targetType,targetId,where),null,quick,
+          quick?{fastPlanning:true,fastGtd:true,onApplied:updateSelection}:null);
+        if(!quick){updateSelection();render();}
       }catch(ex){toast('Verschieben: '+ex.message,true);}
     };
   });
@@ -5116,7 +5166,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     }
     if(action==='task-move-up'||action==='task-move-down'){
       if(!state?.tasks?.[id])return;
-      await mutate(s=>moveOrder(s,'tasks',id,action==='task-move-up'?-1:1));return;
+      const quick=true;
+      await mutate(s=>moveOrder(s,'tasks',id,action==='task-move-up'?-1:1),null,quick,quick?{fastPlanning:true,fastGtd:true}:null);return;
     }
     if(action==='gtd-review-project'){
       if(!state?.projects?.[id])return;
@@ -5552,7 +5603,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
       await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
     }
-    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];await editDraftGuard.flush().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;outlook724Token='';outlook724Connected=false;outlook724Preview=[];authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;outlook724Token='';outlook724Connected=false;outlook724Preview=[];authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){
@@ -5627,7 +5678,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!existing||existing.archived||state.projects?.[existing.projectId]?.isTemplate)return;
       if(state.taskConflicts?.[id]){toast('Zuerst den Änderungskonflikt dieser Aufgabe klären.',true);return;}
       if(!title){toast('Titel muss zwischen 1 und 180 Zeichen lang sein.',true);editor?.querySelector('input')?.focus();return;}
-      if(title!==existing.title){await mutate(s=>{s.tasks[id].title=title;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});}
+      if(title!==existing.title){await mutate(s=>{s.tasks[id].title=title;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;},null,true,{fastGtd:true,fastPlanning:true,singleTaskId:id});render();}
       inlineEditingTaskId=null;render();return;
     }
     if(action==='task-select'){if(!state?.tasks?.[id])return;if(tab==='forecast')forecastInspectorOpen401=true;selectedTaskId=id;if(tab==='today')todayInspectorOpen=true;if(!compass55RefreshInspector())render();if(tab==='today'&&window.matchMedia?.('(max-width:800px)')?.matches)requestAnimationFrame(()=>app.querySelector('.today-focus-inspector')?.scrollIntoView?.({behavior:'smooth',block:'start'}));return;}
@@ -5638,11 +5689,13 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       const t=state?.tasks?.[id];if(!t||t.archived||t.completed||state.projects?.[t.projectId]?.isTemplate)return;
       const next=advanceTaskCounter(t,action==='task-progress-plus'?1:-1);
       if(next===null||next===(t.progressCurrent??0))return;
-      await mutate(s=>{s.tasks[id].progressCurrent=next;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
+      const quick=tab!=='people';
+      await mutate(s=>{s.tasks[id]={...s.tasks[id],progressCurrent:next,updatedAt:stamp()};s.taskPending[id]=true;},null,quick,
+        quick?{fastPlanning:true,fastGtd:true,singleTaskId:id,inlineGtd:true,onApplied:()=>paintGtdProgress(app,id,state.tasks[id])}:null);
       if(next===t.progressTarget)toast('Stückziel erreicht! Die Aufgabe bleibt offen, bis du sie abschließt.');
       return;
     }
-    if(action==='task-flag'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].flagged=!s.tasks[id].flagged;s.taskPending[id]=true;});return;}
+    if(action==='task-flag'){if(!state?.tasks?.[id])return;await mutate(s=>{s.tasks[id].flagged=!s.tasks[id].flagged;s.taskPending[id]=true;},null,false,{fastGtd:true,fastPlanning:true,singleTaskId:id});return;}
     if(action==='wf715-suggest'){
       const date=String(day||'');
       const field=app.querySelector('#wf715-create [name="checkDate"]');
@@ -5663,8 +5716,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       await mutate(s=>{s.tasks[id].completed=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});
       toast('Rückmeldung als erledigt markiert.');return;
     }
-    if(action==='task-toggle'){if(!state?.tasks?.[id])return;if(state.projects?.[state.tasks[id].projectId]?.isTemplate){toast('Vorlage bleibt unverändert. Erstelle eine neue Liste daraus.');return;}const fast=tab==='today'&&!['source','receiver'].includes(state.privateDeviceMirror?.mode)&&[...app.querySelectorAll('.today-tasks .task-row [data-action="task-toggle"]')].some(el=>el.dataset.id===id);await mutate(s=>{s.tasks[id]={...s.tasks[id],completed:!s.tasks[id].completed,updatedAt:stamp()};s.taskPending[id]=true;},null,fast,fast?{fastPlanning:true,fastTodayVisual:true,onApplied:()=>{compass55FastTaskPaint(id);if(todayInspectorOpen&&selectedTaskId===id)compass55RefreshInspector();}}:null);return;}
-    if(action==='task-archive'){if(!confirm('Aufgabe archivieren?'))return;await mutate(s=>{s.tasks[id].archived=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;});selectedTaskId=null;todayInspectorOpen=false;return;}
+    if(action==='task-toggle'){if(!state?.tasks?.[id])return;if(state.projects?.[state.tasks[id].projectId]?.isTemplate){toast('Vorlage bleibt unverändert. Erstelle eine neue Liste daraus.');return;}const fast=tab==='today'&&!['source','receiver'].includes(state.privateDeviceMirror?.mode)&&[...app.querySelectorAll('.today-tasks .task-row [data-action="task-toggle"]')].some(el=>el.dataset.id===id);await mutate(s=>{s.tasks[id]={...s.tasks[id],completed:!s.tasks[id].completed,updatedAt:stamp()};s.taskPending[id]=true;},null,fast,{fastGtd:true,fastPlanning:true,singleTaskId:id,...(fast?{fastTodayVisual:true,onApplied:()=>{compass55FastTaskPaint(id);if(todayInspectorOpen&&selectedTaskId===id)compass55RefreshInspector();}}:{})});return;}
+    if(action==='task-archive'){if(!confirm('Aufgabe archivieren?'))return;await mutate(s=>{s.tasks[id].archived=true;s.tasks[id].updatedAt=stamp();s.taskPending[id]=true;},null,false,{fastGtd:true,fastPlanning:true,singleTaskId:id});selectedTaskId=null;todayInspectorOpen=false;return;}
     if(action==='task-conflict-local'||action==='task-conflict-remote'){
        const conflict=state.taskConflicts[id];if(!conflict)return;
        await mutate(s=>{if(action==='task-conflict-remote'&&conflict.remote){s.tasks[id]=conflict.remote;s.taskVersions[id]=conflict.remote.version;delete s.taskPending[id];}
@@ -5816,7 +5869,7 @@ async function syncReview(){
     await persist();
   }catch(ex){if(ex.status===409){const latest=await request(config.apiUrl,authToken,'/api/review');state.reviewConflict={progress:latest.progress,version:latest.version};await persist();render();return;}throw ex;}
 }
-async function syncNow() {
+async function syncNow({silent=false}={}) {
   if(!state||!authToken||busy||!navigator.onLine)return;
   // An automatic sync must never compete with typing a project/template item.
   // Explicit Sync clicks focus their own button and proceed normally.
@@ -5827,7 +5880,7 @@ async function syncNow() {
   }
   const syncMeasurement=performanceTrace.start();
   clearTimeout(syncTimer);syncTimer=null;
-  busy=true;
+  busy=true;if(!silent)render();
   try {
     const health=await request(config.apiUrl,authToken,'/api/health');
     assertCompatibleWorker(health);
@@ -5871,10 +5924,10 @@ async function syncNow() {
     error=ex.status===401?'Google-Sitzung abgelaufen. Bitte erneut anmelden.':`Synchronisation: ${ex.message}`;
     if(ex.status===401){authToken='';currentUser='';await vault.clearSession().catch(()=>{});}
   }finally{
-    busy=false;render();performanceTrace.end('Cloud-Abgleich',tab,syncMeasurement);
+    busy=false;if(!silent||error||Date.now()-lastActivity>=1500)render();performanceTrace.end('Cloud-Abgleich',tab,syncMeasurement);
     const retry=syncResyncRequested&&Boolean(state?.pending.length||Object.keys(state?.taskPending||{}).length||Object.keys(state?.projectPending||{}).length||Object.keys(state?.eventPending||{}).length||state?.reviewPending)&&Boolean(authToken)&&navigator.onLine&&!error;
     syncResyncRequested=false;
-    if(retry)scheduleSync(0);
+    if(retry)scheduleSync(CHANGE_DEBOUNCE_MS);
   }
 }
 // Opt-in, content-free interaction-to-paint measurement attached to a stable root.
@@ -5916,8 +5969,8 @@ document.addEventListener('compass:post-workout-nutrition-5928',e=>{
   toast(e.detail?.message||'Workout abgeschlossen.');
  });
 window.addEventListener('offline',render);
-for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();},{passive:true});
-setInterval(async()=>{if(state&&Date.now()-lastActivity>15*60*1000&&document.documentElement.dataset.compassRoutineActive!=='yes'&&Number(document.documentElement.dataset.compassRoutineGraceUntil||0)<Date.now()){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);await editDraftGuard.flush().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
+for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();coreIdlePolicy.noteActivity(lastActivity);},{passive:true});
+setInterval(async()=>{if(state&&Date.now()-lastActivity>15*60*1000&&document.documentElement.dataset.compassRoutineActive!=='yes'&&Number(document.documentElement.dataset.compassRoutineGraceUntil||0)<Date.now()){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
 (async()=>{
   try{config=await fetch(`${import.meta.env.BASE_URL}runtime-config.json`,{cache:'no-store'}).then(r=>r.json());}
   catch{config={};}

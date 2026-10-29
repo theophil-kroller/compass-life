@@ -52,9 +52,9 @@ test('release injects instant progress, selective checkpoints, synchronous move 
  const calls=[...cfg.matchAll(/\b(\w+)\(\)/g)].map(m=>m[1]).filter(name=>imports.has(name));
  let s=readFileSync(join(root,'client/src/main.js'),'utf8');
  for(const name of calls){const m=await import(pathToFileURL(join(root,'client',imports.get(name))).href);const result=await m[name]().transform(s,join(root,'client/src/main.js'));if(result?.code)s=result.code;}
- assert.match(s,/const COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.25\.6'/);
+ assert.match(s,/const COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.25\.7'/);
  assert.match(s,/fastGtd\?gtdCheckpoint\(state/);
- assert.match(s,/if\(!fastGtd\)syncQuickPublicFromState/);
+ assert.match(s,/if\(!fastPlanning\)syncQuickPublicFromState/);
  assert.match(s,/paintGtdProgress\(app,id,state\.tasks\[id\]\)/);
  assert.match(s,/GTD Aktion bis Paint/);
  assert.match(s,/moveTaskHierarchy\(s,taskId,type,targetId,'inside'\)/);
