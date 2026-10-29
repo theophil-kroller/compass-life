@@ -1,0 +1,40 @@
+/* Compass .40.25.14 — distinguish quick time capture and habits at a glance.
+   Scoped to the top utility bar. No journal, vault or sync code is changed. */
+.utility-right .pj92-work-quick{
+  color:#174eaa;background:#eaf2ff;border-color:#abc7f4;
+}
+.utility-right .pj92-work-quick:hover{
+  background:#dbeaff;border-color:#6495e3;
+}
+.utility-right .pj92-work-quick.is-active{
+  color:#143e86;background:#d0e2ff;border-color:#447cda;
+  box-shadow:inset 0 0 0 1px #447cda22,0 0 0 2px #447cda14;
+}
+.utility-right .pj92-work-quick.is-active::after{
+  content:'';position:absolute;right:4px;top:4px;width:6px;height:6px;
+  border-radius:50%;background:#185bc0;box-shadow:0 0 0 1.5px #f0f6ff;
+}
+.utility-right .pj92-habit-quick{
+  color:#6f359c;background:#f5edff;border-color:#d4b9ec;
+}
+.utility-right .pj92-habit-quick:hover{
+  background:#eadbfb;border-color:#ad79d3;
+}
+.utility-right .pj92-habit-quick.is-complete{
+  color:#5b267d;background:#e9dcfa;border-color:#9763be;
+  box-shadow:inset 0 0 0 1px #9763be22;
+}
+.utility-right .pj92-habit-quick.is-complete::after{
+  content:'✓';position:absolute;right:2px;top:1px;font-size:9px;font-weight:900;
+  border-radius:50%;background:#6f359c;color:white;line-height:11px;
+  width:11px;height:11px;text-align:center;
+}
+.utility-right .pj92-habit-glyph{
+  display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;
+  font-size:19px;line-height:1;
+}
+.utility-right .pj92-work-quick:focus-visible{outline:2px solid #2864c6;outline-offset:3px}
+.utility-right .pj92-habit-quick:focus-visible{outline:2px solid #753eb4;outline-offset:3px}
+@media(max-width:480px){
+  .utility-right .pj92-work-quick,.utility-right .pj92-habit-quick{min-width:31px;min-height:33px}
+}

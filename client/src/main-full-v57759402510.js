@@ -100,6 +100,7 @@ import {personCalendarEvents} from './people-matching.js';
 import './people-agenda-v57717.css';
 import './people-scope-v57720.css';
 import './style.css';
+import './quick-utility-colors-v57759402514.css';
 import {allRecoveryIdeas,scoreRecoveryIdeas,recoveryWeather,validRecoveryIdea} from './recovery-ideas.js';
 import {assertCompatibleWorker} from './health-check.js';
 import {parseEventImport,upcomingImportedEvents,discoveryPromptRegional,discoveryPromptTravel,eventKey,eventAppearance as discoveryAppearance,EVENT_CATEGORIES,eventArea,eventCountry} from './event-import.js';
@@ -1319,10 +1320,10 @@ function syncQuickPublicWorktime(entry){
  quickPublic=normalized;writeQuickPublic();
 }
 function worktimeQuickButton(){
- const active=isWorktimeActive(state);return `<button class="quick-utility-button ${active?'is-active':''}" type="button" data-action="worktime-quick-open" title="Arbeitszeit erfassen" aria-haspopup="dialog">${ico(active?'clock':'clock',18)}<span class="quick-utility-label">Arbeit</span>${active?'<small class="pj92-work-status">●</small>':''}</button>`;
+ const active=isWorktimeActive(state);const title=active?'Arbeitszeit erfassen · Timer läuft':'Arbeitszeit erfassen';return `<button class="quick-utility-button pj92-work-quick ${active?'is-active':''}" type="button" data-action="worktime-quick-open" title="${title}" aria-label="${title}" aria-haspopup="dialog">${ico('clock',18)}<span class="quick-utility-label">Arbeit</span>${active?'<small class="pj92-work-status">●</small>':''}</button>`;
 }
 function habitQuickButton(){
- const items=habitItems(state),done=todayHabitIds(state).length;return `<button class="quick-utility-button ${done&&items.length&&done===items.length?'is-complete':''}" type="button" data-action="habit-quick-open" title="Habits abhaken" aria-haspopup="dialog">${ico('checkSquare',18)}<span class="quick-utility-label">Habits</span>${items.length?'<small class="pj92-habit-count">'+done+'/'+items.length+'</small>':''}</button>`;
+ const items=habitItems(state),done=todayHabitIds(state).length;const complete=Boolean(items.length&&done===items.length);const title=items.length?`Habits abhaken · ${done} von ${items.length} erledigt`:'Habits abhaken';return `<button class="quick-utility-button pj92-habit-quick ${complete?'is-complete':''}" type="button" data-action="habit-quick-open" title="${title}" aria-label="${title}" aria-haspopup="dialog"><span class="pj92-habit-glyph" aria-hidden="true">💪</span><span class="quick-utility-label">Habits</span>${items.length?'<small class="pj92-habit-count">'+done+'/'+items.length+'</small>':''}</button>`;
 }
 function worktimeQuickOverlay(){
  const source=worktimeSource(state);const active=!!source.activeStart;const sessions=worktimeSessionsForDay(state);const total=worktimeMinutesForDay(state);
