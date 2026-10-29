@@ -37,7 +37,7 @@ test('Today family memo caches only identical inputs and never changes output on
 });
 test('plugin has guarded anchors, fast review/inspector, visible Today timings',()=>{
  const source=read('transformed-main-preview.js');const plugin=compass5940258CorePerformance();
- assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.25\.8'/);
+ assert.match(source,/COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.25\.9'/);
  assert.match(source,/fastReview\?reviewCheckpoint/);
  assert.match(source,/GTD Journal sicher/);
  assert.match(source,/Heute: Familien- und Geburtstagsradar/);

@@ -73,6 +73,7 @@ import {planningCheckpoint,restorePlanningCheckpoint,afterPlanningPaint} from '.
 import {gtdCheckpoint,paintGtdProgress} from './fast-gtd-actions-v5775940256.js';
 import {gtdDelta,createCoreIdlePolicy} from './core-first-v5775940257.js';
 import {reviewCheckpoint,restoreReviewCheckpoint,createTodayPanelMemo} from './core-performance-v5775940258.js';
+import {calendarBirthdayCandidates,familyWorkerSnapshot,createDeferredFamilyCache} from './today-core-deferred-v5775940259.js';
 import './mobile-planning-v57719.css';
 import './performance-trace-v57719.css';
 import {buildPlanTreeIndex} from './plan-tree-index-v57717.js';
@@ -236,7 +237,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.8';
+const COMPASS_CLIENT_VERSION='0.5.77.59.40.25.9';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -891,6 +892,24 @@ function download(filename,obj) {
 let fastGtdMutationRevision=0;
 let coreTodayDataRevision=0;
 const coreTodayFamilyMemo=createTodayPanelMemo();
+const core259FamilyCache=createDeferredFamilyCache();
+let core259FamilyKey=null;
+const core259FamilyKeyNow=()=>[coreTodayDataRevision,journalRevision,state?.people,state?.familyRadar,calendarEvents,calendarEvents.length,calendarUpdatedAt,state?.calendarRules,state?.calendarOverrides,showHiddenCalendarEvents,localDate()];
+function core259FamilyAfterPaint(){
+ if(tab!=='today'||!state||document.visibilityState==='hidden')return;
+ const key=core259FamilyKeyNow();
+ if(!core259FamilyKey||!key.every((x,i)=>x===core259FamilyKey[i]))return;
+ if(core259FamilyCache.peek(key)!==null||core259FamilyCache.isPending(key))return;
+ const input=familyWorkerSnapshot(calendarEvents,state.people||{},state,localDate(),e=>eventAppearance(e),showHiddenCalendarEvents);
+ const started=performanceTrace.start();
+ core259FamilyCache.schedule(key,input,html=>{
+  performanceTrace.end('Heute: Familienradar Worker fertig',tab,started);
+  if(!state||tab!=='today'||!key.every((x,i)=>x===core259FamilyKeyNow()[i]))return;
+  const host=app.querySelector('[data-core259-family]');if(!host)return;
+  host.innerHTML=html;
+  host.querySelectorAll('[data-action]').forEach(el=>{el.onclick=ev=>{ev.preventDefault();runAction(el.dataset.action,el.dataset.id,el.dataset.step,el.dataset.day);};});
+ },{workerFactory:()=>new Worker(new URL('./today-family-worker-v5775940259.js',import.meta.url),{type:'module'})});
+}
 async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=null) {
   let draftBackup=null;
   if(!state)throw new Error('Der Tresor muss entsperrt sein.');
@@ -1100,14 +1119,13 @@ function chrome(content){
   let familyVisible=null, familyProposals=null;
   if(tab==='today'){
    const familyStarted=performanceTrace.start();
-   const familyMarkup=coreTodayFamilyMemo.get([coreTodayDataRevision,journalRevision,state.people,state.familyRadar,calendarEvents,calendarEvents.length,calendarUpdatedAt,showHiddenCalendarEvents,familyNow],()=>{
-    const familyVisible=calendarEvents.filter(e=>e.status!=='cancelled'&&String(e.summary||'').includes(':')&&(!eventAppearance(e).hidden||showHiddenCalendarEvents));
-    const familyProposals=familySuggestions(familyVisible,familyPeople,state,{today:familyNow});
-    const birthdays=todayBirthdayHighlights(calendarEvents,e=>eventAppearance(e),familyPeople,familyNow);
-    return todayBirthdayPanel(birthdays)+familyTodayPanel(familyProposals,familyTodayObservations(familyVisible,familyPeople,state,{today:familyNow}));
-   });
+   const birthdayStarted=performanceTrace.start();
+   const birthdays=todayBirthdayHighlights(calendarBirthdayCandidates(calendarEvents,familyNow,7),e=>eventAppearance(e),familyPeople,familyNow);
+   performanceTrace.end('Heute: Geburtstage sofort',tab,birthdayStarted);
+   const key=core259FamilyKeyNow();core259FamilyKey=key;
+   const fromWorker=core259FamilyCache.peek(key);
+   content=todayBirthdayPanel(birthdays)+'<div data-core259-family style="display:contents">'+(fromWorker??'')+'</div>'+content;
    performanceTrace.end('Heute: Familien- und Geburtstagsradar',tab,familyStarted);
-   content=familyMarkup+content;
   }else{
    familyVisible=calendarEvents.filter(e=>e.status!=='cancelled'&&String(e.summary||'').includes(':')&&(!eventAppearance(e).hidden||showHiddenCalendarEvents));
    familyProposals=familySuggestions(familyVisible,familyPeople,state,{today:familyNow});
@@ -1185,7 +1203,7 @@ function chrome(content){
  <div class="content ${tab==='today'||tab==='forecast'?'content-work':tab==='finance'?'content-finance':''}">
  <h1 class="sr-only">${h(title)}</h1>${tab==='today'?`<div class="ctx42-date-row"><nav class="daynav38" aria-label="Tag auswählen"><button type="button" data-action="daynav38" data-id="previous" title="Vorheriger Tag" aria-label="Vorheriger Tag">‹</button><button type="button" data-action="daynav38" data-id="today" title="Zu Heute springen" aria-label="Heute anzeigen">${h(title)}</button><button type="button" data-action="daynav38" data-id="next" title="Nächster Tag" aria-label="Nächster Tag">›</button></nav>${locationCycle46(state)}</div>`:''}
  ${notice&&!((tab==='finance'||tab==='insights')&&notice==='Synchronisiert. Alle verfügbaren Änderungen abgeglichen.')?`<div role="status" class="alert good ${tab==='finance'?'fin31-sync-status':''}">${h(notice)}</div>`:''}${error?`<div role="alert" class="alert bad">${h(error)}</div>`:''}
- ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.25.8 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
+ ${content}<footer>Compass · Private Beta · Lokal verschlüsselt · Build 0.5.77.59.40.25.9 ${ico('shield',13)}</footer></div></main>${state||hasVault&&sealedCaptureAvailable?`<button class="capture-fab" type="button" data-action="capture-focus" aria-label="Schnellerfassung öffnen" title="Gedanken erfassen">${ico('plus',23)}</button>`:``}${captureOverlayOpen?captureOverlay():``}${feelingOverlayOpen?feelingOverlay(feelingDraft,state?.feelingCheckins||[],{inputMode:feelingInputMode,captureReady:true}):``}${worktimeQuickOpen?worktimeQuickOverlay():``}${habitQuickOpen?habitQuickOverlay():``}${nutritionQuickOpen?nutritionQuickOverlay():``}${touchQuickOpen?touchQuickOverlay():``}${morningPlayerOpen?morningRenderOverlay():``}</div>`;
 }
 
 
@@ -2812,7 +2830,7 @@ function render(){
  const feelingScrollBefore=feelingOverlayOpen?app.querySelector('#fw65-dialog')?.scrollTop||0:0;
  const captureFocus=snapshotCaptureDraft();
  morningSaveNoteFromScreen();
- if(!state){app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[],{inputMode:feelingInputMode,captureReady:sealedCaptureAvailable}):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);editDraftGuard.afterRender(editDraftFocus);lastEditRenderSignature=editRenderSignature();return;}
+ if(!state){core259FamilyCache.clear();core259FamilyKey=null;app.innerHTML=vaultScreen()+(feelingOverlayOpen?feelingOverlay({...feelingDraft,locked:true},[],{inputMode:feelingInputMode,captureReady:sealedCaptureAvailable}):'')+(nutritionQuickOpen?nutritionQuickOverlay():'')+(worktimeQuickOpen?worktimeQuickOverlay():'')+(habitQuickOpen?habitQuickOverlay():'')+(morningPlayerOpen?morningRenderOverlay():'');bind();restoreCaptureDraft(captureFocus);editDraftGuard.afterRender(editDraftFocus);lastEditRenderSignature=editRenderSignature();return;}
  try{sessionStorage.setItem('compass.calm.lastView',JSON.stringify({tab,insight:insightTab,finance:financePane}));}catch{}
  const screenMeasurement=performanceTrace.start();
  let html;
@@ -2835,6 +2853,10 @@ function render(){
  }
  if(tab==='system'&&configured()&&!authToken)renderGoogleButton();
  performanceTrace.end('Bildschirm rendern',tab,renderMeasurement);
+ if(tab==='today'&&core259FamilyKey&&core259FamilyCache.peek(core259FamilyKey)===null){
+   const run=()=>setTimeout(core259FamilyAfterPaint,0);
+   if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(run));else run();
+ }
  if(performanceTrace.enabled&&typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(()=>performanceTrace.end('Render bis Darstellung',tab,renderMeasurement)));
 }
 function bindStrengthEditor732(){
@@ -5987,6 +6009,9 @@ document.addEventListener('compass:post-workout-nutrition-5928',e=>{
   // Never auto-log a supplement. The athlete decides whether anything was consumed.
   toast(e.detail?.message||'Workout abgeschlossen.');
  });
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&state&&tab==='today'&&core259FamilyKey){
+    if(typeof requestAnimationFrame==='function')requestAnimationFrame(core259FamilyAfterPaint);else setTimeout(core259FamilyAfterPaint,0);
+  }});
 window.addEventListener('offline',render);
 for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();coreIdlePolicy.noteActivity(lastActivity);},{passive:true});
 setInterval(async()=>{if(state&&Date.now()-lastActivity>15*60*1000&&document.documentElement.dataset.compassRoutineActive!=='yes'&&Number(document.documentElement.dataset.compassRoutineGraceUntil||0)<Date.now()){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Nach 15 Minuten Inaktivität automatisch gesperrt.';render();}},60000);
