@@ -2,6 +2,9 @@ import {mergePeopleDirectory} from './people-sync-v57719.js';
 import {mergeMorningData} from './miracle-morning-v570.js';
 import {mergeHabitQuick} from './habit-device-sync-v5731.js';
 import {mergeCalendarArchives} from './calendar-cache-v574.js';
+import {mergeStrengthJournal} from './strength-device-sync-v57742.js';
+import {mergeDreamJournals} from './dream-journal-v57743.js';
+import {mergeReceiptJournals} from './receipt-gpt-v57743.js';
 import {energyGoalSettings,energyGoalView} from './energy-goal-v575.js';
 /** Compass 0.5.69.2 – Personal Time Journal + nutrition; pure data transformations. */
 export const TIME_AREAS=[
@@ -296,6 +299,9 @@ export function mergeJournalData(local,remote){
   timeJournal:{entries:byId(lc.timeJournal?.entries,rc.timeJournal?.entries),overrides:unionObject(lc.timeJournal?.overrides,rc.timeJournal?.overrides)},
   nutritionJournal:{entries:byId(lc.nutritionJournal?.entries,rc.nutritionJournal?.entries),customFoods:byId(lc.nutritionJournal?.customFoods,rc.nutritionJournal?.customFoods),...(lc.nutritionJournal?.macroPrefs||rc.nutritionJournal?.macroPrefs?{macroPrefs:(()=>{const a=lc.nutritionJournal?.macroPrefs,b=rc.nutritionJournal?.macroPrefs;return !a?b:!b?a:String(a.updatedAt||'')>=String(b.updatedAt||'')?a:b;})()}:{}),...(lc.nutritionJournal?.energyGoal||rc.nutritionJournal?.energyGoal?{energyGoal:(()=>{const left=lc.nutritionJournal?.energyGoal,right=rc.nutritionJournal?.energyGoal;if(!left)return energyGoalSettings(right);if(!right)return energyGoalSettings(left);return energyGoalSettings(String(left.updatedAt||'')>=String(right.updatedAt||'')?left:right);})()}:{} )},
   touchJournal:mergeTouchRecords(lc.touchJournal,rc.touchJournal),
+  strengthJournal:mergeStrengthJournal(lc.strengthJournal,rc.strengthJournal),
+  dreamJournal:mergeDreamJournals(lc.dreamJournal,rc.dreamJournal),
+  receiptJournal:mergeReceiptJournals(lc.receiptJournal,rc.receiptJournal),
   quickWorktime:mergeQuickWorktime(localWork,remoteWork),
   feelingCheckins:mergeFeelingCheckins(lc.feelingCheckins,rc.feelingCheckins),
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),
