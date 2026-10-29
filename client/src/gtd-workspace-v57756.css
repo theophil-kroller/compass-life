@@ -49,3 +49,8 @@
 .shell .compass56-recommend-actions{display:flex;justify-content:flex-end;gap:4px;padding:0 4px}
 .shell .compass56-recommend-actions button{display:grid;place-items:center;min-width:31px;min-height:31px;border:1px solid #dbe5df;border-radius:9px;background:transparent;color:#42685c;cursor:pointer;font-size:17px}
 .shell .compass56-recommend-actions button:hover{background:#eef5f0}
+
+/* .40.25.13 — A stable, unmistakable mode signal (desktop + mobile). */
+.compass55-extended .compass56-mode-switch .compass56-mode-button{color:#d35400;border-color:#ffb45d;background:#fff0d5;box-shadow:inset 0 0 0 1px rgba(245,135,10,.18),0 0 0 2px rgba(255,165,0,.09)}
+.compass55-extended .compass56-mode-switch .compass56-mode-button:hover{color:#a93f00;border-color:#ef7d0c;background:#ffe1b3}
+.compass55-extended .compass56-mode-switch .compass56-mode-button:focus-visible{outline:2px solid #ec7500;outline-offset:3px}
