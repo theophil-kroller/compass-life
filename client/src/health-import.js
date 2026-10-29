@@ -21,6 +21,9 @@ export function parseFitdaysRows(rows){
  const headIndex=rows.findIndex(r=>Array.isArray(r)&&r.some(c=>headings(c)==='date')&&r.some(c=>headings(c)==='weight'));
  if(headIndex<0)throw Error('Fitdays-Spalten „Date“ und „Weight“ nicht gefunden');
  const head=rows[headIndex].map(headings),column=(n)=>head.indexOf(n),value=(r,n)=>numeric(r[column(n)]);
+ // Optional columns really supplied by the exported file; never impute them.
+ // Fitdays export labels differ between app languages and models.
+ const optional=(r,aliases,low,high)=>{const index=head.findIndex(label=>aliases.includes(label));return index<0?null:within(numeric(r[index]),low,high);};
  const output=[];for(const r of rows.slice(headIndex+1)){
   if(!Array.isArray(r))continue;
   const at=isoFromFitdays(r[column('date')]);if(!at)continue;
@@ -41,7 +44,15 @@ export function parseFitdaysRows(rows){
    if(fat)segmentFat[key]=fat;
    if(muscle)segmentMuscle[key]=muscle;
   }
-  const entry={at,day:at.slice(0,10),weightKg:weight,bodyFatPct:bodyFat,visceralFat:within(value(r,'visceral fat'),0,60),waterPct:within(value(r,'body water'),5,90),muscleKg:muscleMass,boneKg:within(value(r,'bone mass'),0,30),proteinPct:within(value(r,'protein'),0,60),fatMassKg:within(value(r,'fat mass'),0,200),segmentFat,segmentMuscle,source:'fitdays'};
+  const entry={at,day:at.slice(0,10),weightKg:weight,bodyFatPct:bodyFat,visceralFat:within(value(r,'visceral fat'),0,60),waterPct:within(value(r,'body water'),5,90),muscleKg:muscleMass,boneKg:within(value(r,'bone mass'),0,30),proteinPct:within(value(r,'protein'),0,60),fatMassKg:within(value(r,'fat mass'),0,200),
+   bmi:optional(r,['bmi','body mass index'],10,70),
+   subcutaneousFatPct:optional(r,['subcutaneous fat','subcutaneous fat rate','subcutaneous fat (%)','subcutaneous fat percentage','unterhautfett','subkutanes fett'],0,75),
+   whr:optional(r,['whr','waist to hip ratio','waist-to-hip ratio','waist hip ratio','taille hüfte verhältnis'],0.45,1.6),
+   bmrKcal:optional(r,['bmr','basal metabolic rate','basal metabolism','basal metabolic rate (kcal)','grundumsatz'],500,5000),
+   fatFreeKg:optional(r,['fat-free body weight','fat free body weight','fat free mass','fat-free mass','fat free body weight','fettfreie masse'],10,300),
+   bodyAge:optional(r,['body age','metabolic age','körperalter','metabolisches alter'],5,125),
+   asmi:optional(r,['asmi','appendicular skeletal muscle index','appendicular skeletal muscle mass index'],2,20),
+   segmentFat,segmentMuscle,source:'fitdays'};
   // Same timestamp with distinct measurements is deliberately retained.
   entry.id=`${at}|${[weight,bodyFat,muscleMass,entry.waterPct,entry.visceralFat,entry.fatMassKg].join('|')}|${JSON.stringify([segmentFat,segmentMuscle])}`;
   output.push(entry);
@@ -129,7 +140,14 @@ export function commitHealthImport(s,preview){
  s.healthImports??={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],lastImportAt:null};
  const target=s.healthImports;const merge=(a,b,key,quality=false)=>{const map=new Map();for(const x of [...a,...b]){const old=map.get(key(x));if(!old||!quality||(x.stages?.length||0)>=(old.stages?.length||0))map.set(key(x),x);}return [...map.values()].sort((x,y)=>(x.at||x.day).localeCompare(y.at||y.day));};
  const before=[target.fitdays.length,target.garminNights.length,target.garminHrv.length];
- target.fitdays=merge(target.fitdays,preview.fitdays,x=>x.id);
+ // Enriched reimports keep prior optional measurements when the newly supplied
+ // file has no such column. Stable identity remains compatible with old Vaults.
+ const fitById=new Map((target.fitdays||[]).map(x=>[x.id,x]));
+ for(const incoming of preview.fitdays||[]){const older=fitById.get(incoming.id);
+  if(!older){fitById.set(incoming.id,incoming);continue;}
+  fitById.set(incoming.id,{...older,...incoming,...Object.fromEntries(['bmi','subcutaneousFatPct','whr','bmrKcal','fatFreeKg','bodyAge','asmi'].map(k=>[k,incoming[k]??older[k]??null]))});
+ }
+ target.fitdays=[...fitById.values()].sort((a,b)=>a.at.localeCompare(b.at));
  target.garminNights=merge(target.garminNights,preview.garminNights,x=>x.day,true);
  target.garminHrv=merge(target.garminHrv,preview.garminHrv,x=>x.day);
  // Merge by 5-minute timestamp and preserve populated fields from previous imports.
