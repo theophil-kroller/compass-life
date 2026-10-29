@@ -1,3 +1,4 @@
+import {stackedWorkDays,focusActivityBreakdown} from './focus-productivity-v57759402510.js';
 /** Compass 0.5.11 · Productivity × Health (local-only joins).
  * All joins use observed dates; missing focus tracking is never treated as zero output.
  * Calendar titles are classified transiently, never persisted or sent to a Compass API.
@@ -122,10 +123,11 @@ export function productivityInsightsView(model,activities=[],calendarStatus='Nic
  const {rows,sleepPairs,stressPairs,batteryPairs,meetingPairs}=model;
  return `<section class="insight-productivity" aria-label="Produktivität und Gesundheit im Vergleich">
  <div class="insight-kpi-grid">${kpi('Arbeitszeit erfasst',fmt(model.totalWorkMinutes/60,1)+' h',`${model.workDays} Tage mit Arbeitssessions`)}${kpi('Pomodoros',fmt(model.totalPomodoros,0),'Tatsächlich protokollierte Zähler')}${kpi('Schlaf × Arbeit',fmt(sleepPairs.length,0),'gemeinsam beobachtete Tage')}${kpi('Kalender × Arbeit',fmt(meetingPairs.length,0),'Tage im geladenen Kalenderfenster')}</div>
+ ${focusActivityBreakdown(activities)}
  <div class="insight-productivity-tools"><div><strong>Auswertung aktualisieren</strong><small>Kalender und Arbeitssessions werden nur lesend abgerufen.</small></div><div><button class="secondary-btn" type="button" data-action="watch-refresh">Arbeitssessions laden</button><button class="secondary-btn" type="button" data-action="${calendarConnected?'calendar-refresh':'calendar-connect'}">${calendarConnected?'Kalender aktualisieren':'Kalender verbinden'}</button></div></div>
  <div class="insight-data-note"><strong>Was die Daten leisten:</strong> Compass verbindet ausschließlich tatsächlich protokollierte Arbeitssessions mit Schlaf, Stress, Body Battery und zeitlich passenden Kalenderterminen. <strong>Arbeitssessions sind ein Zeitindikator, kein Maß für Leistung oder Qualität.</strong> Tage ohne Aufzeichnung sind unbekannt, nicht unproduktiv.</div>
  <div class="insight-chart-grid">
- ${box('01','Meine erfasste Arbeitszeit',durationChart(rows),'Bis zu 36 protokollierte Arbeitstage. Nur Kategorie „Arbeit“; manuelle und Garmin-Sessions bleiben unterscheidbar.')}
+ ${box('01','Meine erfasste Arbeitszeit',stackedWorkDays(activities,rows),'Bis zu 36 dokumentierte Arbeitstage, nach Garmin-Tätigkeitsart eingefärbt. Pausen zählen zur Sessiondauer, nicht zur Fokuszeit.')}
  ${box('02','Zu welchen Zeiten arbeite ich?',weekdayHeatmap(activities),'Zeitmatrix anhand der erfassten Session-Startzeiten, nicht anhand angenommener Arbeitszeiten.')}
  ${box('03','Schlafdauer × Arbeitszeit',productivityScatter(sleepPairs,'sleepMinutes','workMinutes',{title:'Letzte Nacht → erfasste Arbeit am selben Kalendertag',xLabel:'Schlafdauer [min]',yLabel:'Arbeitszeit [min]',xUnit:' min',yUnit:' min',color:'#407F78'}),'Nacht wird nach ihrem Aufwachtag zugeordnet; keine Aussage über Ursache oder geistige Leistungsfähigkeit.')}
  ${box('04','Schlafdauer × Pomodoros',productivityScatter(sleepPairs,'sleepMinutes','pomodoros',{title:'Schlafdauer und protokollierte Pomodoros',xLabel:'Schlafdauer [min]',yLabel:'Pomodoros [Anzahl]',xUnit:' min',color:'#8D76AD'}),'Die Anzahl ist nur für verbundene Garmin-Pomodoro-Sessions verfügbar; andere Arbeitssessions können null protokollierte Pomodoros haben.')}

@@ -81,6 +81,7 @@ import { compass5940256FastGtdActions } from './compass5940256-fast-gtd-actions.
 import { compass5940257CoreFirst } from './compass5940257-core-first.js';
 import { compass5940258CorePerformance } from './compass5940258-core-performance.js';
 import { compass5940259TodayDeferred } from './compass5940259-today-deferred.js';
+import { compass59402510FocusWorktime } from './compass59402510-focus-worktime.js';
 
 const base = process.env.VITE_BASE_PATH || '/';
 const compassConfig=defineConfig({
@@ -170,5 +171,5 @@ compassConfig.plugins.push(compass594016FoodBasicsRelease());
 compassConfig.plugins.push(compass594017NutritionFocusRelease());
 compassConfig.plugins.push(compass594018LifeReportRelease());
 compassConfig.plugins.push(compass594019AnnualRelease());
-compassConfig.plugins.push(compass594020AnnualWorkmapRelease(),compass594021AnnualPrintFix(),compass594022AnnualPremiumReport(),compass594023AnnualChartAtlas(),compass594024AnnualKnowledge(),compass594025EditorialAnnual(),compass5940251SolarCoverHotfix(),compass5940252PersonalPatterns(),compass5940253PwaDeployFix(),compass5940254FinancePatternsPrint(),compass5940255BirthdaysSpeed(),compass5940256FastGtdActions(),compass5940257CoreFirst(),compass5940258CorePerformance(),compass5940259TodayDeferred());
+compassConfig.plugins.push(compass594020AnnualWorkmapRelease(),compass594021AnnualPrintFix(),compass594022AnnualPremiumReport(),compass594023AnnualChartAtlas(),compass594024AnnualKnowledge(),compass594025EditorialAnnual(),compass5940251SolarCoverHotfix(),compass5940252PersonalPatterns(),compass5940253PwaDeployFix(),compass5940254FinancePatternsPrint(),compass5940255BirthdaysSpeed(),compass5940256FastGtdActions(),compass5940257CoreFirst(),compass5940258CorePerformance(),compass5940259TodayDeferred(),compass59402510FocusWorktime());
 export default compassConfig;

@@ -1,0 +1,13 @@
+/* .40.25.10 · compact integrated productivity, no hero banners */
+.c4010-focus-summary,.c4010-progress{border:1px solid var(--border,#dce6e3);border-radius:12px;padding:12px 14px;margin:10px 0;background:var(--card,#fff)}
+.c4010-focus-summary header,.c4010-progress-head{display:flex;align-items:baseline;gap:12px;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px}
+.c4010-focus-summary header small,.c4010-progress-head small,.c4010-focus-note{color:var(--muted,#687c76);font-size:.78rem}
+.c4010-focus-rows{display:grid;gap:3px}.c4010-focus-row{display:grid;grid-template-columns:9px minmax(100px,1fr) 50px 92px 92px;align-items:center;gap:9px;font-size:.82rem;border-top:1px solid #e9eeec;padding:6px 0}
+.c4010-focus-row strong{font-weight:550}.c4010-focus-row span:nth-last-child(-n+3){text-align:right;font-variant-numeric:tabular-nums}.c4010-legend-dot,.c4010-progress-line i{width:8px;height:8px;border-radius:3px;display:block}
+.c4010-review-warning{margin:8px 0 0;font-size:.8rem;color:#995e31}.c4010-focus-note{margin:7px 0 0}
+.c4010-daybar{display:grid;grid-template-columns:50px minmax(0,1fr) 70px 44px;gap:8px;align-items:center;padding:3px 0;font-size:.8rem;font-variant-numeric:tabular-nums}.c4010-dayrail{height:13px;background:#eaf0ec;border-radius:4px;overflow:hidden}.c4010-dayfill{height:100%;display:flex;min-width:0;overflow:hidden;border-radius:4px}.c4010-dayfill i{height:100%;display:block;flex:none}.c4010-daybar strong,.c4010-daybar small{text-align:right}
+.c4010-legend{display:flex;flex-wrap:wrap;gap:7px 12px;margin:10px 0 0;font-size:.74rem}.c4010-legend span{display:flex;align-items:center;gap:4px}.c4010-legend i{height:8px;width:8px;border-radius:2px;display:inline-block}
+.c4010-progress-line{display:grid;grid-template-columns:9px 1fr 55px 46px;align-items:center;gap:9px;padding:5px 0;border-top:1px solid #e9eeec;font-size:.79rem}.c4010-progress-line strong,.c4010-progress-line small{text-align:right}
+@media(max-width:600px){.c4010-focus-row{grid-template-columns:8px minmax(70px,1fr) 38px 70px 70px;gap:5px;font-size:.69rem}.c4010-focus-summary{padding:9px}.c4010-daybar{grid-template-columns:42px 1fr 55px 32px;gap:4px;font-size:.7rem}}
+
+.c4010-share{font-size:.73em;font-weight:500;color:var(--muted,#6a8279);font-style:normal;white-space:nowrap}

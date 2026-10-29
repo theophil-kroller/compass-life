@@ -6,7 +6,7 @@ import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {purgeWatchSession,acceptWatchSession,hash} from '../worker/src/watch.js';
 const base=join(dirname(fileURLToPath(import.meta.url)),'../worker/migrations');
-const sqlFiles=['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql'];
+const sqlFiles=['0001_core.sql','0002_auth_sessions.sql','0003_watch_tracker.sql','0004_planning_tasks.sql','0005_gtd_projects_agendas.sql','0006_gtd_context_review.sql','0007_project_hierarchy.sql','0008_watch_session_tombstones.sql','0020_watch_session_revision.sql'];
 function dbFixture(){
  const sqlite=new DatabaseSync(':memory:');
  for(const name of sqlFiles)sqlite.exec(readFileSync(join(base,name),'utf8'));

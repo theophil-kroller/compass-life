@@ -158,7 +158,7 @@ async function route(req,env,identity) {
   if(req.method==='POST' && url.pathname==='/api/health/pair/start')return startHealthPair(env,identity);
   if(req.method==='POST' && url.pathname==='/api/health/device/revoke')return revokeHealthDevice(req,env,identity);
   if(req.method==='POST' && url.pathname==='/api/watch/pair/start')return createPair(env,identity);
-  if(req.method==='GET' && url.pathname==='/api/watch/sessions')return listWatchSessions(env,identity);
+  if(req.method==='GET' && url.pathname==='/api/watch/sessions')return listWatchSessions(env,identity,req);
   if(req.method==='POST' && url.pathname==='/api/watch/sessions/purge')return purgeWatchSession(req,env,identity);
   if(req.method==='GET' && url.pathname==='/api/watch/devices')return listWatchDevices(env,identity);
   if(req.method==='POST' && url.pathname==='/api/watch/device/revoke')return revokeWatchDevice(req,env,identity);

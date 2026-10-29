@@ -14,7 +14,12 @@ export const validWatchSession=s=>Boolean(s && typeof s==='object' && /^w[0-9a-f
  (s.bbStart==null||(Number.isInteger(s.bbStart)&&s.bbStart>=0&&s.bbStart<=100)) &&
  (s.bbEnd==null||(Number.isInteger(s.bbEnd)&&s.bbEnd>=0&&s.bbEnd<=100)) &&
  Array.isArray(s.bbSamples)&&s.bbSamples.length<=72 && s.bbSamples.every(p=>Array.isArray(p)&&p.length===2&&Number.isInteger(p[0])&&p[0]>=0&&p[0]<=s.durationSec&&Number.isInteger(p[1])&&p[1]>=0&&p[1]<=100) &&
- Array.isArray(s.hrSamples)&&s.hrSamples.length<=180 && s.hrSamples.every(p=>Array.isArray(p)&&p.length===2&&Number.isInteger(p[0])&&p[0]>=0&&p[0]<=s.durationSec&&Number.isInteger(p[1])&&p[1]>=30&&p[1]<=230));
+ Array.isArray(s.hrSamples)&&s.hrSamples.length<=180 && s.hrSamples.every(p=>Array.isArray(p)&&p.length===2&&Number.isInteger(p[0])&&p[0]>=0&&p[0]<=s.durationSec&&Number.isInteger(p[1])&&p[1]>=30&&p[1]<=230) &&
+ (s.revision===undefined || Number.isSafeInteger(s.revision)&&s.revision>=1&&s.revision<=10000) &&
+ (s.finalized===undefined || typeof s.finalized==='boolean') &&
+ (s.finalized!==false || s.revision!==undefined) &&
+ (s.cancelled===undefined || typeof s.cancelled==='boolean') &&
+ (s.cancelled!==true || s.finalized===true && s.revision>=1));
 async function body(req,cap=16000){const raw=await req.text();if(raw.length>cap)throw Error('payload-too-large');return JSON.parse(raw);}
 
 export async function createPair(env,owner){
@@ -53,20 +58,61 @@ async function getDevice(req,env){
   const d=await env.DB.prepare('SELECT owner_sub,revoked FROM watch_devices WHERE token_hash=?').bind(tokenHash).first();
   return d&&!d.revoked?{sub:d.owner_sub,hash:tokenHash}:null;
 }
+/** Versioned, idempotent session snapshots. Final rows are immutable. */
 export async function acceptWatchSession(req,env){
   const d=await getDevice(req,env);if(!d)return out({error:'unauthorized'},401);
   let s;try{s=await body(req,14000);}catch{return out({error:'invalid-payload'},400);}
   if(!validWatchSession(s))return out({error:'invalid-session'},400);
+  if(s.cancelled===true){
+    // A discarded running draft must not remain a productive work session.
+    // Only non-final rows may be cancelled from the device. The owner can
+    // explicitly purge finalized records through the separate owner endpoint.
+    const current=await env.DB.prepare('SELECT finalized FROM watch_sessions WHERE owner_sub=? AND session_id=?').bind(d.sub,s.id).first();
+    if(current?.finalized===1)return out({error:'already-finalized'},409);
+    await env.DB.batch([
+      env.DB.prepare('INSERT OR IGNORE INTO watch_deleted_sessions(owner_sub,session_id,deleted_at) VALUES(?,?,?)').bind(d.sub,s.id,nowISO()),
+      env.DB.prepare('DELETE FROM watch_sessions WHERE owner_sub=? AND session_id=? AND finalized=0').bind(d.sub,s.id)
+    ]);
+    return out({ok:true,cancelled:true});
+  }
   const tombstone=await env.DB.prepare('SELECT 1 AS deleted FROM watch_deleted_sessions WHERE owner_sub=? AND session_id=?').bind(d.sub,s.id).first();
   if(tombstone)return out({ok:true,duplicate:true,deleted:true});
-  const result=await env.DB.prepare(`INSERT INTO watch_sessions(owner_sub,session_id,token_hash,activity,started_at,duration_sec,focus_sec,break_sec,pomodoros,hr_samples_json,bb_samples_json,body_battery_start,body_battery_end,received_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(owner_sub,session_id) DO NOTHING`)
-    .bind(d.sub,s.id,d.hash,s.activity,s.startedAt,s.durationSec,s.focusSec,s.breakSec,s.pomodoros,JSON.stringify(s.hrSamples),JSON.stringify(s.bbSamples),s.bbStart??null,s.bbEnd??null,nowISO()).run();
-  return out({ok:true,duplicate:result.meta?.changes===0});
+  const revision=s.revision??0,finalized=s.finalized===false?0:1;
+  const result=await env.DB.prepare(`INSERT INTO watch_sessions(
+    owner_sub,session_id,token_hash,activity,started_at,duration_sec,focus_sec,break_sec,pomodoros,
+    hr_samples_json,bb_samples_json,body_battery_start,body_battery_end,received_at,revision,finalized)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(owner_sub,session_id) DO UPDATE SET
+    activity=excluded.activity,started_at=excluded.started_at,duration_sec=excluded.duration_sec,
+    focus_sec=excluded.focus_sec,break_sec=excluded.break_sec,pomodoros=excluded.pomodoros,
+    hr_samples_json=excluded.hr_samples_json,bb_samples_json=excluded.bb_samples_json,
+    body_battery_start=excluded.body_battery_start,body_battery_end=excluded.body_battery_end,
+    received_at=excluded.received_at,revision=excluded.revision,finalized=excluded.finalized
+    WHERE watch_sessions.finalized=0 AND excluded.revision>watch_sessions.revision
+      AND excluded.started_at=watch_sessions.started_at`)
+   .bind(d.sub,s.id,d.hash,s.activity,s.startedAt,s.durationSec,s.focusSec,s.breakSec,s.pomodoros,
+    JSON.stringify(s.hrSamples),JSON.stringify(s.bbSamples),s.bbStart??null,s.bbEnd??null,nowISO(),revision,finalized).run();
+  return out({ok:true,duplicate:result.meta?.changes===0,revision,finalized:!!finalized});
 }
-export async function listWatchSessions(env,owner){
-  const q=await env.DB.prepare('SELECT session_id,activity,started_at,duration_sec,focus_sec,break_sec,pomodoros,hr_samples_json,bb_samples_json,body_battery_start,body_battery_end FROM watch_sessions WHERE owner_sub=? ORDER BY started_at DESC LIMIT 50').bind(owner.sub).all();
-  return out({sessions:(q.results||[]).map(r=>({id:r.session_id,activity:r.activity,startedAt:r.started_at,durationSec:r.duration_sec,focusSec:r.focus_sec,breakSec:r.break_sec,pomodoros:r.pomodoros,hrSamples:JSON.parse(r.hr_samples_json),bbSamples:JSON.parse(r.bb_samples_json),bbStart:r.body_battery_start,bbEnd:r.body_battery_end}))});
+
+/** Keyset pagination: all sessions remain available without massive first paint. */
+export async function listWatchSessions(env,owner,req){
+  const url=req?new URL(req.url):new URL('https://compass.local/api/watch/sessions');
+  const limitRaw=Number(url.searchParams.get('limit')||100);
+  const limit=Number.isSafeInteger(limitRaw)?Math.min(200,Math.max(1,limitRaw)):100;
+  const cursor=url.searchParams.get('cursor');
+  if(cursor&&!/^[0-9]{10}\.w[0-9a-f]{32}$/.test(cursor))return out({error:'invalid-cursor'},400);
+  const [before,previousId]=cursor?cursor.split('.'):[];
+  const fields='session_id,activity,started_at,duration_sec,focus_sec,break_sec,pomodoros,hr_samples_json,bb_samples_json,body_battery_start,body_battery_end,revision,finalized';
+  const sql=`SELECT ${fields} FROM watch_sessions WHERE owner_sub=? ${cursor?'AND (started_at<? OR (started_at=? AND session_id<?))':''} ORDER BY started_at DESC,session_id DESC LIMIT ?`;
+  const args=cursor?[owner.sub,Number(before),Number(before),previousId,limit+1]:[owner.sub,limit+1];
+  const q=await env.DB.prepare(sql).bind(...args).all();
+  const rows=(q.results||[]),page=rows.slice(0,limit),last=page.at(-1);
+  return out({sessions:page.map(r=>({id:r.session_id,activity:r.activity,startedAt:r.started_at,
+    durationSec:r.duration_sec,focusSec:r.focus_sec,breakSec:r.break_sec,pomodoros:r.pomodoros,
+    hrSamples:JSON.parse(r.hr_samples_json),bbSamples:JSON.parse(r.bb_samples_json),
+    bbStart:r.body_battery_start,bbEnd:r.body_battery_end,revision:r.revision??0,
+    finalized:r.finalized!==0})),nextCursor:rows.length>limit&&last?`${last.started_at}.${last.session_id}`:null});
 }
 // Only an authenticated owner can permanently purge an activity; devices cannot purge.
 // A tombstone makes later device retries idempotent rather than restoring purged data.
