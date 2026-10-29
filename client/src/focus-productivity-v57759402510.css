@@ -11,3 +11,15 @@
 @media(max-width:600px){.c4010-focus-row{grid-template-columns:8px minmax(70px,1fr) 38px 70px 70px;gap:5px;font-size:.69rem}.c4010-focus-summary{padding:9px}.c4010-daybar{grid-template-columns:42px 1fr 55px 32px;gap:4px;font-size:.7rem}}
 
 .c4010-share{font-size:.73em;font-weight:500;color:var(--muted,#6a8279);font-style:normal;white-space:nowrap}
+
+/* .40.25.11: direct exam categorisation; all controls are keyboard-accessible. */
+.c4011-exam-row-action{appearance:none;border:0;background:transparent;color:inherit;font:inherit;font-weight:650;text-align:left;cursor:pointer;padding:6px 4px;margin:-6px -4px;border-radius:6px}
+.c4011-exam-row-action:hover,.c4011-exam-row-action:focus-visible{color:#176351;background:#ecf3ef;outline:2px solid #6e9b89;outline-offset:0}
+.c4011-exam-row-action em{font-weight:500}
+.c4010-review-warning{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.c4011-review-cta{min-height:30px;padding:5px 12px;font-size:.76rem;white-space:nowrap}
+.c4011-exam-queue{margin:12px 0;padding:13px 15px;background:#f8faf8;border:1px solid #cdded5;border-radius:12px}
+.c4011-exam-queue strong{color:#123d32}.c4011-exam-queue p{margin:5px 0 10px;color:#617970;font-size:.82rem}
+.c4011-exam-buttons{display:flex;gap:7px;flex-wrap:wrap;max-height:190px;overflow:auto}
+.c4011-exam-buttons button.is-chosen{border-color:#1a7363;background:#e5f1ed;color:#114b3b;font-weight:650}
+.c4011-both-sides{font-size:.8rem;color:#577468;align-self:center}

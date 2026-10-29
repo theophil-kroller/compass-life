@@ -199,7 +199,7 @@ import './compass741.css';
 import {mountPremiumAnatomy} from './strength-premium-v57738.js';
 import {nutritionFatView} from './nutrition-fat-quality-v57731.js';
 import './nutrition-fat-quality-v57731.css';
-import {strengthInsightsView} from './strength-insights-v57728.js';
+import {strengthInsightsView} from './strength-insights-full-repair-v57759402511.js';
 import './strength-insights-v57728.css';
 import {nutritionIntelligenceView} from './nutrition-intelligence-v57712.js';
 import {recognizeMeal,saveMeal,gptMealPrompt,importMealJSON,mealPreviewMarkup,mealMacroMarkup,mealComposerMarkup} from './meal-compose-v57723.js';
@@ -327,7 +327,7 @@ let selectedAgendaEventId=null;
 let calendarRulesOpen=false,showHiddenCalendarEvents=false;
 let reviewWorkflow='next';
 let reviewEditingTaskId=null,reviewProjectId=null;
-let activitySelectedId=null,activityTrash=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,personOpenPointId='',peopleTab='list',peopleScope='all',peopleRadarExpanded=false,peopleShowAll=false,relationshipMapFocus=false,relationshipMapFilter='all',quickContactType='',occasionOpen=true;
+let activitySelectedId=null,activityTrash=false,activityReviewFlow=false,overviewHorizon=30,overviewWeek=0,selectedTimelineDay='',selectedPersonId=null,personOpenPointId='',peopleTab='list',peopleScope='all',peopleRadarExpanded=false,peopleShowAll=false,relationshipMapFocus=false,relationshipMapFilter='all',quickContactType='',occasionOpen=true;
 const reviewDrafts=new Map();
 function captureReviewDraft(){const form=app?.querySelector('#review-commit-form');if(form?.dataset.id)reviewDrafts.set(form.dataset.id,Object.fromEntries(new FormData(form).entries()));}
 let showCalendarBlocks=false;
@@ -2732,7 +2732,9 @@ function activityScreen(){
  const projectOpts=`<option value="">Ohne Projekt</option>${Object.values(state?.projects||{}).filter(p=>p.kind!=='folder').map(p=>`<option value="${h(p.id)}" ${p.id===chosen?.projectId?'selected':''}>${h(p.title)}</option>`).join('')}`;
  const choices=ACTIVITY_CATEGORIES.map(c=>`<option value="${h(c)}" ${chosen?.category===c?'selected':''}>${h(c)}</option>`).join('');
  const typeChoices=focusActivityTypeChoices.map(c=>`<option value="${h(c.type)}" ${chosen?.activityType===c.type?'selected':''}>${h(c.label)}</option>`).join('');
- return chrome(`<div class="compass593-external-insights" aria-label="Gesundheit und Körper">${insights750Subtabs('activity',insightTab)}</div><div class="activity-summary-insights">${sportsInsightsView(state?.healthImports?.garminSessions||[],activeActivities(watchSessions,state),sportsPeriodWindow(sportsMode,sportsAnchor,localDate()),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,localDate()).label,today:localDate()})}</div><div class="activity-layout"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitätsverwaltung</span><div class="activity-actions"><button type="button" class="secondary-btn" data-action="activity-new">+ Manuell</button><button type="button" class="secondary-btn" data-action="watch-refresh" ${!authToken?'disabled':''}>Garmin aktualisieren</button></div></div>
+ const pendingExams=rows.filter(a=>a.activityTypeReview).sort((a,b)=>a.startedAt.localeCompare(b.startedAt));
+ const pendingQueue=pendingExams.length?`<nav class="c4011-exam-queue work-card" aria-label="Prüfungs-Sessions zur Zuordnung"><strong>${pendingExams.length} Prüfungs-Sessions zuordnen</strong><p>Wähle eine Session, anschließend im Inspector die Tätigkeit „Prüfungskorrektur“ oder „Prüfungserstellung“ und speichere.</p><div class="c4011-exam-buttons">${pendingExams.map(a=>`<button type="button" class="secondary-btn ${chosen?.id===a.id?'is-chosen':''}" data-action="activity-open" data-id="${h(a.id)}">${h(a.startedAt.slice(0,10))} · ${h(a.startedAt.slice(11,16))} · ${a.durationMinutes} Min.</button>`).join('')}</div></nav>`:'';
+ return chrome(`<div class="compass593-external-insights" aria-label="Gesundheit und Körper">${insights750Subtabs('activity',insightTab)}</div>${activityReviewFlow?'':`<div class="activity-summary-insights">${sportsInsightsView(state?.healthImports?.garminSessions||[],activeActivities(watchSessions,state),sportsPeriodWindow(sportsMode,sportsAnchor,localDate()),{mode:sportsMode,anchor:sportsAnchor,metric:sportsMetric,selected:sportsSelected,label:sportsPeriodWindow(sportsMode,sportsAnchor,localDate()).label,today:localDate()})}</div>`}${pendingQueue}<div class="activity-layout"><section class="work-card"><div class="work-heading"><span>${ico('activity',18)} Aktivitätsverwaltung</span><div class="activity-actions"><button type="button" class="secondary-btn" data-action="activity-new">+ Manuell</button><button type="button" class="secondary-btn" data-action="watch-refresh" ${!authToken?'disabled':''}>Garmin aktualisieren</button></div></div>
  <p class="muted-line">Korrigieren, verschieben, Projekt zuordnen, wiederherstellen oder endgültig entfernen. Messwerte der Garmin bleiben bei redaktionellen Änderungen unverändert.</p><div class="activity-tabs"><button type="button" class="secondary-btn ${!activityTrash?'is-chosen':''}" data-action="activity-tab" data-id="active">Aktiv (${all.filter(a=>!a.deleted).length})</button><button type="button" class="secondary-btn ${activityTrash?'is-chosen':''}" data-action="activity-tab" data-id="trash">Papierkorb (${all.filter(a=>a.deleted).length})</button></div>
  <div class="activity-list">${rows.map(a=>`<button type="button" data-action="activity-open" data-id="${h(a.id)}" class="activity-row ${chosen?.id===a.id?'selected':''}"><strong>${h(a.title)} <small>· ${h(a.source)}</small></strong><span>${h(a.startedAt.replace('T',' · '))} · ${a.durationMinutes} min · ${h(projectLabel(a.projectId))}</span></button>`).join('')||'<p class="muted-line">Keine Aktivitäten in dieser Ansicht.</p>'}</div></section>
  <section class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Session-Inspector</span></div>${chosen?`<form id="activity-edit-form" data-id="${h(chosen.id)}" class="compact-stack"><label>Titel<input name="title" required maxlength="100" value="${h(chosen.title)}"/></label><label>Lebensbereich<select name="category">${choices}</select></label><label>Tätigkeitsart<select name="activityType">${typeChoices}</select></label>${chosen.activityTypeReview?'<small class="c4010-review-warning">Historische Prüfungssession: Bitte Korrektur oder Prüfungsmodus bestätigen.</small>':''}<label>Datum und Uhrzeit<input name="startedAt" type="datetime-local" required value="${h(chosen.startedAt)}"/></label><label>Dauer in Minuten<input name="durationMinutes" type="number" required min="1" max="1440" value="${chosen.durationMinutes}"/></label><label>Projekt<select name="projectId">${projectOpts}</select></label><label>Strecke (km, optional)<input name="distanceKm" type="number" min="0" max="999.99" step="0.01" value="${chosen.distanceKm??''}"/></label><label>Notiz<textarea name="note" maxlength="1000" rows="3">${h(chosen.note||'')}</textarea></label><p class="muted-line">Quelle: ${h(chosen.source)}${chosen.source==='Garmin'?' · Messwerte bleiben erhalten':''}</p><div class="activity-actions"><button type="submit" class="primary-btn">Änderungen speichern</button><button type="button" class="secondary-btn" data-action="${chosen.deleted?'activity-restore':'activity-trash'}" data-id="${h(chosen.id)}">${chosen.deleted?'Wiederherstellen':'In Papierkorb'}</button>${chosen.deleted?`<button type="button" class="danger-btn" data-action="activity-purge" data-id="${h(chosen.id)}">Endgültig löschen</button>`:''}</div></form>`:'<p class="muted-line">Wähle eine Session oder lege eine manuelle Aktivität an.</p>'}
@@ -2806,6 +2808,7 @@ function refreshStrength728(){
  const old=app.querySelector('.str728-root');
  if(!old||!state){render();return;}
  old.outerHTML=strengthInsightsView(state,{range:strengthRange728,side:strengthSide728,today:localDate(),editingId:strengthEditId732,activity:strengthActivity737});
+ void mountPremiumAnatomy(app).catch(err=>console.warn('Compass Premium-Anatomie:',err));
  app.querySelector('.str728-root')?.querySelectorAll('[data-action]').forEach(el=>{el.onclick=()=>runAction(el.dataset.action,el.dataset.id);});
  bindStrengthEditor732();
 }
@@ -3285,7 +3288,13 @@ function bind() {
     ev.preventDefault();const id=activityForm.dataset.id;const d=new FormData(activityForm);
     const data={title:String(d.get('title')||'').trim(),category:String(d.get('category')||''),startedAt:String(d.get('startedAt')||''),durationMinutes:Number(d.get('durationMinutes')),distanceKm:String(d.get('distanceKm')||'').trim()===''?null:Number(d.get('distanceKm')),note:String(d.get('note')||''),projectId:String(d.get('projectId')||''),activityType:String(d.get('activityType')||'')};
     if(!validActivityEdit(data)||data.projectId&&!state?.projects?.[data.projectId]){toast('Prüfe Titel, Zeitpunkt, Dauer und Projekt.',true);return;}
-    await mutate(s=>{if(id.startsWith('manual-')){s.manualActivities[id]={...s.manualActivities[id],...data};}else{s.activityEdits??={};s.activityEdits[id]={...(s.activityEdits[id]||{}),...data};}});toast('Änderungen im verschlüsselten Tresor gespeichert.');
+    const wasPending=projectActivities(watchSessions,state).some(a=>a.id===id&&a.activityTypeReview);
+    await mutate(s=>{if(id.startsWith('manual-')){s.manualActivities[id]={...s.manualActivities[id],...data};}else{s.activityEdits??={};s.activityEdits[id]={...(s.activityEdits[id]||{}),...data};}});
+    if(activityReviewFlow&&wasPending&&data.activityType&&data.activityType!=='Pruefungen'&&data.activityType!=='Unklassifiziert'){
+      const next=activeActivities(watchSessions,state).filter(a=>a.activityTypeReview).sort((a,b)=>a.startedAt.localeCompare(b.startedAt))[0];
+      if(next){activitySelectedId=next.id;render();const field=app.querySelector('#activity-edit-form select[name="activityType"]');field?.scrollIntoView({block:'center'});field?.focus({preventScroll:true});toast('Zuordnung gespeichert · nächste Prüfungs-Session geöffnet.');}
+      else{activityReviewFlow=false;toast('Alle historischen Prüfungs-Sessions zugeordnet.');}
+    }else toast('Änderungen im verschlüsselten Tresor gespeichert.');
   };
   const personForm=app.querySelector('#person-create-form');if(personForm)personForm.onsubmit=async ev=>{ev.preventDefault();const name=String(new FormData(personForm).get('name')||'').trim(),tag=personTag(name);if(!name||!tag){toast('Bitte einen gültigen Namen eingeben.',true);return;}if(Object.values(state.people||{}).some(p=>p.tag===tag)){toast('Kontakt bereits vorhanden.',true);return;}const id=crypto.randomUUID();await mutate(s=>{s.people??={};s.people[id]={id,name,tag,note:'',...(peopleScope==='work'?{relationKind:'colleague'}:{})};});selectedPersonId=id;render();};
   const personTagForm=app.querySelector('#person-tag-form');if(personTagForm)personTagForm.onsubmit=async ev=>{
@@ -5101,7 +5110,13 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       const id='manual-'+crypto.randomUUID(),item={id,title:title.trim(),category:'Freizeit',startedAt:isoLocal(Date.now()/1000),durationMinutes:30,distanceKm:null,note:'',projectId:'',deleted:false};
       await mutate(s=>{s.manualActivities??={};s.manualActivities[id]=item;});activitySelectedId=id;activityTrash=false;render();return;
     }
-    if(action==='activity-tab'){activityTrash=id==='trash';activitySelectedId=null;render();return;}
+    if(action==='focus-review-open'){
+      const first=activeActivities(watchSessions,state).filter(a=>a.activityTypeReview).sort((a,b)=>a.startedAt.localeCompare(b.startedAt))[0];
+      if(!first)return toast('Keine offenen Prüfungs-Sessions vorhanden.');
+      activityReviewFlow=true;activitySelectedId=first.id;activityTrash=false;tab='activity';render();
+      const field=app.querySelector('#activity-edit-form select[name="activityType"]');field?.scrollIntoView({block:'center'});field?.focus({preventScroll:true});return;
+    }
+    if(action==='activity-tab'){activityTrash=id==='trash';activitySelectedId=null;activityReviewFlow=false;render();return;}
     if(action==='activity-open'){activitySelectedId=id;tab='activity';render();return;}
     if(action==='activity-trash'||action==='activity-restore'){
       const entry=projectActivities(watchSessions,state).find(x=>x.id===id);if(!entry)return;

@@ -18,6 +18,7 @@ export const RECEIPT_CATEGORY_GROUPS = Object.freeze([
  ['drinks','Getränke','☕'],
  ['drugstore','Drogerie & Hygiene','🧻'],
  ['household','Haushalt','🧹'],
+ ['books','Bücher','📚'],
  ['unknown','Noch zu prüfen','❔']
 ]);
 export const RECEIPT_CATEGORY_IDS=Object.freeze(RECEIPT_CATEGORY_GROUPS.map(x=>x[0]));
@@ -27,6 +28,7 @@ const normal=x=>String(x||'').normalize('NFKC').toLocaleLowerCase('de-AT').repla
 export function receiptRuleKey(merchant,description){return `${normal(merchant).slice(0,80)}|${normal(description).slice(0,150)}`;}
 const TESTS=[
  ['drugstore', /taschent|toilettenp|toilett|klopapier|kuechenroll|küchenroll|zahnpast|shampoo|seife|duschgel|hygiene|windel|kosmet/],
+ ['books', /\bbücher?\b|\bbuecher?\b|\bbuch\b|\bbuech\b|\btaschenbuch\b|\bhardcover\b|\bpaperback\b|\bfachbuch\b|\blehrbuch\b|\bsachbuch\b|\bkinderbuch\b|\bhörbuch\b|\bhoerbuch\b|\bbuchhandlung\b|\bbuchladen\b|\broman\b|\bisbn\b/],
  ['household', /spülmittel|spuelmittel|waschmittel|weichspül|reinigung|müllsack|muellsack|alu\s?folie|geschirrspül|geschirrspuel/],
  ['plant-based', /haferdrink|sojadrink|mandeldrink|reisdrink|erbsendrink|pflanzendrink|vegane milch|pflanzenmilch/],
  ['legumes', /käferbohn|kaeferbohn|kichererbs|kidneybohn|linsen\b|bohnen\b|weisse bohnen|weiße bohnen/],
@@ -49,6 +51,7 @@ export function suggestReceiptCategory(item){
  for(const [id,re] of TESTS)if(re.test(source))return {category:id,confidence:'high',reason:'Produktname erkannt'};
  const broad=normal(item?.category);
  if(broad==='drogerie')return {category:'drugstore',confidence:'medium',reason:'GPT-Oberkategorie'};
+ if(broad==='bücher'||broad==='buecher'||broad==='buch')return {category:'books',confidence:'medium',reason:'GPT-Oberkategorie'};
  if(broad==='haushalt')return {category:'household',confidence:'medium',reason:'GPT-Oberkategorie'};
  if(broad==='getränke'||broad==='getraenke')return {category:'drinks',confidence:'medium',reason:'GPT-Oberkategorie'};
  return {category:'unknown',confidence:'low',reason:'Keine eindeutige Produktregel'};
