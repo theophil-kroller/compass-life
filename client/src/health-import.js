@@ -48,6 +48,8 @@ export function parseFitdaysRows(rows){
    bmi:optional(r,['bmi','body mass index'],10,70),
    subcutaneousFatPct:optional(r,['subcutaneous fat','subcutaneous fat rate','subcutaneous fat (%)','subcutaneous fat percentage','unterhautfett','subkutanes fett'],0,75),
    whr:optional(r,['whr','waist to hip ratio','waist-to-hip ratio','waist hip ratio','taille hüfte verhältnis'],0.45,1.6),
+   waistCm:optional(r,['waist','waist circumference','waist (cm)','waist circumference (cm)','taillenumfang','taille (cm)'],40,180),
+   hipCm:optional(r,['hip','hip circumference','hip (cm)','hip circumference (cm)','hüftumfang','hueftumfang','hüfte (cm)'],50,200),
    bmrKcal:optional(r,['bmr','basal metabolic rate','basal metabolism','basal metabolic rate (kcal)','grundumsatz'],500,5000),
    fatFreeKg:optional(r,['fat-free body weight','fat free body weight','fat free mass','fat-free mass','fat free body weight','fettfreie masse'],10,300),
    bodyAge:optional(r,['body age','metabolic age','körperalter','metabolisches alter'],5,125),
@@ -145,7 +147,7 @@ export function commitHealthImport(s,preview){
  const fitById=new Map((target.fitdays||[]).map(x=>[x.id,x]));
  for(const incoming of preview.fitdays||[]){const older=fitById.get(incoming.id);
   if(!older){fitById.set(incoming.id,incoming);continue;}
-  fitById.set(incoming.id,{...older,...incoming,...Object.fromEntries(['bmi','subcutaneousFatPct','whr','bmrKcal','fatFreeKg','bodyAge','asmi'].map(k=>[k,incoming[k]??older[k]??null]))});
+  fitById.set(incoming.id,{...older,...incoming,...Object.fromEntries(['bmi','subcutaneousFatPct','whr','waistCm','hipCm','bmrKcal','fatFreeKg','bodyAge','asmi'].map(k=>[k,incoming[k]??older[k]??null]))});
  }
  target.fitdays=[...fitById.values()].sort((a,b)=>a.at.localeCompare(b.at));
  target.garminNights=merge(target.garminNights,preview.garminNights,x=>x.day,true);

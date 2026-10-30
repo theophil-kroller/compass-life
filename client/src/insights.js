@@ -155,8 +155,6 @@ export function insightsSleepView(model,selectedNight='',ico=()=>'',today='',imp
   timeZone:model.timeZone,sleepTimeline});
  const findings=healthFindings({nights:allNights,imported,today:activeDay});
  return `<div class="insight-sleep-content">
- ${healthFindingsView(findings,healthAi.order||[],healthAi.status||'')}
- ${sleepDataProvenance(model,imported)}
  ${sleep}
  <div class="insight-data-note">${ico('shield',16)} <span><strong>${model.validSleepNights} gemessene Nächte</strong> im ausgewählten Zeitraum · <strong>${model.totalHrvDays} HRV-Tage</strong>. Die Uhrzeiten werden in <strong>${escapeHtml(model.timeZone)}</strong> angezeigt, nicht nachträglich in Reise-Ortszeiten umgerechnet. Fehlende Messungen sind keine Nullwerte.</span></div>
  <details class="sleep550-extra sleep550-extended"><summary>Weitere Analysen: Schlafkonsistenz, Boxplots & HRV</summary>
@@ -164,6 +162,10 @@ export function insightsSleepView(model,selectedNight='',ico=()=>'',today='',imp
   <article class="insight-chart-card"><div class="insight-figure-title"><div><small>04 · WEEKLY DISTRIBUTION</small><h3>Wie stark schwankt mein Schlaf?</h3></div>${ico('activity',20)}</div>${sleepDistributionChart(nights)}</article>
   <article class="insight-chart-card"><div class="insight-figure-title"><div><small>05 · PERSONAL HRV REFERENCE</small><h3>Meine beobachtete HRV-Spanne</h3></div>${ico('heart',20)}</div>${hrvReferenceView(hrv,(rows,series,title,options)=>insightsLineChart(rows,series,title,{...options,range}))}</article>
   <article class="insight-chart-card"><div class="insight-figure-title"><div><small>06 · SLEEP & HRV</small><h3>Schlaf und HRV zusammen</h3></div>${ico('layers',20)}</div>${sleepHrvScatter(nights,hrv)}</article></div>
+ </details>
+ <details class="sleep-data-context"><summary>Einordnung, Erläuterungen &amp; Datenqualität</summary>
+  ${healthFindingsView(findings,healthAi.order||[],healthAi.status||'')}
+  ${sleepDataProvenance(model,imported)}
  </details>
  <div class="insight-footnote">Nur tatsächlich beobachtete Tief-, Leicht- und REM-Minuten aus Garmin, keine medizinische Diagnose. Ein Garmin-Sleep-Need-Wert ist noch nicht verfügbar. Garmin-Schlafphasen können von Schlaflaborwerten abweichen; daraus leiten wir keine Schlafstörung oder Übermüdungsdiagnose ab. Ein mögliches 95%-Konfidenzintervall folgt nur mit geeignetem statistischen Modell. Fehlende Werte werden nicht geschätzt.</div>
  </div>`;

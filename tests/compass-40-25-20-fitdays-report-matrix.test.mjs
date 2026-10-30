@@ -40,7 +40,7 @@ test('Only selected body matrix visualization changes; transformation, 184cm, re
  assert.match(main,/heightCm:184,targetWeightKg:/);
  assert.match(main,/\+bodyTransformationView\(state,/);
  assert.match(main,/\+healthBodyView\(/);
- assert.match(release,/0\.5\.77\.59\.40\.25\.20/);
+ assert.match(release,/0\.5\.77\.59\.40\.25\.21/);
  const b=JSON.stringify(sample);make();assert.equal(JSON.stringify(sample),b);
  assert.equal(resolvedBodyMetrics(sample,184).bmiOrigin,'computed');
 });

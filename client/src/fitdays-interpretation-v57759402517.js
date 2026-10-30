@@ -5,21 +5,48 @@
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(x,digits=1)=>Number(x).toLocaleString('de-AT',{maximumFractionDigits:digits});
 const get=(x,k)=>Number.isFinite(x?.[k])?x[k]:null;
+/** Dynamic per-measurement calculations. Nothing is written to the vault.
+ * Garmin activity calories are not daily resting calories and never become BMR.
+ * WHR needs a per-record device estimate OR the two actual circumferences.
+ */
 export function resolvedBodyMetrics(row,heightCm=null){
- const h=Number(heightCm),weight=get(row,'weightKg'),imported=get(row,'bmi');
- const calculated=imported===null&&Number.isFinite(h)&&h>=120&&h<=230&&weight!==null&&weight>20;
- const bmi=imported!==null?imported:calculated?Math.round(weight/(h/100)**2*100)/100:null;
- return {...row,bmi,bmiOrigin:imported!==null?'fitdays':calculated?'computed':'missing'};
+ const h=Number(heightCm),weight=get(row,'weightKg'),fat=get(row,'bodyFatPct'),fatMass=get(row,'fatMassKg');
+ const validHeight=Number.isFinite(h)&&h>=120&&h<=230;
+ const importedBmi=get(row,'bmi');
+ const bmiComputed=importedBmi===null&&validHeight&&weight!==null&&weight>20;
+ const bmi=importedBmi??(bmiComputed?Math.round(weight/(h/100)**2*100)/100:null);
+ const importedFatFree=get(row,'fatFreeKg');
+ const fromFat=weight!==null&&fat!==null&&fat>=1&&fat<=75?weight*(1-fat/100):null;
+ const fromFatKg=weight!==null&&fatMass!==null&&fatMass>=0&&fatMass<weight?weight-fatMass:null;
+ const fatFreeKg=importedFatFree??(fromFat!==null?Math.round(fromFat*100)/100:fromFatKg!==null?Math.round(fromFatKg*100)/100:null);
+ const importedBmr=get(row,'bmrKcal');
+ const computedBmr=importedBmr===null&&fatFreeKg!==null&&fatFreeKg>=15&&fatFreeKg<=200;
+ const bmrKcal=importedBmr??(computedBmr?Math.round(370+21.6*fatFreeKg):null);
+ const importedWhr=get(row,'whr'),waist=get(row,'waistCm'),hip=get(row,'hipCm');
+ const computedWhr=importedWhr===null&&waist!==null&&hip!==null&&waist>=40&&hip>=50&&waist/hip>=.45&&waist/hip<=1.6;
+ const whr=importedWhr??(computedWhr?Math.round(waist/hip*1000)/1000:null);
+ const importedAsmi=get(row,'asmi'),parts=['leftArm','rightArm','leftLeg','rightLeg'].map(k=>get(row?.segmentMuscle?.[k],'kg'));
+ const segmentMass=parts.every(n=>n!==null&&n>0)?parts.reduce((a,b)=>a+b,0):null;
+ // This is a BIA appendicular-muscle-mass *proxy*, not clinically validated ASMM.
+ const derivedAsmi=importedAsmi===null&&validHeight&&segmentMass!==null&&segmentMass<weight*.6;
+ const asmi=importedAsmi??(derivedAsmi?Math.round(segmentMass/(h/100)**2*100)/100:null);
+ return {...row,bmi,fatFreeKg,bmrKcal,whr,asmi,
+  bmiOrigin:importedBmi!==null?'fitdays':bmiComputed?'computed':'missing',
+  fatFreeOrigin:importedFatFree!==null?'fitdays':fatFreeKg!==null?'calculated':'missing',
+  bmrOrigin:importedBmr!==null?'fitdays':computedBmr?'katch-mcardle':'missing',
+  whrOrigin:importedWhr!==null?'fitdays':computedWhr?'circumferences':'missing',
+  asmiOrigin:importedAsmi!==null?'fitdays':derivedAsmi?'segment-proxy':'missing'};
 }
+
 const measures=Object.freeze([
  {key:'bodyFatPct',label:'Körperfett',unit:'%',min:0,max:55,about:'Bioimpedanz-Schätzung des Körperfettanteils. Referenzbereiche hängen unter anderem vom Alter und vom verwendeten Bewertungsmodell ab.'},
  {key:'visceralFat',label:'Viszeralfett',unit:'Index',min:0,max:30,about:'Von Fitdays berechneter Index für Fett im Bauchraum. Kein direkt gemessenes Volumen und nicht mit Prozent oder kg gleichzusetzen.'},
  {key:'subcutaneousFatPct',label:'Subkutanes Fett',unit:'%',min:0,max:60,about:'Geschätzter Anteil des Unterhautfetts. Die Bewertung hängt von der Messmethode und den jeweiligen Referenzen ab.'},
  {key:'bmi',label:'BMI',unit:'kg/m²',min:12,max:42,about:'Gewicht im Verhältnis zur Körpergröße. Bei viel Muskelmasse kann der BMI Körperfett und Körperbau nur eingeschränkt unterscheiden.'},
- {key:'whr',label:'WHR',unit:'',min:0.55,max:1.3,about:'Waist-to-Hip Ratio: Taillenumfang geteilt durch Hüftumfang. Bei Fitdays gegebenenfalls ein importierter Schätzwert; es werden keine Umfänge daraus rekonstruiert.'},
+ {key:'whr',label:'WHR',unit:'',min:0.55,max:1.3,about:'Taille / Hüfte, wenn beide Umfänge vorliegen; sonst geräteabhängige Fitdays-Schätzung. Aus BMI, Körperfett oder Garmin-Aktivitätskalorien allein nicht seriös ableitbar.'},
  {key:'bmrKcal',label:'Grundumsatz (BMR)',unit:'kcal/Tag',min:900,max:3000,about:'Geschätzter Energiebedarf in Ruhe. Nicht identisch mit der benötigten Tagesenergie einschließlich Bewegung.'},
  {key:'fatFreeKg',label:'Fettfreie Masse',unit:'kg',min:0,max:145,about:'Gewicht ohne Fettmasse; enthält unter anderem Muskelgewebe, Wasser und Knochen und darf nicht zusätzlich zur Muskelmasse addiert werden.'},
- {key:'asmi',label:'ASMI',unit:'kg/m²',min:3,max:13,about:'Appendikulärer Skelettmuskelindex. Nur anzeigen, wenn der Fitdays-Export ihn ausdrücklich enthält.'},
+ {key:'asmi',label:'Muskelindex Arme/Beine',unit:'kg/m²',min:3,max:13,about:'Bei vorhandenen vier Segment-Muskelmassen näherungsweise als Summe der Arm- und Beinwerte geteilt durch Körpergröße² berechnet. Nicht gleichbedeutend mit klinisch gemessenem ASMI.'},
  {key:'bodyAge',label:'Fitdays-Körperalter',unit:'Jahre',min:10,max:100,about:'Herstellerabhängiger Modellwert. Keine medizinische oder biologische Altersbestimmung.'}
 ]);
 function bmiZone(v){if(v<18.5)return 'Untergewicht';if(v<25)return 'Normalbereich';if(v<30)return 'Übergewicht';return 'Adipositasbereich';}
@@ -36,7 +63,13 @@ function bmiLabels(){return `<div class="fdi-zone-legend">${bmiRegions.map(r=>`<
 function trend(rows,key){const values=rows.filter(x=>get(x,key)!==null);if(values.length<2)return 'Noch kein Vergleichswert';const a=get(values[0],key),b=get(values.at(-1),key),d=b-a;const digits=key==='whr'?2:1;return `${d>0?'+':''}${num(d,digits)} ${d===0?'unverändert':d>0?'seit erster Messung gestiegen':'seit erster Messung gesunken'}`;}
 function gauge(row,rows,model){
  const value=get(row,model.key),has=value!==null,isBmi=model.key==='bmi';
- const source=isBmi&&row.bmiOrigin==='computed'?'Aus Gewicht + Körpergröße berechnet':isBmi&&row.bmiOrigin==='fitdays'?'Aus Fitdays importiert':has?'Fitdays-Messwert':'Nicht im Export';
+ const sources={bmi:{computed:'Gewicht / Größe² · berechnet',fitdays:'Fitdays · importiert'},
+  fatFreeKg:{calculated:'Gewicht × (1 − Körperfettanteil) · berechnet',fitdays:'Fitdays · importiert'},
+  bmrKcal:{'katch-mcardle':'Katch–McArdle · geschätzt',fitdays:'Fitdays · Schätzung'},
+  whr:{circumferences:'Taille / Hüfte · berechnet',fitdays:'Fitdays · Schätzung'},
+  asmi:{'segment-proxy':'4 Segment-Muskelmassen / Größe² · Näherung',fitdays:'Fitdays · importiert'}};
+ const originKey={bmi:'bmiOrigin',fatFreeKg:'fatFreeOrigin',bmrKcal:'bmrOrigin',whr:'whrOrigin',asmi:'asmiOrigin'}[model.key];
+ const source=has?(sources[model.key]?.[row[originKey]]||'Fitdays · importiert'):'Nicht im Export / nicht berechenbar';
  const status=has&&isBmi?bmiZone(value):has?'Messwert (keine medizinische Einstufung)':'Noch kein Messwert';
  const position=has?percent(value,model.min,model.max):0;
  const band=isBmi?bmiBands():'<span class="fdi-neutral-band"></span>';
@@ -139,8 +172,10 @@ function reportSummary(row,{targetWeightKg=null}={}){
  const fatFree=fatFreeImported??fatFreeDerived;
  const indicators=[
   ['Visceral fat grade · Viszeralfett',get(row,'visceralFat'),'Index'],
-  ['Basal metabolic rate · Grundumsatz',get(row,'bmrKcal'),'kcal'],
-  ['Fat-free body weight · Fettfreie Masse',fatFree,'kg']
+  ['Basal metabolic rate · Grundumsatz',get(row,'bmrKcal'),'kcal',row.bmrOrigin==='katch-mcardle'?'Katch–McArdle · berechnet':'Fitdays · Schätzung'],
+  ['Fat-free body weight · Fettfreie Masse',fatFree,'kg',row.fatFreeOrigin==='calculated'?'Aus Körperfett berechnet':'Fitdays · importiert'],
+  ['Waist-to-hip ratio · WHR',get(row,'whr'),' ',row.whrOrigin==='circumferences'?'Taille / Hüfte · berechnet':row.whrOrigin==='fitdays'?'Fitdays · Schätzung':''],
+  ['Muskelindex Arme/Beine',get(row,'asmi'),'kg/m²',row.asmiOrigin==='segment-proxy'?'4 Segmente / Größe² · Näherung':row.asmiOrigin==='fitdays'?'Fitdays · importiert':'']
  ];
  return `<section class="fdi-report-summary" aria-label="Fitdays Bericht: Körperstatus und Kennzahlen">
   <h4>Obesity assessment <small>· Fitdays-Stil</small></h4>
@@ -148,7 +183,7 @@ function reportSummary(row,{targetWeightKg=null}={}){
   ${reportStrip({label:'Body fat rate · Körperfett',value:fat,unit:'%',bands:fatBands,source:'Kategorien nur optisch nachgebildet – keine validierten Fitdays-Grenzen',neutral:true})}
   ${reportStrip({label:'Obesity · Gewicht / Zielgewicht',value:ratio,unit:'%',bands:targetBands,source:validTarget?`Zielgewicht ${num(target)} kg`:'Kein Zielgewicht hinterlegt – kein Prozentwert berechnet',neutral:true})}
   <h4 class="fdi-other-title">Other indicators <small>· Weitere Kennzahlen</small></h4>
-  <div class="fdi-report-indicators">${indicators.map(([label,value,unit],idx)=>`<div><span>${esc(label)}</span><strong>${value===null?'–':esc(num(value,idx===0?0:1))+' '+esc(unit)}</strong></div>`).join('')}</div>
+  <div class="fdi-report-indicators">${indicators.map(([label,value,unit,source],idx)=>`<div><span>${esc(label)}${source?` <small>· ${esc(source)}</small>`:''}</span><strong>${value===null?'–':esc(num(value,idx===0?0:1))+' '+esc(unit)}</strong></div>`).join('')}</div>
   ${fatFreeDerived!==null?'<p class="fdi-strip-source">Fettfreie Masse aus Gewicht und Körperfett berechnet; kein eigener Fitdays-Exportwert.</p>':''}
  </section>`;
 }

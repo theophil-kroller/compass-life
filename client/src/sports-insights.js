@@ -3,10 +3,11 @@
  */
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(n,d=1)=>Number(n).toLocaleString('de-AT',{maximumFractionDigits:d});
-const TYPES={running:['Laufen','🏃','#6B9E90'],cycling:['Radfahren','🚲','#3E8A78'],walking:['Spazierengehen','🚶','#8BAE77'],hiking:['Wandern / Hiking','🥾','#8DAB75'],ski:['Skifahren','⛷️','#6B9BC9'],swimming:['Schwimmen','🏊','#5C9DBB'],paddling:['Kayak / SUP','🛶','#699EB2'],dancing:['Tanzen','♫','#B08CC5'],disc:['Disc Golf','◎','#CB9B6E'],martial:['Kampfsport','🥋','#B77A73'],sauna:['Sauna & Therme','♨','#D49A72'],other:['Sonstige Aktivitäten','✦','#9AAFA4']};
+const TYPES={running:['Laufen','🏃','#6B9E90'],cycling:['Radfahren','🚲','#3E8A78'],walking:['Spazierengehen','🚶','#8BAE77'],hiking:['Wandern / Hiking','🥾','#8DAB75'],ski:['Skifahren','⛷️','#6B9BC9'],swimming:['Schwimmen','🏊','#5C9DBB'],paddling:['Kayak / SUP','🛶','#699EB2'],dancing:['Tanzen','♫','#B08CC5'],disc:['Disc Golf','◎','#CB9B6E'],martial:['Kampfsport','🥋','#B77A73'],strength:['Kraftsport','🏋️','#9F70BD'],sauna:['Sauna & Therme','♨','#D49A72'],other:['Sonstige Aktivitäten','✦','#9AAFA4']};
 const DISTANCE_TYPES=new Set(['running','cycling','walking','hiking','ski','swimming','paddling']);
 const sportMap={1:'running',2:'cycling',5:'swimming',11:'walking',12:'ski',13:'ski',14:'ski',16:'hiking',17:'hiking',19:'paddling',21:'cycling'};
 function titleType(title){const x=String(title||'').toLocaleLowerCase('de-AT');
+ if(/strength[ _-]?training|weight[ _-]?training|weightlifting|powerlifting|resistance[ _-]?training|stronglifts|kraftsport|krafttraining|hanteltraining|muskeltraining|gym[ _-]?workout/i.test(x))return 'strength';
  if(/\b(zouk|bachata|salsa|tanz\w*|danc\w*|forró|kizomba)\b/u.test(x))return 'dancing';
  if(/disc\s*golf|discgolf|frisbee golf/u.test(x))return 'disc';
  if(/sauna|therme|wellness|dampfbad/u.test(x))return 'sauna';
@@ -59,7 +60,7 @@ export function normalizedSportDistance(s,type){const n=s?.distanceKm==null?null
 export function sportsRows(sessions=[],activities=[],range={}){
  const rows=[];
  for(const s of sessions){if(!s||!inRange(s.day,range))continue;
-  const titleCategory=titleType(s.title||s.activityType||'');const activityCategory=titleType(s.activityType||'');const type=titleCategory!=='other'?titleCategory:activityCategory!=='other'?activityCategory:(sportMap[s.sport]||'other');const mins=Number(s.durationMinutes);
+  const titleCategory=titleType(s.title||s.activityType||'');const activityCategory=titleType(s.activityType||'');const type=titleCategory!=='other'?titleCategory:activityCategory!=='other'?activityCategory:(s.source==='garmin-activities-csv'&&s.sport===19?'strength':sportMap[s.sport]||'other');const mins=Number(s.durationMinutes);
   if(!Number.isFinite(mins)||mins<=0||mins>1440)continue;
   const km=normalizedSportDistance(s,type);
   rows.push({id:String(s.id||s.start),at:s.start,day:s.day,type,mins,km,avgHr:Number.isFinite(Number(s.avgHr))&&s.avgHr!=null?Number(s.avgHr):null,source:'garmin'});
