@@ -1,0 +1,19 @@
+COMPASS LIFE 0.5.79 – INSTALLATION
+==================================
+PATCH nur auf vollständig vorhandenen Compass-0.5.78-Quellstand anwenden.
+ZIP im Stammverzeichnis des GitHub-Repositories entpacken, Pfade erhalten,
+Dateien ersetzen und neuen Dateien hinzufügen. Alternativ FULL SOURCE verwenden.
+Nicht PATCH und FULL SOURCE übereinander hochladen.
+
+VORHER: Bestehenden verschlüsselten Tresor sichern. IndexedDB/PWA-Daten niemals löschen.
+BEIDE Geräte auf 0.5.79 aktualisieren (PC = Hauptgerät, Handy = Empfangsgerät).
+Bei bestehendem Geräteabgleich ist kein neues Pairing nötig. E2EE-Journal muss aktiv sein.
+
+GitHub-Commit erstellen; Action "Deploy Compass Web" auf vollständigen Erfolg prüfen.
+Danach Handy: Finanzen > Unklassifiziert > Kategorie > Zuordnen & nächste Buchung.
+Vorgemerkt ist nicht final: PC-App öffnen und synchronisieren; danach Handy synchronisieren.
+
+Keine D1-Migration. Keine neue Worker-API. Kein externes KI-Backend für Bankdaten.
+Tests: 33/33 Deploy-Gate, 1750/1779 gesamter historischer Testsatz.
+Vite-Produktionskompilierung lokal nicht durchgeführt (npm-Registry EAI_AGAIN).
+Siehe RELEASE_0.5.79.md für Konfliktlogik und Einschränkungen.

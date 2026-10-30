@@ -1,0 +1,16 @@
+/* 0.5.79: usable finance shortcuts above financial charts on both desktop and mobile. */
+.fin79-quick-nav{display:flex;align-items:center;gap:7px;position:sticky;top:0;z-index:11;overflow-x:auto;scrollbar-width:thin;padding:8px 2px 9px;margin:0 0 8px;background:var(--surface,#fffaf4);border-bottom:1px solid #d5e1db}
+.fin79-nav-btn{flex:0 0 auto;min-height:40px;padding:9px 14px;border:1px solid #c9dacf;border-radius:12px;background:#fff;color:#245247;font-size:13px;font-weight:650;cursor:pointer;white-space:nowrap}
+.fin79-nav-btn.is-active{background:#e2efe8;border-color:#7cae9b;color:#155345}
+.fin79-nav-btn:focus-visible,.fin79-open-review:focus-visible{outline:3px solid #dfa05e;outline-offset:2px}
+.fin79-open-review{width:100%;border:0;background:transparent;color:inherit;text-align:left;display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:0}
+.fin79-open-review strong{text-decoration:underline;text-underline-offset:3px}
+.fin79-sync-status{background:#fff2dc;color:#6f4c23;padding:11px 13px;border-radius:12px;font-size:12px;margin-bottom:8px}
+.fin79-receiver-explain{border:1px solid #9bbdb2;border-radius:11px;padding:12px;background:#e7f3ed;font-size:13px;line-height:1.5;margin:10px 0}
+.fin79-receiver-explain strong{display:block;margin-bottom:4px}
+@media(max-width:700px){.fin79-quick-nav{margin-top:0;gap:6px;padding:8px 0 11px}.fin79-nav-btn{min-height:46px;font-size:13px;padding:10px 14px}.fin79-sync-status{font-size:12px}.fin-review-row,.fin-ledger-entry{min-width:0}.fin-review-row select,.fin-review-row input,.fin-review-row button[type=submit]{max-width:100%;min-height:44px}}
+.fin79-mobile-review{max-width:740px;margin:0 auto;padding:2px 0 30px;color:#244c3f}.fin79-mobile-review header{margin:8px 0 15px}.fin79-mobile-review h2{font-size:21px;margin:5px 0}.fin79-mobile-review header p{font-size:13px;line-height:1.5;color:#6b7c70}
+.fin79-review-card{display:grid;gap:10px;border:1px solid #dce8df;border-radius:16px;background:white;padding:16px;margin:12px 0;box-shadow:0 2px 12px #233f3210}
+.fin79-review-top{display:flex;justify-content:space-between;align-items:start;gap:14px;font-size:15px}.fin79-review-top strong:last-child{white-space:nowrap}.fin79-review-card>small{font-size:12px;color:#758b7f}.fin79-review-card label{display:grid;gap:5px;font-size:12px;font-weight:600}.fin79-review-card select{width:100%;min-height:48px;border:1px solid #c9d9d0;border-radius:10px;padding:9px;background:#fcfdfb;color:#1f4639;font-size:15px}.fin79-review-card button[type=submit]{min-height:48px;width:100%;font-size:14px}.fin79-review-details summary{font-size:12px;color:#4c8271;cursor:pointer}.fin79-review-details p{font-size:12px;line-height:1.5;overflow-wrap:anywhere}.fin79-review-pagination{display:flex;justify-content:space-between;align-items:center;gap:8px}.fin79-review-empty{padding:20px;background:#eaf5ee;border-radius:12px}
+
+.fin79-review-card .fin79-checkbox{display:flex;align-items:center;gap:8px;font-weight:400;font-size:12px}.fin79-review-card .fin79-checkbox input{width:18px;height:18px;accent-color:#377a67}

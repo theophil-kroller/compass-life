@@ -1,7 +1,7 @@
 {
   "name": "compass-personal-life-manager",
   "private": true,
-  "version": "0.5.78",
+  "version": "0.5.79",
   "type": "module",
   "workspaces": [
     "client",
@@ -16,7 +16,7 @@
     "deploy:api": "npm run deploy -w worker",
     "db:local": "npm run db:local -w worker",
     "db:remote": "npm run db:remote -w worker",
-    "test:release": "node --test tests/compass-fullsource-25-10-deploy.test.mjs tests/compass-057759402510-unified-focus.test.mjs tests/compass-057759402510-watch-sql.test.mjs tests/gtd-0410-worker-purge.test.mjs tests/watch-bridge.test.mjs tests/gtd-0511-productivity-health.test.mjs tests/gtd-0410-occasion-activity.test.mjs",
+    "test:release": "node --test tests/compass-fullsource-25-10-deploy.test.mjs tests/compass-057759402510-unified-focus.test.mjs tests/compass-057759402510-watch-sql.test.mjs tests/gtd-0410-worker-purge.test.mjs tests/watch-bridge.test.mjs tests/gtd-0511-productivity-health.test.mjs tests/gtd-0410-occasion-activity.test.mjs tests/compass-0579-mobile-finance.test.mjs",
     "check:deploy": "node scripts/check-import-graph.mjs && npm run check -w worker && npm run test:release"
   },
   "engines": {

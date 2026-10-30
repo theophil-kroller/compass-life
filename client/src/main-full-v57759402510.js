@@ -134,6 +134,10 @@ import {putBudgetEntry,putSavingsGoal,validateSavingsGoal,flexBudgetModel} from 
 import {PRIVATE_KINDS,privateSection,privateChanged,applyPrivateSection,newSalt,syncKeyFromPhrase,encryptSection,decryptSection} from './private-device-sync-v30.js';
 import {applyCalendarWindow,visibleCachedCalendar,calendarFetchWindows,shiftCalendarDay,normalizeCalendarArchive} from './calendar-cache-v574.js';
 import {privateMirrorNeedsChunks,privateMirrorParts,joinMirrorParts} from './private-device-chunks-v552.js';
+import {queueFinanceMobileDecision,applyQueuedFinanceDecisions} from './finance-mobile-decisions-v0579.js';
+import {financeQuickNavView} from './finance-mobile-nav-v0579.js';
+import {mobileFinanceReviewView,mobileFinanceReviewRows} from './finance-mobile-review-v0579.js';
+import './finance-mobile-v0579.css';
 import {financeMerchantEdit} from './finance-merchant-editor.js';
 import {addWealthSnapshot} from './finance-wealth-consolidation.js';
 import {addHoldingSnapshot} from './finance-holdings-v19.js';
@@ -255,7 +259,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.78';
+const COMPASS_CLIENT_VERSION='0.5.79';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -440,7 +444,7 @@ if(typeof window!=='undefined'){
 if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')automaticJournalResume743();});
 let weeklyOffset746=0;
 let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLastConfirmedAt=0;
-function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.strengthJournal||null,s?.dreamJournal||null,s?.receiptJournal||null,s?.mensaCatalog||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.familyRadar||null,s?.taskInspiration||null,s?.habitTimeSessions||null,s?.makkoHoSessions||null,s?.strengthGuidedSessions||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
+function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.strengthJournal||null,s?.dreamJournal||null,s?.receiptJournal||null,s?.mensaCatalog||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.familyRadar||null,s?.taskInspiration||null,s?.habitTimeSessions||null,s?.makkoHoSessions||null,s?.strengthGuidedSessions||null,s?.financeMobileDecisions||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
 function scheduleJournalSync(delay=0){
  clearTimeout(journalSyncTimer);journalSyncTimer=null;
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
@@ -2233,8 +2237,8 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},mensaCatalog:st.mensaCatalog||{schemaVersion:1,entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,taskInspiration:st.taskInspiration||[],habitTimeSessions:st.habitTimeSessions||[],makkoHoSessions:st.makkoHoSessions||[],strengthGuidedSessions:st.strengthGuidedSessions||[],...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
-function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.mensaCatalog=m.mensaCatalog;st.feelingCheckins=m.feelingCheckins;st.taskInspiration=m.taskInspiration||[];st.habitTimeSessions=m.habitTimeSessions||[];st.makkoHoSessions=m.makkoHoSessions||[];st.strengthGuidedSessions=m.strengthGuidedSessions||[];if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},mensaCatalog:st.mensaCatalog||{schemaVersion:1,entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,taskInspiration:st.taskInspiration||[],habitTimeSessions:st.habitTimeSessions||[],makkoHoSessions:st.makkoHoSessions||[],strengthGuidedSessions:st.strengthGuidedSessions||[],financeMobileDecisions:st.financeMobileDecisions||[],...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.mensaCatalog=m.mensaCatalog;st.feelingCheckins=m.feelingCheckins;st.taskInspiration=m.taskInspiration||[];st.habitTimeSessions=m.habitTimeSessions||[];st.makkoHoSessions=m.makkoHoSessions||[];st.strengthGuidedSessions=m.strengthGuidedSessions||[];st.financeMobileDecisions=m.financeMobileDecisions||[];if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
 async function syncPersonalJournal(){
  // One E2EE journal flight per device. Mutations during flight queue an immediate
  // follow-up instead of being hidden by a generic "synced" status.
@@ -2250,9 +2254,21 @@ async function syncPersonalJournal(){
     if(remote&&remote.salt!==cfg.salt)throw Error('Anderer Synchronisierungsschlüssel – Journal nicht verändert.');
     const remoteData=remote?await decryptSection(cfg.key,'journal',remote):{};
     journalLastReadAt=Date.now();journalRemoteActiveStart=remoteData.quickWorktime?.activeStart||'';journalRemoteVersion=Number(remote?.version||0);journalLastError='';
-    const merged=mergeJournalData(journalSyncPayload(state),remoteData);
+    let merged=mergeJournalData(journalSyncPayload(state),remoteData);
     if(JSON.stringify(merged)!==JSON.stringify(journalSyncPayload(state))){
      applyJournalPayload(state,merged);await persist();syncQuickPublicFromState();render();
+    }
+    // Receiver decisions are immutable encrypted journal commands, not finance-mirror writes.
+    // Only the primary device applies a decision after validating its exact base snapshot.
+    if(state?.privateDeviceMirror?.mode==='source'){
+     const outcome=applyQueuedFinanceDecisions(state);
+     if(outcome.handled){
+      if(outcome.applied)state.privateDeviceMirror.dirty=true;
+      await persist();
+      if(outcome.applied)await publishPrivateMirror();
+      merged=mergeJournalData(journalSyncPayload(state),remoteData);
+      render();
+     }
     }
     // If the encrypted cloud snapshot already contains this data, a GET is sufficient.
     if(remote&&JSON.stringify(merged)===JSON.stringify(mergeJournalData(remoteData,{}))){
@@ -2511,7 +2527,7 @@ function peopleScreen(){
  <small>Gespeichert im verschlüsselten Tresor auf diesem Gerät. Geburtstage erscheinen in der Anlassvorbereitung und werden mit gleichen Google-Kalendergeburtstagen zusammengeführt.</small></form>
  <form id="person-note-form" data-id="${h(selected.id)}" class="compact-stack"><label>Notizen zur Person<textarea name="note" rows="3" maxlength="1500">${h(selected.note||'')}</textarea></label><button type="submit" class="secondary-btn">Notiz speichern</button></form></details>`:'<p class="muted-line">Wähle eine Person, um gemeinsame Themen und nächste Schritte zu verwalten.</p>'}</section></div>`);
 }
-function financeScreen(){if(!compass54Ready('finance'))return compass54LoadingScreen('finance');if(financePane==='Überblick')return chrome(financePremiumOverviewView(state,{period:financePeriod,account:financeAccount,today:localDate()}));return chrome(financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,financeWhatIf,financeWhatIfDraft,financeAiSuggestions,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote,portfolioTab:financePortfolioTab,portfolioMarket:financePortfolioMarket,flatexSort:{key:flatexPositionSort,descending:flatexPositionDescending},flatexChart:{isin:flatexChartIsin,ticker:flatexChartTicker,period:flatexChartPeriod,busy:flatexChartBusy,error:flatexChartError,data:flatexChartData,settings:flatexChartSettings}}));}
+function financeScreen(){if(!compass54Ready('finance'))return compass54LoadingScreen('finance');const quickNav=financeQuickNavView(state,financePane);if(financePane==='Überblick')return chrome(quickNav+financePremiumOverviewView(state,{period:financePeriod,account:financeAccount,today:localDate()}));if(financePane==='Prüfen'&&typeof window!=='undefined'&&window.matchMedia?.('(max-width: 760px)')?.matches)return chrome(quickNav+mobileFinanceReviewView(state,{account:financeAccount,page:financeReviewPage}));return chrome(quickNav+(state?.privateDeviceMirror?.mode==='receiver'&&financePane==='Prüfen'?'<div class="fin79-receiver-explain"><strong>Zuordnung am Zweitgerät</strong>Deine Auswahl wird lokal verschlüsselt vorgemerkt. Das Hauptgerät prüft und übernimmt sie beim nächsten Abgleich. Bis dahin bleibt die Buchung in der Liste offen.</div>':'')+financeDashboardView(state,financePane,financePeriod,financePreview,financeReviewPage,{paceCompare:financePaceCompare,budgetMonth:financeBudgetMonth,query:financeLedgerQuery,filter:financeLedgerFilter,page:financeLedgerPage,tripSelected:financeTripSelected,tripQuery:financeTripQuery,tripMode:financeTripMode,tripPage:financeTripPage,categorySelected:financeCategorySelected,account:financeAccount,visualMode:financeVisualMode,compareMode:financeCompareMode,merchantCategory:financeMerchantCategory,sankeyFocus:financeSankeyFocus,sankeyExpanded:financeOverviewSankeyOpen,merchantSelected:financeMerchantSelected,cycleSelected:financeCycleSelected,forecastScenario:financeForecastScenario,financeWhatIf,financeWhatIfDraft,financeAiSuggestions,krakenPreview,krakenBridgeBusy,krakenPublicBusy,krakenChartAsset,krakenChartPeriod,krakenChartBusy,krakenChartError,krakenChartData,krakenChartSettings,marketQuote:financeMarketQuote,portfolioTab:financePortfolioTab,portfolioMarket:financePortfolioMarket,flatexSort:{key:flatexPositionSort,descending:flatexPositionDescending},flatexChart:{isin:flatexChartIsin,ticker:flatexChartTicker,period:flatexChartPeriod,busy:flatexChartBusy,error:flatexChartError,data:flatexChartData,settings:flatexChartSettings}}));}
 
 
 
@@ -3920,6 +3936,11 @@ function bind() {
   const finSearch=app.querySelector('#finance-ledger-query');if(finSearch)finSearch.onchange=()=>{financeLedgerQuery=finSearch.value.slice(0,100);financeLedgerPage=0;render();};
   const finFilter=app.querySelector('#finance-ledger-filter');if(finFilter)finFilter.onchange=()=>{financeLedgerFilter=finFilter.value;financeLedgerPage=0;render();};
   app.querySelectorAll('form[data-finance-edit]').forEach(form=>form.onsubmit=async ev=>{ev.preventDefault();const id=form.dataset.financeEdit;const data=new FormData(form),category=String(data.get('category')||''),flow=String(data.get('flow')||'');if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')return toast('Bitte eine konkrete Kategorie auswählen.',true);try{let affected=0;const remember=data.get('remember')==='yes';
+    if(state?.privateDeviceMirror?.mode==='receiver'){
+     // Do not modify the mirrored bank record or create unreviewed merchant rules on the phone.
+     await mutate(s=>{queueFinanceMobileDecision(s,id,category,flow,new Date().toISOString(),crypto.randomUUID(),remember);});
+     toast('Zuordnung verschlüsselt vorgemerkt. Auf dem Hauptgerät nach dem Abgleich wirksam.');return;
+    }
     await mutate(s=>{s.financeTransactions??=[];s.financeRules??=[];const i=s.financeTransactions.findIndex(t=>t.id===id);if(i<0)throw Error('Buchung nicht mehr vorhanden.');
       const old=s.financeTransactions[i],key=merchantKey(old.merchant);const rule=remember&&safeMerchantRule(old.merchant);const alias=String(data.get('merchantDisplayName')||'').normalize('NFKC').replace(/\s+/g,' ').trim();if(alias.length>90)throw Error('Anzeigename zu lang.');
       if(rule){for(let j=0;j<s.financeTransactions.length;j++){const t=s.financeTransactions[j];if(j===i||(merchantKey(t.merchant)===key&&(t.amountCents>0)===(old.amountCents>0)&&t.source!=='user'&&t.confidence!=='confirmed')){
@@ -3935,7 +3956,14 @@ function bind() {
     ev.preventDefault();const id=form.dataset.financeConfirm,old=(state.financeTransactions||[]).find(t=>t.id===id);if(!old||!old.needsReview)return;
     const fd=new FormData(form),category=String(fd.get('category')||''),flow=String(fd.get('flow')||''),remember=fd.get('remember')==='yes',applyAll=fd.get('applyAll')==='yes';
     if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')return toast('Bitte eine konkrete Kategorie auswählen.',true);
-    try{let approved=0;await mutate(s=>{s.financeTransactions??=[];s.financeRules??=[];
+    try{
+      if(state?.privateDeviceMirror?.mode==='receiver'){
+       // Expanded groups are explicit opt-in. Only the known matching book entries are queued.
+       const candidateRows=applyAll?(state.financeTransactions||[]).filter(t=>t.needsReview&&merchantKey(t.merchant)===merchantKey(old.merchant)&&(t.amountCents>0)===(old.amountCents>0)&&t.flow===old.flow):[old];
+       await mutate(s=>{for(const row of candidateRows)queueFinanceMobileDecision(s,row.id,category,flow,new Date().toISOString(),crypto.randomUUID(),remember);});
+       toast(`${candidateRows.length} Zuordnung(en) verschlüsselt für das Hauptgerät vorgemerkt.`);return;
+      }
+      let approved=0;await mutate(s=>{s.financeTransactions??=[];s.financeRules??=[];
       const key=merchantKey(old.merchant);
       const same=t=>merchantKey(t.merchant)===key&&(t.amountCents>0)===(old.amountCents>0)&&t.flow===old.flow;
       for(let i=0;i<s.financeTransactions.length;i++){
@@ -5502,6 +5530,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='compass56-recommend'){compass56RecommendationDay=selectedDay;compass56RecommendationMarkup=todaySmartPanel();render();return;}
     if(action==='compass56-recommend-close'){compass56RecommendationMarkup='';compass56RecommendationDay='';if(!compass55RefreshInspector())render();return;}
     if(action==='compass56-planning'){compass56PlanningOpen=!compass56PlanningOpen;render();return;}
+    if(action==='finance79-next'||action==='finance79-prev'){const count=mobileFinanceReviewRows(state,financeAccount).length;financeReviewPage=Math.min(Math.max(0,Math.ceil(count/10)-1),Math.max(0,financeReviewPage+(action==='finance79-next'?1:-1)));render();return;}
     if(action==='finance-pane'){if(FINANCE_TABS.some(p=>p.title===id)){financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='finance-trip-select'){
       if((state?.financeTrips||[]).some(t=>t.id===id)){financeTripSelected=id;financeTripPage=0;financeTripQuery='';render();}return;
