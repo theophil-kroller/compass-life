@@ -37,7 +37,7 @@ test('Daily Dozen and Anti-Aging recognize 2 fruit servings, not the supplement'
 });
 test('lock and app share one visible release label, old snapshot constant untouched',()=>{
  const release=src('../client/src/compass-release-v57759402519.js');const main=src('../client/src/main-full-v57759402510.js'),lock=src('../client/src/ars-vivendi-lock-full-v5775922.js');
- assert.match(release,/0\.5\.77\.59\.40\.25\.19/);assert.match(main,/Personal Life Manager · \$\{COMPASS_VISIBLE_RELEASE\}/);assert.match(lock,/Build \$\{COMPASS_VISIBLE_RELEASE\}/);
+ assert.match(release,/0\.5\.77\.59\.40\.25\.20/);assert.match(main,/Personal Life Manager · \$\{COMPASS_VISIBLE_RELEASE\}/);assert.match(lock,/Build \$\{COMPASS_VISIBLE_RELEASE\}/);
  assert.match(main,/const COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.25\.10'/);
 });
 test('Fitdays-style axes, readable categorical ranges and crosshairs only for known data',()=>{

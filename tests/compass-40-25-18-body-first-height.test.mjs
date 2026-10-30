@@ -8,7 +8,7 @@ test('184cm and 87.1kg compute BMI 25.73 when Fitdays BMI field absent',()=>{
  assert.equal(r.bmi,25.73);assert.equal(r.bmiOrigin,'computed');assert.equal(sample.bmi,undefined);
  const html=fitdaysInterpretationView([sample],{heightCm:184,today:'2026-10-30'});
  assert.match(html,/BMI aus dem Gewicht berechnet/);assert.match(html,/25,7/);assert.match(html,/184 cm/);
- assert.match(html,/fdi-matrix-dot/);assert.match(html,/fdi-zone-legend/);
+ assert.match(html,/fdi-type-point/);assert.match(html,/fdi-zone-legend/);
  assert.match(html,/Viszeralfett/);assert.match(html,/Subkutanes Fett/);
  assert.match(html,/Nicht im Export/);
 });
@@ -19,5 +19,5 @@ test('preexisting Fitdays BMI wins; never derive absent BMI without documented h
 });
 test('body references appear BEFORE the previous plots and health figure',()=>{
  const m=readFileSync(new URL('../client/src/main-full-v57759402510.js',import.meta.url),'utf8');
- assert.match(m,/insightTab==='body'\?fitdaysInterpretationView\([\s\S]*?heightCm:[\s\S]*?184\}\)\+bodyTransformationView\([\s\S]*?\+healthBodyView\(/);
+ assert.match(m,/insightTab==='body'\?fitdaysInterpretationView\([\s\S]*?heightCm:[\s\S]*?184,targetWeightKg:[\s\S]*?\}\)\+bodyTransformationView\([\s\S]*?\+healthBodyView\(/);
 });
