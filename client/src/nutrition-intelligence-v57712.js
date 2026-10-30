@@ -3,7 +3,7 @@
  * value is interpreted as zero and no compound content is fabricated.
  * User food log remains within the encrypted nutritionJournal vault. */
 import {nutritionEntries,nutritionFoods,nutritionKcalEstimate} from './personal-journal-v5692.js';
-import {DAILY_NRV,CAFFEINE_EFSA_ADULT_ORIENTATION_MG,GENERIC_MICRONUTRIENTS,APPLE_GENERIC_100G} from './nutrition-reference-v57722.js';
+import {DAILY_NRV,CAFFEINE_EFSA_ADULT_ORIENTATION_MG,GENERIC_MICRONUTRIENTS,APPLE_GENERIC_100G,BANANA_GENERIC_100G} from './nutrition-reference-v57722.js';
 import {macroGoalView} from './macro-goals-v57723.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -54,6 +54,12 @@ const LABELLED={
  'coffee':profile('Filterkaffee · Richtwert 200 ml',200,'ml',{kcal:2},'Schätzung / EFSA',{caffeine:{label:'Koffein',value:90,unit:'mg',mode:'estimate'}},'EFSA-Richtwert 90 mg je 200 ml Filterkaffee; tatsächlicher Kaffee variiert.'),
  // The source is the non-40+ ONE for Men formula (NIH DSLD 332616, UPC 743715001398).
  // 40+ is a different supplement with different strengths: do not silently mix formulations.
+ 'profuel-alphaminos-bcaa':profile('PROFUEL Alphaminos BCAA · 13 g',13,'g',{kcal:35},'Historische Nutzerangabe zum Produkt, 26.10.2026',{
+   bcaa:{label:'BCAA gesamt (isolierte Aminosäuren)',value:10000,unit:'mg'},
+   leucine:{label:'L-Leucin',value:5000,unit:'mg',partOf:'bcaa'},
+   isoleucine:{label:'L-Isoleucin',value:2500,unit:'mg',partOf:'bcaa'},
+   valine:{label:'L-Valin',value:2500,unit:'mg',partOf:'bcaa'}
+ },'35 kcal und 10 g BCAA je 13 g Portion laut früherer Erfassung. Die frei vorliegenden Aminosäuren werden NICHT als 10 g vollständiges Nahrungseiweiß verbucht. Andere Makro- und Mikronährstoffe sind unbekannt, nicht null. Kein Obst, keine Pflanzennahrungsmittel-Portion.'),
  'supplement-bluebonnet-one-men':profile('Bluebonnet ONE for Men · Whole Food-Based Multiple',1,'Kapseln',{
    vitaminA:1050,vitaminC:90,vitaminD:20,vitaminE:15,vitaminK:20,
    vitaminB1:1.2,vitaminB2:1.3,niacin:16,vitaminB6:1.7,folate:667,
@@ -114,6 +120,8 @@ for(const [id,micros] of Object.entries(GENERIC_MICRONUTRIENTS)){
  original.estimatedNutrients=keys;
  original.note+=' Ergänzende Mikronährstoffe: Referenzdaten ähnlicher Lebensmittel, nicht Herstelleretikett.'+(id==='mixed-nuts'?' Die Anteile außerhalb der 30 % Cashews und 10 % Paranüsse sind geschätzt; Selen wird wegen extremer Schwankungen von Paranüssen nicht beziffert.':'');
 }
+LABELLED.banana=profile('Banane, roh ohne Schale',100,'g',BANANA_GENERIC_100G,'USDA FoodData Central 173944 (Durchschnitt)',{},'Eine mittelgroße Banane ≈ 120 g essbarer Anteil. Sorten, Reife und Größe variieren.');
+LABELLED.banana.estimatedNutrients=Object.keys(BANANA_GENERIC_100G);
 LABELLED.apple=profile('Apfel mit Schale · Referenzportion 100 g',100,'g',APPLE_GENERIC_100G,'USDA FDC 171688 (Durchschnitt)',{},'1 mittelgroßer Apfel ≈ 182 g essbarer Anteil; Vitamin C ≈ 8,4 mg. Sorten, Lagerung und Größe variieren.');
 LABELLED.apple.estimatedNutrients=Object.keys(APPLE_GENERIC_100G);
 LABELLED['apple-shortcrust-cake'].estimatedNutrients=['kcal','protein','carbs','sugar','fat','fiber'];
@@ -125,6 +133,7 @@ const round=x=>Math.round((x+Number.EPSILON)*100)/100;
 const amountNumber=x=>Number(String(x).replace(',','.'));
 function quantityFor(entry,food){
  const a=String(entry?.amount||food?.defaultAmount||'').toLowerCase();
+ if(entry.foodId==='banana'){const pcs=a.match(/(\d+(?:[.,]\d+)?)\s*(?:stück(?:e)?|bananen?)\b/i);const grams=a.match(/(\d+(?:[.,]\d+)?)\s*g\b/i);return {value:pcs?amountNumber(pcs[1])*120:grams?amountNumber(grams[1]):120,unit:'g'};}
  if(entry.foodId==='apple'&&!/(?:\d+(?:[.,]\d+)?\s*(?:g|gramm)\b)/i.test(a)){const m=a.match(/(\d+(?:[.,]\d+)?)\s*(?:stücke?|äpfel)/i);return {value:(m?amountNumber(m[1]):1)*182,unit:'g'};}
  if(entry.foodId==='coffee'&&!/\d+(?:[.,]\d+)?\s*ml/i.test(a))return {value:200,unit:'ml'};
  if(entry.foodId==='apple-shortcrust-cake'){
@@ -265,7 +274,7 @@ function section(title,keys,m,{icons=false}={}){return `<section class="ni712-pa
  }).join('')}</div></section>`;}
 export function nutritionIntelligenceView(state,{day=dateLocal(new Date()),detail=''}={}){
  const m=nutritionDay(state,day),entries=m.entries,labels=N,detailProfile=LABELLED[detail];
- const productList=['apple','coffee','espresso','matcha-powder','milk-my-vay','monin-caramel','mixed-nuts','peanuts','dried-mango','rice-pudding','pistachio-butter-cups','cheddar','cheddar-hofer','bio-kornbrot','butter-hofer','supplement-bluebonnet-one-men','supplement-fuerstenmed'];
+ const productList=['banana','apple','profuel-alphaminos-bcaa','coffee','espresso','matcha-powder','milk-my-vay','monin-caramel','mixed-nuts','peanuts','dried-mango','rice-pudding','pistachio-butter-cups','cheddar','cheddar-hofer','bio-kornbrot','butter-hofer','supplement-bluebonnet-one-men','supplement-fuerstenmed'];
  const head=`<section class="work-card ni712-root"><div class="ni712-header"><div><small>COMPASS · NUTRITION INTELLIGENCE</small><h2>Makro & Mikro · Tagesanalyse</h2><p>Nur tatsächlich protokollierte Produkte und Rezepte. Fehlende Werte sind unbekannt, nicht null.</p></div><div class="ni712-day"><button type="button" data-action="ni712-day" data-id="prev" aria-label="Vortag">←</button><strong>${esc(new Date(day+'T12:00:00').toLocaleDateString('de-AT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))}</strong><button type="button" data-action="ni712-day" data-id="next" aria-label="Folgetag">→</button><button type="button" data-action="ni712-day" data-id="today">Heute</button></div></div>
  <div class="ni712-kpis"><div><strong>${entries.length}</strong><small>Ernährungseinträge</small></div><div><strong>${m.coverage.kcal.known?pretty(m.totals.kcal,'kcal'):'–'}</strong><small>Erfasste Energie · Teilbilanz</small></div><div><strong>${m.coverage.protein.known?pretty(m.totals.protein,'g'):'–'}</strong><small>Bekanntes Eiweiß</small></div><div><strong>${m.coverage.fiber.known?pretty(m.totals.fiber,'g'):'–'}</strong><small>Bekannte Ballaststoffe</small></div></div>
  <p class="ni712-caveat">${entries.length?`${entries.length} Einträge · ${m.coverage.kcal.known} mit Energiewert · ${m.coverage.protein.unknown} ohne Proteindaten. Ein niedriger Wert zeigt keine Unterversorgung an.`:'Für diesen Tag sind noch keine Lebensmittel oder Nahrungsergänzungen protokolliert.'} Die Prozentbalken nutzen EU-NRV für allgemeine Erwachsene: weder persönlicher Bedarf noch sichere Obergrenze. Fehlende Lebensmittel und unvollständige Nährwerte können die Bilanz unterschätzen. Kein Nachweis eines Nährstoffmangels.</p>${macroGoalView(state,m.totals,m.coverage)}${m.coverage.salt.known?`<section class="ni712-panel meal723-salt"><h3>🧂 Salz · WHO-Orientierung</h3><strong>≈ ${pretty(m.totals.salt,'g')} (${Math.round(m.totals.salt/5*100)} % der Grenze von 5 g/Tag)</strong><div class="ni722-track"><span style="width:${Math.min(100,m.totals.salt/5*100)}%"></span></div><small>Keine Sollmenge, sondern eine Obergrenze für Erwachsene. Zugesetztes Salz in Mensagerichten bleibt unbekannt. ${m.coverage.salt.unknown} Einträge ohne Salzangabe.</small></section>`:''}

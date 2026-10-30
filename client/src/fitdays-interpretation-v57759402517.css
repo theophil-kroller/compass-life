@@ -11,3 +11,20 @@
 .fdi-more{margin-top:13px;border:1px solid #e2e9e3;border-radius:10px;padding:10px 12px;background:#f5f8f6}.fdi-more>summary{cursor:pointer;color:#2c6452;font-weight:700;font-size:.77rem}.fdi-secondary{margin-top:13px}.fdi-footnote{font-size:.69rem;color:#70867a;line-height:1.6;margin:13px 0 0}.fdi-sr{position:absolute;overflow:hidden;clip:rect(0,0,0,0);height:1px;width:1px;white-space:nowrap}
 @media(max-width:1080px){.fdi-layout{grid-template-columns:1fr}.fdi-matrix-card{max-width:480px}}
 @media(max-width:650px){.fdi-head{flex-direction:column}.fdi-gauges{grid-template-columns:1fr}.fdi-personal{gap:5px}.fdi-root{padding:11px}.fdi-matrix-card{max-width:none}}
+
+/* .40.25.19: readable Fitdays-style marker and quadrant classification by axes, not risk. */
+.fdi-track-caption{font-size:.67rem;font-weight:650;color:#526d63;margin:13px 4px -9px}
+.fdi-track{margin-top:19px;height:15px;border-radius:5px}
+.fdi-track .fdi-marker{width:3px;height:27px;top:-6px;background:#163b58;box-shadow:0 0 0 1px #163b58}
+.fdi-marker i{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #163b58}
+.fdi-zone-legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));text-align:center;gap:3px;margin-top:8px}
+.fdi-zone-legend span{border-top:2px solid #dbe7e1;padding-top:6px;overflow-wrap:anywhere}
+.fdi-zone-legend span.low{border-color:#a6b7d3}.fdi-zone-legend span.normal{border-color:#5aaf94}.fdi-zone-legend span.higher{border-color:#d7ac5d}.fdi-zone-legend span.highest{border-color:#ce8173}
+.fdi-matrix-grid{background:none;aspect-ratio:1.24/1;overflow:hidden;border-color:#b8ccc3}
+.fdi-quadrants{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.fdi-quadrants span{display:grid;place-items:center;text-align:center;padding:10px;color:#506d65;font-size:.72rem;border:1px solid #fff;line-height:1.3}
+.fdi-quadrants span:nth-child(1){background:#e9f0ec}.fdi-quadrants span:nth-child(2){background:#e8ded2}.fdi-quadrants span:nth-child(3){background:#c7e0d6}.fdi-quadrants span:nth-child(4){background:#edd2bc}
+.fdi-crosshair-y,.fdi-crosshair-x{position:absolute;z-index:2;pointer-events:none}
+.fdi-crosshair-y{left:0;right:0;border-top:1px dashed #205a4d}.fdi-crosshair-x{top:0;bottom:0;border-left:1px dashed #205a4d}
+.fdi-matrix-dot{background:#145b4e;box-shadow:0 0 0 2px #145b4e,0 0 0 6px #ffffff99}
+@media(max-width:480px){.fdi-quadrants span{font-size:.6rem;padding:5px}.fdi-zone-legend{font-size:.56rem}}

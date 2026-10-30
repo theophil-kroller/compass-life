@@ -40,10 +40,12 @@ function gauge(row,rows,model){
  const status=has&&isBmi?bmiZone(value):has?'Messwert (keine medizinische Einstufung)':'Noch kein Messwert';
  const position=has?percent(value,model.min,model.max):0;
  const band=isBmi?bmiBands():'<span class="fdi-neutral-band"></span>';
+ const rangeText=isBmi?'BMI-Referenz für Erwachsene':'Messwertskala (ohne gesicherte Referenzbereiche)';
  return `<article class="fdi-gauge ${has?'':'fdi-gauge-empty'}" aria-label="${esc(model.label)}: ${has?esc(num(value)):'nicht erfasst'}">
   <div class="fdi-gauge-title"><strong>${esc(model.label)}</strong><span class="fdi-observed">${has?esc(num(value,model.key==='whr'?2:1))+' '+esc(model.unit):'–'}</span></div>
   <div class="fdi-origin">${esc(source)}</div>
-  <div class="fdi-track" role="img" aria-label="${esc(model.label)}: ${has?esc(num(value)): 'nicht verfügbar'}${isBmi?', BMI-Kategorien für Erwachsene':' – geräteneutrale Messwertskala'}">${band}${has?`<span class="fdi-marker" style="left:${position.toFixed(2)}%" aria-hidden="true"></span>`:''}</div>
+  <div class="fdi-track-caption">${esc(rangeText)}</div>
+  <div class="fdi-track" role="img" aria-label="${esc(model.label)}: ${has?esc(num(value)): 'nicht verfügbar'}${isBmi?', BMI-Kategorien für Erwachsene':' – geräteneutrale Messwertskala'}">${band}${has?`<span class="fdi-marker" style="left:${position.toFixed(2)}%" aria-hidden="true"><i></i></span>`:''}</div>
   ${isBmi?bmiLabels():`<div class="fdi-scale"><span>${model.min} ${esc(model.unit)}</span><span>${model.max} ${esc(model.unit)}</span></div>`}
   <div class="fdi-signal"><strong>${esc(status)}</strong><small>${has?esc(trend(rows,model.key)):'Für diesen Wert sind keine Daten importiert'}</small></div>
   <details><summary>Was bedeutet das?</summary><p>${esc(model.about)}</p>${isBmi?'<p>Allgemeine BMI-Kategorien für Erwachsene, keine Diagnose. Muskelmasse wird nicht berücksichtigt.</p>':'<p>Keine künstlichen Normal-/Risikobereiche: Fitdays-Indizes sind geräteabhängig, andere Körperwerte können methodenspezifisch sein.</p>'}</details>
@@ -56,11 +58,11 @@ function bodyMatrix(row){
  const x=percent(fat,0,50),y=100-percent(bmi,12,42);
  return `<div class="fdi-matrix" role="img" aria-label="Körperfett ${esc(num(fat))} Prozent, BMI ${esc(num(bmi))}, Positionspunkt in einer zweidimensionalen Grafik">
   <div class="fdi-matrix-ylabel">BMI</div><div class="fdi-matrix-grid">
-   <span class="fdi-matrix-zone normal" style="bottom:${(percent(18.5,12,42)*100/100).toFixed(2)}%;height:${(percent(25,12,42)-percent(18.5,12,42)).toFixed(2)}%"></span>
-   <span class="fdi-matrix-zone higher" style="bottom:${percent(25,12,42).toFixed(2)}%;height:${(percent(30,12,42)-percent(25,12,42)).toFixed(2)}%"></span>
+   <div class="fdi-quadrants" aria-hidden="true"><span>höherer BMI · weniger Fett</span><span>höherer BMI · mehr Fett</span><span>niedriger BMI · weniger Fett</span><span>niedriger BMI · mehr Fett</span></div>
+   <span class="fdi-crosshair-y" style="top:${y.toFixed(2)}%" aria-hidden="true"></span><span class="fdi-crosshair-x" style="left:${x.toFixed(2)}%" aria-hidden="true"></span>
    <span class="fdi-matrix-dot" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%"><span class="fdi-sr">Deine Position</span></span>
   </div><div class="fdi-matrix-ticks"><span>0 %</span><span>25 %</span><span>50 %</span></div><div class="fdi-axis-bottom">Körperfettanteil</div>
- </div><p class="fdi-matrix-values"><strong>${esc(num(fat))} % Körperfett</strong> · <strong>BMI ${esc(num(bmi))}</strong></p><p class="fdi-subtle">Positionsgrafik der zwei Kennzahlen, keine medizinische Körpertyp-Diagnose.</p>`;
+ </div><p class="fdi-matrix-values"><strong>${esc(num(fat))} % Körperfett</strong> · <strong>BMI ${esc(num(bmi))}</strong></p><p class="fdi-subtle">Vier beschreibende Quadranten, inspiriert von Fitdays. Die Achsen sind BMI und Körperfett; keine medizinische Körpertyp-Diagnose.</p>`;
 }
 
 export function fitdaysInterpretationView(fitdays=[],{today='',range='28',heightCm=null}={}){
@@ -76,9 +78,9 @@ export function fitdaysInterpretationView(fitdays=[],{today='',range='28',height
  const height=Number(heightCm);
  const heightNote=Number.isFinite(height)&&height>=120&&height<=230?`Körpergröße ${esc(num(height,0))} cm${latest.bmiOrigin==='computed'?' · BMI aus dem Gewicht berechnet':''}`:'Körpergröße nicht hinterlegt';
  return `<section class="fdi-root" id="fitdays-interpretation" aria-label="Fitdays Referenz- und Werteinterpretation">
-  <header class="fdi-head"><div><span class="fdi-eyebrow">KÖRPERANALYSE · REFERENZEN</span><h3>Deine Körperwerte – auf einen Blick</h3><p>Einordnung und Positionsgrafiken zuerst; die vorhandenen Dot-Plots und Segmentgrafiken folgen darunter.</p></div><small>${esc(latest.day)} · ${selected.length} Messungen</small></header>
+  <header class="fdi-head"><div><span class="fdi-eyebrow">KÖRPERANALYSE · REFERENZEN</span><h3>Deine Körperwerte – auf einen Blick</h3><p>Fitdays-artige Statusbalken und Körpertyp-Positionsmatrix; bestehende Dot-Plots und Segmentanalysen folgen darunter.</p></div><small>${esc(latest.day)} · ${selected.length} Messungen</small></header>
   <div class="fdi-personal"><strong>${esc(heightNote)}</strong><span>${measured} von ${measures.length} Werten verfügbar · Fitdays-Werte sind BIA-Schätzungen</span></div>
-  <div class="fdi-layout"><div class="fdi-gauges">${primary.map(m=>gauge(latest,selected,m)).join('')}</div><aside class="fdi-matrix-card"><h4>BMI × Körperfett</h4>${bodyMatrix(latest)}<details><summary>Zur Einordnung</summary><p>Die Achsen zeigen nur zwei Körpermaße; die gefärbten horizontalen Bänder markieren allgemeine BMI-Kategorien. Sie sind keine Validierung des Körperfettanteils.</p></details></aside></div>
+  <div class="fdi-layout"><div class="fdi-gauges">${primary.map(m=>gauge(latest,selected,m)).join('')}</div><aside class="fdi-matrix-card"><h4>BMI × Körperfett</h4>${bodyMatrix(latest)}<details><summary>Zur Einordnung</summary><p>Beschriftete Quadranten dienen nur zur räumlichen Orientierung. Die Fitdays-Herstellerklassifikation und ihre Grenzwerte werden nicht ohne belegte Referenztabelle übernommen.</p></details></aside></div>
   <details class="fdi-more"><summary>Weitere Kennzahlen · ${secondary.filter(m=>get(latest,m.key)!==null).length} Werte verfügbar</summary><div class="fdi-gauges fdi-secondary">${secondary.map(m=>gauge(latest,selected,m)).join('')}</div></details>
   <p class="fdi-footnote">BMI: allgemeine Erwachsenenkategorien. Die übrigen Skalen zeigen die Position des tatsächlichen Messwerts, keine erfundenen Fitdays-Risikogrenzen. Fehlende Exportfelder bleiben fehlend. Keine automatische Gesundheitsdiagnose.</p>
  </section>`;

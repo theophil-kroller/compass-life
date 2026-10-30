@@ -38,6 +38,10 @@ export const GENERIC_MICRONUTRIENTS=Object.freeze({
  'cheddar-hofer':Object.freeze({calcium:710,phosphorus:455,potassium:76,magnesium:27,zinc:3.64,selenium:28.5,vitaminA:337,vitaminD:.6,vitaminE:.71,vitaminK:2.4,vitaminB2:.43,vitaminB12:1.1,vitaminB1:.029,vitaminB6:.066,folate:27,iron:.14}),
  'peanuts':Object.freeze({calcium:92,magnesium:168,potassium:705,folate:240}),
 });
+// USDA FoodData Central 173944 (raw bananas), generic per 100 g; not brand-specific.
+export const BANANA_GENERIC_100G=Object.freeze({kcal:89,protein:1.09,carbs:22.84,sugar:12.23,fat:.33,saturated:.112,fiber:2.6,salt:.0025,
+ vitaminC:8.7,vitaminB6:.367,folate:20,vitaminB1:.031,vitaminB2:.073,niacin:.665,pantothenicAcid:.334,vitaminA:3,vitaminE:.1,vitaminK:.5,
+ calcium:5,magnesium:27,potassium:358,phosphorus:22,iron:.26,zinc:.15,copper:.078,manganese:.27,choline:9.8});
 export const APPLE_GENERIC_100G=Object.freeze({kcal:52,protein:.26,carbs:13.81,sugar:10.39,fat:.17,saturated:.028,fiber:2.4,salt:.0025,
  vitaminA:3,vitaminC:4.6,vitaminE:.18,vitaminK:2.2,vitaminB1:.017,vitaminB2:.026,niacin:.091,vitaminB6:.041,folate:3,pantothenicAcid:.061,
  calcium:6,magnesium:5,potassium:107,phosphorus:11,iron:.12,zinc:.04,copper:.027,manganese:.035,choline:3.4});

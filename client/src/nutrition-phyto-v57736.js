@@ -29,6 +29,11 @@ export function bioactiveForEntry(entry){
   const grams=id==='matcha-powder'?(m?Number(m[1].replace(',','.')):t?Number(t[1].replace(',','.'))*2:2):2;
   return grams>0&&grams<=30?[make('egcg-min','EGCG (garantierter Mindestgehalt)',30*grams,null,'MatchaTherapy 30+','MatchaTherapy Hersteller · mindestens 30 mg EGCG/g','https://matchatherapy.com/de-at','Markenprofil: deklarierter Mindestgehalt, keine obere Grenze; nicht zu Tee-Catechinen summieren.','matcha')]:[];
  }
+ if(id==='apple'||id==='banana'){
+  // These foods contain phytochemicals, but there is no validated generic
+  // brand/ripeness-specific class assay here. Keep unknown, never zero.
+  return [];
+ }
  if(id==='smoothie-personal'){
   const grams=smoothieRecipe(entry.recipe).find(x=>x.id==='blueberries')?.grams||0;
   // Specific assay on 10 commercial/freezing cultivars; not guaranteed for user's brand.

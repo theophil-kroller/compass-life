@@ -71,7 +71,7 @@ export function readSmoothieForm(formData){
 }
 
 /** Favorites surface first INSIDE each group, not only at the category level. */
-const COMMON_FAVORITES={'Getränke':['green-tea-chinese','smoothie-personal','coffee','matcha','matcha-oat-plain','tea-unsweetened'],'Snacks':['peanuts','mixed-nuts','pistachio-butter-cups'],'Mahlzeiten':['mensa-study-veggie','dark-bread-butter']};
+const COMMON_FAVORITES={'Getränke':['green-tea-chinese','smoothie-personal','coffee','matcha','matcha-oat-plain','tea-unsweetened'],'Snacks':['banana','apple','peanuts','mixed-nuts','pistachio-butter-cups'],'Mahlzeiten':['mensa-study-veggie','dark-bread-butter']};
 export function smartNutritionFoods(foods=[],group=''){
  const favorite=COMMON_FAVORITES[group]||[];
  return foods.filter(f=>f.group===group).sort((a,b)=>{const ai=favorite.indexOf(a.id),bi=favorite.indexOf(b.id);return (ai<0?100:ai)-(bi<0?100:bi);});

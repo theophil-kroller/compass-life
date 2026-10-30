@@ -66,7 +66,8 @@ export function dailyDozenIngredientEvidence404(state,day){
    }
    continue;
   }
-  if(id==='apple'){const m=a.match(/(\d+(?:[.,]\d+)?)\s*(?:stück|äpfel|apfel)/i);add('fruit',m?Number(m[1].replace(',','.')):1,'Apfel',sourceId);}
+  if(id==='apple'){const m=a.match(/(\d+(?:[.,]\d+)?)\s*(?:stück|äpfel|apfel)/i);add('fruit',m?Number(m[1].replace(',','.')):g!==null?g/182:1,'Apfel',sourceId);}
+  else if(id==='banana'){const m=a.match(/(\d+(?:[.,]\d+)?)\s*(?:stück|bananen?)/i);add('fruit',m?Number(m[1].replace(',','.')):g!==null?g/120:1,'Banane',sourceId);}
   else if(id==='dried-mango')add('fruit',(g??40)/40,'Getrocknete Mango',sourceId);
   else if(id==='krautsalat')add('cruciferous',(g??150)/150,'Krautsalat',sourceId);
   else if(id==='stangenbohnensalat')add('vegetables',(g??150)/150,'Stangenbohnensalat · grüne Bohnen',sourceId);

@@ -13,7 +13,7 @@ const amountPieces=x=>{
  return m?Math.max(0,Math.min(8,Math.floor(Number(m[1].replace(',','.'))))):1;
 };
 export const VERIFIED_DAILY_FOODS=Object.freeze({
- apple:'fruit', 'dried-mango':'fruit',
+ apple:'fruit', banana:'fruit', 'dried-mango':'fruit',
  peanuts:'nuts','mixed-nuts':'nuts',
  'water-glass':'beverages','green-tea-chinese':'beverages','tea-unsweetened':'beverages',coffee:'beverages','matcha':'beverages','matcha-oat-plain':'beverages','oat-latte':'beverages',
  'bio-kornbrot':null // Grain content cannot be inferred from its name alone.
@@ -35,7 +35,7 @@ export function dailyDozenEvidence(state,day){
    // For dried fruit, count conservatively at most 1 documented serving per entry.
    const amountGrams=amountOf(amount);
    const count=foodId==='dried-mango'?(amountGrams===null||amountGrams>=35?1:0):Math.min(3,amountPieces(amount));
-   totals.fruit+=count;sources.fruit.push(foodId==='apple'?`Apfel: ${count} Stück`:'Getrocknete Mango (Portionsmenge grob)');
+   totals.fruit+=count;sources.fruit.push(foodId==='apple'?`Apfel: ${count} Stück`:foodId==='banana'?`Banane: ${count} Stück`:'Getrocknete Mango (Portionsmenge grob)');
   }else{
    // One entered tea/coffee is ONE drink, irrespective of ml or caffeine content.
    totals.beverages++;sources.beverages.push(foodId==='green-tea-chinese'?'Chinesischer Grüntee':'Erfasstes Getränk');
