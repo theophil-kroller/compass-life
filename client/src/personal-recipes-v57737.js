@@ -26,6 +26,13 @@ const RAW=Object.freeze({
   ing('balsamic','Balsamicoessig',15,{kcal:88,carbs:17,sugar:15},'USDA · Balsamico, generisch'),
   ing('salt','Salz',.5,{salt:100},'Zugesetztes Speisesalz; Salz aus der Bohnenkonserve separat unbekannt')
  ]},
+ 'crackers-feta-evening-personal':{name:'Mein Abendsnack · Cracker, Schafkäse, Kürbiskernöl, Miso & Basilikumpesto',icon:'🧀',ingredients:[
+  ing('crackers','Cracker · halbe 180-g-Packung',90,{kcal:445,protein:9,carbs:66,sugar:4,fat:15,saturated:4,fiber:3,salt:1.7},'Generische Cracker-Schätzung je 100 g; Sorte und Etikett unbekannt'),
+  ing('sheep-cheese','Schafkäse · halbe geschätzte 180-g-Packung',90,{kcal:265,protein:15.5,carbs:1.5,sugar:1,fat:21.5,saturated:15.5,salt:2.5,calcium:450,vitaminB12:1.7},'Generischer Schafkäse/Feta-Richtwert je 100 g; tatsächliche HOFER-Packungsgröße noch zu prüfen'),
+  ing('pumpkin-oil','Kürbiskernöl · 1 EL',14,{kcal:884,fat:100,saturated:18,mono:34,poly:48},'1 EL Öl ≈ 14 g; generisches Kürbiskernöl, keine Markenanalyse'),
+  ing('miso','Miso-Paste · 1 EL',15,{kcal:195,protein:12,carbs:26,sugar:5,fat:6,saturated:1,fiber:5,salt:11.2},'1 EL Miso ≈ 15 g; Salzgehalt variiert stark mit Sorte/Marke'),
+  ing('basil-pesto','Basilikumpesto · 1 EL',15,{kcal:475,protein:5,carbs:6,sugar:2,fat:47,saturated:8,salt:2.5},'1 EL Pesto ≈ 15 g; Öl-/Käseanteil und Salz variieren stark')
+ ]},
  'fried-egg-personal':{name:'Mein Spiegelei · Olivenöl, Kala Namak, Kurkuma, Chili',icon:'🍳',ingredients:[
   ing('egg','Hühnerei · 1 Stück ohne Schale',55,{kcal:143,protein:12.56,carbs:.72,fat:9.51,saturated:3.126,cholesterol:372,vitaminB12:.89,vitaminD:2,selenium:30.7},'USDA · ganzes rohes Ei; Fettaufnahme beim Braten hängt von Ölmenge ab'),
   ing('olive-oil','Natives Olivenöl extra · zum Braten',5,{kcal:884,fat:100,saturated:13.8,mono:73,poly:10.5,vitaminE:14.35},'USDA · Olivenöl; tatsächlich aufgenommenes Öl nicht gemessen'),
@@ -35,7 +42,7 @@ const RAW=Object.freeze({
  ]}
 });
 export const PERSONAL_RECIPE_IDS=Object.freeze(Object.keys(RAW));
-export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>Object.freeze({id,title:RAW[id].name,emoji:RAW[id].icon,group:id==='fried-egg-personal'?'Frühstück':'Mahlzeiten',defaultAmount:'1 Portion',kcalLow:null,kcalHigh:null,recipeNote:'Persönliches Rezept, Grammangaben je Zutat editierbar'})));
+export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>Object.freeze({id,title:RAW[id].name,emoji:RAW[id].icon,group:id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':'Mahlzeiten',defaultAmount:'1 Portion',kcalLow:null,kcalHigh:null,recipeNote:'Persönliches Rezept, Grammangaben je Zutat editierbar'})));
 export const PERSONAL_RECIPE_CATALOG=RAW;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const round=x=>Math.round((x+Number.EPSILON)*100)/100;

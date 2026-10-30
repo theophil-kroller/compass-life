@@ -1,0 +1,7 @@
+Compass 0.5.80 | Installationshinweise
+
+Basis: GitHub main / 0.5.79 / Commit 9d141b3577976618530aba5090088f5560b592cd.
+PATCH: ZIP im Repository-Stamm entpacken und Pfade erhalten. Nur auf genau diesen Basisstand anwenden.
+FULL SOURCE: Vollständiger Quellstand zur Installation, falls Repository exakt dem vorherigen Stand entspricht.
+Vor Upload Commit auf GitHub prüfen; nach Upload GitHub Actions Build und PWA auf Handy kontrollieren.
+Keine Tresor-/IndexedDB-Daten löschen. Lebensmittel im Menü unter Abendsnack auswählen.

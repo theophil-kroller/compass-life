@@ -259,7 +259,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.79';
+const COMPASS_CLIENT_VERSION='0.5.80';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
