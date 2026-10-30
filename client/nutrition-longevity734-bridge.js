@@ -33,9 +33,11 @@ function refreshDailyDozen733(){`, 'Local Anti-Aging refresh');
    return {code:s,map:null};
   }
   if(path.endsWith('/client/src/personal-journal-v5692.js')){
+   if(input.includes("['green-tea-chinese'"))return {code:input,map:null};
    return {code:replace(input, "['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5]", "['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['green-tea-chinese','🍃','Chinesischer Grüntee · ungesüßt','Getränke','1 Tasse (250 ml)',0,3]",'Grüntee-Preset'),map:null};
   }
   if(path.endsWith('/client/src/nutrition-intelligence-v57712.js')){
+   if(input.includes("'green-tea-chinese':profile("))return {code:input,map:null};
    let s=replace(input,"const LABELLED={",`const LABELLED={
  'green-tea-chinese':profile('Chinesischer Grüntee · aufgebrüht, ohne Zucker',250,'ml',{kcal:2,fat:0,saturated:0,carbs:0,sugar:0},'BfR / EFSA: generischer Grüntee-Richtwert',{caffeine:{label:'Koffein (Teein)',value:38,unit:'mg',mode:'estimate'}},'≈ 38 mg Koffein pro 250 ml laut Referenzbereich, keine Messung deiner Teesorte. Ziehzeit und Blattmenge beeinflussen den Gehalt. https://www.bfr.bund.de/fragen-und-antworten/thema/fragen-und-antworten-zu-koffein-und-koffeinhaltigen-lebensmitteln-einschliesslich-energy-drinks/'),`, 'Grüntee Koffeinprofil');
    s=replace(s,"'milk-my-vay':profile", "'milk-my-vay':profile",'profile passt');

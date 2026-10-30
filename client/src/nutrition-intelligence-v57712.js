@@ -51,6 +51,7 @@ const LABELLED={
  },'Bestätigte Sorte 30+. 1 TL ≈ 2 g Pulver geschätzt; Gehalte sind Mindestwerte (mg/g), keine exakten Analysedurchschnitte. Quelle: https://matchatherapy.com/de-at'),
  'honey':profile('Honig, 1 TL',7,'g',{kcal:21,carbs:5.7,sugar:5.7},'Schätzung',{},'Teelöffel ≈ 7 g; kein Markenetikett.'),
  'espresso':profile('Espresso · Richtwert 60 ml',1,'Portion',{kcal:2},'Schätzung / EFSA',{caffeine:{label:'Koffein',value:80,unit:'mg',mode:'estimate'}},'EFSA-Richtwert 80 mg je 60 ml Espresso; tatsächliche Shotgröße, Bohne und Zubereitung schwanken.'),
+ 'green-tea-chinese':profile('Chinesischer Grüntee · aufgebrüht, ohne Zucker',250,'ml',{kcal:2,fat:0,saturated:0,carbs:0,sugar:0,potassium:20,magnesium:2.5,manganese:.46,vitaminB2:.15},'Generischer Grüntee; USDA FDC 171917, NCBI Bookshelf',{caffeine:{label:'Koffein (Teein)',value:38,unit:'mg',mode:'estimate'},catechins:{label:'Catechine gesamt (50–100 mg/250 ml)',value:75,unit:'mg',mode:'estimate'}},'Generischer Grüntee, 250 ml Tasse; Mineralien und Koffein geschätzt, abhängig von Sorte und Ziehzeit.'),
  'coffee':profile('Filterkaffee · Richtwert 200 ml',200,'ml',{kcal:2},'Schätzung / EFSA',{caffeine:{label:'Koffein',value:90,unit:'mg',mode:'estimate'}},'EFSA-Richtwert 90 mg je 200 ml Filterkaffee; tatsächlicher Kaffee variiert.'),
  // The source is the non-40+ ONE for Men formula (NIH DSLD 332616, UPC 743715001398).
  // 40+ is a different supplement with different strengths: do not silently mix formulations.
@@ -128,6 +129,7 @@ LABELLED['apple-shortcrust-cake'].estimatedNutrients=['kcal','protein','carbs','
 LABELLED['matcha-powder'].estimatedNutrients=['kcal'];
 LABELLED.espresso.estimatedNutrients=['kcal'];
 LABELLED.coffee.estimatedNutrients=['kcal'];
+LABELLED['green-tea-chinese'].estimatedNutrients=['kcal','potassium','magnesium','manganese','vitaminB2'];
 export const PRODUCT_PROFILES=Object.freeze(LABELLED);
 const round=x=>Math.round((x+Number.EPSILON)*100)/100;
 const amountNumber=x=>Number(String(x).replace(',','.'));

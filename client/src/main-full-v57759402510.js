@@ -162,6 +162,7 @@ import {bodyTransformationView} from './body-transformation-v57749.js';
 import {fitdaysInterpretationView} from './fitdays-interpretation-v57759402517.js';
 import {COMPASS_VISIBLE_RELEASE} from './compass-release-v57759402519.js';
 import './fitdays-interpretation-v57759402517.css';
+import './body-fat-visual-v57759402522.css';
 import {saveCapacitySettings749} from './capacity-preserve-v57749.js';
 import {nutritionTrendsIndex} from './nutrition-trends-v57726.js';
 import {strengthSummariesWithFit} from './strength-insights-v57728.js';

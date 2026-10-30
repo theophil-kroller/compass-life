@@ -24,7 +24,7 @@ export const FOOD_PRESETS=[
  ['bio-kornbrot','🍞','Zurück zum Ursprung Bio Nur-Kornbrot','Zutaten','1 Scheibe (50 g)',134,134],
  ['butter-hofer','🧈','Hofer Bio-Butter','Zutaten','10 g',72,76],
  ['water-glass','💧','Wasser','Getränke','1 Glas (250 ml)',0,0],
- ['smoothie','🥤','Smoothie','Getränke','1 Glas (300 ml)',120,280],['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['tea-honey','🫖','Tee mit Honig','Getränke','1 Tasse (250 ml)',20,75],
+ ['smoothie','🥤','Smoothie','Getränke','1 Glas (300 ml)',120,280],['green-tea-chinese','🍵','Chinesischer Grüntee · ungesüßt','Getränke','1 Tasse (250 ml)',0,3],['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['tea-honey','🫖','Tee mit Honig','Getränke','1 Tasse (250 ml)',20,75],
  ['turmeric','🟡','Kurkuma-Latte mit Honig','Getränke','1 Tasse (250 ml)',130,270],['coffee','☕','Kaffee','Getränke','1 Tasse (200 ml)',0,10],
  ['latella','🥛','Lattella','Getränke','500 ml',250,360],
  ['aperol-spritz','🍹','Aperol Spritz','Getränke','1 Glas (200 ml)',160,250],
@@ -269,9 +269,36 @@ export function timeJournalView(state,{period=7,editingId='',showForm=false,watc
  const inputStart=editing?toInputDate(editing.start):toInputDate(new Date(Date.now()-3600000)),inputEnd=editing?toInputDate(editing.end):toInputDate(new Date());
  return `<div class="pj92-shell"><section class="work-card pj92-summary"><div class="work-heading"><span>⏱️ Zeitjournal · Wohin fließt meine Zeit?</span><button class="secondary-btn" data-action="pj92-time-add" type="button">+ Zeit nachtragen</button></div><p class="muted-line">Beruf, Privatprojekte, Familie, Bewegung und Erholung. Unbekannte Stunden bleiben unbekannt.</p><div class="pj92-period">${[7,30,90].map(n=>`<button class="${period===n?'active':''}" type="button" data-action="pj92-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${Math.round(summary.totalMinutes/60*10)/10} h</strong><small>erfasste Zeit in ${period} Tagen</small></div><div class="pj92-category-bars">${TIME_AREAS.filter(([id])=>summary.totals[id]).map(([id,icon,title])=>`<div class="pj92-bar-row"><span>${icon} ${title}</span><div><i style="width:${Math.round(summary.totals[id]/(summary.totalMinutes||1)*100)}%"></i></div><strong>${(summary.totals[id]/60).toFixed(1)} h</strong></div>`).join('')||'<p class="muted-line">Noch keine Zeitintervalle erfasst.</p>'}</div>${overlap.length||summary.overlapSegments?`<p class="pj92-alert">⚠ überlappende Zeitintervalle erkannt und in den Summen nur einmal berücksichtigt. Bitte die betreffenden Buchungen prüfen.</p>`:''}</section><section class="work-card"><div class="work-heading"><span>Chronologie · ${rows.length} Intervalle</span></div><div class="pj92-entry-list">${rows.map(e=>`<button type="button" data-action="${e.source==='watch'?'activity-open':'pj92-time-edit'}" data-id="${esc(e.id)}" class="pj92-time-row"><span><strong>${TIME_AREAS.find(x=>x[0]===e.category)?.[1]||'○'} ${esc(e.title||timeLabel(e.category))}</strong>${e.source==='watch'?'<small> · Garmin</small>':''}<small>${esc(e.project||timeLabel(e.category))}</small></span><span><strong>${dayFormat(e.start)}</strong><small>${hourFormat(e.start)}–${hourFormat(e.end)} · ${durationMinutes(e)} min</small></span></button>`).join('')||'<p class="muted-line">Mit Play/Stopp erfassen oder rückwirkend eine Aktivität hinzufügen.</p>'}</div></section>${showForm||editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>${editing?'Intervall bearbeiten':'Aktivität nachtragen'}</span><button type="button" data-action="pj92-time-cancel">Schließen</button></div><form id="pj92-time-form"><input type="hidden" name="id" value="${esc(editing?.id||'')}"><label>Von<input type="datetime-local" name="start" required value="${esc(inputStart)}"></label><label>Bis<input type="datetime-local" name="end" required value="${esc(inputEnd)}"></label><label>Bereich<select name="category">${timeCategoryOptions(editing?.category||'project')}</select></label><label>Aktivität<input name="title" maxlength="160" placeholder="z. B. Fußball mit meinem Sohn" value="${esc(editing?.title||'')}"></label><label>Projekt / Kontext<input name="project" maxlength="120" placeholder="z. B. Compass oder Beziehungsdynamiken" value="${esc(editing?.project||'')}"></label><div class="pj92-form-actions"><button class="primary-btn" type="submit">Speichern</button>${editing?`<button type="button" class="secondary-btn" data-action="pj92-time-delete" data-id="${esc(editing.id)}">Löschen</button>`:''}</div></form></section>`:''}</div>`;
 }
+/** Local, explainable time-of-day recommendations from prior confirmed food entries.
+ * No network traffic, no implicit entries, no assumptions about missing meals.
+ */
+export function recommendedNutritionFoods(state,now=new Date(),limit=6){
+ const clock=now instanceof Date?now:new Date(now);if(!Number.isFinite(+clock))return [];
+ const known=new Map(nutritionFoods(state).map(food=>[food.id,food]));
+ const rated=new Map();const NOW=clock.getTime(),hour=clock.getHours()+clock.getMinutes()/60;
+ const rows=state?.nutritionJournal?.entries||[];
+ for(const entry of rows){
+  if(!entry||entry.deleted||!known.has(entry.foodId))continue;
+  const at=new Date(entry.at),ms=at.getTime();if(!Number.isFinite(ms)||ms>NOW+3600000)continue;
+  const days=(NOW-ms)/86400000;if(days<0||days>90)continue;
+  const past=at.getHours()+at.getMinutes()/60;
+  const diff=Math.min(Math.abs(past-hour),24-Math.abs(past-hour));
+  const timeAffinity=Math.exp(-.5*(diff/2.35)**2);
+  const score=Math.exp(-days/40)*(.18+.82*timeAffinity);
+  const previous=rated.get(entry.foodId)||{score:0,similar:0,total:0,last:0};
+  previous.score+=score;previous.total++;if(diff<=3)previous.similar++;previous.last=Math.max(previous.last,ms);
+  rated.set(entry.foodId,previous);
+ }
+ // At least one relevant historical entry. Sorting is stable and deterministic.
+ return [...rated].filter(([,r])=>r.score>0).sort((a,b)=>b[1].score-a[1].score||b[1].similar-a[1].similar||b[1].last-a[1].last||a[0].localeCompare(b[0]))
+  .slice(0,Math.max(0,Math.min(8,limit))).map(([id,stats])=>({...known.get(id),recommendedReason:stats.similar?`${stats.similar}× um diese Uhrzeit`:`${stats.total}× zuletzt erfasst`}));
+}
 export function nutritionQuickView(state,{selectedFoodId='',dateToday}={}){
  const foods=nutritionFoods(state),groups=[...new Set(foods.map(f=>f.group))];
- return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3>${group==='Frühstück'?'<p class="pj92-matcha-note">Matcha: 1 TL Pulver, heißes Wasser, ca. 75 ml Hafermilch; optional 1 TL Honig. Die ca. 500 ml sind die gesamte Trinkmenge. Hafermilch-Menge im Tagebuch bearbeitbar.</p>':''}<div>${foods.filter(f=>f.group===group).map(f=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.recipeNote||f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}${f.defaultAmount?` · ${esc(f.defaultAmount)}`:''}</small></button>`).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. kcal-Schätzungen und ein freiwilliges persönliches Ziel findest du im Ernährungstagebuch. Menge und Zeitpunkt lassen sich im Ernährungstagebuch auch rückwirkend bearbeiten. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
+ const recommendations=recommendedNutritionFoods(state,dateToday?new Date(dateToday):new Date());
+ const tile=(f,sub='')=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.recipeNote||f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}${f.defaultAmount?` · ${esc(f.defaultAmount)}`:''}</small>${sub?`<em>${esc(sub)}</em>`:''}</button>`;
+ const recommendedBlock=recommendations.length?`<section class="pj92-recommended" aria-label="Recommended: Empfehlungen nach Tageszeit"><h3>✦ Recommended <small>· passend zur Uhrzeit</small></h3><div class="pj92-recommended-grid">${recommendations.map(f=>tile(f,f.recommendedReason)).join('')}</div></section>`:'';
+ return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${recommendedBlock}${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3>${group==='Frühstück'?'<p class="pj92-matcha-note">Matcha: 1 TL Pulver, heißes Wasser, ca. 75 ml Hafermilch; optional 1 TL Honig. Die ca. 500 ml sind die gesamte Trinkmenge. Hafermilch-Menge im Tagebuch bearbeitbar.</p>':''}<div>${foods.filter(f=>f.group===group).map(f=>tile(f)).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. „Recommended“ wird nur aus deinen bisherigen Tagebucheinträgen lokal berechnet – es werden keine fehlenden Mahlzeiten vermutet. Die übrigen Lebensmittel bleiben unverändert verfügbar. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
 }
 export function nutritionInsightsView(state,{period=30,editingId=''}={}){
  const stats=nutritionStats(state,period),foods=nutritionFoods(state),editing=nutritionEntries(state).find(e=>e.id===editingId);
