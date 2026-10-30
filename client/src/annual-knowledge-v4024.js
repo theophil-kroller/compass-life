@@ -7,6 +7,7 @@ import {fatQualityModel} from './nutrition-fat-quality-v57731.js';
 import {nutritionDay,bioactiveFromEntries} from './nutrition-intelligence-v57712.js';
 import {hierarchicalFlows} from './finance-exotic-hierarchy.js';
 
+
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(v,k=1)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('de-AT',{maximumFractionDigits:k}):'nicht bestimmt';
 const day=s=>typeof s==='string'&&/^\d{4}-\d\d-\d\d/.test(s)?s.slice(0,10):'';

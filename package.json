@@ -17,7 +17,7 @@
     "db:local": "npm run db:local -w worker",
     "db:remote": "npm run db:remote -w worker",
     "test:release": "node --test tests/compass-fullsource-25-10-deploy.test.mjs tests/compass-057759402510-unified-focus.test.mjs tests/compass-057759402510-watch-sql.test.mjs tests/gtd-0410-worker-purge.test.mjs tests/watch-bridge.test.mjs tests/gtd-0511-productivity-health.test.mjs tests/gtd-0410-occasion-activity.test.mjs",
-    "check:deploy": "npm run check -w worker && npm run test:release"
+    "check:deploy": "node scripts/check-import-graph.mjs && npm run check -w worker && npm run test:release"
   },
   "engines": {
     "node": ">=20"

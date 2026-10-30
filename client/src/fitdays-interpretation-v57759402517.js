@@ -1,4 +1,6 @@
 import {fatMassVisualView} from './body-fat-visual-v57759402522.js';
+import {fitdaysDynamicBodyView} from './body-comparison-v57759402524.js';
+import './body-comparison-v57759402524.css';
 /** Compass .40.25.17 — supplemental Fitdays reading aid, NEVER a diagnosis.
  * Based exclusively on imported observations. The existing point plots and five
  * region figure stay the authoritative visualisations of the measured history.
@@ -206,6 +208,7 @@ export function fitdaysInterpretationView(fitdays=[],{today='',range='28',height
   <div class="fdi-personal"><strong>${esc(heightNote)}</strong><span>${measured} von ${measures.length} Werten verfügbar · Fitdays-Werte sind BIA-Schätzungen</span></div>
   <div class="fdi-layout fdi-report-layout">${reportSummary(latest,{targetWeightKg})}<aside class="fdi-matrix-card"><h4>Body type assessment <small>· Körpertyp</small></h4>${bodyMatrix(latest)}<details><summary>Zur Einordnung</summary><p>Die elf bezeichneten Bereiche orientieren sich an der Fitdays-Vorlage. Die genaue Hersteller-Referenztabelle ist nicht verfügbar. Farben und Felder sind eine Annäherung zur Visualisierung, keine medizinische Einstufung.</p></details></aside></div>
   ${fatMassVisualView(selected)}
+  ${fitdaysDynamicBodyView(selected,{heightCm})}
   <details class="fdi-more"><summary>Detailansichten der Messwerte · ${measured} von ${measures.length} verfügbar</summary><div class="fdi-gauges fdi-secondary">${measures.map(m=>gauge(latest,selected,m)).join('')}</div></details>
   <p class="fdi-footnote">BMI: allgemeine Erwachsenenkategorien. Die übrigen Skalen zeigen die Position des tatsächlichen Messwerts, keine erfundenen Fitdays-Risikogrenzen. Fehlende Exportfelder bleiben fehlend. Keine automatische Gesundheitsdiagnose.</p>
  </section>`;

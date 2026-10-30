@@ -6,6 +6,7 @@ import {sportsRows,summarizeSports,sportsTrendSeries} from './sports-insights.js
 import {nutritionDay,bioactiveFromEntries} from './nutrition-intelligence-v57712.js';
 import {nutritionTimingIndex,nutritionTimingSeries} from './nutrition-timing-v57725.js';
 
+
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rows=x=>Array.isArray(x)?x:[];
 const d=s=>typeof s==='string'&&/^\d{4}-\d\d-\d\d/.test(s)?s.slice(0,10):'';
@@ -17,6 +18,7 @@ const txt=(x,y,s,size=13,color='#426356',anchor='start')=>`<text x="${x}" y="${y
 const line=(x,y,xx,yy,color='#d8e4de',sw=1)=>`<line x1="${x}" y1="${y}" x2="${xx}" y2="${yy}" stroke="${color}" stroke-width="${sw}"/>`;
 const paint=(x,y,width,height,color,rx=2)=>`<rect x="${x}" y="${y}" width="${Math.max(0,width)}" height="${Math.max(0,height)}" rx="${rx}" fill="${color}"/>`;
 const out=(topic,heading,deck,plots,insight)=>({topic,heading,deck,plots,insight});
+
 
 export function annualSleepStageAtlas(state,w){
  const nights=rows(state.healthImports?.garminNights).filter(x=>within(x?.day,w)&&valid(x?.sleepMinutes)&&x.sleepMinutes>0);
@@ -91,6 +93,7 @@ export function annualNutritionAtlas(state,w){
   result.push({label:'Matcha & bioaktive Inhaltsstoffe · dokumentierte Angaben',svg:chart(bars,`Dokumentierte Tee-Inhaltsstoffe und Schätzwerte`,980,Math.max(170,tea.length*38+35)),caption:'Hersteller-Mindestwerte und Schätzungen sind keine Laboranalyse. EGCG ist keine empfohlene Zielmenge; keine gesundheitliche Wirkung aus Mengen ableiten.'});}
  return result.length?[out('V / NUTRIENTS & BIOACTIVES','Nährstoffatlas & botanische Wirkstoffe','Vitamine, Mineralstoffe und Catechine im erfassten Ernährungstagebuch.',result,'Die tägliche Gesamtzufuhr kann bei fehlenden Lebensmitteln oder Nährwertangaben nicht zuverlässig bewertet werden. Keine Defizitdiagnose aus Teilbilanzen.')]:[];
 }
+
 
 export function annualFoodRhythmAtlas(state,w){
  const index=nutritionTimingIndex(state),logged=[...index.days.entries()].filter(([key])=>within(key,w)).sort(([a],[b])=>a.localeCompare(b));
