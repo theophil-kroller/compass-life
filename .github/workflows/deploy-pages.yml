@@ -25,8 +25,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: node scripts/check-import-graph.mjs
       - run: npm install --no-audit --no-fund
-      - run: npm run check
+      # Snapshot build: original transform-chain tests remain available via npm test,
+      # but the frozen deploy entry uses release-specific integration tests.
+      - run: npm run check:deploy
       - run: npm run build
         env:
           VITE_BASE_PATH: /compass-life/
