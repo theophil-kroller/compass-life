@@ -1,6 +1,5 @@
 import {fatMassVisualView} from './body-fat-visual-v57759402522.js';
 import {fitdaysDynamicBodyView} from './body-comparison-v57759402524.js';
-import './body-comparison-v57759402524.css';
 /** Compass .40.25.17 — supplemental Fitdays reading aid, NEVER a diagnosis.
  * Based exclusively on imported observations. The existing point plots and five
  * region figure stay the authoritative visualisations of the measured history.

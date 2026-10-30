@@ -1,3 +1,26 @@
 .inspi23-backdrop{position:fixed;inset:0;z-index:11000;background:#05111fbc;display:grid;place-items:center;padding:12px;box-sizing:border-box;backdrop-filter:blur(5px)}
 .inspi23-dialog{background:#0c2639;color:#eff8f8;border:1px solid #bd9d68;border-radius:19px;padding:19px;max-height:90dvh;overflow-y:auto;width:min(510px,100%);box-shadow:0 18px 65px #0009;box-sizing:border-box}
 .inspi23-dialog h2{font:normal 25px Georgia,serif;color:#ebd5a6;margin:4px 0 8px}.inspi23-dialog p{font-size:13px;line-height:1.4;color:#b9cbd4}.inspi23-kicker{letter-spacing:2px;font-size:9px!important;color:#cfb780!important}.inspi23-task{font-weight:700!important;color:#f4efdf!important;margin:7px 0}.inspi23-choices{display:grid;gap:5px}.inspi23-choices button{display:flex;gap:11px;align-items:center;text-align:left;color:#e8f6f3;background:#163448;border:1px solid #416173;border-radius:10px;padding:8px 10px;cursor:pointer;min-height:46px}.inspi23-choices button:hover,.inspi23-choices button:focus-visible{background:#27516a;border-color:#dfbd75;outline-offset:2px}.inspi23-choices button b{display:grid;place-items:center;width:28px;height:28px;border:1px solid #d1b780;border-radius:50%;color:#efdcac}.inspi23-choices button strong{font-size:13px;display:block}.inspi23-choices button small{font-size:10px;color:#b3c8d0}.inspi23-skip{border:0;color:#d9d4c7;background:transparent;text-decoration:underline;cursor:pointer;margin-top:10px;padding:8px}.inspi23-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.inspi23-kpis>div{border-radius:10px;background:#f1f5f3;padding:11px}.inspi23-kpis small{display:block;color:#526f65;font-size:11px}.inspi23-kpis strong{font-size:20px;color:#20493c}.inspi23-insights-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.inspi23-insights h3{font-size:14px;margin:14px 0 8px}.inspi23-history-row,.inspi23-category-list>div{display:flex;justify-content:space-between;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #b6c7be60;font-size:12px}.inspi23-history-row small{display:block;color:#74887f}.inspi23-category-list strong{white-space:nowrap}.inspi23-insights p{font-size:12px;line-height:1.5}@media(max-width:550px){.inspi23-insights-grid{grid-template-columns:1fr}.inspi23-dialog{padding:14px}.inspi23-dialog h2{font-size:21px}}
+
+/* 0.5.78: 7 clearly separated motivation colors. Strong border + numbered marker
+   (not color alone) keep options accessible for color-vision differences. */
+.inspi23-choices button[data-inspiration-level]{--level-color:#7893ac;border:2px solid var(--level-color);box-shadow:inset 4px 0 0 var(--level-color);background:#132d41;transition:background .15s ease,box-shadow .15s ease,transform .12s ease}
+.inspi23-choices button[data-inspiration-level="1"],.inspi23-history-row[data-inspiration-level="1"]{--level-color:#5796d6}
+.inspi23-choices button[data-inspiration-level="2"],.inspi23-history-row[data-inspiration-level="2"]{--level-color:#55afe0}
+.inspi23-choices button[data-inspiration-level="3"],.inspi23-history-row[data-inspiration-level="3"]{--level-color:#43b9b4}
+.inspi23-choices button[data-inspiration-level="4"],.inspi23-history-row[data-inspiration-level="4"]{--level-color:#76c38c}
+.inspi23-choices button[data-inspiration-level="5"],.inspi23-history-row[data-inspiration-level="5"]{--level-color:#e5c663}
+.inspi23-choices button[data-inspiration-level="6"],.inspi23-history-row[data-inspiration-level="6"]{--level-color:#eb9853}
+.inspi23-choices button[data-inspiration-level="7"],.inspi23-history-row[data-inspiration-level="7"]{--level-color:#ef6670}
+.inspi23-choices button[data-inspiration-level] b{color:#fff;background:color-mix(in srgb,var(--level-color) 22%,#10263a);border:2px solid var(--level-color);flex-shrink:0}
+.inspi23-choices button[data-inspiration-level]:is(:hover,:focus-visible){background:color-mix(in srgb,var(--level-color) 19%,#10283b);box-shadow:0 0 0 2px color-mix(in srgb,var(--level-color) 35%,transparent),inset 4px 0 0 var(--level-color);outline:2px solid #f5fafc;outline-offset:2px;transform:translateY(-1px)}
+.inspi23-history-row[data-inspiration-level] .inspi23-level-mark{padding:3px 7px;border:2px solid var(--level-color);border-radius:8px;color:var(--level-color);background:#142d3a;white-space:nowrap}
+.inspi23-gradient-caption{display:inline-flex;align-items:center;gap:5px;margin-left:8px;white-space:nowrap;font-size:11px!important;color:#d6dee2}
+.inspi23-gradient-caption i{display:inline-block;width:8px;height:8px;border-radius:50%}
+.inspi23-gradient-caption .inspi23-blue{background:#5796d6}.inspi23-gradient-caption .inspi23-red{background:#ef6670}
+@media(prefers-reduced-motion:reduce){.inspi23-choices button[data-inspiration-level]{transition:none}.inspi23-choices button[data-inspiration-level]:is(:hover,:focus-visible){transform:none}}
+
+/* Semiotic reinforcement: each point has its own icon + a stable number and text. */
+.inspi23-choices button .inspi78-symbol{display:grid;place-items:center;font-size:21px;width:29px;min-width:29px;height:30px;color:var(--level-color);font-weight:700;line-height:1}
+.inspi23-level-mark span{font-size:14px;margin-right:3px}
+@media(max-width:390px){.inspi23-choices button{gap:7px;padding:7px}.inspi23-choices button .inspi78-symbol{width:22px;min-width:22px;font-size:18px}}

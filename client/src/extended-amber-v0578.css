@@ -1,0 +1,45 @@
+/* Compass 0.5.78 – Extended Mode Amber. Focus remains emerald.
+   Semantic health/radar colors and charts intentionally retain their data semantics.
+   Only interactive chrome/selected controls and surfaces change.
+*/
+.shell.compass55-extended{
+ --canvas:#fff8f0;--surface:#fffefa;--line:#efdac6;
+ --green:#ab5d23;--greenDark:#824014;--lightGreen:#fff0df;
+ --brand-amber:#b76525;--brand-amber-dark:#87420e;
+ --brand-amber-light:#fff0df;--brand-amber-line:#ebc49f;
+ --shadow:0 1px 3px #5a33100d,0 12px 36px #5c351009;
+ background:var(--canvas);
+}
+.shell.compass55-extended .sidebar{background:#fff9f2;border-right-color:#eedbca}
+.shell.compass55-extended .brand-name{color:#52331e}
+.shell.compass55-extended .brand-name small{color:#986e4f}
+.shell.compass55-extended .workspace{background:linear-gradient(135deg,#fff9f2 0%,#fff7ee 100%)}
+.shell.compass55-extended .utility-bar{background:#fffaf5;border-bottom-color:#efdfcf}
+.shell.compass55-extended .nav-item,.shell.compass55-extended .calm-group-toggle{color:#6a4c38}
+.shell.compass55-extended .nav-item:hover,.shell.compass55-extended .calm-group-toggle:hover{background:#fff0df;color:#8e4515}
+.shell.compass55-extended .nav-item.is-active,
+.shell.compass55-extended .calm-group-toggle.is-open,
+.shell.compass55-extended .ins750-side-item.is-active{background:#ffe6cb;color:#7f3b0d;border-color:#edc8a1}
+.shell.compass55-extended .nav-count{background:#ffead4;color:#99531f}
+.shell.compass55-extended .compass56-mode-switch .compass56-mode-button{color:#a45018;background:#fff0dc;border-color:#ddaf76}
+.shell.compass55-extended .calm-subitems{border-color:#f0d9c0}
+.shell.compass55-extended .primary-btn{background:#a95217;box-shadow:0 3px 12px #9e511b21;color:white}
+.shell.compass55-extended .primary-btn:hover:not(:disabled){background:#833b0e}
+.shell.compass55-extended .text-link,
+.shell.compass55-extended .compass56-link,
+.shell.compass55-extended .compass56-calendar-link{color:#a05019}
+.shell.compass55-extended .nav-item:focus-visible,
+.shell.compass55-extended .primary-btn:focus-visible,
+.shell.compass55-extended .cm930-direct button:focus-visible{outline:2px solid #c26820;outline-offset:2px}
+.shell.compass55-extended .page-overline,.shell.compass55-extended .module-title{color:#a15a22}
+.shell.compass55-extended .page-intro h1{color:#503620}
+.shell.compass55-extended .module-card,.shell.compass55-extended .work-card{border-color:#f0dfce;background:#fffdfa}
+.shell.compass55-extended .ins750-subtab.is-active,
+.shell.compass55-extended .calm-insights-nav .ins750-primary.is-active{background:#ffe6ca;color:#7c3e12;border-color:#eac29d}
+.shell.compass55-extended .ins750-subtab:hover{border-color:#d99d65;color:#814111}
+.shell.compass55-extended .search-shell{background:#fffefa;border-color:#ecd8c3}
+.shell.compass55-extended .capture-fab{background:#a8521b;color:white}
+@media(max-width:700px){
+ .shell.compass55-extended .sidebar[data-cm930-mode="extended"] .cm930-direct button{background:#fff0df;color:#844816;border-color:#eed4b8}
+ .shell.compass55-extended .sidebar[data-cm930-mode="extended"] .cm930-direct button.active{background:#ffdfb9;color:#78380c;border-color:#db9c5c}
+}

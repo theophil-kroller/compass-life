@@ -9,8 +9,8 @@ const full=read('client/src/main-full-v57759402510.js');
 const cfg=read('client/vite.fullsource.config.js');
 const html=read('client/index.html');
 function imports(source,base){const re=/(?:^|\n)import\s+(?:[^;\n]*?\s+from\s+)?['"](\.[^'"]+)['"]|import\(\s*['"](\.[^'"]+)['"]\s*\)/g;let m,missing=[];while((m=re.exec(source))){let dest=path.resolve(base,m[1]||m[2]);if(!existsSync(dest))missing.push(dest);}return missing;}
-test('complete web entry is frozen at 0.5.77.59.40.25.10 and includes all new capabilities',()=>{
- assert.match(full,/const COMPASS_CLIENT_VERSION='0\.5\.77\.59\.40\.25\.10'/);
+test('complete web entry retains frozen fullsource imports and displays the package release',()=>{
+ assert.ok(full.includes(`const COMPASS_CLIENT_VERSION='${JSON.parse(read('package.json')).version}'`));
  for(const x of ['focusActivityTypeChoices','timeProgressMarkup','projectTimeText','watchHistoryLoading','watchHistoryComplete','activityType:String(d.get(\'activityType\')','unified']){
   if(x!=='unified')assert.ok(full.includes(x),x);
  }
