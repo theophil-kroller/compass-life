@@ -6,6 +6,8 @@
 import './ars-vivendi-lock-v5775922.css';
 import './compass-5928-lux.css';
 import {COMPASS_VISIBLE_RELEASE} from './compass-release-v57759402519.js';
+import {sealedCaptureReady,appendSealedCapture} from './vault.js';
+import './compass-25-23-lock-capture.css';
 
 const BASE=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/,'/');
 const ASSET=BASE+'ars-vivendi-lock-v5775922.png';
@@ -57,7 +59,15 @@ function init(){
        <span class="ars28-gold-rings" aria-hidden="true"><i></i><i></i><i></i></span>
        <div class="ars28-version">Compass Life · Build ${COMPASS_VISIBLE_RELEASE}</div>
        <button class="ars22-tap" type="button" data-ars22-open aria-controls="ars22-unlock-dialog" aria-expanded="false" aria-label="Compass Tresor entsperren"></button>
+       <button type="button" class="ars23-capture-trigger" data-ars23-capture aria-label="Gedanken ohne Tresor-Entsperren verschlüsselt in die Inbox erfassen">✎ <span>Gedanke</span></button>
      </div>
+     <section class="ars23-capture-dialog" data-ars23-dialog hidden role="dialog" aria-modal="true" aria-label="Gedanken schnell erfassen">
+      <form data-ars23-form><div class="ars23-capture-heading"><div><small>✦ QUICK CAPTURE · INBOX</small><h2>Gedanken festhalten</h2></div><button type="button" data-ars23-close aria-label="Schließen">×</button></div>
+       <textarea name="title" rows="3" maxlength="1000" placeholder="Was möchtest du nicht vergessen?" autocomplete="off" required aria-label="Gedanke"></textarea>
+       <p data-ars23-status aria-live="polite">Ohne Entsperren · auf diesem Gerät Ende-zu-Ende-verschlüsselt vorgemerkt</p>
+       <button type="submit" class="ars23-capture-submit">Sicher in Inbox erfassen</button>
+      </form>
+     </section>
      <section class="ars22-panel" id="ars22-unlock-dialog" aria-label="Compass Tresor entsperren" role="dialog" aria-modal="true" hidden>
       <div class="ars22-sheet">
        <div class="ars22-sheet-top"><span class="ars22-star" aria-hidden="true">✦</span><button type="button" class="ars22-close" data-ars22-close aria-label="Zurück zum Lockscreen">×</button></div>
@@ -72,7 +82,40 @@ function init(){
     app.inert=true;
     trigger=shell.querySelector('[data-ars22-open]');
     panel=shell.querySelector('.ars22-panel');
+    const captureDialog=shell.querySelector('[data-ars23-dialog]');
+    const captureTrigger=shell.querySelector('[data-ars23-capture]');
+    const captureForm=shell.querySelector('[data-ars23-form]');
+    const captureStatus=shell.querySelector('[data-ars23-status]');
+    captureTrigger.addEventListener('click',async()=>{
+      captureStatus.textContent='Verschlüsselte Erfassung prüfen …';
+      captureDialog.hidden=false;
+      try{
+        if(!await sealedCaptureReady()){
+          captureStatus.textContent='Einmalig zuerst Tresor entsperren und verschlüsselten Eingangspuffer einrichten.';
+          captureForm.querySelector('[type=submit]').disabled=true;
+        }else{
+          captureForm.querySelector('[type=submit]').disabled=false;
+          captureStatus.textContent='Ohne Entsperren · nur verschlüsselt gespeichert';
+        }
+      }catch{captureStatus.textContent='Verschlüsselter Speicher nicht verfügbar. Bitte Tresor entsperren.';captureForm.querySelector('[type=submit]').disabled=true;}
+      captureForm.elements.title.focus({preventScroll:true});
+    });
+    const closeCapture=()=>{captureDialog.hidden=true;captureForm.reset();captureStatus.textContent='';};
+    captureDialog.querySelector('[data-ars23-close]').addEventListener('click',closeCapture);
+    captureForm.addEventListener('submit',async event=>{
+      event.preventDefault();const title=captureForm.elements.title.value.trim();if(!title)return;
+      const button=captureForm.querySelector('[type=submit]');button.disabled=true;
+      try{
+        if(!await sealedCaptureReady())throw Error('Verschlüsselter Eingangspuffer noch nicht eingerichtet');
+        await appendSealedCapture(title);
+        // Clear all plaintext, including the input node, immediately after encrypted storage.
+        closeCapture();
+        captureTrigger.textContent='✓ Gesichert';
+        setTimeout(()=>{if(shell)captureTrigger.innerHTML='✎ <span>Gedanke</span>';},1700);
+      }catch(ex){captureStatus.textContent='Nicht gespeichert: '+String(ex.message||ex);button.disabled=false;}
+    });
     trigger.addEventListener('click',()=>{
+     if(!captureDialog.hidden)closeCapture();
      if(shell.classList.contains('ars28-entering'))return;
      shell.classList.add('ars28-entering');
      window.setTimeout(()=>{if(shell&&!wasOpen){displayForm();shell.classList.remove('ars28-entering');}},540);
@@ -81,6 +124,7 @@ function init(){
     // The original illustration contains the gold unlock control: keep a single
     // invisible semantic hotspot rather than painting a second button on top.
     shell.addEventListener('keydown',e=>{
+      if(e.key==='Escape'&&!captureDialog.hidden){e.preventDefault();closeCapture();return;}
       if(e.key==='Escape'&&wasOpen){e.preventDefault();dismissForm();}
       if(e.key!=='Tab'||!wasOpen)return;
       const focusables=[...panel.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href]')]

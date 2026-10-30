@@ -65,7 +65,7 @@ export function nutritionTimingIndex(state){
   if(existing)unlink(existing);
   if(entry.deleted||!Number.isFinite(Date.parse(entry.at))){index.rows.delete(id);continue;}
   const food=foodById.get(entry.foodId),dt=new Date(entry.at),day=localDay(dt);
-  const approx=nutritionKcalEstimate(food,entry.amount);
+  const approx=nutritionKcalEstimate(food,entry.amount,entry.recipe);
   const nutrients=nutrientEntry(food,entry);
   const rawKcal=nutrients.values.kcal;
   const kcal=Number.isFinite(rawKcal)?rawKcal:approx?(approx.low+approx.high)/2:null;

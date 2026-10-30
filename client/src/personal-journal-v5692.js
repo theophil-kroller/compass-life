@@ -7,6 +7,9 @@ import {mergeDreamJournals} from './dream-journal-v57743.js';
 import {mergeReceiptJournals} from './receipt-gpt-v57743.js';
 import {mergeMensaCatalog} from './mensa-journal-v57759402512.js';
 import {energyGoalSettings,energyGoalView} from './energy-goal-v575.js';
+import {PERSONAL_RECIPE_PRESETS,PERSONAL_RECIPE_IDS,recipeSnapshot,personalRecipeKcal,personalRecipeEditor} from './personal-recipes-v57737.js';
+import {smoothieRecipe,smoothieKcalEstimate,smoothieEditFields} from './nutrition-smart-smoothie-v57736.js';
+import {mergeInspirationEntries} from './task-inspiration-v57759402523.js';
 /** Compass 0.5.69.2 – Personal Time Journal + nutrition; pure data transformations. */
 export const TIME_AREAS=[
  ['work','💼','Berufliche Arbeit'],['project','🛠️','Privatprojekt'],['family','❤️','Familie & Beziehungen'],
@@ -155,12 +158,12 @@ export function overlapWarnings(state){
  const rows=timeEntries(state).sort((a,b)=>a.start.localeCompare(b.start));
  return rows.flatMap((r,i)=>i&&Date.parse(r.start)<Date.parse(rows[i-1].end)?[[rows[i-1].id,r.id]]:[]);
 }
-export function addNutrition(state,{foodId,at,amount,note='',id,deleted=false}){
- ensureJournal(state);const foods=[...FOOD_PRESETS,...state.nutritionJournal.customFoods];
+export function addNutrition(state,{foodId,at,amount,note='',id,deleted=false,recipe}={}){
+ ensureJournal(state);const foods=nutritionFoods(state);
  const food=foods.find(f=>f.id===foodId);
  if(!food)throw Error('Lebensmittel nicht gefunden.');
  const chosenAmount=amount===undefined?(food.defaultAmount||''):amount;
- const item={id:String(id||crypto.randomUUID()),foodId:String(foodId),at:isoTime(at)?at:new Date().toISOString(),amount:String(chosenAmount).slice(0,60),note:String(note).slice(0,500),updatedAt:new Date().toISOString(),deleted};
+ const item={id:String(id||crypto.randomUUID()),foodId:String(foodId),at:isoTime(at)?at:new Date().toISOString(),amount:String(chosenAmount).slice(0,60),note:String(note).slice(0,500),updatedAt:new Date().toISOString(),deleted, ...(foodId==='smoothie-personal'?{recipe:Array.isArray(recipe)?smoothieRecipe(recipe):smoothieRecipe()}:PERSONAL_RECIPE_IDS.includes(foodId)?{recipe:recipeSnapshot(foodId,recipe)}:{})};
  const idx=state.nutritionJournal.entries.findIndex(e=>e.id===item.id);
  if(idx<0)state.nutritionJournal.entries.push(item);else state.nutritionJournal.entries[idx]=item;
  return item;
@@ -173,11 +176,18 @@ export function addCustomFood(state,title,emoji='🍴',options={}){
  const item={id:crypto.randomUUID(),title:name,emoji:String(emoji||'🍴').slice(0,6),group:'Eigene',defaultAmount:amount,kcalLow:valid?low:null,kcalHigh:valid?high:null};
  state.nutritionJournal.customFoods.push(item);return item;
 }
-export function nutritionFoods(state){return [...FOOD_PRESETS,...(state?.nutritionJournal?.customFoods||[])];}
+export const PERSONAL_BLUEBERRY_SMOOTHIE=Object.freeze({id:'smoothie-personal',emoji:'🫐',title:'Mein Blaubeeren-Smoothie · Banane, schwarzer Sesam, Blaubeeren, Gewürze & Blütenpollen',group:'Frühstück',defaultAmount:'1 Portion',kcalLow:null,kcalHigh:null,recipeNote:'Persönliches Smoothie-Rezept mit editierbaren Grammangaben; Nährwerte werden aus dokumentierten Zutaten geschätzt.'});
+export function nutritionFoods(state){
+ const presets=[PERSONAL_BLUEBERRY_SMOOTHIE,...PERSONAL_RECIPE_PRESETS.filter(x=>x.group==='Frühstück'),...FOOD_PRESETS,...PERSONAL_RECIPE_PRESETS.filter(x=>x.group!=='Frühstück')];
+ const seen=new Set(presets.map(food=>food.id));
+ return [...presets,...(state?.nutritionJournal?.customFoods||[]).filter(food=>food?.id&&!seen.has(food.id))];
+}
 export function nutritionEntries(state){return (state?.nutritionJournal?.entries||[]).filter(e=>!e.deleted&&isoTime(e.at)).slice().sort((a,b)=>b.at.localeCompare(a.at));}
 /** An indicative range only, not a nutritional measurement. Explicitly edited quantities
  * override presets when a compatible count or g/ml amount can be parsed. */
-export function nutritionKcalEstimate(food,amount){
+export function nutritionKcalEstimate(food,amount,recipe=null){
+ if(food?.id==='smoothie-personal')return smoothieKcalEstimate(recipe,amount);
+ if(PERSONAL_RECIPE_IDS.includes(food?.id))return personalRecipeKcal(food.id,recipe);
  if(!food||!Number.isFinite(food.kcalLow)||!Number.isFinite(food.kcalHigh))return null;
  const original=String(food.defaultAmount||'').toLowerCase(),given=String(amount||food.defaultAmount||'').toLowerCase().trim();
  if(!given)return null;
@@ -252,7 +262,7 @@ export function nutritionKcalSummary(state,days=30,now=new Date()){
  const foods=nutritionFoods(state),since=now.getTime()-days*86400000;
  const entries=nutritionEntries(state).filter(e=>Date.parse(e.at)>=since&&Date.parse(e.at)<=now.getTime());
  let low=0,high=0,known=0;
- for(const entry of entries){const food=foods.find(f=>f.id===entry.foodId);const estimate=nutritionKcalEstimate(food,entry.amount);if(!estimate)continue;known++;low+=estimate.low;high+=estimate.high;}
+ for(const entry of entries){const food=foods.find(f=>f.id===entry.foodId);const estimate=nutritionKcalEstimate(food,entry.amount,entry.recipe);if(!estimate)continue;known++;low+=estimate.low;high+=estimate.high;}
  return {low,high,known,unknown:entries.length-known,total:entries.length,complete:known===entries.length&&entries.length>0};
 }
 export function nutritionStats(state,days=30,now=new Date()){
@@ -302,7 +312,7 @@ export function nutritionQuickView(state,{selectedFoodId='',dateToday}={}){
 }
 export function nutritionInsightsView(state,{period=30,editingId=''}={}){
  const stats=nutritionStats(state,period),foods=nutritionFoods(state),editing=nutritionEntries(state).find(e=>e.id===editingId);
- return `<div class="pj92-shell"><section class="work-card"><div class="work-heading"><span>🥗 Ernährungstagebuch</span><span class="quiet-tag">${period} Tage</span></div><p class="muted-line">Was esse und trinke ich – und wann? Ohne Bewertung oder automatische Ernährungsnoten.</p><div class="pj92-period">${[7,30,90].map(n=>`<button type="button" class="${n===period?'active':''}" data-action="pj92-nutrition-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${stats.entries.length}</strong><small>erfasste Lebensmittel und Getränke</small></div><details class="pj92-kcal-details"><summary>Geschätzte Energie (optional, unvollständig)</summary>${(()=>{const k=nutritionKcalSummary(state,period);return `<p class="muted-line">${k.known?`Erfasste Einträge mit Referenzwert: ca. ${k.low}–${k.high} kcal für ${period} Tage.`:'Noch keine abschätzbaren Einträge.'} ${k.unknown} Einträge ohne Schätzung. <strong>Keine vollständige Kalorienbilanz.</strong> Werte variieren nach Marke, Sorte und Portionsgröße.</p>`;})()}</details><div class="pj92-category-bars">${stats.ranked.slice(0,12).map(([id,count])=>{const food=foods.find(f=>f.id===id);return `<div class="pj92-bar-row"><span>${food?.emoji||'🍴'} ${esc(food?.title||'Eigenes Lebensmittel')}</span><div><i style="width:${Math.round(count/(stats.ranked[0]?.[1]||1)*100)}%"></i></div><strong>${count}×</strong></div>`;}).join('')||'<p class="muted-line">Noch keine Einträge in diesem Zeitraum.</p>'}</div></section>${energyGoalView(state,{foods,estimate:nutritionKcalEstimate})}<section class="work-card"><div class="work-heading"><span>Letzte Einträge</span><button type="button" class="secondary-btn" data-action="pj92-nutrition-add">Neues Lebensmittel erfassen</button></div><div class="pj92-entry-list">${stats.entries.slice(0,60).map(e=>{const food=foods.find(f=>f.id===e.foodId);return `<button class="pj92-time-row" type="button" data-action="pj92-food-edit" data-id="${esc(e.id)}"><span><strong>${food?.emoji||'🍴'} ${esc(food?.title||'Eintrag')}</strong><small>${esc([e.amount,e.note].filter(Boolean).join(' · ')||'Zum Bearbeiten öffnen')}</small></span><span><strong>${dayFormat(e.at)}</strong><small>${hourFormat(e.at)}</small></span></button>`;}).join('')||'<p class="muted-line">Einfach über das Ernährungssymbol in der Titelzeile beginnen.</p>'}</div></section>${editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>Ernährungseintrag</span><button type="button" data-action="pj92-food-edit-cancel">Schließen</button></div><form id="pj92-food-detail-form"><input type="hidden" name="id" value="${esc(editing.id)}"><label>Zeitpunkt<input type="datetime-local" name="at" value="${esc(toInputDate(editing.at))}" required></label><label>Menge (optional)<input name="amount" maxlength="60" value="${esc(editing.amount||'')}" placeholder="z. B. eine Handvoll"></label><label>Notiz (optional)<textarea name="note" rows="2" maxlength="500">${esc(editing.note||'')}</textarea></label><div class="pj92-form-actions"><button type="submit" class="primary-btn">Speichern</button><button type="button" class="secondary-btn" data-action="pj92-food-delete" data-id="${esc(editing.id)}">Löschen</button></div></form></section>`:''}<section class="work-card"><h3>Eigene Lebensmittel hinzufügen</h3><form id="pj92-add-food-form" class="pj92-inline-form"><label>Bezeichnung<input name="title" maxlength="80" placeholder="z. B. Haferbrei" required></label><label>Portionsbezug<input name="defaultAmount" placeholder="1 Portion" maxlength="60" value="1 Portion"></label><label>kcal min. (optional)<input type="number" name="kcalLow" min="0" max="5000" step="1" placeholder="z. B. 350"></label><label>kcal max. (optional)<input type="number" name="kcalHigh" min="0" max="5000" step="1" placeholder="z. B. 550"></label><button type="submit" class="secondary-btn">Hinzufügen</button></form></section></div>`;
+ return `<div class="pj92-shell"><section class="work-card"><div class="work-heading"><span>🥗 Ernährungstagebuch</span><span class="quiet-tag">${period} Tage</span></div><p class="muted-line">Was esse und trinke ich – und wann? Ohne Bewertung oder automatische Ernährungsnoten.</p><div class="pj92-period">${[7,30,90].map(n=>`<button type="button" class="${n===period?'active':''}" data-action="pj92-nutrition-period" data-id="${n}">${n} Tage</button>`).join('')}</div><div class="pj92-metric"><strong>${stats.entries.length}</strong><small>erfasste Lebensmittel und Getränke</small></div><details class="pj92-kcal-details"><summary>Geschätzte Energie (optional, unvollständig)</summary>${(()=>{const k=nutritionKcalSummary(state,period);return `<p class="muted-line">${k.known?`Erfasste Einträge mit Referenzwert: ca. ${k.low}–${k.high} kcal für ${period} Tage.`:'Noch keine abschätzbaren Einträge.'} ${k.unknown} Einträge ohne Schätzung. <strong>Keine vollständige Kalorienbilanz.</strong> Werte variieren nach Marke, Sorte und Portionsgröße.</p>`;})()}</details><div class="pj92-category-bars">${stats.ranked.slice(0,12).map(([id,count])=>{const food=foods.find(f=>f.id===id);return `<div class="pj92-bar-row"><span>${food?.emoji||'🍴'} ${esc(food?.title||'Eigenes Lebensmittel')}</span><div><i style="width:${Math.round(count/(stats.ranked[0]?.[1]||1)*100)}%"></i></div><strong>${count}×</strong></div>`;}).join('')||'<p class="muted-line">Noch keine Einträge in diesem Zeitraum.</p>'}</div></section>${energyGoalView(state,{foods,estimate:nutritionKcalEstimate})}<section class="work-card"><div class="work-heading"><span>Letzte Einträge</span><button type="button" class="secondary-btn" data-action="pj92-nutrition-add">Neues Lebensmittel erfassen</button></div><div class="pj92-entry-list">${stats.entries.slice(0,60).map(e=>{const food=foods.find(f=>f.id===e.foodId);return `<button class="pj92-time-row" type="button" data-action="pj92-food-edit" data-id="${esc(e.id)}"><span><strong>${food?.emoji||'🍴'} ${esc(food?.title||'Eintrag')}</strong><small>${esc([e.amount,e.note].filter(Boolean).join(' · ')||'Zum Bearbeiten öffnen')}</small></span><span><strong>${dayFormat(e.at)}</strong><small>${hourFormat(e.at)}</small></span></button>`;}).join('')||'<p class="muted-line">Einfach über das Ernährungssymbol in der Titelzeile beginnen.</p>'}</div></section>${editing?`<section class="work-card pj92-editor"><div class="work-heading"><span>Ernährungseintrag</span><button type="button" data-action="pj92-food-edit-cancel">Schließen</button></div><form id="pj92-food-detail-form"><input type="hidden" name="id" value="${esc(editing.id)}"><label>Zeitpunkt<input type="datetime-local" name="at" value="${esc(toInputDate(editing.at))}" required></label><label>Menge (optional)<input name="amount" maxlength="60" value="${esc(editing.amount||'')}" placeholder="z. B. eine Handvoll"></label><label>Notiz (optional)<textarea name="note" rows="2" maxlength="500">${esc(editing.note||'')}</textarea></label>${editing.foodId==='smoothie-personal'?smoothieEditFields(editing):PERSONAL_RECIPE_IDS.includes(editing.foodId)?personalRecipeEditor(editing):''}<div class="pj92-form-actions"><button type="submit" class="primary-btn">Speichern</button><button type="button" class="secondary-btn" data-action="pj92-food-delete" data-id="${esc(editing.id)}">Löschen</button></div></form></section>`:''}<section class="work-card"><h3>Eigene Lebensmittel hinzufügen</h3><form id="pj92-add-food-form" class="pj92-inline-form"><label>Bezeichnung<input name="title" maxlength="80" placeholder="z. B. Haferbrei" required></label><label>Portionsbezug<input name="defaultAmount" placeholder="1 Portion" maxlength="60" value="1 Portion"></label><label>kcal min. (optional)<input type="number" name="kcalLow" min="0" max="5000" step="1" placeholder="z. B. 350"></label><label>kcal max. (optional)<input type="number" name="kcalHigh" min="0" max="5000" step="1" placeholder="z. B. 550"></label><button type="submit" class="secondary-btn">Hinzufügen</button></form></section></div>`;
 }
 // Merge encrypted emotion check-ins by immutable ID. Preserve all historical entries
 // from both devices; an explicit later edit wins, with deterministic ties.
@@ -338,6 +348,7 @@ export function mergeJournalData(local,remote){
   mensaCatalog:mergeMensaCatalog(lc.mensaCatalog,rc.mensaCatalog),
   quickWorktime:mergeQuickWorktime(localWork,remoteWork),
   feelingCheckins:mergeFeelingCheckins(lc.feelingCheckins,rc.feelingCheckins),
+  taskInspiration:mergeInspirationEntries(lc.taskInspiration,rc.taskInspiration),
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),
   ...(lc.calendarArchive||rc.calendarArchive?{calendarArchive:mergeCalendarArchives(lc.calendarArchive,rc.calendarArchive)}:{}),
   ...(lc.familyRadar||rc.familyRadar?{familyRadar:mergeFamilyRadar37(lc.familyRadar,rc.familyRadar)}:{}),

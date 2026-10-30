@@ -15,7 +15,7 @@ export function nutritionDailyHistory(state,{period=30,now=new Date()}={}){
   const day=dayLocal(e.at);if(day>today||day<shift(today,1-days))continue;
   const row=byDay.get(day)||{day,low:0,high:0,known:0,unknown:0,total:0,missingItems:[],supplementItems:[]};
   row.total++;
-  const food=foods.get(e.foodId),estimate=nutritionKcalEstimate(food,e.amount);
+  const food=foods.get(e.foodId),estimate=nutritionKcalEstimate(food,e.amount,e.recipe);
   if(estimate){row.low+=estimate.low;row.high+=estimate.high;row.known++;}
   else{
    const detail={id:e.id,foodId:e.foodId,title:food?.title||'Produkt nicht mehr vorhanden',emoji:food?.emoji||'🍴',amount:String(e.amount||''),reason:!food?'Produktzuordnung fehlt':food.kcalLow==null?'Keine kcal-Angabe hinterlegt':'Menge kann nicht umgerechnet werden'};

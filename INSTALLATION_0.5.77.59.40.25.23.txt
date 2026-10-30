@@ -1,0 +1,25 @@
+COMPASS LIFE 0.5.77.59.40.25.23
+=================================
+
+BASIS: FULL SOURCE bzw. PATCH direkt ab 0.5.77.59.40.25.22
+
+PATCH:
+1. Verschlüsselten Compass-Tresor auf dem Gerät sichern. Keine Browser-/PWA-Daten löschen.
+2. PATCH_FROM_0.5.77.59.40.25.22.zip im Wurzelverzeichnis deines GitHub-Repositorys entpacken.
+3. Ordnerpfade 1:1 erhalten. Vorhandene Dateien ersetzen und neue Dateien hinzufügen.
+4. Commit erstellen. GitHub Actions: Deploy Compass Web kontrollieren.
+5. PWA neu laden, im App-Chrome Version .25.23 kontrollieren und Smoke-Tests durchführen.
+
+FULL SOURCE:
+1. Bei Unsicherheit über den GitHub-Dateistand den FULL_SOURCE-Inhalt als vollständigen Quellbaum verwenden.
+2. Die bestehende .25.22-Installation lokal bzw. im Repository sichern, bevor Dateien ersetzt werden.
+3. GitHub-Workflow starten und die tatsächliche Vite-Produktion/Service-Worker-Ausgabe prüfen.
+4. Bestehenden verschlüsselten Vault / IndexedDB niemals zurücksetzen.
+
+Keine D1-Migration. Kein neuer Worker-Endpunkt. Kein Android-OS-Lockscreen-Zugriff:
+Quick Capture funktioniert im app-internen Compass-Lockscreen, nicht ohne
+Betriebssystem-Entsperrung auf einem hardwaregesperrten Telefon.
+
+QUALITÄT: 6/6 neue Tests; historischer Testsatz 1717/1729; Vite-Build
+in dieser Offlineumgebung wegen fehlender Abhängigkeiten nicht bestätigt.
+Siehe RELEASE_0.5.77.59.40.25.23.md für Testdetails.

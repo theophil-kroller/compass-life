@@ -5,6 +5,8 @@
 import {nutritionEntries,nutritionFoods,nutritionKcalEstimate} from './personal-journal-v5692.js';
 import {DAILY_NRV,CAFFEINE_EFSA_ADULT_ORIENTATION_MG,GENERIC_MICRONUTRIENTS,APPLE_GENERIC_100G,BANANA_GENERIC_100G} from './nutrition-reference-v57722.js';
 import {macroGoalView} from './macro-goals-v57723.js';
+import {smoothieParts} from './nutrition-smart-smoothie-v57736.js';
+import {PERSONAL_RECIPE_IDS,personalRecipeParts} from './personal-recipes-v57737.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const N={
@@ -169,7 +171,9 @@ function rescale(profile,amount,unit,part='product'){
  const values=Object.fromEntries(Object.entries(profile.nutrients).map(([k,v])=>[k,round(v*factor)]));
  return {values,amount,unit,source:profile.source,name:profile.name,part,estimatedKeys:profile.estimatedNutrients||[],extra:Object.entries(profile.extra).map(([key,v])=>({key,...v,value:v.value===null?null:round(v.value*factor)})),note:profile.note};
 }
-export function nutritionParts(foodId,amount='',food=null){
+export function nutritionParts(foodId,amount='',food=null,recipe=null){
+ if(foodId==='smoothie-personal')return smoothieParts(recipe);
+ if(PERSONAL_RECIPE_IDS.includes(foodId))return personalRecipeParts(foodId,recipe);
  // v0.5.77.23: locally persisted composite recipe per whole portion. Independent of
  // the built-in label catalog; all included values are explicitly marked estimated.
  if(food?.nutrients&&food?.nutrientBasis==='perPortion'){
@@ -217,11 +221,11 @@ export function nutritionParts(foodId,amount='',food=null){
  return value?[piece(foodId,value.value,value.unit,'Produkt')].filter(Boolean):[];
 }
 export function nutrientEntry(food,entry){
- const parts=nutritionParts(entry.foodId,entry.amount,food),totals={},knownKeys=new Set();
+ const parts=nutritionParts(entry.foodId,entry.amount,food,entry.recipe),totals={},knownKeys=new Set();
  const sources=new Set(),partialKeys=new Set(),estimatedKeys=new Set();
  for(const p of parts){sources.add(p.source);for(const [k,v] of Object.entries(p.values)){totals[k]=round((totals[k]||0)+v);knownKeys.add(k);if(p.estimatedKeys?.includes(k))estimatedKeys.add(k);}}
  if(parts.length>1)for(const key of knownKeys)if(parts.some(p=>!Object.hasOwn(p.values,key)))partialKeys.add(key);
- if(!parts.length){const k=nutritionKcalEstimate(food,entry.amount);if(k){totals.kcal=round((k.low+k.high)/2);knownKeys.add('kcal');sources.add('Grobe Schätzung');}}
+ if(!parts.length){const k=nutritionKcalEstimate(food,entry.amount,entry.recipe);if(k){totals.kcal=round((k.low+k.high)/2);knownKeys.add('kcal');sources.add('Grobe Schätzung');}}
  return {entry,food,parts,values:totals,knownKeys,partialKeys,estimatedKeys,sources:[...sources]};
 }
 const dateLocal=at=>{const d=new Date(at);return Number.isFinite(d.getTime())?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'';};

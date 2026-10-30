@@ -46,7 +46,7 @@ export function radarNutrition38(state={},today='2026-10-26',period=7){
 }
 export function balanceModel38(state={},opts={}){
  const {today='2026-10-26',period=7,healthDays=[],choice='all'}=opts;
- const base=buildLifeBalanceRadar(state,{today,period,healthDays});
+ const base=buildLifeBalanceRadar(state,{today,period,healthDays,historicalOnly:opts.historicalOnly===true});
  const map=new Map(base.axes.map(a=>[a.key,a]));
  const {movement,strength}=radarMovement38(state,healthDays,today,Number(period));
  const nutrition=radarNutrition38(state,today,Number(period));
@@ -66,14 +66,21 @@ export function balanceModel38(state={},opts={}){
 export function balancePerspective38(state,opts={}){
  const choice=['all','health','life'].includes(opts.choice)?opts.choice:'all';
  const model=balanceModel38(state,{...opts,choice});
- const old=choice==='all'&&model.axes.every((a,i)=>a.key===['sleep','activity','gtd','finance','people','body','recovery','work'][i]);
- const history=old?buildLifeBalanceHistory(state,{today:opts.today,period:opts.period,healthDays:opts.healthDays,count:opts.history||0}):[];
+ // Historical comparison uses the SAME selected perspective, with the same 8 axes.
+ // Unlike a live state snapshot, never backfill current GTD/contacts/finance into past weeks.
+ const n=Number(opts.period)===30?30:7;
+ const requested=Math.max(0,Math.min(2,Number(opts.history)||0));
+ const history=Array.from({length:requested},(_,i)=>{
+  const end=shift(opts.today,-n*(i+1));
+  const past=balanceModel38(state,{...opts,choice,today:end,period:n,historicalOnly:true});
+  return {...past,label:i===0?'Vorperiode':'Davor',periodIndex:i+1};
+ });
  const labels=[['all','Gesamtbalance'],['health','Gesundheit'],['life','Lebensqualität']];
  const tabs=`<nav class="balance38-tabs" aria-label="Life Balance Perspektive">${labels.map(([id,title])=>`<button type="button" data-action="balance-view38" data-id="${id}" aria-pressed="${choice===id}">${title}</button>`).join('')}</nav>`;
  const hint=choice==='health'?'Bewegungsminuten einschließlich dokumentierter Radfahrten und getrenntes Krafttraining; keine Doppelzählung von Garmin und Health Connect.':choice==='life'?'Nur verfügbare Indikatoren; emotionale Qualität und Freizeit werden nicht aus Kalenderzahlen erfunden.':'Gesamtüberblick. Bei ausreichend dokumentierten Bewegungsminuten ersetzt Bewegungszeit die reine Schrittbewertung.';
  // Reuse the proven 8-axis radar. For nonlegacy perspectives the direct-selection
  // action accepts new axis IDs; no change to historical radar internals.
  let html=lifeBalanceRadarView(model,{history,activeAxis:opts.activeAxis||null});
- if(choice!=='all'||!old)html=html.replaceAll('data-action="balance-select"','data-action="balance38-select"');
+ if(choice!=='all'||model.axes.some((a,i)=>a.key!==['sleep','activity','gtd','finance','people','body','recovery','work'][i]))html=html.replaceAll('data-action="balance-select"','data-action="balance38-select"');
  return tabs+`<p class="balance38-hint">${hint}</p>`+html;
 }

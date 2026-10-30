@@ -95,7 +95,7 @@ export function dayEnergyStatus(state,{now=new Date(),foods=[],estimate}={}){
  const model=personalEnergyEstimate(state,now),day=dayLocal(now),index=new Map(foods.map(f=>[f.id,f]));
  const entries=(state?.nutritionJournal?.entries||[]).filter(e=>e&&!e.deleted&&validDate(e.at)&&dayLocal(e.at)===day);
  let low=0,high=0,known=0;
- for(const e of entries){const k=typeof estimate==='function'?estimate(index.get(e.foodId),e.amount):null;
+ for(const e of entries){const k=typeof estimate==='function'?estimate(index.get(e.foodId),e.amount,e.recipe):null;
   if(!k||!finite(k.low)||!finite(k.high))continue;
   low+=k.low;high+=k.high;known++;
  }

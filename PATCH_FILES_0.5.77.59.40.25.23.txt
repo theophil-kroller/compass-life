@@ -1,0 +1,18 @@
+Patch gegen den letzten ausgelieferten .25.22-Stand (nicht GitHub vor .25.22).
+client/src/main-full-v57759402510.js
+client/src/ars-vivendi-lock-full-v5775922.js
+client/src/compass-25-23-lock-capture.css
+client/src/compass-25-23-radar.css
+client/src/life-balance-radar-v563.js
+client/src/life-balance-perspectives-v5775938.js
+client/src/personal-journal-v5692.js
+client/src/nutrition-history-v577.js
+client/src/nutrition-timing-v57725.js
+client/src/energy-goal-v575.js
+client/src/nutrition-intelligence-v57712.js
+client/src/task-inspiration-v57759402523.js
+client/src/task-inspiration-v57759402523.css
+client/src/compass-release-v57759402519.js
+tests/compass-40-25-23-inspiration-capture-radar-food.test.mjs
+RELEASE_0.5.77.59.40.25.23.md
+INSTALLATION_0.5.77.59.40.25.23.txt
