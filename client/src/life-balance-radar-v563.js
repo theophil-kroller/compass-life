@@ -171,8 +171,8 @@ export function lifeBalanceBand(score){
  if(score<25)return {label:'Großer Zielabstand',color:'#ed8e84',className:'low'};
  if(score<50)return {label:'Deutlicher Abstand',color:'#e9b879',className:'limited'};
  if(score<75)return {label:'Teilweise erreicht',color:'#d8ce83',className:'medium'};
- if(score<90)return {label:'Weitgehend erreicht',color:'#91cfb3',className:'good'};
- return {label:'Im Zielbereich',color:'#80e4c4',className:'top'};
+ if(score<90)return {label:'Weitgehend erreicht',color:'#62b77d',className:'good'};
+ return {label:'Im Zielbereich',color:'#4ce0dc',className:'top'};
 }
 const money=c=>Number.isFinite(c)?(c/100).toLocaleString('de-AT',{style:'currency',currency:'EUR'}):'–';
 /** Explain an axis in-place; details never require scrolling below the chart. */
@@ -230,7 +230,7 @@ export function lifeBalanceRadarView(model,{compact=false,history=[],activeAxis=
   return `<g class="lbr63-history-trace" data-history-index="${h+1}" aria-label="${esc(m.label)} ${esc(m.start)} bis ${esc(m.today)}">${lines}${dots}</g>`;
  }).join('');
  const legend=[{label:'Aktuell',color:'#A5F2DB',start:model.start,end:model.today,coverage:model.coverage},...history.map((m,i)=>({label:m.label,color:i===0?'#B7A2F5':'#E8BD73',start:m.start,end:m.today,coverage:m.coverage}))].map((entry,i)=>`<span class="lbr63-temporal-item"><i style="--trace-color:${entry.color};${i?'border-top-style:dashed;':''}"></i><span>${esc(entry.label)}<small>${esc(entry.start)} – ${esc(entry.end)} · ${entry.coverage}/8</small></span></span>`).join('');
- const nodes=axes.map((a,i)=>{const [x,y]=geom(i,a.score==null?126:a.score*1.26);return `<circle data-action="balance-select" data-id="${esc(a.key)}" class="lbr672-chart-node" tabindex="0" role="button" aria-label="${esc(a.label)} Details anzeigen" cx="${x}" cy="${y}" r="${a.score==null?5:7}" fill="${a.score==null?'#6F8896':'#A5F2DB'}" stroke="#163345" stroke-width="2"><title>${esc(a.label)}: ${a.score==null?'Keine Bewertung':a.score+' / 100'} · ${esc(a.detail)}</title></circle>`;}).join('');
+ const nodes=axes.map((a,i)=>{const [x,y]=geom(i,a.score==null?126:a.score*1.26);return `<circle data-action="balance-select" data-id="${esc(a.key)}" class="lbr672-chart-node" tabindex="0" role="button" aria-label="${esc(a.label)} Details anzeigen" cx="${x}" cy="${y}" r="${a.score==null?5:7}" fill="${lifeBalanceBand(a.score).color}" stroke="#163345" stroke-width="2"><title>${esc(a.label)}: ${a.score==null?'Keine Bewertung':a.score+' / 100'} · ${esc(a.detail)}</title></circle>`;}).join('');
  const axisLabels=axes.map((a,i)=>{const [x,y]=geom(i,159);return `<text class="lbr672-axis-name" data-action="balance-select" data-id="${esc(a.key)}" x="${x}" y="${y+4}" text-anchor="middle" fill="${a.score==null?'#8097A6':'#CBDCE4'}" font-size="11.5">${esc(a.label)}</text>`;}).join('');
  const details=axes.map(a=>{const band=lifeBalanceBand(a.score);return `<button type="button" class="lbr63-metric ${a.score==null?'lbr63-unknown':''}" data-action="balance-select" data-id="${esc(a.key)}" aria-label="${esc(a.label)} Erklärung anzeigen"><span class="lbr63-dot" style="background:${band.color}"></span><span class="lbr63-metric-title">${esc(a.label)}</span><strong>${a.score==null?'–':a.score+' / 100'}</strong><small>${esc(band.label)} · ${esc(a.detail)}</small></button>`;}).join('');
  const scale=[{from:'0–24',label:'Großer Abstand',score:0},{from:'25–49',label:'Deutlicher Abstand',score:25},{from:'50–74',label:'Teilweise erreicht',score:50},{from:'75–89',label:'Weitgehend erreicht',score:75},{from:'90–100',label:'Im Zielbereich',score:90}];

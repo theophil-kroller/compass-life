@@ -19,7 +19,7 @@ const iso=x=>{if(typeof x!=='string')return '';const d=x.slice(0,10);return DAY.
 const onDate=d=>Date.parse(d+'T12:00:00Z');
 const round=(x,p=1)=>Number(x.toFixed(p));
 const fmt=x=>Number(x).toLocaleString('de-AT',{maximumFractionDigits:1});
-const periodDays={month:30,quarter:90,year:365};
+const periodDays={month:30,quarter:90,half:180,threequarters:270,year:365};
 export const REPORT_PERIODS=Object.freeze(periodDays);
 export function reportWindow(now='2026-10-28',period='year'){
  const end=iso(now)||new Date().toISOString().slice(0,10),days=periodDays[period]||365;

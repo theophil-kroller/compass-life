@@ -49,6 +49,23 @@ function quantities(food,amount){
  // No inference from generic mensa, unquantified smoothies, supplements, or recipes.
  return units;
 }
+/** Only observed, dated activities. Duration expressed in seconds, milliseconds,
+ * or minutes as indicated by its actual field. Avoid treating arbitrary numbers as minutes. */
+export function dailyDozenExerciseMinutes(state,day){
+ const candidates=[...(state?.healthImports?.garminSessions||[]),...(state?.healthImports?.garminActivities||[]),...(state?.activities?.entries||[])];
+ const seen=new Set();let moderate=0,vigorous=0;
+ for(const r of candidates){if(!r||r.deleted)continue;
+  const at=String(r.start||r.startedAt||r.at||r.day||'');if(!at)continue;
+  if((at.length===10?at:localDay(at))!==day)continue;
+  const id=String(r.id||r.activityId||r.start||JSON.stringify([at,r.durationMinutes,r.type]));if(seen.has(id))continue;seen.add(id);
+  const m=Number.isFinite(r.durationMinutes)?r.durationMinutes:Number.isFinite(r.elapsedMinutes)?r.elapsedMinutes:Number.isFinite(r.durationSeconds)?r.durationSeconds/60:Number.isFinite(r.durationMs)?r.durationMs/60000:null;
+  if(m===null||m<=0||m>720)continue;
+  const text=String(r.type||r.sport||r.activityType||r.name||'').toLowerCase();
+  if(/strength|weight|running|laufen|interval|hiit|sport|swim|schwimm/.test(text))vigorous+=m;
+  else moderate+=m; // Unknown intensity is displayed only as a conservative duration fraction.
+ }
+ return {moderate:Math.round(moderate*10)/10,vigorous:Math.round(vigorous*10)/10};
+}
 export function dailyDozen5930(state,{day=new Date().toLocaleDateString('sv-SE')}={}){
  if(!safeDay(day))throw Error('Invalid Daily Dozen date');
  const records=(state?.nutritionJournal?.entries||[]).filter(e=>e&&!e.deleted&&typeof e.at==='string'&&Number.isFinite(Date.parse(e.at))&&localDay(e.at)===day);
@@ -56,14 +73,15 @@ export function dailyDozen5930(state,{day=new Date().toLocaleDateString('sv-SE')
  const ledger=dailyDozenIngredientEvidence404(state,day);
  const aliases={legumes:'beans',fruits:'fruit'};
  const totals=Object.fromEntries(DAILY_DOZEN_5930.map(x=>[x.id,ledger.totals[aliases[x.id]||x.id]||0]));
+ const exercise=dailyDozenExerciseMinutes(state,day);totals.exercise=Math.min(1,exercise.moderate/90+exercise.vigorous/40);
  const evidence=ledger.sources.map(x=>({id:x.id,category:x.category,source:x.source,portion:x.portion,grams:x.grams}));
  const mappedIds=new Set(ledger.sources.map(x=>x.id));
  const rows=DAILY_DOZEN_5930.map(x=>({...x,observed:Math.min(x.goal,Math.round((totals[x.id]||0)*10)/10),raw:Math.round((totals[x.id]||0)*10)/10,covered:totals[x.id]>0}));
  const observed=rows.reduce((n,x)=>n+x.observed,0),goal=rows.reduce((n,x)=>n+x.goal,0);
- return {day,rows,entries:records.length,mapped:mappedIds.size,unmapped:Math.max(0,records.length-mappedIds.size),observed:Math.round(observed*10)/10,goal,notObserved:rows.filter(x=>!x.covered).length,evidence,uncertainty:'Nur eindeutig erkannte und protokollierte Mengen; nicht erfasst bedeutet nicht nicht gegessen. Aktivität und Nahrungsergänzung werden nicht aus anderen Datensätzen vorgetäuscht.'};
+ return {day,rows,entries:records.length,mapped:mappedIds.size,unmapped:Math.max(0,records.length-mappedIds.size),observed:Math.round(observed*10)/10,goal,notObserved:rows.filter(x=>!x.covered).length,evidence,exercise,uncertainty:'Nur eindeutig protokollierte Mengen und datierte Aktivitäten. Fehlende Intensität wird konservativ als moderat gewertet; nicht erfasst bedeutet nicht nicht durchgeführt.'};
 }
 function localDay(timestamp){const d=new Date(timestamp);if(!Number.isFinite(d.getTime()))return '';return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 export function dailyDozen5930View(model){
  const {rows,day,observed,goal,mapped,unmapped,entries}=model;
- return `<section class="dd930" aria-label="Dr. Greger Daily Dozen · dokumentierte Anteile"><header class="dd930-header"><div><small>ERNÄHRUNG · NUTRITIONFACTS.ORG</small><h3>Daily Dozen</h3><p>Dr. Gregers zwölf tägliche Orientierungskategorien · ${esc(day)}</p></div><div class="dd930-total"><strong>${observed.toLocaleString('de-AT')} / ${goal}</strong><small>dokumentierte Portionen</small></div></header><div class="dd930-grid">${rows.map(x=>`<div class="dd930-row"><div class="dd930-name"><span aria-hidden="true">${x.icon}</span><strong>${esc(x.label)}</strong><small>${x.observed.toLocaleString('de-AT')} / ${x.goal}</small></div><div class="dd930-progress" role="meter" aria-label="${esc(x.label)} protokollierte Portionen" aria-valuemin="0" aria-valuemax="${x.goal}" aria-valuenow="${x.observed}"><i style="width:${Math.round(x.observed/x.goal*100)}%"></i></div><small>${esc(x.example)}</small></div>`).join('')}</div><footer class="dd930-note"><strong>Keine Anti-Aging-Prognose.</strong> ${mapped} von ${entries} Ernährungseinträgen konnten diesen Kategorien konservativ zugeordnet werden${unmapped?`; ${unmapped} Einträge blieben bewusst unklassifiziert`:''}. Nicht erfasste Lebensmittel erscheinen nicht als gegessen. Das ist ein dokumentierter Ausschnitt, kein Urteil über Ernährung oder Gesundheit. Bewegung bitte separat beurteilen. <a href="https://nutritionfacts.org/daily-dozen/" target="_blank" rel="noopener noreferrer">Original-Checkliste</a>.</footer></section>`;
+ return `<section class="dd930" aria-label="Dr. Greger Daily Dozen · dokumentierte Anteile"><header class="dd930-header"><div><small>ERNÄHRUNG · NUTRITIONFACTS.ORG</small><h3>Daily Dozen</h3><p>Dr. Gregers zwölf tägliche Orientierungskategorien · ${esc(day)}</p></div><div class="dd930-total"><strong>${observed.toLocaleString('de-AT')} / ${goal}</strong><small>dokumentierte Portionen</small></div></header><div class="dd930-grid">${rows.map(x=>`<div class="dd930-row"><div class="dd930-name"><span aria-hidden="true">${x.icon}</span><strong>${esc(x.label)}</strong><small>${x.observed.toLocaleString('de-AT')} / ${x.goal}</small></div><div class="dd930-progress" role="meter" aria-label="${esc(x.label)} protokollierte Portionen" aria-valuemin="0" aria-valuemax="${x.goal}" aria-valuenow="${x.observed}"><i style="width:${Math.round(x.observed/x.goal*100)}%"></i></div><small>${esc(x.example)}${x.id==='exercise'&&model.exercise?` · ${model.exercise.moderate} min moderat / ${model.exercise.vigorous} min intensiv dokumentiert`:''}</small></div>`).join('')}</div><footer class="dd930-note"><strong>Keine Anti-Aging-Prognose.</strong> ${mapped} von ${entries} Ernährungseinträgen konnten diesen Kategorien konservativ zugeordnet werden${unmapped?`; ${unmapped} Einträge blieben bewusst unklassifiziert`:''}. Nicht erfasste Lebensmittel erscheinen nicht als gegessen. Das ist ein dokumentierter Ausschnitt, kein Urteil über Ernährung oder Gesundheit. Bewegung basiert auf dokumentierten Tagesaktivitäten; fehlende Bewegungsdaten werden nicht zu Null geschätzt. <a href="https://nutritionfacts.org/daily-dozen/" target="_blank" rel="noopener noreferrer">Original-Checkliste</a>.</footer></section>`;
 }

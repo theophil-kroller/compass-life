@@ -1,0 +1,22 @@
+COMPASS LIFE 0.5.77.59.40.25.25 — INSTALLATION
+===============================================
+PATCH only against an exact .25.24 source tree. Back up the current repository
+and export an encrypted Compass vault backup first. Extract the PATCH into
+repository root, preserving all paths. Commit and check the "Deploy Compass Web"
+GitHub Actions workflow. If the previous release is incomplete or the repo has
+mixed versions, use FULL SOURCE as a clean repository tree; do not upload PATCH
+and FULL concurrently. Do not clear IndexedDB, site data, or the encrypted vault.
+
+First test after deployment:
+- Open Habits > Wim-Hof, finish an audio; confirm 'Gesichert' only after save.
+- Backfill both missed sessions via Habits > Time Intelligence, inspect minutes.
+- Mark Vocal Image complete and record/edit the exercise duration.
+- Check Life Balance Radar color-coded points and past periods.
+- Check Fitdays body comparison at current measurements, no clipped raster text.
+- Check strength muscle map red for documented today, orange recent, yellow support.
+- Check Ratatouille consumed, provisional vegetable progress and source caveat.
+- Check actual today's Garmin movement progress and fractional exercise bar.
+- Report > Ars Vivendi, select 1/3/6/9/12 months, PDF layout unchanged.
+
+No new Cloudflare D1 migration. Real Vite/npm install unavailable in author's
+offline environment (EAI_AGAIN). Build and deploy MUST pass in GitHub Actions.

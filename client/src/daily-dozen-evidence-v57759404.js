@@ -28,6 +28,14 @@ export function dailyDozenIngredientEvidence404(state,day){
  };
  for(const e of entries){
   const id=String(e.foodId||''),a=String(e.amount||''),g=grams(a),factor=scale(e),sourceId=String(e.id||id);
+  if(id.startsWith('mensa-menu-')&&e.menuSnapshot){
+   const title=String(e.menuSnapshot.title||custom.get(id)?.title||'').toLowerCase();
+   const candidates=e.menuSnapshot.dailyDozenCandidateCategories||[];
+   // Provisional partial serving from a *consumed* dish with clearly named vegetables.
+   // No weight supplied => DO NOT assert a full serving.
+   if(candidates.includes('vegetables')&&/ratatouille|gemüse|gemuese|vegetable/.test(title)){add('vegetables',0.5,'Mensa · Gemüseanteil im Gericht (vorläufig, Menge unbekannt)',sourceId);notes.vegetables.push('Mensa-Portion unbekannt: 0,5 vorläufiger Vergleichswert, bitte Gemüsemenge bestätigen.');}
+   continue;
+  }
   if(id==='spar-bio-flaxseed'){
    // Do not silently credit whole seeds. Label prohibits raw consumption.
    const note=String(e.note||'');

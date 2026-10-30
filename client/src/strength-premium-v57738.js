@@ -3,7 +3,7 @@
  * slimmer line-art style closer to the user's preferred fitness-app references.
  * This remains a model of documented involvement, not measured EMG/fatigue/growth.
  */
-import { detailedMuscleData } from './strength-anatomy-v57737.js';
+import { detailedMuscleData,EXERCISE_ANATOMY } from './strength-anatomy-v57737.js';
 
 const e=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fmt=(v,d=0)=>Number.isFinite(v)?v.toLocaleString('de-AT',{maximumFractionDigits:d}):'–';
@@ -134,9 +134,9 @@ export async function mountPremiumAnatomy(root,loader=loadAnatomyPaths){
    const row=id?groupInfo[id]:null;
    const cyclingPrimary=id&&bikePrimary.includes(id),cyclingSecondary=id&&bikeSecondary.includes(id);
    const active=id&&((info.activity!=='cycling'&&((row?.primary||0)+(row?.secondary||0)>0))||(info.activity!=='strength'&&(cyclingPrimary||cyclingSecondary)));
-   const fill=id?colorForRegion(row,info.mode||'roles',cyclingPrimary,cyclingSecondary,info.activity||'combined'):'#232d3c';
+   const fill=id&&info.todayRegions?.includes(id)?'#ed4b42':id&&info.recentRegions?.includes(id)?'#ee963a':id&&info.supportingRegions?.includes(id)?'#f0c955':id?colorForRegion(row,info.mode||'roles',cyclingPrimary,cyclingSecondary,info.activity||'combined'):'#232d3c';
    const name=LABELS[id]||Object.entries(ANATOMY_OVERRIDES).find(([k])=>part.id.startsWith(k))?.[1]||part.name||part.id;
-   const note=id?`${row?.primary||0} Hauptsätze · ${row?.secondary||0} unterstützend${cyclingPrimary||cyclingSecondary?' · Radfahren beteiligt':''}`:'Anatomische Orientierung';
+   const note=id?`${info.todayRegions?.includes(id)?'Heute trainiert · ':info.recentRegions?.includes(id)?'In den letzten 7 Tagen trainiert · ':''}${row?.primary||0} Hauptsätze · ${row?.secondary||0} unterstützend${cyclingPrimary||cyclingSecondary?' · Radfahren beteiligt':''}`:'Anatomische Orientierung';
    const title=`${name} – ${note}`;
    return `<path d="${e(part.path)}" class="str740-muscle${active?' is-active':''}" fill="${fill}" stroke="${active?'#f4ded0':'#9daabd'}" stroke-width="${active?'0.18':'0.14'}" stroke-linejoin="round" role="img" tabindex="0" data-muscle-name="${e(name)}" data-muscle-note="${e(note)}" aria-label="${e(title)}"><title>${e(title)}</title></path>`;
   }).join('');
@@ -167,7 +167,15 @@ export async function mountPremiumAnatomy(root,loader=loadAnatomyPaths){
 export function premiumStrengthSvg(model,view,mode,cycling,activity){
  const data=detailedMuscleData(model);
  const records=Object.fromEntries(Object.entries(data.regions).map(([id,r])=>[id,{primary:r.primary,secondary:r.secondary,index:r.index}]));
- const info={regions:records,activity,mode,cyclingPrimary:cycling?.rides?cycling.regions.primary:[],cyclingSecondary:cycling?.rides?cycling.regions.secondary:[]};
+ const current=typeof model?.today==='string'?model.today:new Date().toLocaleDateString('sv-SE');
+ const recentStart=shift(current,-7),todayRegions=new Set(),recentRegions=new Set(),supportingRegions=new Set();
+ for(const session of model?.sessions||[]){const day=session.day;if(!isDay(day)||day>current)continue;
+  for(const set of session.sets||[]){if(!(Number(set?.reps)>0))continue;const anatomy=EXERCISE_ANATOMY[set.exerciseId];if(!anatomy)continue;
+   for(const id of anatomy.primary){if(day===current)todayRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
+   for(const id of anatomy.secondary){if(day===current)supportingRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
+  }
+ }
+ const info={regions:records,activity,mode,todayRegions:[...todayRegions],recentRegions:[...recentRegions].filter(id=>!todayRegions.has(id)),supportingRegions:[...supportingRegions].filter(id=>!todayRegions.has(id)),cyclingPrimary:cycling?.rides?cycling.regions.primary:[],cyclingSecondary:cycling?.rides?cycling.regions.secondary:[]};
  const back=view==='back';
  return `<svg class="str738-body str740-svg" data-anatomy-view="${back?'back':'front'}" data-anatomy-info="${e(JSON.stringify(info))}" viewBox="${back?'37 0 35 93':'0 0 35 93'}" role="img" aria-label="Anatomische Muskelkarte ${back?'hinten':'vorne'}, über 70 detaillierte Muskelbereiche"><text x="${back?'44':'8'}" y="48" class="str740-loading">Anatomie wird geladen …</text></svg>`;
 }
@@ -188,7 +196,7 @@ export function strengthPremiumRanking(model,cycling,activity='combined'){
 
 export function strengthPremiumMap(model,cycling,activity='combined',side='front'){
  const mode=side==='back'?'load':'roles';
- const legend=mode==='roles'?[['#ef533f','Hauptmuskel'],['#f2c857','Unterstützend']]:[['#f3cf67','Wenige Sätze'],['#f3b24c','Mehr'],['#df4d38','Viele']];
+ const legend=[['#ed4b42','Heute trainiert (primär)'],['#ee963a','Letzte 7 Tage'],['#f0c955','Heute unterstützend']];
  if(activity!=='strength'&&cycling?.rides)legend.push(['#f2a531','Radfahren (primär)']);
  legend.push([OFF_FILL,'Nicht zugeordnet']);
  // Wait until Compass has inserted this HTML into the document. No old cartoon fallback.
