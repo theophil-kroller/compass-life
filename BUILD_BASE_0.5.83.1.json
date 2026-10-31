@@ -1,0 +1,20 @@
+{
+  "version": "0.5.83.1",
+  "base_commit": "74ac23843b5ba2351cf1edc87828df75b287fd8a",
+  "baseline": "0.5.83",
+  "changed_files": [
+    "INSTALLATION_0.5.83.1.txt",
+    "RELEASE_0.5.83.1.md",
+    "client/package.json",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/main-full-v57759402510.js",
+    "client/src/receipt-gpt-v57743.js",
+    "package.json",
+    "tests/compass-05831-receipt-clipboard.test.mjs",
+    "worker/package.json"
+  ],
+  "deleted_files": [],
+  "test_release": "33/33",
+  "test_receipt_hotfix": "8/8",
+  "test_historical": "1784/1817"
+}

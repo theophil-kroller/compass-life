@@ -1,0 +1,16 @@
+Compass Life 0.5.83.1 - Hotfix GPT-Kassenbon-JSON
+
+Basis: GitHub main Commit 74ac23843b5ba2351cf1edc87828df75b287fd8a (Compass 0.5.83)
+
+PATCH: Geänderte und neue Dateien mit identischen Repo-Relativpfaden nach
+GitHub hochladen (nur wenn main weiterhin den obigen Commit enthält).
+FULL SOURCE: Alternative zur Patch-Installation; nicht beide hochladen.
+
+Unter Finanzen > Bonprüfung den formatierten ChatGPT-JSON-Text unverändert
+in das Feld kopieren und zuerst 'JSON prüfen' drücken. Vier Bons werden
+als Vorschau geladen. Erst nach eigener Prüfung speichern.
+
+Keine D1-Migration und keine Löschung bestehender Daten nötig.
+
+Tests: 33/33 check:deploy; 8/8 neue Tests; 1784/1817 historisch.
+Produktion / Vite muss GitHub Actions nach Upload bestätigen.
