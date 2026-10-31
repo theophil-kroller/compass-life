@@ -78,3 +78,56 @@
 .lw85-star-legend{color:#8A6326;font-weight:700}
 .lw85-phase-legend{color:#53776B}
 .lw85-star-legend::first-letter{color:#C9952C}
+
+/* 0.5.86 · life overview information hierarchy and birthday-anchored seven-year panorama */
+.lw86-mode-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border:1px solid #d7e2dd;border-radius:12px;background:#f6faf8}
+.lw86-mode-bar>strong{font-size:12px;color:#1b4746;margin-right:8px}
+.lw86-mode-bar>span{font-size:11px;color:#607a71;margin-left:auto}
+.lw86-mode-bar button.is-active{background:#1b4746;color:#fff;border-color:#1b4746}
+.lw86-seven{display:grid;gap:12px;padding:16px;border:1px solid #c5d8d0;background:linear-gradient(165deg,#f8fbfa,#fff);border-radius:16px;min-width:0}
+.lw86-seven-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.lw86-seven-top small{font-size:10px;font-weight:750;letter-spacing:.12em;color:#9c7d47}
+.lw86-seven-top h3{font:normal clamp(20px,2.1vw,28px) Georgia,serif;color:#1e4448;margin:4px 0}
+.lw86-seven-top h3 span{font:600 12px/1.2 system-ui,sans-serif;color:#769087;white-space:nowrap}
+.lw86-seven-top p{font-size:12px;line-height:1.45;color:#698179;margin:2px 0 0}
+.lw86-seven-actions{display:flex;gap:5px;flex-shrink:0}
+.lw86-seven-actions button{font-size:11px!important;padding:7px 9px}
+.lw86-summary{display:flex;align-items:center;gap:15px;flex-wrap:wrap;border-top:1px solid #e0e9e4;padding-top:9px;color:#607b73;font-size:11px}
+.lw86-summary strong{color:#244c4a;font-size:16px;margin-right:3px}
+.lw86-summary>button{margin-left:auto;font-size:11px!important;min-height:30px!important}
+.lw86-cycle-menu{display:flex;gap:4px;overflow:auto;scrollbar-width:thin;padding:4px 0 7px}
+.lw86-cycle-chip{flex:0 0 69px;display:grid;gap:2px;padding:6px 3px!important;min-height:43px!important;border:1px solid #d5e1d9;border-radius:8px;background:#fff;color:#496b65;font-size:11px!important;text-align:center;line-height:1.2}
+.lw86-cycle-chip strong{font-variant-numeric:tabular-nums;font-size:12px}
+.lw86-cycle-chip small{font-size:9px;color:#809389}
+.lw86-cycle-chip.is-current{border-bottom:2px solid #d5ac55}
+.lw86-cycle-chip.is-active{background:#244f4b;border-color:#244f4b;color:#fff}
+.lw86-cycle-chip.is-active small{color:#e2d4b6}
+.lw86-seven-scroll{overflow-x:auto;max-width:100%;border:1px solid #e0eae4;border-radius:12px;background:#fff}
+.lw86-seven-body{min-width:730px;padding:10px 12px;display:grid;gap:10px}
+.lw86-seven-months,.lw86-year-line{display:grid;grid-template-columns:112px minmax(0,1fr);column-gap:9px;align-items:center}
+.lw86-seven-months{font-size:11px;color:#73867e;padding:0 0 5px;border-bottom:1px solid #dbe6de;position:sticky;top:0;z-index:10;background:#fff}
+.lw86-seven-month-track{position:relative;height:22px}
+.lw86-seven-month-track>strong{position:absolute;left:0;top:0;color:#936b37;font-size:10px}
+.lw86-seven-month-track .lw82-month-label{font-size:10px}
+.lw86-year{padding:8px;border:1px solid #e1e9e4;border-radius:10px;background:#fbfdfc;display:grid;gap:7px}
+.lw86-year.is-current{background:#fffcf4;border-color:#d6b66d}
+.lw86-year-label{display:grid;text-align:left;border:0;background:none;padding:0 3px;gap:2px;cursor:pointer;color:#234e49}
+.lw86-year-label strong{font-size:12px}
+.lw86-year-label span{font-size:10px;color:#6b8178}
+.lw86-weeks{position:relative;display:grid;grid-template-columns:repeat(53,minmax(0,1fr));gap:0;min-width:0;height:25px}
+.lw86-weeks .lw82-week{min-height:0;height:23px;margin-right:2px;border-radius:3px;border-color:#e5ece8}
+.lw86-weeks .lw82-week.is-past{background:#cfd7d6;border-color:#cfd7d6}
+.lw86-weeks .lw82-week.is-event{border-color:transparent}
+.lw86-weeks .lw85-milestone-star{font-size:15px;-webkit-text-stroke:.4px #594521}
+.lw86-weeks .lw82-month-line{z-index:3}
+.lw86-weeks .lw85-phase-ribbon{opacity:.8;height:2px}
+.lw86-year-events{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding-left:121px;min-height:21px}
+.lw86-event-chip,.lw86-more{max-width:min(250px,90%);min-height:23px!important;padding:4px 8px!important;border-radius:6px!important;font-size:10.5px!important;line-height:1.2!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lw86-experience{border:1px solid var(--lw86-event);background:color-mix(in srgb,var(--lw86-event) 16%,white);color:#254840}
+.lw86-milestone{border:1px solid #caad72;background:#fff3d8;color:#825c26;font-weight:750}
+.lw86-phase{border:1px solid #e0e8e4;background:#f1f5f3;color:#59716a}
+.lw86-more{background:none;border:1px dashed #c6d7cf;color:#456962}
+.lw86-empty{font-size:10px;color:#9aaba5;font-style:italic}
+.lw86-seven-footnote{font-size:11px;line-height:1.5;margin:0;color:#6b8076}
+@media(max-width:850px){.lw86-seven{padding:11px}.lw86-seven-top{align-items:flex-start;flex-wrap:wrap}.lw86-mode-bar>span{margin-left:0;flex-basis:100%}}
+@media(max-width:600px){.lw86-seven-body{min-width:740px}.lw86-year-events{padding-left:121px}.lw86-year{padding:6px}.lw86-summary>button{margin-left:0}}

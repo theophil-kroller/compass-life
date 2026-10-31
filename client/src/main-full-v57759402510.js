@@ -263,7 +263,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.85';
+const COMPASS_CLIENT_VERSION='0.5.86';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -647,7 +647,7 @@ const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.c
 if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','shopping','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
 if(!bootView&&!bootCapture&&calmLastView?.insight&&(calmLastView.insight==='touch'||INSIGHT_TABS.some(v=>v.id===calmLastView.insight)))insightTab=calmLastView.insight;
 if(!bootView&&!bootCapture&&calmLastView?.finance&&FINANCE_TABS.some(v=>v.title===calmLastView.finance))financePane=calmLastView.finance;
-let lifeWeeksAge=null,lifeWeeksWeek=null,lifeWeeksBonus=false,lifeWeeksStar=false,lifeWeeksDraft={},lifeWeeksCalendarQuery='',lifeWeeksCalendarHistory=[],lifeWeeksCalendarLoading=false,lifeWeeksZoom='fit',lifeWeeksResizeBound=false,lifeWeeksImportPreview=[];
+let lifeWeeksAge=null,lifeWeeksWeek=null,lifeWeeksBonus=false,lifeWeeksStar=false,lifeWeeksDraft={},lifeWeeksCalendarQuery='',lifeWeeksCalendarHistory=[],lifeWeeksCalendarLoading=false,lifeWeeksZoom='fit',lifeWeeksResizeBound=false,lifeWeeksImportPreview=[],lifeWeeksMode='cycle',lifeWeeksCycleIndex=null;
 let lifeReportSettings={period:'year',finance:false,places:false,people:false,feelings:false,rankedIds:[],aiStatus:''};
 let calmNavGroup=['shopping','templates','projects','overview','next','forecast','radar','flagged','hold','someday','recovery'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'?'insights':tab==='finance'?'finance':'';
 let financeSankeyFocus='all',financeMerchantSelected='';
@@ -2641,7 +2641,7 @@ function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensa
  const healthChoices=false&&healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='lifeweeks'?lifeWeeksView(state,{today,selectedAge:lifeWeeksAge,selectedWeek:lifeWeeksWeek,draft:lifeWeeksDraft,bonus:lifeWeeksBonus,star:lifeWeeksStar,matrixZoom:lifeWeeksZoom,calendar:calendarEvents,calendarResults:lifeWeeksCalendarHistory,calendarQuery:lifeWeeksCalendarQuery,calendarConnected:Boolean(calendarToken&&Date.now()<calendarExpires),calendarLoading:lifeWeeksCalendarLoading,importPreview:lifeWeeksImportPreview}):insightTab==='report'?annualSetupView(state,{...lifeReportSettings,now:today}):insightTab==='intelligence'?insights750Cockpit(state,{today:localDate()}):insightTab==='capacity'?capacityGuardianView(effectiveCapacityState748(state),{today:localDate()})+capacityCalendarView(state,{today:localDate(),now:new Date(),calendarEvents,calendarCoverage,calendarUpdatedAt,calendarConnected:!!(calendarToken&&Date.now()<calendarExpires)||Boolean(state?.calendarArchive?.completed)}):insightTab==='weekly'?weeklyIntelligenceView(state,{today:localDate(),offset:weeklyOffset746})+capacityGuardianTeaser(state,{today:localDate()}):insightTab==='dreamworld'?dreamJournalView(state,{days:dreamDays743,editingId:dreamEditingId743,kind:dreamKind743}):insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?`<div style="margin-bottom:12px"><button type="button" class="t577-tab-shortcut" data-action="t577-open">🫂 Berührung & Nähe erfassen →</button></div>`+feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='timejournal'?timeJournalView(state,{period:timeJournalPeriod,editingId:timeJournalEditId,showForm:timeJournalShowForm,watchActivities:activeActivities(watchSessions,state)})+journalSyncPanel():insightTab==='nutrition'?nutritionWorkspace4017(state,{
+ const content=insightTab==='lifeweeks'?lifeWeeksView(state,{today,selectedAge:lifeWeeksAge,selectedWeek:lifeWeeksWeek,draft:lifeWeeksDraft,bonus:lifeWeeksBonus,star:lifeWeeksStar,matrixZoom:lifeWeeksZoom,calendar:calendarEvents,calendarResults:lifeWeeksCalendarHistory,calendarQuery:lifeWeeksCalendarQuery,calendarConnected:Boolean(calendarToken&&Date.now()<calendarExpires),calendarLoading:lifeWeeksCalendarLoading,importPreview:lifeWeeksImportPreview,viewMode:lifeWeeksMode,cycleIndex:lifeWeeksCycleIndex}):insightTab==='report'?annualSetupView(state,{...lifeReportSettings,now:today}):insightTab==='intelligence'?insights750Cockpit(state,{today:localDate()}):insightTab==='capacity'?capacityGuardianView(effectiveCapacityState748(state),{today:localDate()})+capacityCalendarView(state,{today:localDate(),now:new Date(),calendarEvents,calendarCoverage,calendarUpdatedAt,calendarConnected:!!(calendarToken&&Date.now()<calendarExpires)||Boolean(state?.calendarArchive?.completed)}):insightTab==='weekly'?weeklyIntelligenceView(state,{today:localDate(),offset:weeklyOffset746})+capacityGuardianTeaser(state,{today:localDate()}):insightTab==='dreamworld'?dreamJournalView(state,{days:dreamDays743,editingId:dreamEditingId743,kind:dreamKind743}):insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?`<div style="margin-bottom:12px"><button type="button" class="t577-tab-shortcut" data-action="t577-open">🫂 Berührung & Nähe erfassen →</button></div>`+feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='timejournal'?timeJournalView(state,{period:timeJournalPeriod,editingId:timeJournalEditId,showForm:timeJournalShowForm,watchActivities:activeActivities(watchSessions,state)})+journalSyncPanel():insightTab==='nutrition'?nutritionWorkspace4017(state,{
    day:today,view:nutritionView712,editingId:nutritionEditId,
    renderJournal:()=>nutritionInsightsView(state,{period:nutritionPeriod}),
    renderEditor:()=>nutritionEntryInspectorView(state,{editingId:nutritionEditId}),
@@ -4858,6 +4858,24 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='balance-drill'){if(!['insights','people','finance','review'].includes(id))return;tab=id;if(id==='insights'&&INSIGHT_TABS.some(t=>t.id===stepId))insightTab=stepId;if(id==='finance')financePane='Prognose';calmNavGroup=id==='insights'?'insights':id==='finance'?'finance':'';render();return;}
   lastActivity=Date.now();
   try {
+    if(action==='lw86-mode'){
+      if(!['cycle','overview'].includes(id))return;
+      lifeWeeksMode=id;render();requestAnimationFrame(()=>app.querySelector(id==='cycle'?'#lw86-seven':'.lw82-main-scroll')?.scrollIntoView?.({block:'nearest'}));return;
+    }
+    if(action==='lw86-cycle'||action==='lw86-cycle-prev'||action==='lw86-cycle-next'){
+      const maxCycles=Math.ceil((lifeWeeksStar?110:lifeWeeksBonus?100:80)/7);
+      const current=Math.max(0,Math.min(maxCycles-1,Number.isInteger(lifeWeeksCycleIndex)?lifeWeeksCycleIndex:Math.floor((lifeAgeAt(localDate())??0)/7)));
+      const target=action==='lw86-cycle'?Number(id):current+(action==='lw86-cycle-prev'?-1:1);
+      if(!Number.isInteger(target)||target<0||target>=maxCycles)return;
+      lifeWeeksCycleIndex=target;lifeWeeksMode='cycle';
+      if(lifeWeeksAge===null||lifeWeeksAge<target*7||lifeWeeksAge>target*7+6)lifeWeeksAge=target*7;
+      lifeWeeksWeek=null;render();return;
+    }
+    if(action==='lw86-focus-event'){
+      const entry=(state?.lifeWeekEvents||[]).find(x=>x.id===id&&!x.deleted);if(!entry)return;
+      const age=lifeAgeAt(entry.start);if(age===null)return;
+      lifeWeeksAge=age;lifeWeeksWeek=null;lifeWeeksDraft={};render();requestAnimationFrame(()=>app.querySelector('#lw82-detail')?.scrollIntoView?.({block:'start',behavior:'smooth'}));return;
+    }
     if(action==='lw83-pdf'){
       if(!state||!['A4','A3'].includes(id))return;
       try{
@@ -4883,7 +4901,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(action==='lw84-import-open'){app.querySelector('#lw84-import')?.scrollIntoView?.({behavior:'smooth',block:'start'});app.querySelector('#lw84-import-parse textarea')?.focus();return;}
      if(action==='lw82-bonus'){lifeWeeksBonus=!lifeWeeksBonus;if(!lifeWeeksBonus)lifeWeeksStar=false;render();return;}
       if(action==='lw82-star'){lifeWeeksStar=!lifeWeeksStar;if(lifeWeeksStar)lifeWeeksBonus=true;render();return;}
-      if(action==='lw82-today'){lifeWeeksAge=lifeAgeAt(localDate());lifeWeeksWeek=lifeWeekCells(lifeWeeksAge,{today:localDate()}).find(x=>x.status==='current')?.week||null;lifeWeeksDraft={};lifeWeeksCalendarHistory=[];render();requestAnimationFrame(()=>app.querySelector('.lw82-row[data-age=\"'+lifeWeeksAge+'\"]')?.scrollIntoView?.({block:'center',behavior:'smooth'}));return;}
+      if(action==='lw82-today'){lifeWeeksCycleIndex=Math.floor((lifeAgeAt(localDate())??0)/7);lifeWeeksMode='cycle';lifeWeeksAge=lifeAgeAt(localDate());lifeWeeksWeek=lifeWeekCells(lifeWeeksAge,{today:localDate()}).find(x=>x.status==='current')?.week||null;lifeWeeksDraft={};lifeWeeksCalendarHistory=[];render();requestAnimationFrame(()=>(app.querySelector('.lw86-year[data-age=\"'+lifeWeeksAge+'\"]')||app.querySelector('.lw82-row[data-age=\"'+lifeWeeksAge+'\"]'))?.scrollIntoView?.({block:'center',behavior:'smooth'}));return;}
       if(action==='lw82-year'&&Number.isInteger(age)&&age>=0&&age<110){lifeWeeksAge=age;lifeWeeksWeek=null;lifeWeeksDraft={};lifeWeeksCalendarHistory=[];lifeWeeksCalendarQuery='';render();requestAnimationFrame(()=>app.querySelector('#lw82-detail')?.scrollIntoView?.({behavior:'smooth',block:'start'}));return;}
       if(action==='lw82-previous'||action==='lw82-next'){lifeWeeksAge=Math.min(109,Math.max(0,(lifeWeeksAge??lifeAgeAt(localDate()))+(action==='lw82-previous'?-1:1)));lifeWeeksWeek=null;lifeWeeksDraft={};lifeWeeksCalendarHistory=[];render();return;}
       if(action==='lw82-week'){const yr=Number(id),wk=Number(stepId);if(!Number.isInteger(yr)||yr<0||yr>=110)return;const cell=lifeWeekCells(yr,{today:localDate()}).find(x=>x.week===wk);if(!cell)return;lifeWeeksAge=yr;lifeWeeksWeek=wk;lifeWeeksDraft={start:cell.start,end:cell.end,category:'travel'};render();requestAnimationFrame(()=>app.querySelector('#lw82-editor')?.scrollIntoView?.({behavior:'smooth',block:'center'}));return;}
