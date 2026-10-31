@@ -158,6 +158,7 @@ import {morningIntelligenceHeader,morningCreateView,morningInsightsView,addMorni
 import {nutritionHistoryView} from './nutrition-history-v577.js';
 import {nutritionWorkspace4017} from './nutrition-focus-v577594017.js';
 import './nutrition-focus-v577594017.css';
+import './nutrition-entry-inspector-v0581.css';
 import {dreamJournalView,putDreamEntry,deleteDreamEntry,DREAM_KINDS} from './dream-journal-v57743.js';
 import {RECEIPT_GPT_PROMPT,parseReceiptJSONList,receiptInboxView,putReceipts,deleteReceipt} from './receipt-gpt-v57743.js';
 import {setReceiptCategory} from './receipt-categories-v57745.js';
@@ -223,7 +224,7 @@ import {taskSupportPrompt} from './task-gpt-handoff-v57712.js';
 import {TOUCH_KINDS,touchHistoryView,putTouch,deleteTouch,touchQuickView,touchPersonSummary} from './touch-journal-v577.js';
 import {peopleWithTouchMeetings,personWithTouchMeetings} from './touch-contact-projection-v0578.js';
 import './nutrition-touch-v577.css';
-import {TIME_AREAS,FOOD_PRESETS,timeCategoryOptions,timeLabel,ensureJournal,validTimeEntry,timeEntries,putTimeEntry,deleteTimeEntry,addNutrition,addCustomFood,nutritionFoods,nutritionKcalEstimate,nutritionEntries,timeJournalView,nutritionQuickView,nutritionInsightsView,mergeJournalData} from './personal-journal-v5692.js';
+import {TIME_AREAS,FOOD_PRESETS,timeCategoryOptions,timeLabel,ensureJournal,validTimeEntry,timeEntries,putTimeEntry,deleteTimeEntry,addNutrition,addCustomFood,nutritionFoods,nutritionKcalEstimate,nutritionEntries,timeJournalView,nutritionQuickView,nutritionInsightsView,nutritionEntryInspectorView,mergeJournalData} from './personal-journal-v5692.js';
 import './mensa-catalog-v57759402512.css';
 import {mensaOffer,mensaConsumed,mensaTodayButton,logMensaMeal} from './mensa-journal-v57759402512.js';
 import {energyGoalSettings,dayEnergyStatus} from './energy-goal-v575.js';
@@ -259,7 +260,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.80';
+const COMPASS_CLIENT_VERSION='0.5.81';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -313,6 +314,20 @@ let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice
 let saveQueue=Promise.resolve();
 let calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let selectedDay=localDateString(new Date());
+let lastObservedLocalDay=selectedDay;
+let manuallyChosenDay=false;
+function refreshCurrentDayIfNeeded(){
+ const today=localDateString(new Date());if(today===lastObservedLocalDay)return false;
+ if(!manuallyChosenDay&&selectedDay===lastObservedLocalDay){selectedDay=today;calendarMonth=new Date(today+'T12:00:00');todayInspectorOpen=false;}
+ lastObservedLocalDay=today;
+ return true;
+}
+if(typeof document!=='undefined'){
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&refreshCurrentDayIfNeeded()&&state)render();});
+ window.addEventListener('focus',()=>{if(refreshCurrentDayIfNeeded()&&state)render();});
+ if(typeof setInterval==='function')setInterval(()=>{if(refreshCurrentDayIfNeeded()&&state)render();},60000);
+}
+
 const performanceTrace=createPerformanceTrace();
 try{performanceTrace.setEnabled(localStorage.getItem('compass.perf.v57719')==='on');}catch{}
 function performancePanel(){
@@ -2033,7 +2048,7 @@ function vaultScreen(){
  <h1>${hasVault?'Willkommen zurück':'Compass einrichten'}</h1><p>${hasVault?'Dein persönlicher Arbeitsraum ist geschützt.':'Deine Daten bleiben lokal verschlüsselt. Richte eine Passphrase ein.'}</p>
  ${notice?`<div class="alert" role="status">${h(notice)}</div>`:''}
  ${error?`<div class="alert bad" role="alert">${h(error)}</div>`:''}
- <form id="vault-form" autocomplete="off"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" autocomplete="current-password" placeholder="Passphrase" />
+ <form id="vault-form" autocomplete="on"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" autocomplete="current-password" placeholder="Passphrase" />
  ${!hasVault?`<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" required minlength="12" autocomplete="new-password" placeholder="Passphrase wiederholen"/>`:''}
  <button type="submit" class="primary-btn">${hasVault?'Entsperren':'Tresor erstellen'}</button>
  ${!hasVault?`<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup wiederherstellen</label><input id="encrypted-import" type="file" accept="application/json"/>`:''}
@@ -2624,7 +2639,8 @@ function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensa
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
  const content=insightTab==='report'?annualSetupView(state,{...lifeReportSettings,now:today}):insightTab==='intelligence'?insights750Cockpit(state,{today:localDate()}):insightTab==='capacity'?capacityGuardianView(effectiveCapacityState748(state),{today:localDate()})+capacityCalendarView(state,{today:localDate(),now:new Date(),calendarEvents,calendarCoverage,calendarUpdatedAt,calendarConnected:!!(calendarToken&&Date.now()<calendarExpires)||Boolean(state?.calendarArchive?.completed)}):insightTab==='weekly'?weeklyIntelligenceView(state,{today:localDate(),offset:weeklyOffset746})+capacityGuardianTeaser(state,{today:localDate()}):insightTab==='dreamworld'?dreamJournalView(state,{days:dreamDays743,editingId:dreamEditingId743,kind:dreamKind743}):insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?`<div style="margin-bottom:12px"><button type="button" class="t577-tab-shortcut" data-action="t577-open">🫂 Berührung & Nähe erfassen →</button></div>`+feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='timejournal'?timeJournalView(state,{period:timeJournalPeriod,editingId:timeJournalEditId,showForm:timeJournalShowForm,watchActivities:activeActivities(watchSessions,state)})+journalSyncPanel():insightTab==='nutrition'?nutritionWorkspace4017(state,{
    day:today,view:nutritionView712,editingId:nutritionEditId,
-   renderJournal:()=>nutritionInsightsView(state,{period:nutritionPeriod,editingId:nutritionEditId}),
+   renderJournal:()=>nutritionInsightsView(state,{period:nutritionPeriod}),
+   renderEditor:()=>nutritionEntryInspectorView(state,{editingId:nutritionEditId}),
    renderHistory:()=>nutritionHistoryView(state,{period:nutritionPeriod}),
    renderManualDozen:()=>dailyDozenView(state,{day:dailyDozenDay733,today:localDate()}),
    renderSync:()=>journalSyncPanel(),
@@ -2899,6 +2915,7 @@ function compass59FocusDreamField(){
  return true;
 }
 function render(){
+ refreshCurrentDayIfNeeded();
  if(tab!=='shopping')compass57ShoppingTab='list';
  if(state&&compass55Mode==='focus'&&((tab==='insights'&&insightTab!=='dreamworld')||['finance','activity','recovery','progress'].includes(tab))){tab='today';todayInspectorOpen=false;calmNavGroup='';}
  // Mobile modal must remain mounted while open: background sync/health reloads must
@@ -3176,7 +3193,7 @@ function bind() {
   }catch(ex){toast(ex.message,true);}};
  const macroForm=app.querySelector('#meal723-macro-form');
  if(macroForm)macroForm.onsubmit=async ev=>{ev.preventDefault();if(!state)return;const fd=new FormData(macroForm);try{await mutate(st=>{ensureJournal(st).nutritionJournal.macroPrefs=normalizedMacroPreferences({mode:fd.get('mode'),enabled:fd.get('enabled')==='on',updatedAt:stamp()});});toast('Makroorientierung gespeichert.');}catch(ex){toast(ex.message,true);}};
- const foodDetail=app.querySelector('#pj92-food-detail-form');if(foodDetail)foodDetail.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodDetail);journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===fd.get('id'));if(!item)throw Error('Eintrag fehlt.');item.at=new Date(String(fd.get('at'))).toISOString();item.amount=String(fd.get('amount')||'').slice(0,60);item.note=String(fd.get('note')||'').slice(0,500);if(item.foodId==='smoothie-personal')item.recipe=readSmoothieForm(fd);if(PERSONAL_RECIPE_IDS.includes(item.foodId))item.recipe=readPersonalRecipe(item.foodId,fd);item.updatedAt=stamp();});nutritionEditId='';toast('Ernährungseintrag gespeichert.');}catch(ex){toast(ex.message,true);}};
+ const foodDetail=app.querySelector('#pj92-food-detail-form');if(foodDetail)foodDetail.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(foodDetail);journalSyncStatus='lokal';await mutate(s=>{ensureJournal(s);const item=s.nutritionJournal.entries.find(e=>e.id===fd.get('id'));if(!item)throw Error('Eintrag fehlt.');item.at=new Date(String(fd.get('at'))).toISOString();item.amount=String(fd.get('amount')||'').slice(0,60);item.note=String(fd.get('note')||'').slice(0,500);if(item.foodId==='smoothie-personal')item.recipe=readSmoothieForm(fd);if(PERSONAL_RECIPE_IDS.includes(item.foodId))item.recipe=readPersonalRecipe(item.foodId,fd);item.updatedAt=stamp();});nutritionEditId='';render();toast('Ernährungseintrag gespeichert.');}catch(ex){toast(ex.message,true);}};
  const touchEditForm=app.querySelector('#t577-edit-form');if(touchEditForm)touchEditForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(touchEditForm);const dateValue=new Date(String(fd.get('at')));if(!Number.isFinite(dateValue.getTime()))throw Error('Ungültiges Datum.');const personId=String(fd.get('personId')||'');if(personId&&!state?.people?.[personId])throw Error('Person nicht vorhanden.');await mutate(s=>putTouch(s,{id:String(fd.get('id')),kinds:fd.getAll('kinds'),at:dateValue.toISOString(),personId,person:state?.people?.[personId]?.name||'',note:String(fd.get('note')||''),experience:String(fd.get('experience')||'')}));touchEditingId='';toast('Nähe-Eintrag verschlüsselt gespeichert.');}catch(ex){toast(ex.message,true);}};
  const touchCaptureForm=app.querySelector('#t577-capture-form');if(touchCaptureForm)touchCaptureForm.onsubmit=async ev=>{ev.preventDefault();try{
   const fd=new FormData(touchCaptureForm),personId=String(fd.get('personId')||''),when=new Date(String(fd.get('at')));
@@ -3195,7 +3212,7 @@ function bind() {
  if(state)wireSmartTags(app,()=>state);
  if(tab==='finance'&&financePane==='Portfolio'&&krakenChartData?.candles?.length)app.querySelectorAll('.fin39-price-card .fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,krakenChartData.candles,krakenChartSettings));
  if(tab==='finance'&&financePane==='Portfolio'&&flatexChartData?.candles?.length)app.querySelectorAll('.fin41-market-card .fin40-terminal').forEach(el=>wireTechnicalCrosshair(el,flatexChartData.candles,{...flatexChartSettings,currency:flatexChartData.currency}));
-  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=ev=>{ev?.preventDefault?.();const target=el.dataset.tab;if(!target)return;cm930MobileMenuOpen=false;if(target==='today')todayInspectorOpen=false;if(target==='people'){familyRadarJumpPersonId401=null;peopleScope=state&&typeof effectiveContext39==='function'&&effectiveContext39(state).kind==='work'?'work':'all';peopleTab='list';peopleShowAll=false;selectedPersonId=null;}if(target==='forecast')forecastInspectorOpen401=false;if(target==='recovery'){compass55Mode='extended';try{localStorage.setItem(COMPASS55_MODE_KEY,'extended');}catch{}}tab=target;calmNavGroup=['overview','projects','templates','shopping','next','forecast','radar','flagged','hold','someday','recovery'].includes(tab)?'plan':['insights','activity','progress'].includes(tab)?'insights':'';if(tab==='finance')calmNavGroup='finance';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();
+  app.querySelectorAll('[data-tab]').forEach(el=>el.onclick=ev=>{ev?.preventDefault?.();const target=el.dataset.tab;if(!target)return;cm930MobileMenuOpen=false;if(target==='today'){todayInspectorOpen=false;selectedDay=localDateString(new Date());calendarMonth=new Date(selectedDay+'T12:00:00');manuallyChosenDay=false;}if(target==='people'){familyRadarJumpPersonId401=null;peopleScope=state&&typeof effectiveContext39==='function'&&effectiveContext39(state).kind==='work'?'work':'all';peopleTab='list';peopleShowAll=false;selectedPersonId=null;}if(target==='forecast')forecastInspectorOpen401=false;if(target==='recovery'){compass55Mode='extended';try{localStorage.setItem(COMPASS55_MODE_KEY,'extended');}catch{}}tab=target;calmNavGroup=['overview','projects','templates','shopping','next','forecast','radar','flagged','hold','someday','recovery'].includes(tab)?'plan':['insights','activity','progress'].includes(tab)?'insights':'';if(tab==='finance')calmNavGroup='finance';if(tab==='health'){tab='insights';insightTab='sources';}if(tab==='places'){tab='insights';insightTab='places';insightPeriod='all';}notice='';error='';render();
   // Explicit navigation is allowed to refresh already-opted-in contacts, but
   // never turns on sharing or makes Today wait for an extra network request.
   if(tab==='people'&&state?.peopleSyncEnabled===true&&state?.privateDeviceMirror?.key&&authToken&&navigator.onLine&&Object.keys(state.people||{}).length===0&&journalSyncStatus!=='ok'){
@@ -3285,7 +3302,7 @@ function bind() {
       syncQuickPublicFromState();restoreCalendarFromVault(state);
       compass55Mode='focus';
       try{localStorage.setItem(COMPASS55_MODE_KEY,'focus');}catch{}
-      if(!captureAfterUnlock&&!bootView){tab='today';todayInspectorOpen=false;calmNavGroup='';}
+      if(!captureAfterUnlock&&!bootView){tab='today';selectedDay=localDateString(new Date());calendarMonth=new Date(selectedDay+'T12:00:00');lastObservedLocalDay=selectedDay;manuallyChosenDay=false;todayInspectorOpen=false;calmNavGroup='';}
       if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
       resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}finally{performanceTrace.end('Tresor entsperren',tab,unlockMeasurement);}
   };
@@ -4261,7 +4278,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
   const day=id==='today'?localDate():previousLocalDay(selectedDay);
   const next=id==='next'?new Date(Date.parse(selectedDay+'T12:00:00Z')+86400000).toISOString().slice(0,10):day;
   if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(next))return;
-  selectedDay=next;todayInspectorOpen=false;calendarMonth=new Date(next+'T12:00:00');render();return;
+  selectedDay=next;manuallyChosenDay=id!=='today';todayInspectorOpen=false;calendarMonth=new Date(next+'T12:00:00');render();return;
  }
  if(action==='balance-view38'){
   if(!['all','health','life'].includes(id))return;
@@ -4494,7 +4511,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     mensaMessage=`${result.added} neue Menüs · ${result.updated} aktualisiert · ${result.unchanged} unverändert. Verschlüsselt gespeichert.`;render();toast(mensaMessage);}
   catch(ex){toast('Mensa-Import: '+ex.message,true);}return;
  }
- if(action==='ni712-view'){if(!['journal','nutrients','timing','trends','connections','fats','daily-dozen','anti-aging','phyto','mensa'].includes(id))return;nutritionView712=id;if(id==='nutrients')nutritionDay712=localDateString(new Date());render();return;}
+ if(action==='ni712-view'){if(!['journal','nutrients','timing','trends','connections','fats','daily-dozen','anti-aging','phyto','mensa'].includes(id))return;nutritionView712=id;if(id!=='journal')nutritionEditId='';if(id==='nutrients')nutritionDay712=localDateString(new Date());render();return;}
  // Nutrition 3: independent, read-only scatter series and light-weight subpanel updates.
  if(action==='ni727-input'){
   if(!['lastMeal','kcal','protein','caffeine'].includes(id))return;
@@ -5460,7 +5477,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       captureOverlayOpen=true;render();return;
     }
     if(action==='capture-close'||action==='capture-close-backdrop'){captureOverlayOpen=false;render();return;}
-    if(action==='select-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;selectedDay=id;todayInspectorOpen=false;calendarMonth=new Date(`${id}T12:00:00`);render();return;}
+    if(action==='select-day'){if(!/^\d{4}-\d{2}-\d{2}$/.test(id||''))return;selectedDay=id;manuallyChosenDay=id!==localDateString(new Date());todayInspectorOpen=false;calendarMonth=new Date(`${id}T12:00:00`);render();return;}
     if(action==='reset-today'){selectedDay=localDateString(new Date());todayInspectorOpen=false;calendarMonth=new Date();render();return;}
     if(action==='month-prev'||action==='month-next'){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+(action==='month-next'?1:-1),1);render();return;}
     if(action==='weather-load'){await loadWeather(weather.city||'Graz');return;}
@@ -6157,6 +6174,7 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'&&morningPlayerOpen){ev.preventDefault();morningCloseOverlay();render();return;}
   if(ev.key==='Escape'&&feelingOverlayOpen){ev.preventDefault();feelingOverlayOpen=false;render();return;}
   if(ev.key==='Escape'&&captureOverlayOpen){ev.preventDefault();captureOverlayOpen=false;render();return;}
+  if(ev.key==='Escape'&&nutritionEditId&&tab==='insights'&&insightTab==='nutrition'){ev.preventDefault();nutritionEditId='';render();return;}
   if(!typing&&!ev.ctrlKey&&!ev.altKey&&!ev.metaKey&&ev.key.toLowerCase()==='n'&&state){ev.preventDefault();runAction('capture-focus');}
 });
 window.addEventListener('online',()=>{render();if(authToken){scheduleSync(0);scheduleJournalSync(0);}});

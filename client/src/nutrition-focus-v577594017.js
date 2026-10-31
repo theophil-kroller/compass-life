@@ -50,7 +50,7 @@ function recentRows(model){
  const rows=model.entries.slice(-6).reverse();
  return `<section class="nf4017-recent"><div class="nf4017-section-heading"><h3>Zuletzt erfasst</h3><button type="button" class="nf4017-link" data-action="pj92-nutrition-add">+ Lebensmittel erfassen</button></div>${rows.length?`<div class="nf4017-recent-list">${rows.map(e=>`<button type="button" class="nf4017-recent-row" data-action="pj92-food-edit" data-id="${h(e.id)}" aria-label="${h(e.title)} bearbeiten"><span class="nf4017-recent-emoji" aria-hidden="true">${h(e.emoji)}</span><span class="nf4017-recent-title"><strong>${h(e.title)}</strong><small>${e.time.toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'})}${e.amount?' · '+h(e.amount):''}</small></span><span class="nf4017-recent-energy">${e.known?`≈ ${format(e.kcal)} kcal`:'kcal offen'}</span></button>`).join('')}</div>`:'<p class="nf4017-empty">Dein erster Eintrag erscheint direkt hier.</p>'}</section>`;
 }
-export function nutritionWorkspace4017(state,{day,view='journal',editingId='',renderSection,renderHistory,renderJournal,renderManualDozen,renderSync,renderMensa}={}){
+export function nutritionWorkspace4017(state,{day,view='journal',editingId='',renderSection,renderHistory,renderJournal,renderEditor,renderManualDozen,renderSync,renderMensa}={}){
  if(typeof renderSection!=='function'||typeof renderHistory!=='function'||typeof renderJournal!=='function'||typeof renderManualDozen!=='function'||typeof renderSync!=='function')throw Error('Nutrition .40.17: missing view renderers');
  const active=detailViews.includes(view)?'timing':view;
  const nav=`<nav class="nf4017-nav" aria-label="Ernährung: fünf Hauptbereiche">${mainTabs.map(([id,label])=>`<button type="button" data-action="ni712-view" data-id="${id}" class="${active===id?'selected':''}" aria-current="${active===id?'page':'false'}">${label}</button>`).join('')}</nav>`;
@@ -58,7 +58,7 @@ export function nutritionWorkspace4017(state,{day,view='journal',editingId='',re
  let body='';
  if(active==='journal'){
   const model=nutritionFocusDay4017(state,day);
-  body=`${nutritionDotChart4017(model)}${summaryCards(model)}${recentRows(model)}<details class="nf4017-detail" ${editingId?'open':''}><summary>Einträge bearbeiten und Tagebuchdetails</summary>${renderJournal()}</details><details class="nf4017-detail"><summary>Bisherige kcal-Verlaufsgrafiken anzeigen</summary>${renderHistory()}</details>`;
+  body=`${nutritionDotChart4017(model)}${summaryCards(model)}${recentRows(model)}<details class="nf4017-detail"><summary>Einträge bearbeiten und Tagebuchdetails</summary>${renderJournal()}</details><details class="nf4017-detail"><summary>Bisherige kcal-Verlaufsgrafiken anzeigen</summary>${renderHistory()}</details>`;
  }else if(active==='daily-dozen'){
   body=`<p class="nf4017-explain">Tagesverteilung deiner dokumentierten Lebensmittel. Fehlende Einträge sind keine Aussage über tatsächliche Ernährung.</p>${renderSection('daily-dozen')}<details class="nf4017-detail"><summary>Manuelle Checkliste und Korrekturen</summary>${renderManualDozen()}</details>`;
  }else if(active==='nutrients'){
@@ -68,5 +68,5 @@ export function nutritionWorkspace4017(state,{day,view='journal',editingId='',re
  }else{
   body=`<nav class="nf4017-subnav" aria-label="Erweiterte Ernährungsanalysen">${trendTabs.map(([id,label])=>`<button type="button" data-action="ni712-view" data-id="${id}" class="${view===id?'selected':''}" aria-pressed="${view===id}">${label}</button>`).join('')}</nav>${renderSection(view)}`;
  }
- return `<section class="nf4017-workspace">${header}${nav}<div class="nf4017-body">${body}</div>${renderSync()}</section>`;
+ return `<section class="nf4017-workspace">${header}${nav}<div class="nf4017-body">${body}</div>${view==='journal'&&typeof renderEditor==='function'?renderEditor():''}${renderSync()}</section>`;
 }

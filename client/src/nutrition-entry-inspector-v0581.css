@@ -1,0 +1,17 @@
+/* Compass 0.5.81: nutrition inspector, responsive and keyboard-safe. */
+.ni81-inspector-host{position:fixed;z-index:1500;inset:0;pointer-events:none}
+.ni81-inspector-backdrop{position:absolute;inset:0;border:0;background:rgba(4,24,19,.12);pointer-events:auto;cursor:default}
+.ni81-inspector{position:absolute;right:0;top:0;bottom:0;width:min(405px,calc(100vw - 24px));box-sizing:border-box;padding:24px 21px max(20px,env(safe-area-inset-bottom));background:var(--surface,#fff);color:var(--ink,#183e35);border-left:1px solid #dce8e1;box-shadow:-16px 0 50px rgba(16,45,35,.14);overflow:auto;overscroll-behavior:contain;pointer-events:auto;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
+.ni81-inspector-heading{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;padding-bottom:13px;border-bottom:1px solid #dce8e1}
+.ni81-inspector-heading small{font-size:.63rem;font-weight:750;letter-spacing:.13em;color:#719082}
+.ni81-inspector-heading h3{font-size:1.1rem;margin:6px 0 0;line-height:1.35;overflow-wrap:anywhere}
+.ni81-inspector-close{border:1px solid #d5e2d8;border-radius:10px;background:transparent;color:inherit;font-size:1.6rem;min-width:38px;min-height:38px;cursor:pointer}
+.ni81-inspector-form{display:flex;flex-direction:column;gap:13px}
+.ni81-inspector-form label{display:flex;flex-direction:column;gap:6px;font-weight:650;font-size:.82rem}
+.ni81-inspector-form input,.ni81-inspector-form textarea,.ni81-inspector-form select{font:inherit;line-height:1.3;color:inherit;background:var(--surface,#fff);border:1px solid #cbdcd1;border-radius:10px;padding:11px;min-height:42px;box-sizing:border-box;width:100%;min-width:0;max-width:100%}
+.ni81-inspector-form textarea{resize:vertical}
+.ni81-inspector-actions{display:flex;gap:9px;position:sticky;bottom:-24px;padding:12px 0;background:var(--surface,#fff)}
+.ni81-inspector-actions button{flex:1;min-height:42px;cursor:pointer}
+.ni81-inspector-hint{font-size:.72rem;color:#71877a;margin:0;line-height:1.5}
+@media(max-width:650px){.ni81-inspector-backdrop{background:rgba(4,24,19,.28)}.ni81-inspector{width:min(100vw,430px);padding-top:max(16px,env(safe-area-inset-top));border-radius:16px 0 0 16px}}
+@media(prefers-reduced-motion:reduce){.ni81-inspector{transition:none}}

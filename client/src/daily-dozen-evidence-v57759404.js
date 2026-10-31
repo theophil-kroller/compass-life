@@ -69,6 +69,11 @@ export function dailyDozenIngredientEvidence404(state,day){
    } else if(id==='bean-salad-personal'){
     add('beans',(by.beans||0)/90,'Käferbohnensalat · Bohnen',sourceId);
     const spice=(by.garlic||0)+(by.oregano||0);if(spice>0){spiceGrams+=spice;notes.spices.push(`Käferbohnensalat · Kräuter: ~${round(spice)} g`);sources.push({id:sourceId,category:'spices',grams:round(spice),source:'Käferbohnensalat · Kräuter'});}
+   } else if(id==='kitcheri-personal'){
+    // Dry mung dal is NOT the same weight as cooked legumes; conservative ~2.3x hydration.
+    add('beans',Math.min(2,(by['mung-dal']||0)*2.3/90),'Kitcheri · Mung Dal (gekochte Menge geschätzt)',sourceId);
+    add('vegetables',((by.carrot||0)+(by.zucchini||0))/80,'Kitcheri · Karotte & Zucchini',sourceId);
+    const spice=(by.ginger||0)/10+(by.turmeric||0)+(by.cumin||0);if(spice>0){spiceGrams+=spice;notes.spices.push(`Kitcheri · Gewürze (Trockenäquivalent geschätzt): ~${round(spice)} g`);sources.push({id:sourceId,category:'spices',grams:round(spice),source:'Kitcheri · Gewürze'});}
    } else if(id==='fried-egg-personal'){
     const spice=(by.turmeric||0)+(by.chili||0);if(spice>0){spiceGrams+=spice;notes.spices.push(`Spiegelei · Kurkuma/Chili: ~${round(spice)} g`);sources.push({id:sourceId,category:'spices',grams:round(spice),source:'Spiegelei · Kurkuma/Chili'});}
    }

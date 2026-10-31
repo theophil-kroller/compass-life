@@ -77,6 +77,8 @@ function init(){
       </div>
      </section>`;
     shell.style.setProperty('--ars22-bg',`url("${ASSET}")`);
+    const adaptUnlockViewport=()=>{if(!shell)return;const vv=window.visualViewport;if(!vv)return;shell.style.setProperty('--ars81-vv-height',`${Math.round(vv.height)}px`);shell.style.setProperty('--ars81-vv-top',`${Math.round(vv.offsetTop)}px`);};
+    adaptUnlockViewport();window.visualViewport?.addEventListener('resize',adaptUnlockViewport);window.visualViewport?.addEventListener('scroll',adaptUnlockViewport);
     shell.style.setProperty('--ars22-desktop-bg',`url("${DESKTOP_MOONLIT}")`);
     document.body.append(shell);
     app.inert=true;

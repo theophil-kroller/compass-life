@@ -33,6 +33,16 @@ const RAW=Object.freeze({
   ing('miso','Miso-Paste · 1 EL',15,{kcal:195,protein:12,carbs:26,sugar:5,fat:6,saturated:1,fiber:5,salt:11.2},'1 EL Miso ≈ 15 g; Salzgehalt variiert stark mit Sorte/Marke'),
   ing('basil-pesto','Basilikumpesto · 1 EL',15,{kcal:475,protein:5,carbs:6,sugar:2,fat:47,saturated:8,salt:2.5},'1 EL Pesto ≈ 15 g; Öl-/Käseanteil und Salz variieren stark')
  ]},
+ 'kitcheri-personal':{name:'Kitcheri · Mung Dal, Reis & Gemüse',icon:'🍛',ingredients:[
+  ing('mung-dal','Gelbes Mung Dal · trocken',50,{kcal:347,protein:24,carbs:62.6,fiber:16.3,fat:1.2},'Generische getrocknete Mungbohnen; Portionsmenge vorläufig'),
+  ing('basmati-rice','Basmatireis · trocken',45,{kcal:365,protein:7.1,carbs:80,fiber:1.3,fat:.7},'Generischer weißer Basmatireis; kein Vollkorn'),
+  ing('carrot','Karotten',70,{kcal:41,protein:.93,carbs:9.6,fiber:2.8,fat:.2},'Generische Karotten'),
+  ing('zucchini','Zucchini',70,{kcal:17,protein:1.2,carbs:3.1,fiber:1,fat:.3},'Generische Zucchini'),
+  ing('oil','Ghee oder Pflanzenöl · geschätzt',8,{kcal:884,fat:100,saturated:35},'Schätzung für ein typisches Rezept; Ghee/Pflanzenöl stark unterschiedlich'),
+  ing('ginger','Ingwer, frisch',5,{kcal:80,protein:1.8,carbs:17.8,fiber:2,fat:.75},'Generischer Ingwer'),
+  ing('turmeric','Kurkuma, gemahlen',1,{kcal:312,protein:9.68,carbs:67.1,fiber:22.7,fat:3.25},'Generische Kurkuma'),
+  ing('cumin','Kreuzkümmel, gemahlen',1,{kcal:375,protein:17.8,carbs:44.2,fiber:10.5,fat:22.3},'Generischer Kreuzkümmel')
+ ]},
  'fried-egg-personal':{name:'Mein Spiegelei · Olivenöl, Kala Namak, Kurkuma, Chili',icon:'🍳',ingredients:[
   ing('egg','Hühnerei · 1 Stück ohne Schale',55,{kcal:143,protein:12.56,carbs:.72,fat:9.51,saturated:3.126,cholesterol:372,vitaminB12:.89,vitaminD:2,selenium:30.7},'USDA · ganzes rohes Ei; Fettaufnahme beim Braten hängt von Ölmenge ab'),
   ing('olive-oil','Natives Olivenöl extra · zum Braten',5,{kcal:884,fat:100,saturated:13.8,mono:73,poly:10.5,vitaminE:14.35},'USDA · Olivenöl; tatsächlich aufgenommenes Öl nicht gemessen'),

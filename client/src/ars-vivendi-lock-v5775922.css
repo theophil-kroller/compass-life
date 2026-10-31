@@ -29,3 +29,11 @@ html.ars22-locked{overflow:hidden!important;overscroll-behavior:none}
 @media(prefers-reduced-motion:no-preference){.ars22-panel{animation:ars22-reveal .24s ease-out both}@keyframes ars22-reveal{from{opacity:0}to{opacity:1}}}
 
 @media(max-width:719px){.ars22-art{width:100vw;height:100dvh;max-height:none;max-width:none}.ars22-image{object-fit:cover;object-position:center}}
+
+/* 0.5.81: keep the real password form above virtual keyboards / password-manager trays. */
+@media(max-width:719px){
+ .ars22-panel{position:fixed;inset:auto 0 auto 0;top:var(--ars81-vv-top,0px);height:var(--ars81-vv-height,100dvh);max-height:var(--ars81-vv-height,100dvh);align-items:center;justify-content:center;padding:12px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));overscroll-behavior:contain}
+ .ars22-sheet{width:min(440px,100%);max-height:calc(var(--ars81-vv-height,100dvh) - 24px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+ .ars22-sub{margin-bottom:12px}
+ .ars22-sheet:focus-within{scroll-margin-block:12px}
+}

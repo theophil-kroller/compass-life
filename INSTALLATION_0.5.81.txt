@@ -1,0 +1,10 @@
+COMPASS LIFE 0.5.81
+Base GitHub repository: theophil-kroller/compass-life
+Base main commit: 141d5e4d82e084650047690424b60a637f95718f (0.5.80)
+
+PATCH: Extract, preserve folder structure, and upload only changed files to GitHub main.
+FULL SOURCE: Extract, preserve folder structure, and upload all files to the repository.
+Use only one package. Do not delete encrypted vault files, browser storage, or IndexedDB.
+Check GitHub Actions 'Deploy Compass Web' after pushing.
+The package changes source code, not your previously logged food records.
+Vite production build has NOT been verified locally; required npm dependencies are unavailable.

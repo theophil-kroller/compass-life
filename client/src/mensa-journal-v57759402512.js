@@ -1,5 +1,6 @@
 /** Minimal, no-network local mensa journal & Today helpers. Heavy seed/GPT UI loads only in Insights. */
 import {addNutrition,ensureJournal} from './personal-journal-v5692.js';
+import {isAustrianWorkday} from './waiting-followup-v57715.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dateOK=d=>/^20\d{2}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(d)&&new Date(d+'T12:00:00Z').toISOString().slice(0,10)===d;
 const stableId=date=>`mensa-stremayrgasse-study-${date}`;
@@ -39,11 +40,12 @@ export function logMensaMeal(state,date,at=new Date().toISOString()){
 const viennaDay=(date=new Date())=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Vienna',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
 const daysAhead=(day,count=5)=>Array.from({length:count},(_,i)=>{const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10);});
 export function mensaResearchReminder(state,today=viennaDay()){
- const weekdays=daysAhead(today,10).filter(d=>{const w=new Date(d+'T12:00:00Z').getUTCDay();return w!==0&&w!==6;}).slice(0,3);
+ const weekdays=daysAhead(today,12).filter(isAustrianWorkday).slice(0,3);
  const missing=weekdays.filter(d=>!mensaOffer(state,d));return {missing,needsResearch:missing.length>0};
 }
 export function mensaTodayButton(state,now=new Date()){
  const day=viennaDay(now),hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Vienna',hour:'2-digit',hourCycle:'h23'}).format(now)),offer=mensaOffer(state,day);
+ if(!isAustrianWorkday(day))return ''; // On Saturdays, Sundays and public holidays, no Mensa reminder.
  const eaten=mensaConsumed(state,day);if(eaten)return '';const reminder=mensaResearchReminder(state,day);
  // Compact GTD-safe markup. No imports, no network requests, no automatic journal entries.
  if(hour>=11&&hour<14&&offer)return `<div class="mensa-today-chip" aria-label="Mensa Rooftop Mittagessen"><span>🥗 <b>Mensa heute</b> · ${esc(offer.title)}</span><button type="button" data-action="mensa-eat-today">Study-Teller gegessen ✓</button></div>`;
