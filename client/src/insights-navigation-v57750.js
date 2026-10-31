@@ -8,7 +8,7 @@ export const INSIGHTS750_GROUPS=Object.freeze([
  {id:'health',title:'Gesundheit & Körper',icon:'heart',default:'sleep',tabs:[
   ['sleep','Schlaf'],['energy','Body Battery'],['stress','Stress'],['body','Körperanalyse'],['strength','Krafttraining'],['nutrition','Ernährung'],['activity','Aktivitäten']]},
  {id:'life',title:'Leben & Orte',icon:'compass',default:'feelings',tabs:[
-  ['feelings','Gefühlswelt'],['touch','Berührung & Nähe'],['dreamworld','Traumwelt'],['places','Orte & Weltkarte']]},
+  ['feelings','Gefühlswelt'],['touch','Berührung & Nähe'],['dreamworld','Traumwelt'],['lifeweeks','My Life in Weeks'],['places','Orte & Weltkarte']]},
  {id:'time',title:'Zeit & Produktivität',icon:'clock',default:'worktime',tabs:[
   ['worktime','Arbeitszeit'],['timejournal','Zeitjournal'],['focus','Produktivität'],['habits','Habits'],['progress','Fortschritt']]},
  {id:'sources',title:'Datenquellen',icon:'settings',default:'sources',tabs:[['sources','Datenquellen']]}

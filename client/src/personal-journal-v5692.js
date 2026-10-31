@@ -351,6 +351,7 @@ function mergeTouchRecords(a={},b={}){const map=new Map();for(const e of [...(a?
 import {mergeFamilyRadar37} from './family-planning-v5775937.js';
 import {mergeHabitTimeSessions} from './habit-time-v57759402525.js';
 import {mergeFinanceMobileDecisions} from './finance-mobile-decisions-v0579.js';
+import {mergeLifeWeekEvents} from './life-weeks-v0582.js';
 export function mergeJournalData(local,remote){
  // Versioned per-ID merge; a remote device must never erase a newer local entry.
  const lc=local&&typeof local==='object'?local:{},rc=remote&&typeof remote==='object'?remote:{};
@@ -372,6 +373,7 @@ export function mergeJournalData(local,remote){
   taskInspiration:mergeInspirationEntries(lc.taskInspiration,rc.taskInspiration),
   habitTimeSessions:mergeHabitTimeSessions(lc.habitTimeSessions,rc.habitTimeSessions),
   financeMobileDecisions:mergeFinanceMobileDecisions(lc.financeMobileDecisions,rc.financeMobileDecisions),
+  lifeWeekEvents:mergeLifeWeekEvents(lc.lifeWeekEvents,rc.lifeWeekEvents),
   makkoHoSessions:byId(lc.makkoHoSessions,rc.makkoHoSessions),
   strengthGuidedSessions:byId(lc.strengthGuidedSessions,rc.strengthGuidedSessions),
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),

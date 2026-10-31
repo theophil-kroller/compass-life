@@ -1,0 +1,21 @@
+{
+  "version": "0.5.82",
+  "base_commit": "ebaf98adaa34a82bbdbb495ef7913257204e8836",
+  "changed_files": [
+    "INSTALLATION_0.5.82.txt",
+    "RELEASE_0.5.82.md",
+    "client/package.json",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/insights-navigation-v57750.js",
+    "client/src/life-weeks-v0582.css",
+    "client/src/life-weeks-v0582.js",
+    "client/src/main-full-v57759402510.js",
+    "client/src/personal-journal-v5692.js",
+    "package.json",
+    "tests/compass-0582-life-weeks.test.mjs",
+    "worker/package.json"
+  ],
+  "removed_files": [],
+  "full_file_count": 1314,
+  "baseline_file_count": 1309
+}

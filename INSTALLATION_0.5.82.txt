@@ -1,0 +1,24 @@
+Compass Life 0.5.82 · ARS VIVENDI / MY LIFE IN WEEKS
+
+Verbindliche GitHub-Ausgangsbasis: main / ebaf98adaa34a82bbdbb495ef7913257204e8836 (0.5.81).
+
+PATCH: Nur benutzen, wenn der GitHub-Stand exakt auf dem genannten Commit basiert.
+Dateien des ZIPs in die jeweiligen Pfade des GitHub-Repositories hochladen.
+FULL SOURCE: kompletter Quellstand, falls der Repository-Stand abweicht.
+PATCH und FULL SOURCE niemals gleichzeitig hochladen.
+
+Neuer Menüpunkt: Insights → Leben & Orte → My Life in Weeks.
+Lebensjahr ab 28.06.1983; exakte Monatswechsel inkl. kurzer Juni-Phase;
+Neujahr gold markiert; 80 Jahre Grundbereich; Bonus 80–99 und 100+.
+Eintrag: Jahreszeile anklicken oder Woche antippen; Zeitraum, Kategorie,
+Titel und Ort angeben; speichern. Keine Wochen manuell zählen.
+Google Kalender: nur bestehendes verschlüsseltes Archiv gelesen;
+für ältere Jahre freiwillig eine gezielte Google-Calendar-Abfrage über die
+bestehende Leseberechtigung starten. Vor Import immer bestätigen.
+Ereignisse liegen verschlüsselt im Compass-Tresor und sind im persönlichen
+verschlüsselten Journalabgleich enthalten. Beide Geräte aktualisieren.
+
+Kein neues Datenbankschema, keine bestehenden Daten löschen.
+ACHTUNG: Eine echte Vite-Produktionskompilierung wurde lokal nicht erreicht,
+weil in der Umgebung vite/npm-Abhängigkeiten fehlen. Vor Produktivnutzung
+GitHub Actions Build & Deploy prüfen.
