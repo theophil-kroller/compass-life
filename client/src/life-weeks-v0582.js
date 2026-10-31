@@ -14,6 +14,20 @@ export const LIFE_EVENT_CATEGORIES=Object.freeze([
  ['volunteer','Ehrenamt','#8882b6','✧'],
  ['other','Besondere Erlebnisse','#879b8e','●']
 ]);
+
+/** Week-fill colors encode EXPERIENCES, not long-running curriculum/career/relationship periods. */
+export const LIFE_EXPERIENCE_CATEGORIES=Object.freeze(['travel','abroad','family','other']);
+export const LIFE_PHASE_CATEGORIES=Object.freeze(['relationship','education','learning','work','career','volunteer']);
+export const LIFE_MILESTONE_CATEGORY='milestone';
+export function lifeWeekVisualLayers(cell){
+ const events=(cell?.events||[]).filter(e=>!e.deleted);
+ const experiences=[...new Set(events.filter(e=>LIFE_EXPERIENCE_CATEGORIES.includes(e.category)).map(e=>e.category))];
+ const phases=[...new Set(events.filter(e=>LIFE_PHASE_CATEGORIES.includes(e.category)).map(e=>e.category))];
+ const milestone=events.some(e=>(e.category===LIFE_MILESTONE_CATEGORY && e.start>=cell.start && e.start<=cell.end) ||
+  (e.category==='education' && !e.ongoing && e.endPrecision==='month' && /(?:master|bachelor|msc|bsc|diploma|zertifikat|certificate|certified|cas)/i.test(e.title||'')
+   && !/Nur Jahresangabe/i.test(e.note||'') && e.end>=cell.start && e.end<=cell.end));
+ return {experiences,phases,milestone};
+}
 const DAY=86400000,RE=/^\d{4}-\d{2}-\d{2}$/;
 const dateOf=s=>{if(typeof s!=='string'||!RE.test(s))return NaN;const d=Date.parse(s+'T00:00:00Z');return Number.isFinite(d)&&new Date(d).toISOString().slice(0,10)===s?d:NaN;};
 const iso=t=>new Date(t).toISOString().slice(0,10);
@@ -142,15 +156,20 @@ export function lifeZoomSizing(zoom,years,viewportHeight=900){
 }
 export const lifeYearTier=age=>age>=100?'star':age>=90?'gold':age>=80?'silver':age>=70?'bronze':'base';
 function markers(age,withLabels=false){const list=lifeMonthMarkers(age);return list.filter(x=>!x.start).map(x=>`<span class="lw82-month-line${x.newYear?' lw82-year-line':''}" style="left:${x.pct.toFixed(4)}%" title="${esc(x.date)} · ${x.newYear?'Neujahr':'Monatsanfang'}"></span>${withLabels?`<span class="lw82-month-label${x.newYear?' lw82-jan':''}${x.date.slice(5,10)==='07-01'?' lw82-july':''}" style="left:${x.pct.toFixed(4)}%" title="${esc(x.date)}">${esc(x.label)}</span>`:''}`).join('');}
-function square(cell){const cs=cell.events.filter(e=>e.category!=='relationship').map(e=>color(e.category));const bg=cs.length===1?`background:${cs[0]};`:cs.length>1?`background:linear-gradient(90deg,${cs[0]} 0 50%,${cs[1]} 50%);`:'';
- const cls=cs.length?' is-event':cell.status==='past'?' is-past':cell.status==='current'?' is-now':' is-future';const tip=`${fmt(dateOf(cell.start))} – ${fmt(dateOf(cell.end))}${cell.days<7?' · Teilwoche':''}${cell.events.length?' · '+cell.events.map(e=>e.title).join(' / '):''}`;
- return `<button type="button" class="lw82-week${cls}${cell.status==='current'?' is-current':''}" data-lw82-week="${cell.age}:${cell.week}" title="${esc(tip)}" aria-label="Lebensjahr ${cell.age}, Woche ${cell.week}: ${esc(tip)}" style="${bg}"></button>`;
+function square(cell){
+ const layers=lifeWeekVisualLayers(cell),cs=layers.experiences.map(color);
+ const bg=cs.length===1?`background:${cs[0]};`:cs.length>1?`background:linear-gradient(90deg,${cs.map((c,i)=>`${c} ${i*100/cs.length}% ${(i+1)*100/cs.length}%`).join(',')});`:'';
+ const cls=cs.length?' is-event':cell.status==='past'?' is-past':cell.status==='current'?' is-now':' is-future';
+ const tip=`${fmt(dateOf(cell.start))} – ${fmt(dateOf(cell.end))}${cell.days<7?' · Teilwoche':''}${cell.events.length?' · '+cell.events.map(e=>e.title).join(' / '):''}`;
+ return `<button type="button" class="lw82-week${cls}${layers.milestone?' lw85-has-milestone':''}${cell.status==='current'?' is-current':''}" data-lw82-week="${cell.age}:${cell.week}" title="${esc(tip)}" aria-label="Lebensjahr ${cell.age}, Woche ${cell.week}: ${esc(tip)}" style="${bg}">${layers.milestone?'<span class="lw85-milestone-star" aria-hidden="true">★</span>':''}</button>`;
 }
 const eventDisplay=e=>`<div class="lw82-event" style="--lw82-event:${color(e.category)}"><div><strong>${esc(e.title)}</strong><small>${esc(lifePeriod(e))} · ${esc(name(e.category))}${e.location?' · '+esc(e.location):''}${e.organization?' · '+esc(e.organization):''}${e.person?' · '+esc(e.person):''}</small></div><button type="button" class="secondary-btn" data-action="lw82-edit" data-id="${esc(e.id)}">Bearbeiten</button></div>`;
-function lifeRelationshipRibbons(age,events,today){
- const r=lifeYearRange(age),duration=r.endMs-r.startMs,relationships=events.filter(e=>e.category==='relationship'&&lifeEventActive(e,today)&&dateOf(e.start)<r.endMs&&dateOf(lifeEventEnd(e,today))>=r.startMs).slice(0,3);
- return relationships.map((e,i)=>{const a=Math.max(r.startMs,dateOf(e.start)),b=Math.min(r.endMs,dateOf(lifeEventEnd(e,today))+DAY),start=100*(a-r.startMs)/duration,width=100*(b-a)/duration;
-  return `<span class="lw84-relationship-ribbon" style="left:${start.toFixed(3)}%;width:${width.toFixed(3)}%;bottom:${i*2.5}px" title="${esc((e.person||e.title)+' · '+lifePeriod(e))}"></span>`;
+function lifePhaseRibbons(age,events,today){
+ const r=lifeYearRange(age),duration=r.endMs-r.startMs;
+ const bands=[['relationship',0,'#D3ADC0'],['education',1,'#9FC8BF'],['learning',1,'#9FC8BF'],['work',2,'#E2C3AB'],['career',2,'#E2C3AB'],['volunteer',3,'#B9B4D5']];
+ return (events||[]).filter(e=>LIFE_PHASE_CATEGORIES.includes(e.category)&&lifeEventActive(e,today)&&dateOf(e.start)<r.endMs&&dateOf(lifeEventEnd(e,today))>=r.startMs).map(e=>{
+  const [_,lane,hex]=bands.find(x=>x[0]===e.category),a=Math.max(r.startMs,dateOf(e.start)),b=Math.min(r.endMs,dateOf(lifeEventEnd(e,today))+DAY),left=100*(a-r.startMs)/duration,width=100*(b-a)/duration;
+  return `<span class="lw85-phase-ribbon lw85-phase-${e.category}${e.category==='relationship'?' lw84-relationship-ribbon':''}" style="left:${left.toFixed(3)}%;width:${width.toFixed(3)}%;bottom:${lane*1.6}px;background:${hex}" title="${esc((e.person||e.organization||e.title)+' · '+lifePeriod(e))}"></span>`;
  }).join('');
 }
 function lifeTimelineLanes(events,range,today){
@@ -171,7 +190,7 @@ export function lifeWeeksView(state,{today=new Date().toLocaleDateString('sv-SE'
  const thisYear=focus===null?Math.min(109,ageNow??43):Math.max(0,Math.min(109,focus)),range=lifeYearRange(thisYear),events=all.filter(e=>Number.isFinite(dateOf(e.start))&&Number.isFinite(dateOf(lifeEventEnd(e,today)))&&dateOf(e.start)<range.endMs&&dateOf(lifeEventEnd(e,today))>=range.startMs).sort((a,b)=>a.start.localeCompare(b.start));
  const dates=Array.from({length:star?110:bonus?100:80},(_,i)=>i),lastWeek=ageNow===null?null:lifeWeekCells(ageNow,{today})?.find(w=>w.status==='current');
  const count=all.filter(e=>dateOf(e.start)<=dateOf(today)).length,metrics=lifeElapsedMetrics(today),currentZoom=normalizeLifeZoom(matrixZoom);
- const rows=dates.map(age=>{const cells=lifeWeekCells(age,{today,events:all});return `<div class="lw82-row lw82-${lifeYearTier(age)}${age%7===0?' lw83-cycle-start':''}${age%5===0||age===ageNow?' lw83-labeled':''}" data-age="${age}"><button type="button" class="lw82-row-label" data-action="lw82-year" data-id="${age}" title="Lebensjahr ${age+1} öffnen">${String(1983+age)}<span>/ ${String(1984+age).slice(-2)}</span><small>${age} J.</small></button><div class="lw82-row-grid">${cells.map(square).join('')}${markers(age)}${lifeRelationshipRibbons(age,all,today)}</div></div>`;}).join('');
+ const rows=dates.map(age=>{const cells=lifeWeekCells(age,{today,events:all});return `<div class="lw82-row lw82-${lifeYearTier(age)}${age%7===0?' lw83-cycle-start':''}${age%5===0||age===ageNow?' lw83-labeled':''}" data-age="${age}"><button type="button" class="lw82-row-label" data-action="lw82-year" data-id="${age}" title="Lebensjahr ${age+1} öffnen">${String(1983+age)}<span>/ ${String(1984+age).slice(-2)}</span><small>${age} J.</small></button><div class="lw82-row-grid">${cells.map(square).join('')}${markers(age)}${lifePhaseRibbons(age,all,today)}</div></div>`;}).join('');
  const zoom=lifeWeekCells(thisYear,{today,events:all});const chosen=selectedWeek&&zoom.find(w=>w.week===selectedWeek);
  const suggestions=calendarLifeCandidates([...calendar,...calendarResults],thisYear,{query:calendarQuery,existing:all,onlyTravel:!calendarQuery});
  return `<section class="lw82-root" aria-label="My Life in Weeks"><header class="lw82-intro"><small>ARS VIVENDI · MY LIFE IN WEEKS</small><h2>Ein Leben. Woche für Woche.</h2><p>28. Juni 1983 · 80 Jahre Orientierungsbereich · Bronze ab 70 · Silber ab 80 · Gold ab 90 · Gold-Star-Plus ab 100. Kein festgelegtes Lebensende.</p></header>
@@ -182,13 +201,13 @@ export function lifeWeeksView(state,{today=new Date().toLocaleDateString('sv-SE'
  <div><small>Dein Lebensmonat</small><strong>${metrics?metrics.lifeMonth.toLocaleString('de-AT')+'.':'–'}</strong><span>Ab 28. Juni 1983 gezählt</span></div>
  <div class="lw83-cycle-card"><small>7-Jahreszyklus</small><strong>${metrics?metrics.sevenCycle+'.':'–'}</strong><span>${metrics?metrics.cycleAgeStart+'–'+metrics.cycleAgeEnd+' Jahre · Jahr '+metrics.sevenYear+' von 7':'–'}</span></div>
  </div><p class="lw83-life-notes">${metrics?`Siebenjahreszyklus ${metrics.sevenCycle}: ${esc(fmt(dateOf(metrics.cycleStart)))} – ${esc(fmt(dateOf(metrics.cycleEndExclusive)-DAY))}. Die Zyklen sind eine frei gewählte Orientierung, keine wissenschaftliche Entwicklungsprognose.`:''} · ${count} Lebensereignisse eingetragen</p>
- <div class="lw82-legend">${[['#9ea9ac','Vergangene Wochen'],['#f8faf9','Zukünftige Wochen'],...LIFE_EVENT_CATEGORIES.map(x=>[x[2],x[1]])].map(([hex,label])=>`<span><i style="background:${hex}"></i>${esc(label)}</span>`).join('')}<span class="lw82-current-legend">◎ Aktuelle Woche</span><span class="lw83-cycle-legend">│ 7-Jahreszyklus-Grenze</span></div>
+ <div class="lw82-legend">${[['#9ea9ac','Vergangene Wochen'],['#f8faf9','Zukünftige Wochen'],...LIFE_EVENT_CATEGORIES.filter(x=>LIFE_EXPERIENCE_CATEGORIES.includes(x[0])).map(x=>[x[2],x[1]])].map(([hex,label])=>`<span><i style="background:${hex}"></i>${esc(label)}</span>`).join('')}<span class="lw85-star-legend">★ Lebensmeilenstein</span><span class="lw85-phase-legend">▰ Dünne Linien = Beziehungen, Ausbildung, Beruf, Ehrenamt</span><span class="lw82-current-legend">◎ Aktuelle Woche</span><span class="lw83-cycle-legend">│ 7-Jahreszyklus-Grenze</span></div>
  <div class="lw82-navigator"><button type="button" class="secondary-btn" data-action="lw82-today">◎ Zu meiner Lebenswoche</button><button type="button" class="secondary-btn" data-action="lw82-new">+ Ereignis eintragen</button><button type="button" class="secondary-btn" data-action="lw84-import-open">⇪ Lebenslauf importieren</button><button type="button" class="secondary-btn" data-action="lw82-bonus">${bonus?'80–99 ausblenden':'80–99 · Bonusjahre'}</button><button type="button" class="secondary-btn" data-action="lw82-star">${star?'100+ ausblenden':'100+ · Gold-Star-Plus'}</button></div>
  <p class="lw82-june-key"><strong>Jahresbeginn am Geburtstag:</strong> 28.–30. Juni · <strong class="lw82-july-label">│ 1. Juli</strong> (Monatslinie im ersten Kästchen) · <strong>✦ 1. Jänner</strong> (goldene Jahreswechsellinie)</p>
  <div class="lw83-zoom-toolbar" role="group" aria-label="Zoom für die Wochen-Gesamtübersicht"><span class="lw83-zoom-heading">Gesamtübersicht · Zoom</span><div class="lw83-zoom-buttons">${LIFE_ZOOM_OPTIONS.map(z=>`<button type="button" class="secondary-btn lw83-zoom-button${currentZoom===z?' is-active':''}" data-action="lw83-zoom" data-id="${z}" aria-pressed="${currentZoom===z}">${z} %</button>`).join('')}<button type="button" class="secondary-btn lw83-zoom-button${currentZoom==='fit'?' is-active':''}" data-action="lw83-zoom" data-id="fit" aria-pressed="${currentZoom==='fit'}">Alles einpassen</button></div><small>Nur die Wochenmatrix wird skaliert · alle Jahre im Überblick</small></div>
  <div class="lw83-export-toolbar" role="group" aria-label="Einseitiges Lebensposter als PDF herunterladen"><strong>Lebensposter · Vektor-PDF</strong><button type="button" class="secondary-btn" data-action="lw83-pdf" data-id="A4">PDF · A4 quer</button><button type="button" class="secondary-btn" data-action="lw83-pdf" data-id="A3">PDF · A3 quer</button><label class="lw84-checkbox lw84-pdf-private-label"><input type="checkbox" id="lw84-pdf-private" ${showPrivatePdf?'checked':''}/> Private Beziehungen im PDF anzeigen</label><small>Eine Seite · lokal erstellt · private Beziehungen standardmäßig ausgeblendet</small></div>
  <div class="lw82-main-scroll" tabindex="0" aria-label="Lebensmatrix, vertikal und horizontal scrollbar"><div class="lw82-matrix" data-lw83-zoom="${currentZoom}" data-lw83-years="${dates.length}"><div class="lw82-month-header"><span>Lebensjahr</span><div class="lw82-month-track"><strong>Jun 28</strong>${markers(thisYear,true)}</div></div><div class="lw82-rows" id="lw82-rows">${rows}</div></div></div>
- <p class="lw82-hint">Jede Zeile beginnt an deinem Geburtstag am 28. Juni. Die kurze erste Juniphase endet an der Monatslinie zum 1. Juli. Gold markiert den 1. Jänner. Jede 53. Zelle ist eine kurze Teilwoche. Antippen/Anklicken öffnet das Lebensjahr, Hover zeigt Datum und Ereignisse.</p>
+ <p class="lw82-hint">Jede Zeile beginnt an deinem Geburtstag am 28. Juni. Die kurze erste Juniphase endet an der Monatslinie zum 1. Juli. Gold markiert den 1. Jänner. Jede 53. Zelle ist eine kurze Teilwoche. Bunte Flächen markieren besondere Erlebnisse; dezente Linien zeigen Lebensabschnitte; ★ markiert einen Lebensmeilenstein. Antippen/Anklicken öffnet das Lebensjahr, Hover zeigt Datum und Ereignisse.</p>
  <section class="lw82-detail" id="lw82-detail"><div class="lw82-detail-head"><div><small>LEBENSCHRONIK · ZOOM</small><h3>Lebensjahr ${thisYear+1} · ${esc(range.years)}</h3><p>${esc(fmt(range.startMs))} – ${esc(fmt(range.endMs-DAY))}</p></div><div><button type="button" class="secondary-btn" data-action="lw82-previous" ${thisYear===0?'disabled':''}>←</button><button type="button" class="secondary-btn" data-action="lw82-next" ${thisYear===109?'disabled':''}>→</button></div></div>
  <div class="lw82-zoom-scroll"><div class="lw82-zoom-track"><div class="lw82-zoom-labels"><strong>Jun 28</strong>${markers(thisYear,true)}</div><div class="lw82-zoom-grid">${zoom.map(square).join('')}${markers(thisYear)}</div></div></div>${lifeTimelineLanes(events,range,today)}
  ${chosen?`<div class="lw82-chosen">Ausgewählte Woche ${chosen.week}: ${esc(fmt(dateOf(chosen.start)))} bis ${esc(fmt(dateOf(chosen.end)))} · ${chosen.events.length} Ereignis(se)</div>`:''}

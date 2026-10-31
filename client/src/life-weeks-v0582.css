@@ -66,3 +66,15 @@
 .lw82-editor label.lw84-checkbox,.lw84-pdf-private-label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;line-height:1.4;color:#466d61}
 .lw82-editor .lw84-checkbox input,.lw84-pdf-private-label input{width:16px;min-width:16px;height:16px;accent-color:#6a577b;margin:0}
 @media(max-width:650px){.lw84-timeline-row{grid-template-columns:minmax(64px,90px) minmax(100px,1fr)}.lw84-timeline-row>small{grid-column:2}.lw84-import-item{align-items:flex-start}}
+
+/* 0.5.85 · Experiential coloring, subtle multi-lane background life periods,
+ * golden milestones. The PDF has an equivalent vector-only visual grammar. */
+.lw85-phase-ribbon{position:absolute;z-index:2;height:1.2px;border-radius:2px;opacity:.68;pointer-events:none}
+.lw85-phase-relationship{opacity:.95}
+.lw85-milestone-star{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-54%);font:900 11px/1 system-ui,sans-serif;color:#E7AC37;-webkit-text-stroke:.35px #5A4221;text-shadow:0 0 2px #fff,0 0 3px #fff;pointer-events:none;z-index:5}
+.lw82-zoom-grid .lw85-milestone-star{font-size:18px;-webkit-text-stroke:.5px #69491D}
+.lw82-matrix[data-lw83-zoom="fit"] .lw85-milestone-star{font-size:8px}
+.lw85-has-milestone{z-index:4!important}
+.lw85-star-legend{color:#8A6326;font-weight:700}
+.lw85-phase-legend{color:#53776B}
+.lw85-star-legend::first-letter{color:#C9952C}

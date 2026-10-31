@@ -1,0 +1,9 @@
+Compass 0.5.85 – Installation
+
+PATCH_FROM_0.5.84.zip: Dateien über das bestehende GitHub-Repository auf Commit eb797c3247ac9ef4470596eb79a67e84b33b86f0 hochladen und vorhandene Pfade ersetzen.
+FULL_SOURCE.zip: Alternative als vollständiger Repository-Inhalt.
+Nie PATCH und FULL gleichzeitig hochladen.
+
+Persönliche Lebensereignis-JSON (36 Einträge) ist NICHT im öffentlichen Quellarchiv enthalten. Diese im Compass-Tresor über den JSON-Lebenslauf-Import prüfen und erst anschließend speichern.
+
+Nach GitHub Actions Deploy unter Insights → Leben & Orte → My Life in Weeks Sterne/Phasen/Erlebnisse kontrollieren. KitKat unter Ernährung → Snacks.

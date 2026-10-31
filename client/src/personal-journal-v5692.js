@@ -61,6 +61,7 @@ export const FOOD_PRESETS=[
  ['profuel-alphaminos-bcaa','🥤','PROFUEL Alphaminos BCAA','Nahrungsergänzung','13 g',35,35],
  ['chocolate','🍫','Schokoriegel','Snacks','1 Riegel (50 g)',220,300],
  ['snickers','🍫','Snickers','Snacks','1 Riegel (50 g)',225,275],
+ ['kitkat-chunky-peanut-butter','🍫','KitKat Chunky Peanut Butter','Snacks','1 Riegel (42 g)',222,222],
  ['pistachio-butter-cups','🍬','Better Pistachio Butter Cups','Snacks','3 Stück (39 g)',238,242],
  ['pringles','🥔','Pringles','Snacks','1 Dose (165 g)',830,920],
  ['chio-chips','🥔','Chio Chips','Snacks','1 Packung (150 g)',740,830],
@@ -70,6 +71,7 @@ export const FOOD_PRESETS=[
 ].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({
  id,emoji,title,group,defaultAmount,kcalLow,kcalHigh,
  ...(id==='apple-shortcrust-cake'?{recipeNote:'1 Stück = ca. 125 g (nicht abgewogen). Referenz: Bundeslebensmittelschlüssel (BLS 4.0), Apfelkuchen gedeckt (Mürbeteig), Energieangabe je 100 g in der Referenzdatenbank; je nach Rezept/Portionsgröße starke Abweichungen möglich. Menge im Tagebuch anpassbar.'}:{}),
+ ...(id==='kitkat-chunky-peanut-butter'?{recipeNote:'1 Riegel = 42 g = 222 kcal laut offizieller KitKat-Produktseite. Fett 12,7 g (gesättigt 6,4 g), Kohlenhydrate 21,9 g (Zucker 18,1 g), Ballaststoffe 1,2 g, Eiweiß 4,5 g, Salz 0,26 g. Quelle: https://www.kitkat.de/produkt/kitkat-chunky-peanut-butter ; das österreichische Packungsetikett hat bei Rezepturänderungen Vorrang.'}:{}),
  ...(id==='hofer-germknoedel'?{recipeNote:'HOFER Germknödel · 187 g nach Drittanbieter-Nährwertdaten, etwa 500 kcal pro Portion. Variante, Vanillesauce/Mohn-Zucker und Packungsangabe bitte gegen Verpackung prüfen; nicht als offizieller HOFER-Etikettwert bestätigt.'}:{}),
  ...(id==='banana'?{recipeNote:'Eine mittelgroße Banane = geschätzt 120 g essbarer Anteil ohne Schale; Fruchtgröße und Reifegrad variieren. Makro-/Mikronährstoffe aus generischer USDA-Referenz. Zählt zum Daily Dozen (andere Früchte).'}:{}),
  ...(id==='profuel-alphaminos-bcaa'?{recipeNote:'PROFUEL Alphaminos BCAA: 13 g Portion, BCAA insgesamt 10 g (Leucin 5 g, Isoleucin 2,5 g, Valin 2,5 g), frühere Nutzerangaben. Keine Angaben zu sonstigen Makros/Mikros; BCAA sind kein vollständiges Protein und keine Daily-Dozen-Portion.'}:{}),

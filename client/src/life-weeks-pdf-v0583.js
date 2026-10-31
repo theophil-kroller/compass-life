@@ -3,7 +3,7 @@
  * Use local vault data ONLY after unlocking Compass. PDF export is unencrypted;
  * the download UI warns before saving a PDF outside the encrypted vault.
  */
-import {LIFE_BIRTHDAY,LIFE_EVENT_CATEGORIES,lifeElapsedMetrics,lifeMonthMarkers,lifeWeekCells,lifeYearTier} from './life-weeks-v0582.js';
+import {LIFE_BIRTHDAY,LIFE_EVENT_CATEGORIES,lifeElapsedMetrics,lifeMonthMarkers,lifeWeekCells,lifeYearTier,lifeWeekVisualLayers} from './life-weeks-v0582.js';
 
 const PAGE_SIZES=Object.freeze({A4:[841.89,595.28],A3:[1190.55,841.89]});
 const DAY=86400000;
@@ -44,6 +44,13 @@ export function buildLifeWeeksPdf(opts={}){
  const text=(x,y,s,pt=8,color='#1E3D43',bold=false)=>{
   fill(color);cmd.push(`BT /${bold?'F2':'F1'} ${n(pt)} Tf ${n(x)} ${n(y)} Td ${pdfLiteral(s)} Tj ET`);
  };
+ const fivePointStar=(cx,cy,r)=>{
+  // Filled 10-vertex golden star: no Unicode font dependency, remains vector-sharp.
+  fill('#D6A136');stroke('#78551F');const coords=[];
+  for(let k=0;k<10;k++){const ang=-Math.PI/2+k*Math.PI/5,rr=k%2?r*.43:r;coords.push([cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr]);}
+  cmd.push(`${n(coords[0][0])} ${n(coords[0][1])} m`);
+  coords.slice(1).forEach(([x,y])=>cmd.push(`${n(x)} ${n(y)} l`));cmd.push('h B');
+ };
  const margin=model.paper==='A3'?32:23,chartX=model.paper==='A3'?91:71;
  const chartW=W-margin-chartX,top=H-(model.paper==='A3'?122:107),bottom=model.paper==='A3'?89:75;
  const rowH=(top-bottom)/model.years,cellW=chartW/53;
@@ -55,7 +62,7 @@ export function buildLifeWeeksPdf(opts={}){
  if(m)text(margin,H-80,
   `Lebensjahr ${m.lifeYear}  |  Lebenstag ${m.lifeDay.toLocaleString('de-AT')}  |  Lebenswoche ${m.lifeWeek.toLocaleString('de-AT')}  |  Lebensmonat ${m.lifeMonth.toLocaleString('de-AT')}  |  7-Jahreszyklus ${m.sevenCycle} (Jahr ${m.sevenYear}/7)`,
   model.paper==='A3'?10:7.4,'#245D55',true);
- text(margin,H-94,'Eine Zeile = ein Lebensjahr ab dem 28. Juni. Jede Zelle = eine Lebenswoche. Ereignisse sind farbig.',model.paper==='A3'?8.2:6.6,'#667E76');
+ text(margin,H-94,'Eine Zeile = ein Lebensjahr ab 28. Juni. Bunt = Erlebnisse, Linien = Lebensphasen, Sterne = Meilensteine.',model.paper==='A3'?8.2:6.6,'#667E76');
  // Months are shown once in the header, but all boundaries in each life-year are computed independently.
  const sample=model.rows[0],labelSize=model.paper==='A3'?8:6;
  text(margin,top+7,'JAHR',labelSize,'#56736F',true);
@@ -77,14 +84,19 @@ export function buildLifeWeeksPdf(opts={}){
   const padX=clip(cellW*.09,.4,1.1),padY=clip(rowH*.08,.12,.7),rw=cellW-padX;
   row.cells.forEach((cell,j)=>{
    const xx=chartX+j*cellW,cy=y+padY,rh=Math.max(.55,rowH-2*padY);
-   const categories=[...new Set(cell.events.filter(e=>e.category!=='relationship').map(e=>e.category))].slice(0,3);
+   const layers=lifeWeekVisualLayers(cell),categories=layers.experiences.slice(0,3);
    if(categories.length){categories.forEach((cat,k)=>{
     const match=LIFE_EVENT_CATEGORIES.find(e=>e[0]===cat),c=match?.[2]||'#879B8E';
     rect(xx+padX+(rw/categories.length)*k,cy,rw/categories.length,rh,c);
    });}
    else if(cell.status==='past'||cell.status==='current')rect(xx+padX,cy,rw,rh,'#AAB6B8');
    else rect(xx+padX,cy,rw,rh,'#F7FAF9');
-   if(cell.events.some(e=>e.category==='relationship'))rect(xx+padX,cy,rw,Math.max(.3,rh*.22),'#C57C9C');
+   const phaseColor={relationship:'#D3ADC0',education:'#9FC8BF',learning:'#9FC8BF',work:'#E2C3AB',career:'#E2C3AB',volunteer:'#B9B4D5'};
+   layers.phases.forEach(cat=>{const lane=['relationship','education','learning','work','career','volunteer'].indexOf(cat),ix=lane<0?0:lane;
+    rect(xx+padX,cy+Math.min(rh*.38,ix*.19),rw,Math.max(.16,Math.min(.32,rh*.12)),phaseColor[cat]);
+   });
+   if(layers.milestone)fivePointStar(xx+padX+rw*.5,cy+rh*.55,Math.max(.46,Math.min(cellW*.38,rh*.64,2.7)));
+
    if(cell.status==='current'){
     stroke('#C59A46');cmd.push(`${n(model.paper==='A3'?1.15:.85)} w ${n(xx+padX)} ${n(cy)} ${n(rw)} ${n(rh)} re S`);
    }
@@ -98,11 +110,11 @@ export function buildLifeWeeksPdf(opts={}){
  line(margin,bottom-8,W-margin,bottom-8,'#C6D9D4',.65);
  text(margin,bottom-22,'Grau: vergangen   Weiss: offen   Gold-Rahmen: aktuelle Woche   Linien: Monatsgrenzen   Goldene Linie: 1. Jaenner',model.paper==='A3'?8:6.2,'#4E6762');
  text(margin,bottom-33,'Lebensjahr startet am 28. Juni; der Juli beginnt im ersten Wochenfeld am 1. Juli.',model.paper==='A3'?7.2:5.6,'#647C75');
- const legendY=bottom-48,legends=[...LIFE_EVENT_CATEGORIES.filter(e=>model.includePrivateRelationships||e[0]!=='relationship'),['past','Ohne Ereignis','#AAB6B8']];
+ const legendY=bottom-48,legends=[...LIFE_EVENT_CATEGORIES.filter(e=>['travel','abroad','family','other'].includes(e[0])),['milestone','Meilenstein (Stern)','#D6A136'],['phases','Lebensphasen (Linie)','#4C9A90'],['past','Ohne Erlebnis','#AAB6B8']];
  const colCount=4,itemW=(W-2*margin)/colCount;
  legends.forEach((cat,i)=>{
   const [id,label,hex]=cat,xx=margin+(i%colCount)*itemW,yy=legendY-Math.floor(i/colCount)*(model.paper==='A3'?14:11);
-  rect(xx,yy-2,8,8,hex);text(xx+12,yy,label,model.paper==='A3'?7.1:5.6,'#496963');
+  if(id==='milestone')fivePointStar(xx+4,yy+2,4);else rect(xx,yy-2,8,8,hex);text(xx+12,yy,label,model.paper==='A3'?7.1:5.6,'#496963');
  });
  text(margin,20,'Persoenliche Lebenschronik  |  80 Jahre sind nur ein Orientierungswert; 100+ sind Bonusjahre, keine Prognose.',model.paper==='A3'?6.6:5.5,'#788B86');
  text(W-margin-112,20,'Compass Life  ·  1 / 1',model.paper==='A3'?7:5.7,'#788B86');
@@ -114,7 +126,7 @@ export function buildLifeWeeksPdf(opts={}){
  `<< /Length ${encoder.encode(content).length} >>\nstream\n${content}endstream`,
  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>',
- `<< /Title ${pdfLiteral('Compass Life - My Life in Weeks')} /Creator ${pdfLiteral('Compass Life 0.5.83')} /Subject ${pdfLiteral(`${model.years} Lebensjahre ab ${LIFE_BIRTHDAY}`)} >>`
+ `<< /Title ${pdfLiteral('Compass Life - My Life in Weeks')} /Creator ${pdfLiteral('Compass Life 0.5.85')} /Subject ${pdfLiteral(`${model.years} Lebensjahre ab ${LIFE_BIRTHDAY}`)} >>`
  ];
  let pdf='%PDF-1.4\n%Compass Life vector poster\n';const offs=[0];
  objects.forEach((obj,i)=>{offs.push(encoder.encode(pdf).length);pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;});
