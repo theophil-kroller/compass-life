@@ -25,7 +25,8 @@ test('app seven year panorama has seven distinct years and full descriptive labe
  assert.equal((html.match(/class="lw86-year(?: |\")/g)||[]).length,7);
  assert.match(html,/class="lw86-cycle-menu"/);
  assert.match(html,/Gesamtes Leben ansehen/);
- assert.match(html,/Universität Graz/);
+ assert.match(html,/Lebensphasen einblenden/);
+ const withPhases=lifeWeeksView(state,{today,viewMode:'cycle',showPhases:true});assert.match(withPhases,/Universität Graz/);
  assert.ok(!html.includes('class="lw82-main-scroll"'),'no duplicate full 80-year grid in focus mode');
  assert.match(html,/lw86-year-events/);
 });
@@ -52,7 +53,7 @@ test('milestones remain stars, continuing education stays a phase and does not f
  assert.ok(layers.phases.includes('work'));
  assert.deepEqual(layers.experiences,[]);
  const html=lifeWeeksView(state,{today,cycleIndex:5,viewMode:'cycle'});
- assert.match(html,/lw86-milestone/);
+ assert.match(html,/lw87-milestone/);
  assert.match(html,/★/);
 });
 test('year selection, period selection and printable export are all wired in main screen',async()=>{

@@ -156,12 +156,22 @@ export function lifeZoomSizing(zoom,years,viewportHeight=900){
 }
 export const lifeYearTier=age=>age>=100?'star':age>=90?'gold':age>=80?'silver':age>=70?'bronze':'base';
 function markers(age,withLabels=false){const list=lifeMonthMarkers(age);return list.filter(x=>!x.start).map(x=>`<span class="lw82-month-line${x.newYear?' lw82-year-line':''}" style="left:${x.pct.toFixed(4)}%" title="${esc(x.date)} · ${x.newYear?'Neujahr':'Monatsanfang'}"></span>${withLabels?`<span class="lw82-month-label${x.newYear?' lw82-jan':''}${x.date.slice(5,10)==='07-01'?' lw82-july':''}" style="left:${x.pct.toFixed(4)}%" title="${esc(x.date)}">${esc(x.label)}</span>`:''}`).join('');}
+/** Hovering a star reports ONLY the milestone in that precise week. */
+export function lifeWeekMilestones(cell){
+ return (cell?.events||[]).filter(e=>!e.deleted&&(
+  (e.category==='milestone'&&e.start>=cell.start&&e.start<=cell.end)||
+  (e.category==='education'&&!e.ongoing&&e.endPrecision==='month'&&/(?:master|bachelor|msc|bsc|diploma|zertifikat|certificate|certified|cas)/i.test(e.title||'')
+   &&!/Nur Jahresangabe/i.test(e.note||'')&&e.end>=cell.start&&e.end<=cell.end)));
+}
 function square(cell){
- const layers=lifeWeekVisualLayers(cell),cs=layers.experiences.map(color);
+ const layers=lifeWeekVisualLayers(cell),cs=layers.experiences.map(color),milestones=lifeWeekMilestones(cell);
  const bg=cs.length===1?`background:${cs[0]};`:cs.length>1?`background:linear-gradient(90deg,${cs.map((c,i)=>`${c} ${i*100/cs.length}% ${(i+1)*100/cs.length}%`).join(',')});`:'';
  const cls=cs.length?' is-event':cell.status==='past'?' is-past':cell.status==='current'?' is-now':' is-future';
- const tip=`${fmt(dateOf(cell.start))} – ${fmt(dateOf(cell.end))}${cell.days<7?' · Teilwoche':''}${cell.events.length?' · '+cell.events.map(e=>e.title).join(' / '):''}`;
- return `<button type="button" class="lw82-week${cls}${layers.milestone?' lw85-has-milestone':''}${cell.status==='current'?' is-current':''}" data-lw82-week="${cell.age}:${cell.week}" title="${esc(tip)}" aria-label="Lebensjahr ${cell.age}, Woche ${cell.week}: ${esc(tip)}" style="${bg}">${layers.milestone?'<span class="lw85-milestone-star" aria-hidden="true">★</span>':''}</button>`;
+ const highlights=cell.events.filter(e=>LIFE_EXPERIENCE_CATEGORIES.includes(e.category));
+ // Do not leak unrelated ongoing relationships or employment into a milestone tooltip.
+ const tip=milestones.length?milestones.map(e=>`★ ${e.category==='education'?'Abschluss: ':''}${e.title} · ${e.category==='education'&&e.endPrecision==='month'?e.end.slice(0,7):e.start}`).join(' / ')
+  :`${fmt(dateOf(cell.start))} – ${fmt(dateOf(cell.end))}${cell.days<7?' · Teilwoche':''}${highlights.length?' · '+highlights.map(e=>e.title).join(' / '):''}`;
+ return `<button type="button" class="lw82-week${cls}${layers.milestone?' lw85-has-milestone':''}${cell.status==='current'?' is-current':''}" data-lw82-week="${cell.age}:${cell.week}" title="${esc(tip)}" aria-label="${esc(tip)}" style="${bg}">${layers.milestone?'<span class="lw85-milestone-star" aria-hidden="true">★</span>':''}</button>`;
 }
 const eventDisplay=e=>`<div class="lw82-event" style="--lw82-event:${color(e.category)}"><div><strong>${esc(e.title)}</strong><small>${esc(lifePeriod(e))} · ${esc(name(e.category))}${e.location?' · '+esc(e.location):''}${e.organization?' · '+esc(e.organization):''}${e.person?' · '+esc(e.person):''}</small></div><button type="button" class="secondary-btn" data-action="lw82-edit" data-id="${esc(e.id)}">Bearbeiten</button></div>`;
 function lifePhaseRibbons(age,events,today){
@@ -191,7 +201,63 @@ export function lifeSevenYearRange(cycle=0,years=80,birthday=LIFE_BIRTHDAY){
  return {index,startAge,endAge,start:first.start,endExclusive:last.endExclusive,
   years:esc(first.start.slice(0,4))+'–'+esc(last.endExclusive.slice(0,4)),count:endAge-startAge+1};
 }
-function lifeSevenYearPanel(all,{today,cycleIndex,years,selectedAge}={}){
+/** 0.5.87 · timeline geometry: date-accurate bars and independent label collision lanes. */
+export function lifeSevenYearTracks(age,events,{today=iso(Date.now()),showPhases=false}={}){
+ const r=lifeYearRange(age),total=53*7*DAY;
+ const list=(events||[]).filter(e=>lifeEventActive(e,today)&&dateOf(e.start)<r.endMs&&dateOf(lifeEventEnd(e,today))>=r.startMs);
+ const experiences=list.filter(e=>LIFE_EXPERIENCE_CATEGORIES.includes(e.category));
+ const milestones=list.filter(e=>(e.category==='milestone'&&dateOf(e.start)>=r.startMs&&dateOf(e.start)<r.endMs)||
+  (e.category==='education'&&!e.ongoing&&e.endPrecision==='month'&&/(?:master|bachelor|msc|bsc|diploma|zertifikat|certificate|certified|cas)/i.test(e.title||'')
+   &&!/Nur Jahresangabe/i.test(e.note||'')&&dateOf(e.end)>=r.startMs&&dateOf(e.end)<r.endMs));
+ let phases=showPhases?list.filter(e=>LIFE_PHASE_CATEGORIES.includes(e.category)):[];
+ // Multiple institutional roles from LinkedIn are allowed to overlap, but the
+ // same organisation is represented once in the compact phase overview.
+ if(showPhases){const grouped=new Map();for(const e of phases){const key=`${e.category==='relationship'?'person':e.category==='education'?'education':e.category==='volunteer'?'volunteer':'work'}|${e.person||e.organization||e.title}`;
+  const prev=grouped.get(key);if(!prev){grouped.set(key,e);continue;}
+  const end1=dateOf(lifeEventEnd(prev,today)),end2=dateOf(lifeEventEnd(e,today));
+  if(dateOf(e.start)<=end1+DAY&&dateOf(prev.start)<=end2+DAY){grouped.set(key,{...prev,start:prev.start<e.start?prev.start:e.start,end:iso(Math.max(end1,end2)),ongoing:prev.ongoing||e.ongoing,category:prev.category,id:prev.id});}
+  else grouped.set(key+'|'+e.start,e);
+ }phases=[...grouped.values()];}
+ const toBar=(e,kind)=>{
+  const start=Math.max(r.startMs,dateOf(e.start)),end=Math.min(r.endMs,dateOf(lifeEventEnd(e,today))+DAY);
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return null;
+  const left=Math.max(0,100*(start-r.startMs)/total),width=Math.max(.25,100*(end-start)/total),isMilestone=kind==='milestone';
+  const label=isMilestone?(e.category==='education'?`★ Abschluss: ${e.title}`:`★ ${e.title}`):kind==='phase'?(e.person||e.organization||e.title):e.title;
+  const labelWidth=Math.min(36,Math.max(16,9+label.length*.29));
+  const labelLeft=Math.max(0,Math.min(left,99-labelWidth));
+  const wide=width>=19&&!isMilestone;
+  const textLeft=wide?left:labelLeft,textRight=Math.min(99,wide?left+width:labelLeft+labelWidth);
+  return {id:e.id,kind,category:e.category,label,start:iso(start),end:iso(end-DAY),left,width,labelLeft,labelWidth,wide,textLeft,textRight,ongoing:e.ongoing===true,fullTitle:e.title,
+   dateLabel:e.startPrecision==='month'||e.endPrecision==='month'?lifePeriod(e):`${fmt(start)} – ${fmt(end-DAY)}`};
+ };
+ const all=[...experiences.map(e=>toBar(e,'experience')),...milestones.map(e=>{
+  const at=e.category==='education'?e.end:e.start;
+  return toBar({...e,start:at,end:at,ongoing:false},'milestone');
+ }),...phases.map(e=>toBar(e,'phase'))].filter(Boolean);
+ // Intervals with colliding labels use distinct vertical lanes; chronological
+ // order is preserved even when events occupy the very same days.
+ const allocate=items=>{const occupied=[];for(const entry of items.sort((a,b)=>a.left-b.left||a.label.localeCompare(b.label))){let lane=0;
+  while(occupied[lane]!==undefined&&occupied[lane]>entry.textLeft-1)lane++;
+  occupied[lane]=entry.textRight;entry.lane=lane;
+ }return items;};
+ return {experiences:allocate(all.filter(x=>x.kind!=='phase')),phases:allocate(all.filter(x=>x.kind==='phase')),range:r};
+}
+function lifeSevenYearTrackHtml(age,events,today,showPhases){
+ const parts=lifeSevenYearTracks(age,events,{today,showPhases});
+ const make=(items,kind)=>{
+  if(!items.length)return kind==='experience'?'<div class="lw87-no-experience">In diesem Jahr noch keine besonderen Erlebnisse eingetragen.</div>':'';
+  const lanes=1+Math.max(...items.map(x=>x.lane));
+  return `<div class="lw87-lanes lw87-${kind}-lanes" style="--lw87-lanes:${lanes}" aria-label="${kind==='phase'?'Lebensphasen':'Erlebnisse und Meilensteine'}">${items.map(x=>{
+   const title=`${x.fullTitle} · ${x.dateLabel}${x.ongoing?' · Ongoing':''}`;
+   return `<div class="lw87-lane-item lw87-${x.kind}${x.wide?' is-wide':' is-short'}" style="--lane:${x.lane};--start:${x.left.toFixed(4)}%;--width:${x.width.toFixed(4)}%;--label-left:${x.labelLeft.toFixed(4)}%;--label-width:${x.labelWidth.toFixed(4)}%;--tone:${color(x.category)}">
+    <span class="lw87-time-extent" title="${esc(title)}"></span>
+    <button type="button" class="lw87-period-caption" data-action="lw86-focus-event" data-id="${esc(x.id)}" title="${esc(title)}" aria-label="${esc(title)}"><span>${esc(x.label)}</span>${x.ongoing?'<b>ongoing</b>':''}</button>
+   </div>`;
+  }).join('')}</div>`;
+ };
+ return `<div class="lw87-experience-wrap" aria-label="Zeitlich verankerte Ereignisbalken">${make(parts.experiences,'experience')}${showPhases&&parts.phases.length?`<div class="lw87-phase-heading">Lebensphasen · optional eingeblendet</div>${make(parts.phases,'phase')}`:''}</div>`;
+}
+function lifeSevenYearPanel(all,{today,cycleIndex,years,selectedAge,showPhases=false}={}){
  const selected=lifeSevenYearRange(cycleIndex,years),first=dateOf(selected.start),last=dateOf(selected.endExclusive);
  const source=all.filter(e=>lifeEventActive(e,today)&&dateOf(e.start)<last&&dateOf(lifeEventEnd(e,today))>=first);
  const highlights=source.filter(e=>LIFE_EXPERIENCE_CATEGORIES.includes(e.category)||e.category==='milestone');
@@ -204,30 +270,21 @@ function lifeSevenYearPanel(all,{today,cycleIndex,years,selectedAge}={}){
  }).join('');
  const rows=Array.from({length:selected.count},(_,i)=>{
   const age=selected.startAge+i,r=lifeYearRange(age),cells=lifeWeekCells(age,{today,events:all});
-  const hits=all.filter(e=>lifeEventActive(e,today)&&dateOf(e.start)<r.endMs&&dateOf(lifeEventEnd(e,today))>=r.startMs);
-  const experiences=hits.filter(e=>LIFE_EXPERIENCE_CATEGORIES.includes(e.category)||e.category==='milestone');
-  const periods=hits.filter(e=>LIFE_PHASE_CATEGORIES.includes(e.category));
-  const featured=[...experiences,...periods].slice(0,5);
-  const chips=featured.length?featured.map(e=>{
-   const special=e.category==='milestone';const kind=special?'lw86-milestone':LIFE_EXPERIENCE_CATEGORIES.includes(e.category)?'lw86-experience':'lw86-phase';
-   const caption=(e.person||e.organization||e.title);
-   return `<button type="button" class="lw86-event-chip ${kind}" style="--lw86-event:${color(e.category)}" data-action="lw86-focus-event" data-id="${esc(e.id)}" title="${esc(e.title+' · '+lifePeriod(e))}">${special?'★ ':''}${esc(special||kind==='lw86-experience'?e.title:caption)}</button>`;
-  }).join('')+((hits.length>5)?`<button type="button" class="lw86-more" data-action="lw82-year" data-id="${age}">+${hits.length-5} weitere</button>`:''):'<span class="lw86-empty">Für dieses Jahr noch keine besonderen Erlebnisse erfasst</span>';
-  return `<div class="lw86-year${age===now?' is-current':''}" data-age="${age}"><div class="lw86-year-line"><button type="button" class="lw86-year-label" data-action="lw82-year" data-id="${age}" title="Lebensjahr ${age+1} als Detail öffnen"><strong>${age} Jahre</strong><span>${esc(r.years)}</span></button><div class="lw86-weeks">${cells.map(square).join('')}${markers(age)}${lifePhaseRibbons(age,all,today)}</div></div><div class="lw86-year-events">${chips}</div></div>`;
+  return `<div class="lw86-year lw87-year${age===now?' is-current':''}" data-age="${age}"><div class="lw86-year-line"><button type="button" class="lw86-year-label" data-action="lw82-year" data-id="${age}" title="Lebensjahr ${age+1} als Detail öffnen"><strong>${age} Jahre</strong><span>${esc(r.years)}</span></button><div class="lw86-weeks">${cells.map(square).join('')}${markers(age)}${showPhases?lifePhaseRibbons(age,all,today):''}</div></div><div class="lw86-year-events lw87-year-tracks">${lifeSevenYearTrackHtml(age,all,today,showPhases)}</div></div>`;
  }).join('');
  return `<section class="lw86-seven" id="lw86-seven" aria-label="Siebenjahresansicht">
-  <div class="lw86-seven-top"><div><small>ARS VIVENDI · SIEBENJAHRES-PANORAMA</small><h3>Deine Jahre ${selected.startAge}–${selected.endAge} <span>· ${esc(selected.years)}</span></h3><p>Sieben Lebensjahre mit großen Wochenfeldern, beschrifteten Erlebnissen und dezenten Lebensphasen. Ein Klick auf ein Jahr öffnet den detaillierten Zeitstrahl.</p></div>
+  <div class="lw86-seven-top"><div><small>ARS VIVENDI · SIEBENJAHRES-PANORAMA</small><h3>Deine Jahre ${selected.startAge}–${selected.endAge} <span>· ${esc(selected.years)}</span></h3><p>Alle Erlebnisse sind am tatsächlichen Datum verankert. Beschriftete Zeitbalken zeigen ihre Dauer, ★ zeigt nur den jeweiligen Meilenstein. Lebensphasen kannst du separat einblenden.</p></div>
    <div class="lw86-seven-actions"><button type="button" class="secondary-btn" data-action="lw86-cycle-prev" ${selected.index===0?'disabled':''} aria-label="Sieben Jahre zurück">← 7 Jahre</button><button type="button" class="secondary-btn" data-action="lw86-cycle-next" ${selected.index===cycleCount-1?'disabled':''} aria-label="Sieben Jahre vorwärts">7 Jahre →</button></div></div>
   <div class="lw86-summary" aria-label="Dokumentierte Lebensereignisse in diesem Abschnitt"><span><strong>${highlights.length}</strong> besondere Ereignisse</span><span><strong>${phases.length}</strong> Lebensphasen</span><span><strong>${source.filter(e=>e.category==='milestone').length}</strong> ★ Meilensteine</span><button type="button" class="secondary-btn" data-action="lw86-mode" data-id="overview">Gesamtes Leben ansehen</button></div>
-  <div class="lw86-cycle-menu" role="group" aria-label="Siebenjahresabschnitt auswählen">${cycleMenu}</div>
+  <div class="lw87-view-controls"><button type="button" class="secondary-btn" data-action="lw87-phases" aria-pressed="${showPhases}">${showPhases?'Lebensphasen ausblenden':'Lebensphasen einblenden'}</button><span>${showPhases?'Beruf · Ausbildung · Beziehungen · Ehrenamt':'Fokus: Reisen, prägende Erlebnisse und ★ Meilensteine'}</span></div><div class="lw86-cycle-menu" role="group" aria-label="Siebenjahresabschnitt auswählen">${cycleMenu}</div>
   <div class="lw86-seven-scroll" tabindex="0"><div class="lw86-seven-body"><div class="lw86-seven-months"><span>Alter · Jahr</span><div class="lw86-seven-month-track"><strong>28. Jun</strong>${markers(selected.startAge,true)}</div></div>${rows}</div></div>
-  <p class="lw86-seven-footnote">Farbflächen: besondere Erlebnisse · feine Linien: Studium, Beruf und Beziehungen · ★: Meilenstein. Grau bedeutet nicht „unerlebt“, sondern lediglich „kein besonderes Ereignis dokumentiert“.</p>
+  <p class="lw86-seven-footnote">Beschriftete Balken: tatsächliche Erlebniszeiträume · ★: Meilenstein, unabhängig von Beruf und Beziehung · Lebensphasen nur auf Wunsch · Grau heißt nicht „unerlebt“.</p>
  </section>`;
 }
 function editor(draft={}){return `<section class="lw82-editor" id="lw82-editor"><div class="lw82-section-head"><div><h3>${draft.id?'Lebensereignis bearbeiten':'Lebensereignis hinzufügen'}</h3><p>Ein Zeitraum genügt. Bei Beziehungen ist ein offenes Enddatum möglich. Bei monatsgenauen LinkedIn-Angaben stehen der Monatserste bzw. Monatsletzte nur als Rechenanker.</p></div></div>
 <form id="lw82-event-form" data-id="${esc(draft.id||'')}"><label>Titel<input name="title" maxlength="150" required placeholder="z. B. Familienurlaub in China" value="${esc(draft.title||'')}"/></label><div class="lw82-fields"><label>Beginn<input type="date" name="start" required value="${esc(draft.start||'')}"/></label><label>Beginn-Genauigkeit<select name="startPrecision"><option value="day" ${draft.startPrecision!=='month'?'selected':''}>Tag bekannt</option><option value="month" ${draft.startPrecision==='month'?'selected':''}>Nur Monat bekannt</option></select></label><label>Ende (einschließlich)<input type="date" name="end" ${draft.ongoing?'disabled':''} ${draft.ongoing?'':'required'} value="${esc(draft.end||draft.start||'')}"/></label><label>Ende-Genauigkeit<select name="endPrecision"><option value="day" ${draft.endPrecision!=='month'?'selected':''}>Tag bekannt</option><option value="month" ${draft.endPrecision==='month'?'selected':''}>Nur Monat bekannt</option></select></label><label>Kategorie<select name="category">${LIFE_EVENT_CATEGORIES.map(c=>`<option value="${c[0]}" ${draft.category===c[0]?'selected':''}>${c[3]} ${c[1]}</option>`).join('')}</select></label><label>Person (optional)<input name="person" maxlength="120" placeholder="Name der Partnerperson" value="${esc(draft.person||'')}"/></label><label>Organisation (optional)<input name="organization" maxlength="180" placeholder="Arbeitgeber / Hochschule" value="${esc(draft.organization||'')}"/></label><label>Ort (optional)<input name="location" maxlength="160" placeholder="Sydney, China, …" value="${esc(draft.location||'')}"/></label></div><label class="lw84-checkbox"><input type="checkbox" name="ongoing" value="true" ${draft.ongoing?'checked':''}/> Ongoing – dieser Lebensabschnitt dauert an (kein Enddatum)</label><label>Erinnerung / Notiz (optional)<textarea name="note" rows="2" maxlength="1500">${esc(draft.note||'')}</textarea></label><div class="lw82-actions"><button class="primary-btn" type="submit">${draft.id?'Änderungen speichern':'Ereignis speichern'}</button>${draft.id?`<button type="button" class="secondary-btn" data-action="lw82-delete" data-id="${esc(draft.id)}">Löschen</button>`:''}<button type="button" class="secondary-btn" data-action="lw82-clear">Neue Eingabe</button></div></form></section>`;}
 function lifeImportPanel(preview=[]){return `<section class="lw84-import" id="lw84-import"><h3>Lebenslauf und Beziehungen importieren</h3><p>Hier einen JSON-Block im Format <code>compass_life_events_v1</code> einfügen (z. B. aus diesem Chat). Zuerst prüfen, dann einzelne Zeitspannen bestätigen. Nichts wird ohne Bestätigung gespeichert.</p><form id="lw84-import-parse"><label>JSON-Import<textarea name="json" rows="5" maxlength="250000" placeholder='{"schema":"compass_life_events_v1","events":[…]}'></textarea></label><button type="submit" class="secondary-btn">Import prüfen</button></form>${preview.length?`<form id="lw84-import-apply"><h4>Prüfvorschau · ${preview.length} Einträge</h4><p>Nur angehakte Einträge werden gespeichert. Bereits vorhandene Einträge sind deaktiviert.</p><div class="lw84-import-items">${preview.map(e=>`<label class="lw84-import-item"><input type="checkbox" name="choice" value="${e.previewIndex}" ${e.duplicate?'disabled':'checked'}/><span><strong>${esc(e.title)}</strong><small>${esc(lifePeriod(e))} · ${esc(name(e.category))}${e.organization?' · '+esc(e.organization):''}${e.person?' · '+esc(e.person):''}${e.duplicate?' · Schon vorhanden':''}</small></span></label>`).join('')}</div><button type="submit" class="primary-btn">Ausgewählte Einträge verschlüsselt übernehmen</button></form>`:''}</section>`;}
-export function lifeWeeksView(state,{today=new Date().toLocaleDateString('sv-SE'),selectedAge=null,selectedWeek=null,draft={},bonus=false,star=false,matrixZoom='fit',calendar=[],calendarQuery='',calendarResults=[],calendarLive=false,calendarConnected=false,calendarLoading=false,importPreview=[],showPrivatePdf=false,viewMode='overview',cycleIndex=null}={}){
+export function lifeWeeksView(state,{today=new Date().toLocaleDateString('sv-SE'),selectedAge=null,selectedWeek=null,draft={},bonus=false,star=false,matrixZoom='fit',calendar=[],calendarQuery='',calendarResults=[],calendarLive=false,calendarConnected=false,calendarLoading=false,importPreview=[],showPrivatePdf=false,viewMode='overview',cycleIndex=null,showPhases=false}={}){
  const ageNow=lifeAgeAt(today),all=(state?.lifeWeekEvents||[]).filter(e=>e&&!e.deleted),focus=Number.isInteger(selectedAge)?selectedAge:null;
  const thisYear=focus===null?Math.min(109,ageNow??43):Math.max(0,Math.min(109,focus)),range=lifeYearRange(thisYear),events=all.filter(e=>Number.isFinite(dateOf(e.start))&&Number.isFinite(dateOf(lifeEventEnd(e,today)))&&dateOf(e.start)<range.endMs&&dateOf(lifeEventEnd(e,today))>=range.startMs).sort((a,b)=>a.start.localeCompare(b.start));
  const dates=Array.from({length:star?110:bonus?100:80},(_,i)=>i),lastWeek=ageNow===null?null:lifeWeekCells(ageNow,{today})?.find(w=>w.status==='current');
@@ -247,8 +304,8 @@ export function lifeWeeksView(state,{today=new Date().toLocaleDateString('sv-SE'
  <div class="lw82-legend">${[['#9ea9ac','Vergangene Wochen'],['#f8faf9','Zukünftige Wochen'],...LIFE_EVENT_CATEGORIES.filter(x=>LIFE_EXPERIENCE_CATEGORIES.includes(x[0])).map(x=>[x[2],x[1]])].map(([hex,label])=>`<span><i style="background:${hex}"></i>${esc(label)}</span>`).join('')}<span class="lw85-star-legend">★ Lebensmeilenstein</span><span class="lw85-phase-legend">▰ Dünne Linien = Beziehungen, Ausbildung, Beruf, Ehrenamt</span><span class="lw82-current-legend">◎ Aktuelle Woche</span><span class="lw83-cycle-legend">│ 7-Jahreszyklus-Grenze</span></div>
  <div class="lw82-navigator"><button type="button" class="secondary-btn" data-action="lw82-today">◎ Zu meiner Lebenswoche</button><button type="button" class="secondary-btn" data-action="lw82-new">+ Ereignis eintragen</button><button type="button" class="secondary-btn" data-action="lw84-import-open">⇪ Lebenslauf importieren</button><button type="button" class="secondary-btn" data-action="lw82-bonus">${bonus?'80–99 ausblenden':'80–99 · Bonusjahre'}</button><button type="button" class="secondary-btn" data-action="lw82-star">${star?'100+ ausblenden':'100+ · Gold-Star-Plus'}</button></div>
  <p class="lw82-june-key"><strong>Jahresbeginn am Geburtstag:</strong> 28.–30. Juni · <strong class="lw82-july-label">│ 1. Juli</strong> (Monatslinie im ersten Kästchen) · <strong>✦ 1. Jänner</strong> (goldene Jahreswechsellinie)</p>
- <div class="lw86-mode-bar" role="group" aria-label="Darstellung der Lebenschronik"><strong>Ansicht</strong><button type="button" class="secondary-btn${sevenMode?' is-active':''}" data-action="lw86-mode" data-id="cycle" aria-pressed="${sevenMode}">7 Jahre · lesbar</button><button type="button" class="secondary-btn${!sevenMode?' is-active':''}" data-action="lw86-mode" data-id="overview" aria-pressed="${!sevenMode}">Gesamtes Leben · Matrix</button><span>${sevenMode?'Große Lebensjahre mit Text statt reiner Farbpunkte':'Alle Lebensjahre mit einstellbarer Verkleinerung'}</span></div>
- ${sevenMode?lifeSevenYearPanel(all,{today,cycleIndex:sevenIndex,years:dates.length,selectedAge:focus}):''}
+ <div class="lw86-mode-bar" role="group" aria-label="Darstellung der Lebenschronik"><strong>Ansicht</strong><button type="button" class="secondary-btn${sevenMode?' is-active':''}" data-action="lw86-mode" data-id="cycle" aria-pressed="${sevenMode}">7 Jahre · lesbar</button><button type="button" class="secondary-btn${!sevenMode?' is-active':''}" data-action="lw86-mode" data-id="overview" aria-pressed="${!sevenMode}">Gesamtes Leben · Matrix</button><span>${sevenMode?'Datumstreue Zeitbalken mit direkt zugeordneten Ereignissen':'Alle Lebensjahre mit einstellbarer Verkleinerung'}</span></div>
+ ${sevenMode?lifeSevenYearPanel(all,{today,cycleIndex:sevenIndex,years:dates.length,selectedAge:focus,showPhases}):''}
  ${sevenMode?'':`<div class="lw83-zoom-toolbar" role="group" aria-label="Zoom für die Wochen-Gesamtübersicht"><span class="lw83-zoom-heading">Gesamtübersicht · Zoom</span><div class="lw83-zoom-buttons">${LIFE_ZOOM_OPTIONS.map(z=>`<button type="button" class="secondary-btn lw83-zoom-button${currentZoom===z?' is-active':''}" data-action="lw83-zoom" data-id="${z}" aria-pressed="${currentZoom===z}">${z} %</button>`).join('')}<button type="button" class="secondary-btn lw83-zoom-button${currentZoom==='fit'?' is-active':''}" data-action="lw83-zoom" data-id="fit" aria-pressed="${currentZoom==='fit'}">Alles einpassen</button></div><small>Nur die Wochenmatrix wird skaliert · alle Jahre im Überblick</small></div>`}
  <div class="lw83-export-toolbar" role="group" aria-label="Einseitiges Lebensposter als PDF herunterladen"><strong>Lebensposter · Vektor-PDF</strong><button type="button" class="secondary-btn" data-action="lw83-pdf" data-id="A4">PDF · A4 quer</button><button type="button" class="secondary-btn" data-action="lw83-pdf" data-id="A3">PDF · A3 quer</button><label class="lw84-checkbox lw84-pdf-private-label"><input type="checkbox" id="lw84-pdf-private" ${showPrivatePdf?'checked':''}/> Private Beziehungen im PDF anzeigen</label><small>Eine Seite · lokal erstellt · private Beziehungen standardmäßig ausgeblendet</small></div>
  ${sevenMode?'':`<div class="lw82-main-scroll" tabindex="0" aria-label="Lebensmatrix, vertikal und horizontal scrollbar"><div class="lw82-matrix" data-lw83-zoom="${currentZoom}" data-lw83-years="${dates.length}"><div class="lw82-month-header"><span>Lebensjahr</span><div class="lw82-month-track"><strong>Jun 28</strong>${markers(thisYear,true)}</div></div><div class="lw82-rows" id="lw82-rows">${rows}</div></div></div>

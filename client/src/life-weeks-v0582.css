@@ -131,3 +131,30 @@
 .lw86-seven-footnote{font-size:11px;line-height:1.5;margin:0;color:#6b8076}
 @media(max-width:850px){.lw86-seven{padding:11px}.lw86-seven-top{align-items:flex-start;flex-wrap:wrap}.lw86-mode-bar>span{margin-left:0;flex-basis:100%}}
 @media(max-width:600px){.lw86-seven-body{min-width:740px}.lw86-year-events{padding-left:121px}.lw86-year{padding:6px}.lw86-summary>button{margin-left:0}}
+
+
+/* 0.5.87 – Date-anchored life bars, not unrelated pills. Personal phases opt-in. */
+.lw87-view-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lw87-view-controls button{min-height:32px!important;font-size:11px!important}
+.lw87-view-controls span{font-size:11px;color:#72867f}
+.lw87-year{gap:3px;padding:10px 10px 11px}
+.lw87-year .lw86-year-events{display:block;padding-left:121px;margin-top:3px}
+.lw87-experience-wrap{min-width:0;display:grid;gap:8px}
+.lw87-lanes{position:relative;height:calc(var(--lw87-lanes)*35px + 5px);width:100%;min-width:0;border-radius:6px}
+.lw87-lane-item{position:absolute;inset:auto 0 auto 0;top:calc(var(--lane)*35px);height:33px;pointer-events:none}
+.lw87-time-extent{position:absolute;top:0;left:var(--start);width:var(--width);height:6px;border-radius:3px;background:var(--tone);min-width:2px;opacity:.96;pointer-events:auto}
+.lw87-period-caption{pointer-events:auto;position:absolute;top:8px;left:var(--label-left);max-width:var(--label-width);width:var(--label-width);min-width:0;height:24px!important;min-height:24px!important;padding:3px 7px!important;border-radius:5px!important;border:1px solid color-mix(in srgb,var(--tone) 65%,#fff);border-left:4px solid var(--tone);background:color-mix(in srgb,var(--tone) 10%,white);color:#1d4141;text-align:left;font-size:10.5px!important;display:flex;align-items:center;gap:5px;line-height:1.15;overflow:hidden}
+.lw87-period-caption span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lw87-period-caption b{font-size:8px;font-weight:500;letter-spacing:0;color:#58685f;flex-shrink:0}
+.lw87-lane-item.is-wide .lw87-period-caption{left:var(--start);width:var(--width);max-width:var(--width);top:0;height:28px!important;min-height:28px!important;background:var(--tone);border-color:var(--tone);color:#fff;font-weight:650;box-shadow:0 1px 3px #17453616}
+.lw87-lane-item.is-wide .lw87-time-extent{height:28px}
+.lw87-milestone .lw87-period-caption{background:#fff4d8;border-color:#cba66b;border-left:4px solid #c79c46;color:#725021;font-weight:750}
+.lw87-milestone .lw87-time-extent{background:#c79c46}
+.lw87-phase .lw87-time-extent{opacity:.55}
+.lw87-phase .lw87-period-caption{color:#547268;background:color-mix(in srgb,var(--tone) 9%,#fff);border-color:color-mix(in srgb,var(--tone) 45%,#fff)}
+.lw87-phase-heading{color:#69827b;font-size:10px;font-weight:650;border-top:1px dashed #c9d9d1;padding-top:6px}
+.lw87-no-experience{font:italic 11px/1.4 system-ui,sans-serif;color:#9eaea7;padding:7px 0 5px}
+.lw87-year .lw86-weeks .lw85-milestone-star{font-size:17px;text-shadow:0 0 4px white,0 0 5px white;color:#c5942f}
+.lw87-year .lw86-weeks .lw82-week.lw85-has-milestone{outline:1px solid #c29a50;outline-offset:0}
+.lw87-year .lw86-weeks .lw82-week:hover,.lw87-period-caption:hover{outline:2px solid #24544d;outline-offset:1px}
+@media(max-width:600px){.lw87-year .lw86-year-events{padding-left:121px}.lw87-period-caption{font-size:10px!important}}

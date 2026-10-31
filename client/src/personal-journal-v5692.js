@@ -1,3 +1,4 @@
+import {activityToJournalArea} from './worktime-category-v0587.js';
 import {mergePeopleDirectory} from './people-sync-v57719.js';
 import {mergeMorningData} from './miracle-morning-v570.js';
 import {mergeHabitQuick} from './habit-device-sync-v5731.js';
@@ -130,7 +131,7 @@ export function deleteTimeEntry(state,id){
 export function unifiedTimeEntries(state,watchActivities=[]){
  const base=timeEntries(state),seen=new Set(base.map(x=>x.id));
  const watch=(watchActivities||[]).filter(a=>a.source==='Garmin'&&!a.deleted&&!seen.has(a.id)&&a.durationMinutes>0&&/^[0-9]{4}-[0-9]{2}-[0-9]{2}T/.test(a.startedAt||''))
- .map(a=>({id:a.id,start:new Date(a.startedAt).toISOString(),end:new Date(new Date(a.startedAt).getTime()+a.durationMinutes*60000).toISOString(),category:a.category==='Soziales'?'family':'work',project:state?.projects?.[a.projectId]?.title||'',title:a.title||a.activityType||'Garmin',source:'watch',activityType:a.activityType,updatedAt:a.startedAt}));
+ .map(a=>({id:a.id,start:new Date(a.startedAt).toISOString(),end:new Date(new Date(a.startedAt).getTime()+a.durationMinutes*60000).toISOString(),category:activityToJournalArea(a.category),project:state?.projects?.[a.projectId]?.title||'',title:a.title||a.activityType||'Garmin',source:'watch',activityType:a.activityType,updatedAt:a.startedAt}));
  return [...watch,...base].sort((a,b)=>b.start.localeCompare(a.start));
 }
 export function unifiedTimeBreakdown(state,watchActivities=[],days=7,now=new Date()){
