@@ -26,13 +26,13 @@ function isoLocal(today){return checkDay(today)?today:'2026-10-31';}
 function fmtDate(s){return s.split('-').reverse().join('.');}
 function dateName(ms){return new Intl.DateTimeFormat('de-AT',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(ms));}
 
-export function lifeWeeksPosterModel({events=[],today='2026-10-31',years=80,paper='A3'}={}){
+export function lifeWeeksPosterModel({events=[],today='2026-10-31',years=80,paper='A3',includePrivateRelationships=false}={}){
  if(![80,100,110].includes(years))throw Error('Der Wochenposter-Export unterstützt 80, 100 oder 110 Lebensjahre.');
  if(!PAGE_SIZES[paper])throw Error('PDF-Papierformat muss A4 oder A3 sein.');
  if(!checkDay(today))throw Error('Ungültiger Stichtag für die Lebensmatrix.');
- const validEvents=Array.isArray(events)?events.filter(e=>e&&!e.deleted&&checkDay(e.start)&&checkDay(e.end)&&Date.parse(e.start)<=Date.parse(e.end)):[];
+ const validEvents=Array.isArray(events)?events.filter(e=>e&&!e.deleted&&checkDay(e.start)&&checkDay(e.ongoing?today:e.end)&&Date.parse(e.start)<=Date.parse(e.ongoing?today:e.end)&&(includePrivateRelationships||!(e.category==='relationship'||e.private===true))):[];
  const rows=Array.from({length:years},(_,age)=>({age,year:1983+age,yearEnd:1984+age,tier:lifeYearTier(age),cells:lifeWeekCells(age,{today,events:validEvents}),markers:lifeMonthMarkers(age)}));
- return {paper,years,rows,today,metrics:lifeElapsedMetrics(today),events:validEvents};
+ return {paper,years,rows,today,metrics:lifeElapsedMetrics(today),events:validEvents,includePrivateRelationships};
 }
 /** Returns a complete PDF 1.4 byte stream, exactly one vector page (A4/A3 landscape). */
 export function buildLifeWeeksPdf(opts={}){
@@ -77,13 +77,14 @@ export function buildLifeWeeksPdf(opts={}){
   const padX=clip(cellW*.09,.4,1.1),padY=clip(rowH*.08,.12,.7),rw=cellW-padX;
   row.cells.forEach((cell,j)=>{
    const xx=chartX+j*cellW,cy=y+padY,rh=Math.max(.55,rowH-2*padY);
-   const categories=[...new Set(cell.events.map(e=>e.category))].slice(0,3);
+   const categories=[...new Set(cell.events.filter(e=>e.category!=='relationship').map(e=>e.category))].slice(0,3);
    if(categories.length){categories.forEach((cat,k)=>{
     const match=LIFE_EVENT_CATEGORIES.find(e=>e[0]===cat),c=match?.[2]||'#879B8E';
     rect(xx+padX+(rw/categories.length)*k,cy,rw/categories.length,rh,c);
    });}
    else if(cell.status==='past'||cell.status==='current')rect(xx+padX,cy,rw,rh,'#AAB6B8');
    else rect(xx+padX,cy,rw,rh,'#F7FAF9');
+   if(cell.events.some(e=>e.category==='relationship'))rect(xx+padX,cy,rw,Math.max(.3,rh*.22),'#C57C9C');
    if(cell.status==='current'){
     stroke('#C59A46');cmd.push(`${n(model.paper==='A3'?1.15:.85)} w ${n(xx+padX)} ${n(cy)} ${n(rw)} ${n(rh)} re S`);
    }
@@ -97,7 +98,7 @@ export function buildLifeWeeksPdf(opts={}){
  line(margin,bottom-8,W-margin,bottom-8,'#C6D9D4',.65);
  text(margin,bottom-22,'Grau: vergangen   Weiss: offen   Gold-Rahmen: aktuelle Woche   Linien: Monatsgrenzen   Goldene Linie: 1. Jaenner',model.paper==='A3'?8:6.2,'#4E6762');
  text(margin,bottom-33,'Lebensjahr startet am 28. Juni; der Juli beginnt im ersten Wochenfeld am 1. Juli.',model.paper==='A3'?7.2:5.6,'#647C75');
- const legendY=bottom-48,legends=[...LIFE_EVENT_CATEGORIES,['past','Ohne Ereignis','#AAB6B8']];
+ const legendY=bottom-48,legends=[...LIFE_EVENT_CATEGORIES.filter(e=>model.includePrivateRelationships||e[0]!=='relationship'),['past','Ohne Ereignis','#AAB6B8']];
  const colCount=4,itemW=(W-2*margin)/colCount;
  legends.forEach((cat,i)=>{
   const [id,label,hex]=cat,xx=margin+(i%colCount)*itemW,yy=legendY-Math.floor(i/colCount)*(model.paper==='A3'?14:11);
