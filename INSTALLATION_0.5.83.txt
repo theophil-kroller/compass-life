@@ -1,0 +1,22 @@
+Compass Life 0.5.83 · ARS VIVENDI / MY LIFE IN WEEKS / ZOOM & PDF
+
+Verbindliche GitHub-Ausgangsbasis: main / 2a19d7b85942ad585b4fc228122c23fbbdbc407e (0.5.82).
+
+PATCH: Nur benutzen, wenn der GitHub-Stand exakt auf dem genannten Commit basiert.
+FULL SOURCE: vollständiger Quellstand. Beim Upload darf kein bestehender
+Quellcode aus einer anderen neueren Version überschrieben werden.
+PATCH und FULL SOURCE niemals gleichzeitig hochladen.
+
+INSIGHTS → Leben & Orte → My Life in Weeks:
+- 100/90/80/75/70/60/50 % Zoom, "Alles einpassen" skaliert die Matrix
+  in die Bildschirmhöhe, nicht den Rest von Compass.
+- Lebenstag, Lebenswoche, Lebensmonat, Lebensjahr und 7-Jahreszyklus.
+- A4/A3-Querformat als direkt herunterladbares einseitiges Vektor-PDF,
+  einschließlich Lebensereignissen und Farb-Legende. Export erfolgt lokal,
+  nicht über einen externen Server.
+- Der PDF-Download außerhalb des Tresors ist UNVERSCHLÜSSELT.
+
+Bestehende Daten und Tresor niemals löschen. Keine DB-Migration.
+TESTS: 33/33 Deployment; 16/16 gezielte Life Tests;
+Historisch 1776/1809; 33 alte Fehler. Echter Vite-Produktionsbuild lokal
+nicht durchführbar wegen fehlender node_modules; GitHub Actions prüfen.

@@ -178,6 +178,7 @@ import {nutritionTrendsIndex} from './nutrition-trends-v57726.js';
 import {strengthSummariesWithFit} from './strength-insights-v57728.js';
 import './body-transformation-v57749.css';
 import {lifeWeeksView,lifeYearRange,lifeWeekCells,lifeAgeAt,calendarLifeCandidates,putLifeEvent,deleteLifeEvent,LIFE_EVENT_CATEGORIES} from './life-weeks-v0582.js';
+import {buildLifeWeeksPdf} from './life-weeks-pdf-v0583.js';
 import './life-weeks-v0582.css';
 import {INSIGHTS750_EXTERNAL,insights750Allowed,insights750Group,insights750Sidebar,insights750PrimaryTabs,insights750Subtabs,insights750Cockpit} from './insights-navigation-v57750.js';
 import './insights-navigation-v57750.css';
@@ -262,7 +263,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.82';
+const COMPASS_CLIENT_VERSION='0.5.83';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -646,7 +647,7 @@ const calmLastView=(()=>{try{return JSON.parse(sessionStorage.getItem('compass.c
 if(!bootView&&!bootCapture&&calmLastView&&['today','inbox','review','forecast','overview','someday','activity','people','progress','recovery','insights','finance','projects','templates','shopping','next','flagged','hold'].includes(calmLastView.tab))tab=calmLastView.tab;
 if(!bootView&&!bootCapture&&calmLastView?.insight&&(calmLastView.insight==='touch'||INSIGHT_TABS.some(v=>v.id===calmLastView.insight)))insightTab=calmLastView.insight;
 if(!bootView&&!bootCapture&&calmLastView?.finance&&FINANCE_TABS.some(v=>v.title===calmLastView.finance))financePane=calmLastView.finance;
-let lifeWeeksAge=null,lifeWeeksWeek=null,lifeWeeksBonus=false,lifeWeeksStar=false,lifeWeeksDraft={},lifeWeeksCalendarQuery='',lifeWeeksCalendarHistory=[],lifeWeeksCalendarLoading=false;
+let lifeWeeksAge=null,lifeWeeksWeek=null,lifeWeeksBonus=false,lifeWeeksStar=false,lifeWeeksDraft={},lifeWeeksCalendarQuery='',lifeWeeksCalendarHistory=[],lifeWeeksCalendarLoading=false,lifeWeeksZoom='fit',lifeWeeksResizeBound=false;
 let lifeReportSettings={period:'year',finance:false,places:false,people:false,feelings:false,rankedIds:[],aiStatus:''};
 let calmNavGroup=['shopping','templates','projects','overview','next','forecast','radar','flagged','hold','someday','recovery'].includes(tab)?'plan':tab==='insights'||tab==='activity'||tab==='progress'?'insights':tab==='finance'?'finance':'';
 let financeSankeyFocus='all',financeMerchantSelected='';
@@ -2640,7 +2641,7 @@ function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensa
  const healthChoices=false&&healthMode?`<div class="calm-health-icons" role="group" aria-label="Gesundheitsauswertung">${[['sleep','Schlaf','moon'],['energy','Body Battery','bolt'],['stress','Stress','activity'],['body','Körper','layers']].map(([key,label,icon])=>`<button type="button" class="calm-health-icon ${insightTab===key?'selected':''}" data-action="insights-tab" data-id="${key}" aria-label="${label}" title="${label}" aria-pressed="${insightTab===key}">${ico(icon,19)}<span class="calm-icon-tooltip" aria-hidden="true">${label}</span></button>`).join('')}<span class="calm-active-health-label">${h(tabDef.label)}</span></div>`:'';
  const periods=INSIGHT_PERIODS.map(([v,label])=>`<button type="button" class="insight-period ${insightPeriod===v?'selected':''}" data-action="insights-period" data-id="${h(v)}" aria-pressed="${insightPeriod===v}">${h(label)}</button>`).join('');
  const dataCount=(state?.healthImports?.garminNights?.length||0)+(state?.healthImports?.garminHrv?.length||0)+(state?.healthImports?.fitdays?.length||0)+(state?.healthImports?.garminWellness?.length||0)+(state?.healthImports?.garminFitness?.length||0)+(state?.healthImports?.garminSessions?.length||0);
- const content=insightTab==='lifeweeks'?lifeWeeksView(state,{today,selectedAge:lifeWeeksAge,selectedWeek:lifeWeeksWeek,draft:lifeWeeksDraft,bonus:lifeWeeksBonus,star:lifeWeeksStar,calendar:calendarEvents,calendarResults:lifeWeeksCalendarHistory,calendarQuery:lifeWeeksCalendarQuery,calendarConnected:Boolean(calendarToken&&Date.now()<calendarExpires),calendarLoading:lifeWeeksCalendarLoading}):insightTab==='report'?annualSetupView(state,{...lifeReportSettings,now:today}):insightTab==='intelligence'?insights750Cockpit(state,{today:localDate()}):insightTab==='capacity'?capacityGuardianView(effectiveCapacityState748(state),{today:localDate()})+capacityCalendarView(state,{today:localDate(),now:new Date(),calendarEvents,calendarCoverage,calendarUpdatedAt,calendarConnected:!!(calendarToken&&Date.now()<calendarExpires)||Boolean(state?.calendarArchive?.completed)}):insightTab==='weekly'?weeklyIntelligenceView(state,{today:localDate(),offset:weeklyOffset746})+capacityGuardianTeaser(state,{today:localDate()}):insightTab==='dreamworld'?dreamJournalView(state,{days:dreamDays743,editingId:dreamEditingId743,kind:dreamKind743}):insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?`<div style="margin-bottom:12px"><button type="button" class="t577-tab-shortcut" data-action="t577-open">🫂 Berührung & Nähe erfassen →</button></div>`+feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='timejournal'?timeJournalView(state,{period:timeJournalPeriod,editingId:timeJournalEditId,showForm:timeJournalShowForm,watchActivities:activeActivities(watchSessions,state)})+journalSyncPanel():insightTab==='nutrition'?nutritionWorkspace4017(state,{
+ const content=insightTab==='lifeweeks'?lifeWeeksView(state,{today,selectedAge:lifeWeeksAge,selectedWeek:lifeWeeksWeek,draft:lifeWeeksDraft,bonus:lifeWeeksBonus,star:lifeWeeksStar,matrixZoom:lifeWeeksZoom,calendar:calendarEvents,calendarResults:lifeWeeksCalendarHistory,calendarQuery:lifeWeeksCalendarQuery,calendarConnected:Boolean(calendarToken&&Date.now()<calendarExpires),calendarLoading:lifeWeeksCalendarLoading}):insightTab==='report'?annualSetupView(state,{...lifeReportSettings,now:today}):insightTab==='intelligence'?insights750Cockpit(state,{today:localDate()}):insightTab==='capacity'?capacityGuardianView(effectiveCapacityState748(state),{today:localDate()})+capacityCalendarView(state,{today:localDate(),now:new Date(),calendarEvents,calendarCoverage,calendarUpdatedAt,calendarConnected:!!(calendarToken&&Date.now()<calendarExpires)||Boolean(state?.calendarArchive?.completed)}):insightTab==='weekly'?weeklyIntelligenceView(state,{today:localDate(),offset:weeklyOffset746})+capacityGuardianTeaser(state,{today:localDate()}):insightTab==='dreamworld'?dreamJournalView(state,{days:dreamDays743,editingId:dreamEditingId743,kind:dreamKind743}):insightTab==='connections'?personalConnectionsView(personalConnections(state,{today,days:connectionDays,emotionId:connectionEmotion,healthDays})):insightTab==='feelings'?`<div style="margin-bottom:12px"><button type="button" class="t577-tab-shortcut" data-action="t577-open">🫂 Berührung & Nähe erfassen →</button></div>`+feelingInsights(state?.feelingCheckins||[],today,feelingDays,{view:feelingView,selectedId:feelingSelectedId,limit:feelingHistoryLimit}):insightTab==='habits'?habitInsightsView():insightTab==='timejournal'?timeJournalView(state,{period:timeJournalPeriod,editingId:timeJournalEditId,showForm:timeJournalShowForm,watchActivities:activeActivities(watchSessions,state)})+journalSyncPanel():insightTab==='nutrition'?nutritionWorkspace4017(state,{
    day:today,view:nutritionView712,editingId:nutritionEditId,
    renderJournal:()=>nutritionInsightsView(state,{period:nutritionPeriod}),
    renderEditor:()=>nutritionEntryInspectorView(state,{editingId:nutritionEditId}),
@@ -2967,8 +2968,33 @@ function render(){
  }
  if(performanceTrace.enabled&&typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(()=>performanceTrace.end('Render bis Darstellung',tab,renderMeasurement)));
 }
+function applyLifeWeeksZoom83(root,zoom=lifeWeeksZoom){
+ if(!root)return;
+ const matrix=root.querySelector('.lw82-matrix[data-lw83-zoom]');if(!matrix)return;
+ const allowed=[100,90,80,75,70,60,50];
+ const level=zoom==='fit'?'fit':allowed.includes(Number(zoom))?Number(zoom):'fit';
+ const years=Number(matrix.dataset.lw83Years)||80;
+ const height=Math.min(760,Math.max(330,Math.round((window.innerHeight||900)*.72)));
+ const factor=level==='fit'?null:level/100;
+ const rowHeight=factor===null?Math.max(4.5,Math.min(19,(height-48)/years-0.5)):19*factor;
+ const gap=factor===null?0.5:2*factor;
+ const cell=factor===null?Math.max(3,rowHeight-1):Math.max(4,12*factor);
+ matrix.style.setProperty('--lw83-row-height',rowHeight+'px');
+ matrix.style.setProperty('--lw83-row-gap',gap+'px');
+ matrix.style.setProperty('--lw83-cell-height',cell+'px');
+ matrix.style.setProperty('--lw83-label-font',Math.max(7,Math.min(11,rowHeight*.82))+'px');
+ root.style.setProperty('--lw83-viewport',height+'px');
+ matrix.dataset.lw83Zoom=String(level);
+ for(const button of root.querySelectorAll('[data-action="lw83-zoom"]')){
+  const active=button.dataset.id===String(level);
+  button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));
+ }
+}
 function bindLifeWeeks82(){
  const matrix=app.querySelector('.lw82-root');if(!matrix)return;
+ applyLifeWeeksZoom83(matrix,lifeWeeksZoom);
+ if(!lifeWeeksResizeBound){lifeWeeksResizeBound=true;window.addEventListener('resize',()=>{const root=app?.querySelector?.('.lw82-root');if(root)applyLifeWeeksZoom83(root,lifeWeeksZoom);},{passive:true});}
+
  matrix.onclick=ev=>{const button=ev.target?.closest?.('[data-lw82-week]');if(!button)return;const match=/^(\d+):(\d+)$/.exec(button.dataset.lw82Week||'');if(match){ev.preventDefault();runAction('lw82-week',match[1],match[2]);}};
  const form=app.querySelector('#lw82-event-form');if(form)form.onsubmit=async ev=>{
   ev.preventDefault();const data=new FormData(form);
@@ -4820,6 +4846,25 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='balance-drill'){if(!['insights','people','finance','review'].includes(id))return;tab=id;if(id==='insights'&&INSIGHT_TABS.some(t=>t.id===stepId))insightTab=stepId;if(id==='finance')financePane='Prognose';calmNavGroup=id==='insights'?'insights':id==='finance'?'finance':'';render();return;}
   lastActivity=Date.now();
   try {
+    if(action==='lw83-pdf'){
+      if(!state||!['A4','A3'].includes(id))return;
+      try{
+        const years=lifeWeeksStar?110:lifeWeeksBonus?100:80;
+        const bytes=buildLifeWeeksPdf({events:state.lifeWeekEvents||[],today:localDate(),years,paper:id});
+        const file=new Blob([bytes],{type:'application/pdf'});
+        const href=URL.createObjectURL(file),a=document.createElement('a');
+        a.href=href;a.download=`Compass_My_Life_in_Weeks_${id}_${localDate()}.pdf`;
+        document.body.appendChild(a);a.click();a.remove();
+        window.setTimeout(()=>URL.revokeObjectURL(href),120000);
+        toast(`Lebensposter als einseitiges ${id}-PDF erstellt. Achtung: PDF-Dateien sind außerhalb des Tresors nicht verschlüsselt.`);
+      }catch(ex){toast('PDF-Export: '+ex.message,true);}
+      return;
+    }
+    if(action==='lw83-zoom'){
+      const zoom=id==='fit'?'fit':Number(id);
+      if(zoom!=='fit'&&![100,90,80,75,70,60,50].includes(zoom))return;
+      lifeWeeksZoom=zoom;applyLifeWeeksZoom83(app.querySelector('.lw82-root'),zoom);return;
+    }
     if(action==='lw82-year'||action==='lw82-previous'||action==='lw82-next'||action==='lw82-today'||action==='lw82-bonus'||action==='lw82-star'||action==='lw82-week'||action==='lw82-new'||action==='lw82-clear'||action==='lw82-edit'||action==='lw82-delete'||action==='lw82-calendar-choose'||action==='lw82-calendar-fetch'){
       if(!state)return;
       const age=Number(id);

@@ -1,0 +1,23 @@
+{
+  "version": "0.5.83",
+  "base_commit": "2a19d7b85942ad585b4fc228122c23fbbdbc407e",
+  "changed_files": [
+    "INSTALLATION_0.5.83.txt",
+    "RELEASE_0.5.83.md",
+    "client/package.json",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/life-weeks-pdf-v0583.js",
+    "client/src/life-weeks-v0582.css",
+    "client/src/life-weeks-v0582.js",
+    "client/src/main-full-v57759402510.js",
+    "package.json",
+    "tests/compass-0583-lifeweeks-zoom-pdf.test.mjs",
+    "worker/package.json"
+  ],
+  "removed_files": [],
+  "full_file_count": 1319,
+  "baseline_file_count": 1315,
+  "deploy_tests": "33/33",
+  "life_tests": "16/16",
+  "historical_tests": "1776/1809"
+}
