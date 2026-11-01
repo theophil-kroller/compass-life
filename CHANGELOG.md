@@ -1,3 +1,9 @@
+## 0.5.91.6 · Bankimport-Dubletten und Einnahmen-Transparenz
+
+- Sprachübergreifende Referenzprüfung verhindert doppelte Gehaltseingänge aus unterschiedlich formatierten Bank-CSV-Dateien.
+- Bereits gespeicherte eindeutige Dubletten nur einmal zählen (Cashflow, Kategorien, Kontostände); Originale behalten und bei Fehlzuordnung einzeln freigeben.
+- Doppelschutz in Importvorschau und Bestätigungszeitpunkt; keine unsichere Kombination allein nach Datum/Betrag. Tests und Grenzen: `RELEASE_0.5.91.6.md`.
+
 ## 0.5.91.5 · Finanzprüfung & Buchungs-Nachweis
 
 - „Auswahl bestätigen“ verarbeitet jetzt auch wirtschaftlich offene Buchungen, die im verschlüsselten Original noch kein `needsReview` tragen.

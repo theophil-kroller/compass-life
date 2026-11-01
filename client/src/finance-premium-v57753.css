@@ -87,3 +87,14 @@
 .fin-review-feedback[data-status="error"]{background:#fff1e9;color:#9a3b19;border:1px solid #f1d0bf}
 .fin-review-feedback[hidden]{display:none!important}
 @media(max-width:520px){.fin53-drill-item{grid-template-columns:65px minmax(0,1fr);gap:7px}.fin53-drill-item b{grid-column:2;justify-self:start}}
+
+/* 0.5.91.6 — non-destructive duplicate review, premium compact styling */
+.fin53-duplicate-notice{margin:12px 20px;padding:12px 16px;border:1px solid #b9d4c5;border-radius:14px;background:rgba(79,139,116,.065);color:inherit}
+.fin53-duplicate-notice summary{cursor:pointer;font-size:.88rem;line-height:1.5}
+.fin53-duplicate-notice p{font-size:.82rem;opacity:.8;max-width:85ch}
+.fin53-duplicate-notice ul{list-style:none;margin:0;padding:0}
+.fin53-duplicate-notice li{padding:12px 0;border-top:1px solid #c5d3ca;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.fin53-duplicate-notice li div{display:flex;flex-direction:column;gap:3px;flex:1;min-width:210px}
+.fin53-duplicate-notice li span,.fin53-duplicate-notice li small{font-size:.8rem;opacity:.78;overflow-wrap:anywhere}
+.fin53-duplicate-notice button{font-size:.78rem;white-space:normal}
+@media(max-width:650px){.fin53-duplicate-notice{margin:10px 0}.fin53-duplicate-notice li button{width:100%}}

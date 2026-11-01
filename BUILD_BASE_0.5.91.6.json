@@ -1,0 +1,15 @@
+{
+  "version": "0.5.91.6",
+  "base_version": "0.5.91.5",
+  "base_commit": "5987fe27856f94e545f22ea1d6dc9e412ecde37d",
+  "quality": {
+    "targeted_tests": "9/9 passed",
+    "deployment_tests": "33/33 passed",
+    "full_suite": "1920/1955 passed",
+    "preexisting_failed_tests": 35,
+    "new_regressions": 0,
+    "vite_production_bundle": "not run locally: dependencies unavailable"
+  },
+  "vault_migration": false,
+  "data_loss": "none; duplicates preserved in raw ledger"
+}
