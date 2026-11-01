@@ -1,0 +1,16 @@
+{
+  "version": "0.5.91.8",
+  "baseVersion": "0.5.91.7",
+  "baseRepo": "theophil-kroller/compass-life",
+  "baseBranch": "main",
+  "baseCommit": "76737d13e21723558019f11d28c723aa454c2303",
+  "release": "RELEASE_0.5.91.8.md",
+  "newTests": 8,
+  "testPass": 1935,
+  "testTotal": 1970,
+  "historicalFailures": 35,
+  "deployTests": 33,
+  "productionBundleBuilt": false,
+  "productionBundleReason": "vite: not found (missing installed dependencies)",
+  "smartTapeImportEnabled": false
+}

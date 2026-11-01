@@ -1,3 +1,9 @@
+## 0.5.91.8 · Coach-Sätze vereinheitlicht; Smart Tape vorbereitet (Import AUS)
+
+- Body Transformation verwendet jetzt die bestehenden bestätigten Coach-Sätze über die gleiche Coach-/Garmin-Session-Zusammenführung wie die Muscle Map.
+- Fitdays+ Smart-Tape-Modell (12 Regionen, cm/in, Dot-Plots, Ratio, synthetische Tests) auf dem bestehenden Coach-Messwertspeicher vorbereitet; Import/UI/Adaptive Vorschläge deaktiviert.
+- Testergebnisse und Grenzen: `RELEASE_0.5.91.8.md`.
+
 ## 0.5.91.7 · Mein Ofenkartoffel-Gericht mit editierbarer Suppenschüssel-Portion
 
 - Persönliches Mahlzeit-Rezept mit Bio-Kartoffeln samt Schale, Olivenöl, schwarzem Sesam, Chiliflocken und Salz; Ölmenge für beide Übergüsse zusammen.
