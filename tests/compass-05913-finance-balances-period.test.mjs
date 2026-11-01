@@ -39,7 +39,7 @@ test('real bank snapshots use latest confirmed per named account, no invented ba
  assert.equal(n26.snapshot.cents,175500);assert.equal(n26.snapshot.day,'2026-10-31');
  assert.equal(n26.latestTransaction,'2026-11-01');
  assert.equal(m.accounts.find(x=>x.label==='Revolut · Current EUR').snapshot.cents,42100);
- assert.equal(m.knownCount,2);assert.equal(m.total,217600);assert.equal(m.incomplete,false);
+ assert.equal(m.knownCount,2);assert.equal(m.total,217100);assert.equal(m.incomplete,false); // Oct 31 snapshot minus Nov 1 booking
  const missing=financeAccountStatusModel({financeTransactions:all.financeTransactions},'2026-11-01');
  assert.ok(missing.accounts.every(x=>x.snapshot===null));
  assert.equal(missing.knownCount,0);assert.equal(missing.total,0);
@@ -53,7 +53,7 @@ test('future snapshots ignored in current overview, historical snapshots never c
  const m=financeAccountStatusModel({financeTransactions:[tx('2026-10-21',123,'income')],financeWealthSnapshots:[{type:'bank',label:'N26 · Giro EUR',day:'2026-12-01',cents:123400}]},'2026-11-01');
  assert.equal(m.knownCount,0);
  const html=financePremiumOverviewView(all,{today:'2026-11-01',period:'lastMonth'});
- for(const phrase of ['Letzter Monat','Wo liegt mein Geld?','Saldo vom 2026-10-31','Letzte Buchung: 2026-11-01','MONAT AUF EINEN BLICK','Oktober 2026','Kontostand erfassen / aktualisieren','finance-wealth-add'])assert.ok(html.includes(phrase),phrase);
+ for(const phrase of ['Letzter Monat','Wo liegt mein Geld?','Saldo vom 2026-10-31','Letzte Buchung bis Stichtag: 2026-10-31','MONAT AUF EINEN BLICK','Oktober 2026','Kontostand erfassen / aktualisieren','finance-wealth-add'])assert.ok(html.includes(phrase),phrase);
  assert.match(html,/Dieser Monat/);assert.match(html,/fin53-chart-scroll/);assert.match(html,/fin79-open-review/);
 });
 test('user text is escaped and no missing bank balance shown as zero euros',()=>{

@@ -1,3 +1,10 @@
+## 0.5.91.4 · Externe Geldflüsse, Diagramm zuerst, Saldo-Brücken
+
+- Eigenüberträge und Bargeldbewegungen bleiben aus Einnahmen, Konsum, Kategorien und Netto-Cashflow heraus. Alte grobe Kategorien ohne gesicherten wirtschaftlichen Zweck werden separat als ungeklärt ausgewiesen; gespeicherte Buchungen bleiben unverändert.
+- Monatsdiagramm steht vor Kennzahlen und Kategorien; Kontostände erscheinen weiter unten. Monatschalter vor/zurück.
+- Salden an gewählten Monatsstichtagen aus dem zeitlich nächsten bestätigten Snapshot und signierten Kontobuchungen vorwärts bzw. rückwärts rekonstruiert. Abgeleitete Salden explizit provisorisch; keine API-Salden vorgetäuscht.
+- Gemeinsame wirtschaftliche Klassifizierung für Premium-Überblick und aggregierte Cashflow-/Ausgabenmodelle, inkl. Testfällen.
+
 ## 0.5.91.3 · Kontostände & letzter Kalendermonat
 
 - Konten mit bestätigtem Saldo und Bewertungsdatum neben letzter Buchung; lokale Aktualisierung ohne neue Datenbank.

@@ -4,6 +4,7 @@
 import {merchantKey,safeMerchantRule} from './finance-core.js';
 import {normalizedMerchant} from './finance-merchant-insights.js';
 import {isRecognizedExternalHousingTransfer} from './finance-payment-patterns-v561.js';
+import {economicFlowIndex,economicFlowKind} from './finance-economic-flows-v05914.js';
 
 const cents=t=>Math.abs(Number(t.amountCents)||0);
 const signed=t=>Number(t.amountCents)||0;
@@ -14,25 +15,26 @@ export function monthDistance(a,b){
 }
 export function financeMonthlySeries(transactions=[],period='all'){
  const rows=(Array.isArray(transactions)?transactions:[]).filter(t=>/^\d{4}-\d{2}-\d{2}$/.test(t.day||'')&&(period==='all'||t.day.startsWith(period)));
- const result=new Map();
+ const result=new Map(),economic=economicFlowIndex(transactions);
  for(const t of rows){const m=t.day.slice(0,7);if(!isMonth(m))continue;
   const x=result.get(m)||{month:m,count:0,expenseCents:0,incomeCents:0,refundCents:0,transfersOutCents:0,transfersInCents:0,cashCents:0,pendingOutCents:0,pendingInCents:0,netBankCents:0,categories:{}};
   x.count++;x.netBankCents+=signed(t);const v=cents(t);
-  if(t.needsReview){if(signed(t)<0)x.pendingOutCents+=v;else x.pendingInCents+=v;}
-  else if(t.flow==='expense'&&signed(t)<0){x.expenseCents+=v;const category=String(t.category||'Unbekannt').split(' / ')[0];x.categories[category]=(x.categories[category]||0)+v;}
-  else if(t.flow==='income'&&signed(t)>0)x.incomeCents+=v;
-  else if(t.flow==='refund'&&signed(t)>0)x.refundCents+=v;
-  else if(t.flow==='cash'&&signed(t)<0)x.cashCents+=v;
-  else if(t.flow==='transfer'){if(signed(t)<0)x.transfersOutCents+=v;else x.transfersInCents+=v;}
+  const kind=economicFlowKind(t,economic);
+  if(kind==='uncertain'){if(signed(t)<0)x.pendingOutCents+=v;else x.pendingInCents+=v;}
+  else if(kind==='expense'&&signed(t)<0){x.expenseCents+=v;const category=String(t.category||'Unbekannt').split(' / ')[0];x.categories[category]=(x.categories[category]||0)+v;}
+  else if(kind==='income'&&signed(t)>0)x.incomeCents+=v;
+  else if(kind==='refund'&&signed(t)>0)x.refundCents+=v;
+  else if(kind==='cash'&&signed(t)<0)x.cashCents+=v;
+  else if(kind==='transfer'){if(signed(t)<0)x.transfersOutCents+=v;else x.transfersInCents+=v;}
   result.set(m,x);
  }
  return [...result.values()].sort((a,b)=>a.month.localeCompare(b.month));
 }
 export function financeExpenseOverview(transactions=[],period='all'){
  const months=financeMonthlySeries(transactions,period);
- const categories=new Map(),merchants=new Map();
+ const categories=new Map(),merchants=new Map(),economic=economicFlowIndex(transactions);
  for(const t of transactions){
-  if(t.needsReview||t.flow!=='expense'||signed(t)>=0||(period!=='all'&&!String(t.day).startsWith(period)))continue;
+  if(economicFlowKind(t,economic)!=='expense'||signed(t)>=0||(period!=='all'&&!String(t.day).startsWith(period)))continue;
   const v=cents(t),c=String(t.category||'Unbekannt'),parent=c.split(' / ')[0];
   const group=categories.get(parent)||{name:parent,cents:0,detail:new Map(),count:0};group.cents+=v;group.count++;group.detail.set(c,(group.detail.get(c)||0)+v);categories.set(parent,group);
   const display=t.merchantDisplayName?normalizedMerchant(t.merchantDisplayName):(t.merchant||'Unbekannt'),mk=merchantKey(display),prev=merchants.get(mk)||{name:display,cents:0,count:0};prev.count++;prev.cents+=v;merchants.set(mk,prev);

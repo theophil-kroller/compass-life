@@ -1,0 +1,12 @@
+Compass 0.5.91.4 · Test- und Paketprüfung
+Basis: 0.5.91.3 / GitHub main b5347d1ab2a6611401f8cb44c9a88700a0df55be
+
+Gezielte Tests: 14/14 bestanden (0.5.91.3 Regression + 0.5.91.4 Finanzen).
+Deployment-Check: npm run check:deploy – bestanden, 33/33 Tests, Worker-Check und Modul-Graph.
+Gesamtsuite: npm test – 1904/1939 Tests bestanden; 35 identische historische Fehler aus Basis 0.5.91.3; keine neuen Fehler.
+Baseline: npm test – 1898/1933 bestanden, ebenfalls 35 historische Fehler.
+Syntaktische Node-Prüfung: bestanden.
+Vite-Produktionsbundling: in dieser isolierten Umgebung nicht möglich, da vite / node_modules fehlen und externe Paketinstallation nicht erreichbar ist. Nach GitHub-Upload bitte GitHub Actions als Produktions-Build- und Deploy-Prüfung ausführen.
+
+Datenhaltung: keine Migration, kein automatisches Umschreiben bestehender Banktransaktionen.
+Fortgeschriebene Kontostände: rechnerisch und nur bei vollständigen importierten Buchungen deckungsgleich mit Bankständen.

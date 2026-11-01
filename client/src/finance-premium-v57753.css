@@ -40,3 +40,22 @@
 @media(max-width:1000px){.fin53-priority{grid-template-columns:1fr 1fr}.fin53-balance-form{grid-template-columns:1fr 1fr}.fin53-balance-form label:first-child{grid-column:1/-1}}
 @media(max-width:760px){.fin53-priority{grid-template-columns:1fr}.fin53-account-row{gap:8px}.fin53-balances,.fin53-month-summary{padding:12px}}
 @media(max-width:430px){.fin53-balance-form{grid-template-columns:1fr}.fin53-balance-form label:first-child{grid-column:auto}}
+
+/* 0.5.91.4 — chart first, economic cashflow and lower historical account balances */
+.fin53-content-first{display:block;margin:0 0 12px}
+.fin53-content-first .fin53-hero{min-height:0}
+.fin53-content-first .fin53-chart-scroll svg{max-height:235px}
+.fin53-priority{grid-template-columns:minmax(280px,1fr) minmax(280px,1fr);align-items:stretch}
+.fin53-priority .fin53-top{display:block;min-height:0}
+.fin53-balances-later{margin-top:12px}
+.fin53-balances-later .fin53-balances{width:100%}
+.fin53-month-nav{display:flex;align-items:center;justify-content:flex-end;gap:9px;font-size:11px;color:#647f70;margin:-4px 0 3px}
+.fin53-month-nav button{border:1px solid #dbe5de;background:#f6faf7;color:#2d6d57;cursor:pointer;border-radius:8px;font-size:18px;line-height:1;min-width:30px;min-height:28px}
+.fin53-month-nav button:disabled{opacity:.35;cursor:default}
+.fin53-account-value small{max-width:280px;white-space:normal}
+@media(max-width:760px){.fin53-priority{grid-template-columns:1fr}.fin53-month-summary,.fin53-top{padding:12px}}
+
+.fin53-saving-bar{display:flex;height:7px;overflow:hidden;border-radius:7px;background:#eff3ed;margin-top:12px}
+.fin53-saving-bar span{display:block;height:100%;background:#d18f68}
+.fin53-saving-bar i{display:block;height:100%;background:#548b79}
+.fin53-saving-label{display:block;color:#789085;font-size:10px;margin:5px 0 2px}

@@ -1,0 +1,15 @@
+{
+  "version": "0.5.91.4",
+  "base_version": "0.5.91.3",
+  "base_commit": "b5347d1ab2a6611401f8cb44c9a88700a0df55be",
+  "source": "reconstructed from verified 0.5.89 full source and 0.5.90–0.5.91.3 patch series",
+  "release": "RELEASE_0.5.91.4.md",
+  "test_results": {
+    "tests": 1939,
+    "passed": 1904,
+    "historical_failures": 35,
+    "new_failures": 0,
+    "deployment_tests_passed": 33
+  },
+  "vite_build": "Not run: vite dependencies absent in local environment"
+}

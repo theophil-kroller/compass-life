@@ -22,6 +22,7 @@ import {financeMonthlyMini,financeRecentPeek,financeBudgetPeek,financeFixedPeek}
 import {circularWealthFlowView} from './finance-circular-flow-v32.js';
 import {BANK_ACCOUNTS,accountChoices,accountMatches,accountLabel,transferCandidates} from './finance-revolut.js';
 import {accountFlowView} from './finance-account-flows.js';
+import {economicFlowIndex,economicPresentationRows} from './finance-economic-flows-v05914.js';
 import {merchantInsightsView} from './finance-merchant-insights.js';
 import {financeMerchantInspector} from './finance-merchant-editor.js';
 import {consolidatedWealthView} from './finance-wealth-consolidation.js';
@@ -84,7 +85,7 @@ export function financeVisualLab(all=[],filtered=[],ui={},today=new Date().toLoc
  <div class="fin-viz-hero">${chartHtml}</div></section>`;
 }
 export function financeDashboardView(state={},selected='Überblick',period='all',preview=null,page=0,ui={}){
- const allTransactions=state.financeTransactions||[],transactions=allTransactions.filter(t=>accountMatches(t,ui.account||'all')),today=ui.today||new Date().toLocaleDateString('sv-SE'),window=financePeriodInfo(transactions,period,today),filtered=window.rows,rollingAvg=financeCategorySeries(transactions,'',today),vm=financeViewModel(filtered,'all'),full=financeViewModel(transactions,'all'),uniqueMonths=[...new Set(transactions.map(t=>t.day.slice(0,7)))].sort().reverse(),years=[...new Set(transactions.map(t=>t.day.slice(0,4)))].sort().reverse();
+ const allTransactions=state.financeTransactions||[],economic=economicFlowIndex(allTransactions),transactions=economicPresentationRows(allTransactions.filter(t=>accountMatches(t,ui.account||'all')),economic),today=ui.today||new Date().toLocaleDateString('sv-SE'),window=financePeriodInfo(transactions,period,today),filtered=window.rows,rollingAvg=financeCategorySeries(transactions,'',today),vm=financeViewModel(filtered,'all'),full=financeViewModel(transactions,'all'),uniqueMonths=[...new Set(transactions.map(t=>t.day.slice(0,7)))].sort().reverse(),years=[...new Set(transactions.map(t=>t.day.slice(0,4)))].sort().reverse();
  const vague=transactions.filter(t=>!t.needsReview&&(t.confidence==='broad'||t.source==='broad-rule')).length;
  const pOpts=`${[['current','Dieser Monat'],['lastMonth','Letzter Monat'],['last3','Letzte 3 Monate'],['last12','Letzte 12 Monate'],['ytd','Dieses Jahr'],['all','Gesamter Zeitraum']].map(([id,label])=>`<option value="${id}" ${period===id?'selected':''}>${label}</option>`).join('')}${years.map(y=>`<option value="${y}" ${period===y?'selected':''}>${y}</option>`).join('')}${uniqueMonths.map(m=>`<option value="${m}" ${period===m?'selected':''}>${m}</option>`).join('')}`;
  const pane=FINANCE_TABS.some(x=>x.title===selected)?selected:'Überblick';

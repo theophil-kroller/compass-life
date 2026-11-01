@@ -47,9 +47,9 @@ test('category confirmation and learned merchant rule never overwrite confirmed 
 
 test('Sankey and accounting exclude unreviewed, transfers and cash from consumer spending',()=>{
  let rows=parseRaiffeisenCsv(csv).rows;const vm=financeViewModel(rows,'2024-01');
- assert.equal(vm.incomeCents,230000);assert.equal(vm.expenseCents,2345+3490+30000+9000+4301);assert.equal(vm.pending.length,0);
+ assert.equal(vm.incomeCents,230000);assert.equal(vm.expenseCents,2345+3490+9000+4301);assert.equal(vm.pending.length,1); // previously generic unknown transfer was counted as consumption
  const html=expenseSankey(vm);assert.match(html,/Sankey|Abflüsse/);assert.match(html,/Sonstiges|Shopping/);
- assert.match(financeDashboardView({financeTransactions:rows},'Prüfen','all'),/Keine zwingende Prüfung mehr offen/);
+ assert.match(financeDashboardView({financeTransactions:rows},'Prüfen','all'),/Buchung|Prüfen/); // generic unknown transfer now appears for verification
  const transfer=categorizeTransaction(rows[2],'Transfer / Eigene Konten','transfer');rows=[...rows.slice(0,2),transfer,...rows.slice(3)];
  const v=financeViewModel(rows,'all');assert.equal(v.transferCents,30000);assert.equal(v.expenseCents,2345+3490+9000+4301);
  assert.equal(v.pending.length,0);

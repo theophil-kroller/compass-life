@@ -267,7 +267,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.3';
+const COMPASS_CLIENT_VERSION='0.5.91.4';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -5679,6 +5679,14 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='compass56-recommend-close'){compass56RecommendationMarkup='';compass56RecommendationDay='';if(!compass55RefreshInspector())render();return;}
     if(action==='compass56-planning'){compass56PlanningOpen=!compass56PlanningOpen;render();return;}
     if(action==='finance79-next'||action==='finance79-prev'){const count=mobileFinanceReviewRows(state,financeAccount).length;financeReviewPage=Math.min(Math.max(0,Math.ceil(count/10)-1),Math.max(0,financeReviewPage+(action==='finance79-next'?1:-1)));render();return;}
+    if(action==='finance-month-step'){
+      const step=Number(id);if(step!==-1&&step!==1)return;
+      const today=localDate(),current=today.slice(0,7);
+      const base=/^\d{4}-(?:0[1-9]|1[0-2])$/.test(financePeriod)?financePeriod:financePeriod==='current'?current:new Date(Date.UTC(Number(today.slice(0,4)),Number(today.slice(5,7))-2,1)).toISOString().slice(0,7);
+      const next=new Date(Date.UTC(Number(base.slice(0,4)),Number(base.slice(5,7))-1+step,1)).toISOString().slice(0,7);
+      if(next>current||next<'2000-01')return;
+      financePeriod=next;financeReviewPage=0;financeLedgerPage=0;render();return;
+    }
     if(action==='finance-pane'){if(FINANCE_TABS.some(p=>p.title===id)){financePane=id;financeReviewPage=0;financeLedgerPage=0;render();}return;}
     if(action==='finance-trip-select'){
       if((state?.financeTrips||[]).some(t=>t.id===id)){financeTripSelected=id;financeTripPage=0;financeTripQuery='';render();}return;

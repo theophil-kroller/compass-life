@@ -2,6 +2,7 @@
 import {detailedFinanceMatch,financeGenericFallback,updateBankSuggestions} from './finance-auto-rules.js';
 import {matchPrivateFinanceRule} from './finance-private-rules.js';
 import {parseRevolutCsv} from './finance-revolut.js';
+import {economicFlowIndex,economicFlowKind} from './finance-economic-flows-v05914.js';
 import {parseFlatexCsv} from './finance-flatex-v36.js';
 import {detectFinanceFormat,parseN26Csv,parseDkbGiroCsv,parseDkbVisaCsv} from './finance-account-import.js';
 export {updateBankSuggestions} from './finance-auto-rules.js';
@@ -138,21 +139,22 @@ export function categorizeTransaction(t,category,flow){
 }
 
 export function financeViewModel(transactions=[],period='all'){
- const entries=transactions.filter(t=>period==='all'||t.day.startsWith(period));
- const sum=(list)=>list.reduce((n,x)=>n+Math.abs(x.amountCents),0);
- const income=entries.filter(x=>x.amountCents>0&&x.flow==='income'&&!x.needsReview);
- const refunds=entries.filter(x=>x.amountCents>0&&x.flow==='refund'&&!x.needsReview);
- const spending=entries.filter(x=>x.amountCents<0&&x.flow==='expense'&&!x.needsReview);
- const transfers=entries.filter(x=>x.amountCents<0&&x.flow==='transfer'&&!x.needsReview);
- const cash=entries.filter(x=>x.amountCents<0&&x.flow==='cash'&&!x.needsReview);
- const pending=entries.filter(x=>x.needsReview);
- const groups=new Map();for(const t of spending){const parent=t.category.split(' / ')[0];groups.set(parent,(groups.get(parent)||0)+Math.abs(t.amountCents));}
+ const all=Array.isArray(transactions)?transactions:[],economic=economicFlowIndex(all);
+ const entries=all.filter(t=>period==='all'||String(t.day||'').startsWith(period));
+ const sum=list=>list.reduce((n,x)=>n+Math.abs(x.amountCents),0);
+ const of=kind=>entries.filter(x=>economicFlowKind(x,economic)===kind);
+ const income=of('income'),refunds=of('refund'),spending=of('expense'),transfers=of('transfer'),cash=of('cash'),pending=of('uncertain');
+ const groups=new Map();for(const t of spending){const parent=String(t.category||'Sonstiges').split(' / ')[0];groups.set(parent,(groups.get(parent)||0)+Math.abs(t.amountCents));}
  const categories=[...groups].sort((a,b)=>b[1]-a[1]).map(([name,cents])=>({name,cents}));
- const months=new Map();for(const t of entries){const key=t.day.slice(0,7);const x=months.get(key)||{month:key,incomeCents:0,expenseCents:0,transferCents:0,pendingCents:0,pendingOutCents:0,pendingInCents:0};
-  const v=Math.abs(t.amountCents);if(t.needsReview){x.pendingCents+=v;if(t.amountCents<0)x.pendingOutCents+=v;else x.pendingInCents+=v;}else if(t.flow==='income')x.incomeCents+=v;else if(t.flow==='expense')x.expenseCents+=v;else if(t.flow==='transfer')x.transferCents+=v;months.set(key,x);}
+ const months=new Map();for(const t of entries){if(!/^\d{4}-\d{2}-\d{2}$/.test(t.day||''))continue;
+  const key=t.day.slice(0,7),x=months.get(key)||{month:key,incomeCents:0,expenseCents:0,transferCents:0,pendingCents:0,pendingOutCents:0,pendingInCents:0};
+  const kind=economicFlowKind(t,economic),v=Math.abs(t.amountCents);
+  if(kind==='uncertain'){x.pendingCents+=v;if(t.amountCents<0)x.pendingOutCents+=v;else x.pendingInCents+=v;}
+  else if(kind==='income')x.incomeCents+=v;else if(kind==='expense')x.expenseCents+=v;else if(kind==='transfer')x.transferCents+=v;months.set(key,x);
+ }
  const recurring=new Map();for(const t of spending){const m=merchantKey(t.merchant);if(!m)continue;const v=recurring.get(m)||{merchant:t.merchant,months:new Set(),amounts:[]};v.months.add(t.day.slice(0,7));v.amounts.push(Math.abs(t.amountCents));recurring.set(m,v);}
  const subscriptions=[...recurring.values()].filter(x=>x.months.size>=3).map(x=>({merchant:x.merchant,months:x.months.size,meanCents:Math.round(sum(x.amounts.map(amountCents=>({amountCents})))/x.amounts.length)})).sort((a,b)=>b.months-a.months).slice(0,18);
- return {count:entries.length,pending,auto:entries.filter(x=>!x.needsReview).length,incomeCents:sum(income),refundCents:sum(refunds),expenseCents:sum(spending),transferCents:sum(transfers),cashCents:sum(cash),pendingCents:sum(pending),pendingOutCents:sum(pending.filter(t=>t.amountCents<0)),pendingInCents:sum(pending.filter(t=>t.amountCents>0)),categories,months:[...months.values()].sort((a,b)=>a.month.localeCompare(b.month)),subscriptions,netCents:sum(income)+sum(refunds)-sum(spending)-sum(cash)-sum(transfers)};
+ return {count:entries.length,pending,auto:entries.length-pending.length,incomeCents:sum(income),refundCents:sum(refunds),expenseCents:sum(spending),transferCents:sum(transfers),cashCents:sum(cash),pendingCents:sum(pending),pendingOutCents:sum(pending.filter(t=>t.amountCents<0)),pendingInCents:sum(pending.filter(t=>t.amountCents>0)),categories,months:[...months.values()].sort((a,b)=>a.month.localeCompare(b.month)),subscriptions,netCents:sum(income)+sum(refunds)-sum(spending)};
 }
 
 /** Batch-review candidates are grouped by exact normalized counterparty and direction.

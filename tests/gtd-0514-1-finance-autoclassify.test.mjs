@@ -80,5 +80,5 @@ test('0.5.14.1 review lists all booking details and ledger exposes original text
  const list=financeDashboardView({financeTransactions:[t,broad]},'Buchungen');
  assert.match(list,/Grobe Kategorien/);assert.match(list,/Vollständige Buchungsdetails|Buchungen/);
  assert.equal(financeSearchTransactions([t,broad],{filter:'broad'}).count,1);
- assert.equal(financeViewModel([t,broad]).pending.length,1);
+ assert.equal(financeViewModel([t,broad]).pending.length,2); // broad generic spending is now economically unresolved
 });
