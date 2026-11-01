@@ -1,3 +1,9 @@
+## 0.5.91.3 · Kontostände & letzter Kalendermonat
+
+- Konten mit bestätigtem Saldo und Bewertungsdatum neben letzter Buchung; lokale Aktualisierung ohne neue Datenbank.
+- Monatsbilanz des letzten abgeschlossenen Monats und neuer Filter „Letzter Monat“ in Übersicht und Finanzdetails.
+- Keine geschätzten Kontostände. Tests und Grenzen: `RELEASE_0.5.91.3.md`.
+
 ## 0.5.91.2 · Happy Harvest Steinofen-Kornspitz
 
 - 1 Stück (75 g), Produktetikett-Makros und Zutaten; konsistente Stück-/Gramm-Eingabe. Siehe RELEASE_0.5.91.2.md.

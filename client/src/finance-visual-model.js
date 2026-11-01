@@ -10,6 +10,7 @@ export function financePeriodInfo(transactions=[],period='last12',today=new Date
  const day=isFinanceDay(today)?today:new Date().toISOString().slice(0,10),current=day.slice(0,7);
  let start='',end='',label='Gesamter importierter Zeitraum';
  if(period==='current'){start=current+'-01';end=day;label=`${monthName(current)} · bisher`;}
+ else if(period==='lastMonth'){const prev=monthStart(day,-1);start=prev+'-01';end=`${prev}-${lastDay(prev)}`;label=monthName(prev);}
  else if(period==='last3'||period==='last12'){start=monthStart(day,period==='last3'?-2:-11)+'-01';end=day;label=`Letzte ${period==='last3'?'3':'12'} Kalendermonate · inkl. laufendem Monat`;}
  else if(period==='ytd'){start=day.slice(0,4)+'-01-01';end=day;label=`${day.slice(0,4)} · bisher`;}
  else if(/^\d{4}$/.test(period)){start=period+'-01-01';end=period+'-12-31';label=`Kalenderjahr ${period}`;}
