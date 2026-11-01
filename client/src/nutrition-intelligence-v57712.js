@@ -184,7 +184,7 @@ function rescale(profile,amount,unit,part='product'){
 }
 export function nutritionParts(foodId,amount='',food=null,recipe=null){
  if(foodId==='smoothie-personal')return smoothieParts(recipe);
- if(PERSONAL_RECIPE_IDS.includes(foodId))return personalRecipeParts(foodId,recipe);
+ if(PERSONAL_RECIPE_IDS.includes(foodId))return personalRecipeParts(foodId,recipe,amount);
  // v0.5.77.23: locally persisted composite recipe per whole portion. Independent of
  // the built-in label catalog; all included values are explicitly marked estimated.
  if(food?.nutrients&&food?.nutrientBasis==='perPortion'){

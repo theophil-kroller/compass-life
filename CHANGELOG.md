@@ -1,3 +1,9 @@
+## 0.5.91.7 · Mein Ofenkartoffel-Gericht mit editierbarer Suppenschüssel-Portion
+
+- Persönliches Mahlzeit-Rezept mit Bio-Kartoffeln samt Schale, Olivenöl, schwarzem Sesam, Chiliflocken und Salz; Ölmenge für beide Übergüsse zusammen.
+- Generische Makro-/Mikronährstoffschätzung, individuelle Zutatengrammangaben, Portionenskalierung und vorsichtiges Daily-Dozen-Zutaten-Mapping.
+- Details und Tests: `RELEASE_0.5.91.7.md`.
+
 ## 0.5.91.6 · Bankimport-Dubletten und Einnahmen-Transparenz
 
 - Sprachübergreifende Referenzprüfung verhindert doppelte Gehaltseingänge aus unterschiedlich formatierten Bank-CSV-Dateien.

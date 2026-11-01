@@ -1,0 +1,16 @@
+{
+  "version": "0.5.91.7",
+  "base_version": "0.5.91.6",
+  "base_commit": "2e51dea1b0610f0ade622f9672bd72b9a076c687",
+  "content": "Persönliches Ofenkartoffel-Gericht; editierbare Zutaten; eine breite Suppenschüssel; konservative Nährwerte",
+  "quality": {
+    "new_recipe_tests": "7/7 passed",
+    "deployment_tests": "33/33 passed",
+    "full_suite": "1927/1962 passed",
+    "preexisting_failed_tests": 35,
+    "new_regressions": 0,
+    "vite_production_bundle": "not run locally: vite dependency unavailable"
+  },
+  "vault_migration": false,
+  "automatic_food_log_entries": false
+}

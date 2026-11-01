@@ -76,6 +76,12 @@ export function dailyDozenIngredientEvidence404(state,day){
     const spice=(by.ginger||0)/10+(by.turmeric||0)+(by.cumin||0);if(spice>0){spiceGrams+=spice;notes.spices.push(`Kitcheri · Gewürze (Trockenäquivalent geschätzt): ~${round(spice)} g`);sources.push({id:sourceId,category:'spices',grams:round(spice),source:'Kitcheri · Gewürze'});}
    } else if(id==='fried-egg-personal'){
     const spice=(by.turmeric||0)+(by.chili||0);if(spice>0){spiceGrams+=spice;notes.spices.push(`Spiegelei · Kurkuma/Chili: ~${round(spice)} g`);sources.push({id:sourceId,category:'spices',grams:round(spice),source:'Spiegelei · Kurkuma/Chili'});}
+   } else if(id==='oven-potatoes-sesame-personal'){
+    // Only explicitly logged seed/spice weights: starchy potatoes are NOT
+    // auto-awarded a Daily Dozen vegetable serving on an unweighed bowl.
+    const sesame=by['black-sesame']||0,chili=by['chili-flakes']||0;
+    if(sesame>0){nutGrams+=sesame;notes.nuts.push(`Ofenkartoffeln · schwarzer Sesam: ~${round(sesame)} g`);sources.push({id:sourceId,category:'nuts',grams:round(sesame),source:'Ofenkartoffeln · Sesam'});}
+    if(chili>0){spiceGrams+=chili;notes.spices.push(`Ofenkartoffeln · Chiliflocken: ~${round(chili)} g`);sources.push({id:sourceId,category:'spices',grams:round(chili),source:'Ofenkartoffeln · Chili'});}
    }
    continue;
   }

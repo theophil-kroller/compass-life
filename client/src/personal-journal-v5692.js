@@ -215,7 +215,7 @@ export function nutritionKcalEstimate(food,amount,recipe=null){
   return {low:Math.max(0,Math.round(kcal)-2),high:Math.round(kcal)+2,kind:'Zutatenbasierte Schätzung'};
  }
  if(food?.id==='smoothie-personal')return smoothieKcalEstimate(recipe,amount);
- if(PERSONAL_RECIPE_IDS.includes(food?.id))return personalRecipeKcal(food.id,recipe);
+ if(PERSONAL_RECIPE_IDS.includes(food?.id))return personalRecipeKcal(food.id,recipe,amount);
  if(!food||!Number.isFinite(food.kcalLow)||!Number.isFinite(food.kcalHigh))return null;
  const original=String(food.defaultAmount||'').toLowerCase(),given=String(amount||food.defaultAmount||'').toLowerCase().trim();
  if(!given)return null;

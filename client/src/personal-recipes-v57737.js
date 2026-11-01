@@ -43,6 +43,15 @@ const RAW=Object.freeze({
   ing('turmeric','Kurkuma, gemahlen',1,{kcal:312,protein:9.68,carbs:67.1,fiber:22.7,fat:3.25},'Generische Kurkuma'),
   ing('cumin','Kreuzkümmel, gemahlen',1,{kcal:375,protein:17.8,carbs:44.2,fiber:10.5,fat:22.3},'Generischer Kreuzkümmel')
  ]},
+ 'oven-potatoes-sesame-personal':{name:'Meine Ofenkartoffeln mit Olivenöl, schwarzem Sesam & Chili',icon:'🥔',ingredients:[
+  // Amounts describe one *wide soup bowl*, not a weighed serving. Potato weight is
+  // raw/unpeeled, before oven moisture loss; oil covers BOTH drizzle steps together.
+  ing('potato-skin','Bio-Kartoffeln mit Schale · roh gewogen',300,{kcal:77,protein:2.05,carbs:17.5,sugar:.82,fat:.09,fiber:2.2,potassium:425,magnesium:23,vitaminB6:.3},'USDA/generische rohe Kartoffel mit Schale · Backverlust und Sorte unbekannt'),
+  ing('olive-oil','Olivenöl · beide Übergüsse zusammen',20,{kcal:884,fat:100,saturated:13.8,mono:73,poly:10.5,vitaminE:14.35},'USDA/generisches Olivenöl; 20 g insgesamt geschätzt, nicht zweimal 20 g'),
+  ing('black-sesame','Schwarzer Sesam',10,{kcal:573,protein:17.73,carbs:23.45,sugar:.3,fiber:11.8,fat:49.67,saturated:6.96,calcium:975,magnesium:351,iron:14.55},'USDA/generischer Sesam; schwarzer Sesam kann abweichen'),
+  ing('chili-flakes','Chiliflocken',.5,{kcal:282,protein:12,carbs:50,fiber:28,fat:14},'Generische getrocknete Chiliflocken · Menge geschätzt'),
+  ing('salt','Zugesetztes Salz',1,{kcal:0,salt:100},'Zugesetztes Speisesalz, ca. 1 g geschätzt; natürlicher Natriumgehalt separat nicht vollständig bekannt')
+ ]},
  'fried-egg-personal':{name:'Mein Spiegelei · Olivenöl, Kala Namak, Kurkuma, Chili',icon:'🍳',ingredients:[
   ing('egg','Hühnerei · 1 Stück ohne Schale',55,{kcal:143,protein:12.56,carbs:.72,fat:9.51,saturated:3.126,cholesterol:372,vitaminB12:.89,vitaminD:2,selenium:30.7},'USDA · ganzes rohes Ei; Fettaufnahme beim Braten hängt von Ölmenge ab'),
   ing('olive-oil','Natives Olivenöl extra · zum Braten',5,{kcal:884,fat:100,saturated:13.8,mono:73,poly:10.5,vitaminE:14.35},'USDA · Olivenöl; tatsächlich aufgenommenes Öl nicht gemessen'),
@@ -52,7 +61,7 @@ const RAW=Object.freeze({
  ]}
 });
 export const PERSONAL_RECIPE_IDS=Object.freeze(Object.keys(RAW));
-export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>Object.freeze({id,title:RAW[id].name,emoji:RAW[id].icon,group:id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':'Mahlzeiten',defaultAmount:'1 Portion',kcalLow:null,kcalHigh:null,recipeNote:'Persönliches Rezept, Grammangaben je Zutat editierbar'})));
+export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>Object.freeze({id,title:RAW[id].name,emoji:RAW[id].icon,group:id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':'Mahlzeiten',defaultAmount:id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':'1 Portion',kcalLow:null,kcalHigh:null,recipeNote:id==='oven-potatoes-sesame-personal'?'Eine breite Suppenschüssel mit im Ofen gebackenen Bio-Kartoffelwürfeln samt Schale, zweimal mit Olivenöl übergossen, Salz, schwarzem Sesam und Chiliflocken. Anfangsannahmen: 300 g Kartoffeln roh, Olivenöl insgesamt 20 g (nicht zweimal 20 g), 10 g Sesam, 0,5 g Chili, 1 g Salz. Bei 5 g mehr Öl ca. 44 kcal zusätzlich. Alle Zutatenmengen im Inspektor änderbar; Nährstoffe nur generisch geschätzt, Vitamin C nach dem Backen nicht quantifiziert.':'Persönliches Rezept, Grammangaben je Zutat editierbar'})));
 export const PERSONAL_RECIPE_CATALOG=RAW;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const round=x=>Math.round((x+Number.EPSILON)*100)/100;
@@ -62,20 +71,28 @@ export function recipeSnapshot(id,input){
  return def.ingredients.map(x=>{const edited=rows.get(x.id),n=Number(String(edited?.grams??'').replace(',','.'));
   return {id:x.id,grams:edited&&Number.isFinite(n)&&n>=0&&n<=2000?round(n):x.grams,assumed:edited?.assumed===false?false:true};});
 }
-export function personalRecipeParts(id,recipe){
+export function personalRecipeParts(id,recipe,amount='1 Portion'){
  const def=RAW[id];if(!def)return [];
+ // Existing recipes retain their prior per-entry logic. The oven-potato bowl
+ // additionally supports an explicit count (e.g. '2 Portionen' or '2 Schüsseln').
+ const count= id==='oven-potatoes-sesame-personal'
+  ? String(amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion(?:en)?|schüssel(?:n)?|schuessel(?:n)?)\b/i)
+  : null;
+ const factor=count?Number(count[1].replace(',','.')):1;
+ if(!Number.isFinite(factor)||factor<=0||factor>20)return [];
  const saved=recipeSnapshot(id,recipe);
  return saved.map(row=>{
   const ingredient=def.ingredients.find(x=>x.id===row.id);
   // Omitted OPTIONAL item = explicitly not included in THIS recipe, NOT zero nutrients in that ingredient.
   if(row.grams===0)return null;
-  const values=Object.fromEntries(Object.entries(ingredient.values).map(([key,n])=>[key,round(n*row.grams/100)]));
-  return {name:ingredient.label,part:'Persönliches Rezept',amount:row.grams,unit:'g',source:ingredient.source,values,
+  const grams=round(row.grams*factor);
+  const values=Object.fromEntries(Object.entries(ingredient.values).map(([key,n])=>[key,round(n*grams/100)]));
+  return {name:ingredient.label,part:'Persönliches Rezept',amount:grams,unit:'g',source:ingredient.source,values,
    estimatedKeys:Object.keys(values),extra:[],note:row.assumed?'Menge vorläufig, bitte bei Bedarf abwiegen; generisches Nährstoffprofil':'Menge persönlich editiert; Nährstoffprofil weiterhin geschätzt'};
  }).filter(Boolean);
 }
-export function personalRecipeKcal(id,recipe){
- const parts=personalRecipeParts(id,recipe);if(!parts.length)return null;
+export function personalRecipeKcal(id,recipe,amount){
+ const parts=personalRecipeParts(id,recipe,amount);if(!parts.length)return null;
  const k=parts.filter(x=>Number.isFinite(x.values.kcal));
  if(!k.length)return null;
  const subtotal=k.reduce((n,p)=>n+p.values.kcal,0);
