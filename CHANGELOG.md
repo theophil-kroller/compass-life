@@ -1,3 +1,7 @@
+## 0.5.89 · Personalised Exercise Library (2026-11-01)
+
+Sechs optionale Übungen, zwölf KI-Start-/Endbilder als separate WebP-Dateien und Integration in den bestehenden Coach; siehe `RELEASE_0.5.89.md`.
+
 ## 0.5.88 · Integrated Coach Intelligence (2026-11-01)
 
 Protein Intelligence, offene Einmalmahlzeiten mit GPT-JSON-Prüfung, manuell konfigurierbares StrongLifts 5×5, gemeinsames Coach-/Garmin-Belastungsmodell und datenlimitierte Fitdays-Gewichtsszenarien. Details und Prüfstatus: `RELEASE_0.5.88.md`.

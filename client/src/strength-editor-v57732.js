@@ -65,7 +65,14 @@ export const EXERCISES=Object.freeze([
  ['decline-pushup','Liegestütze mit erhöhten Füßen','Brust','chest',['triceps','shoulders','core']],
  ['incline-pushup','Liegestütze mit erhöhten Händen','Brust','chest',['triceps','shoulders']],
  ['pike-pushup','Pike-Liegestütze','Schultern','shoulders',['triceps','core']],
- ['prone-y-raise','Y-Heben in Bauchlage','Schultern','shoulders',['back']]
+ ['prone-y-raise','Y-Heben in Bauchlage','Schultern','shoulders',['back']],
+ // 0.5.89 · Six opt-in individual movements; distinct from existing generic ids.
+ ['one-arm-dumbbell-snatch','Einarmiges Kurzhantel-Reißen','Kraft & Koordination','posterior',['shoulders','glutes','quads','core']],
+ ['dumbbell-front-squat','Kurzhantel-Frontkniebeuge','Beine','quads',['glutes','core','posterior']],
+ ['dumbbell-walking-lunge','Gehender Kurzhantel-Ausfallschritt','Beine','quads',['glutes','posterior','core']],
+ ['sled-push','Gewichtsschlitten schieben','Funktionell','quads',['glutes','posterior','core']],
+ ['farmers-walk','Farmergang mit Kurzhanteln','Funktionell','forearms',['core','back','shoulders']],
+ ['dumbbell-bench-press','Kurzhantel-Bankdrücken','Brust','chest',['triceps','shoulders']]
 ].map(([id,name,group,primary,secondary])=>Object.freeze({id,name,group,primary,secondary})));
 export const STRONGLIFTS_5X5=Object.freeze({
  A:Object.freeze([{exerciseId:'squat',sets:5,reps:5},{exerciseId:'bench',sets:5,reps:5},{exerciseId:'barbell-row',sets:5,reps:5}]),
@@ -99,7 +106,10 @@ export const STRENGTH_ENGLISH_NAMES=Object.freeze({
  'cable-single-arm-row':'Single-Arm Cable Row','cable-lateral-raise':'Cable Lateral Raise',
  'cable-rear-delt-fly':'Cable Rear-Delt Fly','cable-crunch':'Cable Crunch',
  'cable-woodchop':'Cable Woodchop','decline-pushup':'Decline Push-Up',
- 'incline-pushup':'Incline Push-Up','pike-pushup':'Pike Push-Up','prone-y-raise':'Prone Y Raise'
+ 'incline-pushup':'Incline Push-Up','pike-pushup':'Pike Push-Up','prone-y-raise':'Prone Y Raise',
+ 'one-arm-dumbbell-snatch':'One-Arm Dumbbell Snatch','dumbbell-front-squat':'Dumbbell Front Squat',
+ 'dumbbell-walking-lunge':'Dumbbell Walking Lunge','sled-push':'Sled Push',
+ 'farmers-walk':"Farmer's Walk / Farmer's Carry",'dumbbell-bench-press':'Dumbbell Bench Press'
 });
 const GERMAN_CLARIFICATIONS=Object.freeze({
  'hip-thrust':'Hüftheben','glute-bridge':'Gesäßbrücke',
@@ -181,6 +191,7 @@ export function strengthSetRow(i,s={},recent=[]){
   group('⭐ Deine häufigen Übungen · schneller Zugriff',favorites)+
   group('V-Taper · Zuhause',V_TAPER_HOME_EXERCISES)+
   group('V-Taper · Gym',V_TAPER_GYM_EXERCISES)+
+  group('Neue optionale Übungen · 0.5.89',['one-arm-dumbbell-snatch','dumbbell-front-squat','dumbbell-walking-lunge','sled-push','farmers-walk','dumbbell-bench-press'])+
   group('StrongLifts 5×5 · Workout A',STRONGLIFTS_5X5.A.map(x=>x.exerciseId))+
   group('StrongLifts 5×5 · Workout B',STRONGLIFTS_5X5.B.map(x=>x.exerciseId))+
   regionGroups.map(([title,regions])=>group(title,EXERCISES.filter(x=>regions.includes(x.primary)).map(x=>x.id))).join('');

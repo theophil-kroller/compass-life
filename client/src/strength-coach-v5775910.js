@@ -7,6 +7,7 @@ import {strongliftsNextVariant88,strengthenStrongliftsPlan88,strongliftsSettings
 import {strengthCoachHealthContext} from './strength-coach-recovery-v5775926.js';
 import {detailedMuscleData} from './strength-anatomy-v57737.js';
 import {EXERCISES,strengthExerciseLabel} from './strength-editor-v57732.js';
+import {NEW_EXERCISES_89,NEW_EXERCISES_BY_ID_89,insertOptionalExercise89} from './strength-exercise-library-v0589.js';
 import './strength-coach-v5775910.css';
 import {resumableGuidedSession,guidedPlanFromSession} from './strength-workout-resume-v57759405.js';
 import './strength-workout-resume-v57759405.css';
@@ -17,7 +18,7 @@ import {readCycle35,saveCycleAction35,coachCycle35} from './strength-cycle-v5775
 import './strength-cycle-v5775935.css';
 
 const safe=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const GROUPS={back:'Rücken/Lat',shoulders:'Schultern',core:'Bauch/Rumpf',chest:'Brust',quads:'Oberschenkel',posterior:'Beinrückseite',glutes:'Gesäß',biceps:'Bizeps',triceps:'Trizeps'};
+const GROUPS={back:'Rücken/Lat',shoulders:'Schultern',core:'Bauch/Rumpf',chest:'Brust',forearms:'Griff/Unterarme',quads:'Oberschenkel',posterior:'Beinrückseite',glutes:'Gesäß',biceps:'Bizeps',triceps:'Trizeps'};
 const GOALS={
  balance:{label:'Ausgeglichen trainieren',targets:['back','shoulders','core','chest','quads','posterior','glutes'],note:'Unterrepräsentierte Muskelgruppen nach belegten Sätzen berücksichtigen.'},
  vtaper:{label:'V-Taper',targets:['back','shoulders','back','shoulders','core'],note:'Latissimus, seitliche/hintere Schultern und Rumpf betonen; Beine bleiben im Plan.'},
@@ -97,7 +98,7 @@ export function proposeStrengthTraining(state,{goal='balance',equipment='home',t
 export const HOME_PLATE_INVENTORY=Object.freeze([{kg:2.5,count:4},{kg:2,count:4},{kg:1.5,count:4},{kg:1,count:4}]);
 const WORKOUT_PREF_KEY='compass:strength-coach:preferences-v5919';
 export const HOME_EQUIPMENT={dumbbells:2,connectorWeightKg:0,availablePlateKg:28,abWheel:true};
-const WORKOUT_GROUP_ORDER=['back','shoulders','chest','core','quads','posterior','glutes','biceps','triceps'];
+const WORKOUT_GROUP_ORDER=['back','shoulders','chest','core','quads','posterior','glutes','biceps','triceps','forearms'];
 const DAY_MS=86400000;
 const WORKOUT_SETS={
  'ab-wheel-kneeling':[3,'6–10',90], 'dead-bug':[2,'8–12 / Seite',45],plank:[3,'30–45 Sek.',45],
@@ -110,7 +111,13 @@ const WORKOUT_SETS={
  'cable-straight-arm-pulldown':[3,'10–15',60],'cable-crunch':[3,'10–15',60],
  'cable-woodchop':[2,'10 / Seite',60],'face-pull':[3,'12–15',60],
  squat:[3,'5–8',120],deadlift:[2,'5–6',150],bench:[3,'6–8',120],
- 'military-press':[3,'6–8',120],'barbell-row':[3,'6–8',120]
+ 'military-press':[3,'6–8',120],'barbell-row':[3,'6–8',120],
+ 'one-arm-dumbbell-snatch':[3,'3–5 / Seite',120],
+ 'dumbbell-front-squat':[3,'6–10',90],
+ 'dumbbell-walking-lunge':[2,'8–12 / Bein',75],
+ 'sled-push':[4,'20 Sek.',90],
+ 'farmers-walk':[3,'30 Sek.',75],
+ 'dumbbell-bench-press':[3,'8–12',90]
 };
 const WORKOUT_POOLS={
  vtaper:{
@@ -248,7 +255,7 @@ function nextStrongLiftsVariant(history){
 /** Proposed plan: deterministic, equipment-filtered, with honest uncertainty.
  * It never prescribes load increases or treats missing data as a zero load.
  */
-export function planNextWorkout(state,{goal='balance',equipment='home',minutes=45,today,mode='smart'}={}){
+export function planNextWorkout(state,{goal='balance',equipment='home',minutes=45,today,mode='smart',optionalExercise='',techniqueApproved=false}={}){
  const todayValue=/^\d{4}-\d{2}-\d{2}$/.test(String(today||''))?today:new Date().toISOString().slice(0,10);
  const selectedGoal=GOALS[goal]?goal:'balance';
  const location=equipment==='gym'?'gym':'home';
@@ -284,6 +291,10 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  if(!strongLifts&&history.valid.length){const rested=ids.filter(id=>{const g=catalog.get(id)?.primary;return !(ageDays(history.last[g],todayValue)<=1&&(history.counts7[g]||0)>=3);});if(rested.length>=2)ids=rested;}
  const limit=strongLifts?3:budget===25?3:budget===45?5:6;
  ids=ids.slice(0,limit);
+ // The optional 0.5.89 movement only replaces a planned exercise on explicit user choice.
+ // Never append excess work to 25-minute home routine; never modify StrongLifts A/B.
+ const optional89=typeof insertOptionalExercise89==='function'?insertOptionalExercise89(ids,{optionalExercise,equipment:location,strongLifts,techniqueApproved,pain,healthAttention:health.attention===true}):{ids,selected:null,reason:''};
+ ids=optional89.ids;
  let exercises=ids.map((id,index)=>{
   const item=catalog.get(id);
   const spec=strongLifts?STRONG_LIFTS[variant].find(row=>row[0]===id):null;
@@ -302,6 +313,8 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   const corrected=rirModel?{...progression,action:rirModel.action,suggestedKg:rirModel.suggestedKg,message:rirModel.message}:progression;
   if(pain||health.attention){corrected.suggestedKg=null;corrected.message='Belastungswarnung: keine Erhöhung vorgeschlagen. '+corrected.message;}
   if(rirModel)reason+=' RIR-Progression auf bestätigten Arbeitssätzen; Vorschlag jederzeit anpassbar.';
+  const optionalMetadata=typeof NEW_EXERCISES_BY_ID_89!=='undefined'?NEW_EXERCISES_BY_ID_89.get(id):null;
+  if(optionalMetadata)reason+=' Freiwillige Zusatzübung: '+optionalMetadata.cue+' '+optionalMetadata.recovery;
   return {id,title:typeof strengthExerciseLabel==='function'?strengthExerciseLabel(id):(item.name||id),primary,kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets,reps,restSeconds,ageDays:age,sevenSets:seven,
    lastKg:corrected.lastKg,suggestedKg:corrected.suggestedKg,progressionAction:corrected.action,progressionHint:corrected.message,targetReps:rirModel?.targetReps||null,rirConfidence:rirModel?.confidence||null,
    reason,order:index+1};
@@ -326,6 +339,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  ]:[];
  const planned={goal:selectedGoal,equipment:location,budget,mode:strongLifts?'stronglifts':'smart',trainingFocus:strongLifts?'Kraft · schweres 5×5':selectedGoal==='vtaper'?'Hypertrophie · kontrollierte 8–15+ Wiederholungen':'Zielorientiertes Training',homeEquipment:location==='home'?{...HOME_EQUIPMENT}:null,profile,variant,exercises,estimatedMinutes,timeFit,
   cautious,recentlyTrained,latestAge,suggestRecovery,evidence,known,missing,history,sourceStats:history.sourceStats,balances,health,adaptive,cycle,
+  optionalExercise:optional89.selected||null,optionalReason:optional89.reason||'',
   title:strongLifts?`StrongLifts 5×5 · Workout ${variant}`:selectedGoal==='vtaper'?'V-Taper · Rücken & Schultern':selectedGoal==='abs'?'Core & Ganzkörper':selectedGoal==='strength'?`Kraft · ${location==='gym'?'Gym':'Zuhause'}`:'Muskelbalance · Ganzkörper',
   recoveryNote:suggestRecovery?'Rücken/Schultern oder andere geplante Muskeln wurden erst kürzlich mehrfach beansprucht. Heute ggf. Pause, Mobilität oder andere Muskelgruppen wählen; keine exakt berechnete biologische Regeneration.':cautious?'Letztes bestätigtes Coach- oder zugeordnetes Garmin-Training heute/gestern. Diesen Vorschlag erst am nächsten geeigneten Trainingstag umsetzen; vorher Erholung und Leistungsfähigkeit prüfen.':
    evidence==='none'?'Keine zugeordneten Übungssätze vorhanden: Es gibt keine belastbare Aussage zur Regeneration.':
@@ -333,10 +347,10 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  return strongLifts&&typeof strengthenStrongliftsPlan88==='function'?strengthenStrongliftsPlan88(state,planned,{healthAttention:health.attention===true,pain}):planned;
 }
 function coachPrefs(){
- try{const o=JSON.parse(localStorage.getItem(WORKOUT_PREF_KEY)||'{}');return {goal:GOALS[o.goal]?o.goal:'balance',equipment:o.equipment==='gym'?'gym':'home',minutes:[25,45,65].includes(Number(o.minutes))?Number(o.minutes):25,mode:o.mode==='stronglifts'?'stronglifts':'smart'};}
- catch{return {goal:'balance',equipment:'home',minutes:25,mode:'smart'};}
+ try{const o=JSON.parse(localStorage.getItem(WORKOUT_PREF_KEY)||'{}');return {goal:GOALS[o.goal]?o.goal:'balance',equipment:o.equipment==='gym'?'gym':'home',minutes:[25,45,65].includes(Number(o.minutes))?Number(o.minutes):25,mode:o.mode==='stronglifts'?'stronglifts':'smart',optionalExercise:'',techniqueApproved:false};}
+ catch{return {goal:'balance',equipment:'home',minutes:25,mode:'smart',optionalExercise:'',techniqueApproved:false};}
 }
-function saveCoachPrefs(p){try{localStorage.setItem(WORKOUT_PREF_KEY,JSON.stringify(p));}catch{}}
+function saveCoachPrefs(p){try{const {goal,equipment,minutes,mode}=p;localStorage.setItem(WORKOUT_PREF_KEY,JSON.stringify({goal,equipment,minutes,mode}));}catch{}} // Optional movements and technique clearance are per-dialog, never persisted.
 function coachCopyText(plan){
  return [plan.title,`${plan.equipment==='home'?'Zuhause':'Gym'} · etwa ${plan.estimatedMinutes} min`,
   ...plan.exercises.map((x,i)=>`${i+1}. ${x.title}: ${x.sets} × ${x.reps}; Pause ${x.restSeconds} s${x.lastKg!==null?`; zuletzt ${x.lastKg} kg`:``}; ${x.progressionHint}`),
@@ -366,6 +380,7 @@ export function openStrengthCoach({state,today,onSession=async()=>{},onSettings=
   </div>
   ${prefs.equipment==='gym'?`<div class="str621-method" role="group" aria-label="Trainingsmethode"><span>Trainingsmethode</span><button type="button" data-mode="smart" aria-pressed="${prefs.mode!=='stronglifts'}" class="${prefs.mode!=='stronglifts'?'active':''}">Intelligenter Mix</button><button type="button" data-mode="stronglifts" aria-pressed="${prefs.mode==='stronglifts'}" class="${prefs.mode==='stronglifts'?'active':''}">StrongLifts 5×5</button></div>`:''}
   <label class="sl88-safety"><input type="checkbox" id="sl88-pain" ${(state?.strengthJournal?.safety88?.day===today&&state?.strengthJournal?.safety88?.pain)?'checked':''}> Rücken-/HWS-Schmerzen oder andere Trainingsbeschwerden heute · Steigerungen aussetzen</label>
+  <details class="str623-more str589-extras" ${prefs.optionalExercise?'open':''}><summary>＋ Weitere Übungen (freiwillig)</summary><label>Eine Übung für diesen Trainingsplan gezielt auswählen<select class="str589-exercise"><option value="">Keine zusätzliche Übung</option>${NEW_EXERCISES_89.filter(e=>e.places.includes(prefs.equipment)).map(e=>`<option value="${safe(e.id)}" ${prefs.optionalExercise===e.id?'selected':''}>${safe(e.english)} · ${safe(e.german)}</option>`).join('')}</select></label><p style="font-size:12px;line-height:1.5;margin:8px 0">Gewählte Übung ersetzt eine Übung gleicher Bewegungsart oder eine andere geplante Übung, statt den kurzen Trainingsplan zu verlängern. Keine Änderung an StrongLifts A/B.</p>${prefs.optionalExercise==='one-arm-dumbbell-snatch'?`<label><input type="checkbox" class="str589-technique" ${prefs.techniqueApproved?'checked':''}> Technikfreigabe nach eigenständiger Prüfung bestätigt · nur ohne HWS-/Rückenschmerzen</label>`:''}<small>${safe(plan.optionalReason)}</small></details>
   ${prefs.equipment==='gym'?strongliftsSettingsMarkup88(state):''}
   <details class="str623-more"><summary>Equipmentdetails</summary><div class="str621-equipment-note">${prefs.equipment==='home'?'Zuhause: zwei verstellbare Kurzhanteln, nahezu gewichtslose Verbindungsstange, Ab Wheel · vier Scheiben je 2,5 / 2 / 1,5 / 1 kg = 28 kg Scheiben insgesamt; Bei zwei symmetrisch beladenen Kurzhanteln wären das je höchstens 14 kg Scheiben; für eine einzelne Hantel können mehr Scheiben verwendet werden. Griffgewichte separat erfassen.':'Gym: schwere Langhanteln, Maschinen und Kabelzug · StrongLifts nur auf Wunsch.'}</div></details>
   <section class="str626-context" aria-label="Persönlicher Schlaf-HRV-Körpertrend" style="margin:10px 0;padding:14px;border:1px solid #c8dcd3;border-radius:14px;background:rgba(238,247,242,.65)">
@@ -397,6 +412,8 @@ export function openStrengthCoach({state,today,onSession=async()=>{},onSettings=
   dialog.querySelectorAll('[data-place]').forEach(button=>button.onclick=()=>update('equipment',button.dataset.place));
   dialog.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>{prefs={...prefs,mode:button.dataset.mode,...(button.dataset.mode==='stronglifts'?{goal:'strength'}:{})};saveCoachPrefs(prefs);draw();});
   dialog.querySelector('.str619-minutes').onchange=e=>update('minutes',Number(e.target.value));
+  dialog.querySelector('.str589-exercise')?.addEventListener('change',e=>update('optionalExercise',e.target.value));
+  dialog.querySelector('.str589-technique')?.addEventListener('change',e=>update('techniqueApproved',Boolean(e.target.checked)));
   dialog.querySelector('.str405-resume-now')?.addEventListener('click',async()=>{
    const guide=await import('./strength-guided-v5775920.js');
    close();guide.openGuidedWorkout({plan:guidedPlanFromSession(unfinished),resumeSession:unfinished,onSession});

@@ -1,0 +1,133 @@
+{
+  "version": "0.5.89",
+  "description": "Owner-reference-inspired AI renderings; images illustrate poses, not formal technique clearance. Each phase is a distinct static asset.",
+  "dimensions": [
+    768,
+    600
+  ],
+  "mime": "image/webp",
+  "exercises": {
+    "one_arm_dumbbell_snatch": {
+      "start": "one_arm_dumbbell_snatch_start.webp",
+      "end": "one_arm_dumbbell_snatch_end.webp"
+    },
+    "dumbbell_front_squat": {
+      "start": "dumbbell_front_squat_start.webp",
+      "end": "dumbbell_front_squat_end.webp"
+    },
+    "dumbbell_walking_lunge": {
+      "start": "dumbbell_walking_lunge_start.webp",
+      "end": "dumbbell_walking_lunge_end.webp"
+    },
+    "sled_push": {
+      "start": "sled_push_start.webp",
+      "end": "sled_push_end.webp"
+    },
+    "farmers_walk": {
+      "start": "farmers_walk_start.webp",
+      "end": "farmers_walk_end.webp"
+    },
+    "dumbbell_bench_press": {
+      "start": "dumbbell_bench_press_start.webp",
+      "end": "dumbbell_bench_press_end.webp"
+    }
+  },
+  "images": {
+    "one_arm_dumbbell_snatch_start": {
+      "path": "one_arm_dumbbell_snatch_start.webp",
+      "bytes": 13950,
+      "original": [
+        1122,
+        1402
+      ]
+    },
+    "one_arm_dumbbell_snatch_end": {
+      "path": "one_arm_dumbbell_snatch_end.webp",
+      "bytes": 12554,
+      "original": [
+        1122,
+        1402
+      ]
+    },
+    "dumbbell_front_squat_start": {
+      "path": "dumbbell_front_squat_start.webp",
+      "bytes": 12470,
+      "original": [
+        1122,
+        1402
+      ]
+    },
+    "dumbbell_front_squat_end": {
+      "path": "dumbbell_front_squat_end.webp",
+      "bytes": 13978,
+      "original": [
+        1122,
+        1402
+      ]
+    },
+    "dumbbell_walking_lunge_start": {
+      "path": "dumbbell_walking_lunge_start.webp",
+      "bytes": 13306,
+      "original": [
+        1122,
+        1402
+      ]
+    },
+    "dumbbell_walking_lunge_end": {
+      "path": "dumbbell_walking_lunge_end.webp",
+      "bytes": 13234,
+      "original": [
+        1122,
+        1402
+      ]
+    },
+    "sled_push_start": {
+      "path": "sled_push_start.webp",
+      "bytes": 22150,
+      "original": [
+        764,
+        332
+      ]
+    },
+    "sled_push_end": {
+      "path": "sled_push_end.webp",
+      "bytes": 20758,
+      "original": [
+        761,
+        332
+      ]
+    },
+    "farmers_walk_start": {
+      "path": "farmers_walk_start.webp",
+      "bytes": 18636,
+      "original": [
+        764,
+        340
+      ]
+    },
+    "farmers_walk_end": {
+      "path": "farmers_walk_end.webp",
+      "bytes": 17646,
+      "original": [
+        761,
+        340
+      ]
+    },
+    "dumbbell_bench_press_start": {
+      "path": "dumbbell_bench_press_start.webp",
+      "bytes": 20750,
+      "original": [
+        764,
+        331
+      ]
+    },
+    "dumbbell_bench_press_end": {
+      "path": "dumbbell_bench_press_end.webp",
+      "bytes": 20560,
+      "original": [
+        761,
+        331
+      ]
+    }
+  }
+}

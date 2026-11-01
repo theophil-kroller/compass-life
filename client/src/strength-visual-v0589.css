@@ -1,0 +1,6 @@
+/* Compass 0.5.89 · lazy-loaded guided exercise pairs; original visuals untouched. */
+.str589-figure{max-width:100%;margin:0}
+.str589-photo-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;width:100%}
+.str589-photo-pair img{display:block;width:100%;height:auto;aspect-ratio:768/600;object-fit:contain;border-radius:10px;background:#e9e7e4}
+.str589-figure figcaption{font-size:11px;line-height:1.45;opacity:.85;text-align:center;margin:6px 0}
+@media(max-width:520px){.str589-photo-pair{gap:3px}.str589-photo-pair img{border-radius:6px}.str589-figure figcaption{font-size:10px}}
