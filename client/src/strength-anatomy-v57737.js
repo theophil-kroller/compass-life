@@ -79,11 +79,19 @@ export const EXERCISE_ANATOMY=Object.freeze({
  'decline-pushup':r(['pectoral_upper'],['triceps','deltoid_front','rectus_abdominis']),
  'incline-pushup':r(['pectoral_lower'],['triceps','deltoid_front']),
  'pike-pushup':r(['deltoid_front'],['triceps','deltoid_side']),
- 'prone-y-raise':r(['trapezius_mid'],['deltoid_rear','rhomboids'])
+ 'prone-y-raise':r(['trapezius_mid'],['deltoid_rear','rhomboids']),
+ // 0.5.91.2 · distinct anatomical roles for newly introduced movements.
+ 'one-arm-dumbbell-snatch':r(['glute_max','hamstrings'],['quadriceps','erector_spinae','deltoid_front','trapezius_upper','obliques']),
+ 'dumbbell-front-squat':r(['quadriceps','glute_max'],['rectus_abdominis','erector_spinae','adductors']),
+ 'dumbbell-walking-lunge':r(['quadriceps','glute_max'],['hamstrings','glute_med','rectus_abdominis']),
+ 'sled-push':r(['quadriceps','glute_max'],['calves_gastro','hamstrings','rectus_abdominis']),
+ 'farmers-walk':r(['forearm_flex','trapezius_upper'],['obliques','rectus_abdominis','erector_spinae','forearm_ext']),
+ 'dumbbell-bench-press':r(['pectoral_lower','pectoral_upper'],['deltoid_front','triceps'])
 });
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n.toLocaleString('de-AT',{maximumFractionDigits:1});
-const validSet=s=>s&&s.exerciseId&&Number(s.reps)>0;
+// Duration-based Garmin carry/sled sets can be identified even with no repetitions.
+const validSet=s=>s&&s.exerciseId&&(Number(s.reps)>0||Number(s.durationSeconds)>0);
 export function detailedMuscleData(model){
  const data=Object.fromEntries(ANATOMY_REGIONS.map(region=>[region.id,{...region,primary:0,secondary:0,index:0}]));
  let mapped=0,unmapped=0;

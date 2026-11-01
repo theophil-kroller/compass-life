@@ -55,7 +55,8 @@ export function suggestOptionalExercise90({plannedIds=[],goal='vtaper',equipment
   if(recent.some(x=>x.days!==null&&x.days>=0&&x.days<=1&&x.sets>=(x.i===0?3:4)))return null;
   const present=plannedIds.some(id=>e.replaces.includes(id));
   const extraTime=Math.ceil(e.sets*.8+Math.max(0,e.sets-1)*e.restSeconds/60);
-  if(!present&&extraTime>Number(availableMinutes||0))return null; // no unrelated core exercise replacement
+  // Always permit a *choice* on the four-card overview: the user can extend the
+  // 25-minute routine deliberately, but the plan itself is never extended silently.
   const recently=recent.some(x=>x.days!==null&&x.days>=0&&x.days<=2&&x.sets>=2);
   const score=(targets[e.id]||0)+(present?2:0)-(recently?4:0)+(e.places.length===1?0:.1)+(extraTime<=Number(availableMinutes||0)?1:0);
   const reason=present?'Passt als Variation zu einer bereits geplanten Übung.':
@@ -69,4 +70,17 @@ export function suggestOptionalExercise90({plannedIds=[],goal='vtaper',equipment
   // Suggest an actual add-on only when the routine's remaining time allows it.
   mode:pick.extraTime<=Number(availableMinutes||0)?'conditional-bonus':'swap',
   estimatedExtraMinutes:pick.extraTime};
+}
+
+/** 0.5.91.2: Prepares a *proposal*, never an extra completed exercise.
+ * A three-exercise smart workout gets at most one fourth option. StrongLifts
+ * and safety-blocked days do not acquire an optional prescription.
+ */
+export function guidedBonusCandidate92(plan){
+ if(!plan||plan.mode==='stronglifts'||!Array.isArray(plan.exercises)||plan.exercises.length!==3||!plan.suggestedOptional)return null;
+ const idea=plan.suggestedOptional,meta=NEW_EXERCISES_BY_ID_89.get(idea.id);
+ if(!meta||meta.requiresApproval||!meta.places.includes(plan.equipment)||plan.exercises.some(e=>e.id===idea.id))return null;
+ return {id:meta.id,title:meta.german,primary:meta.primary,secondary:[...meta.secondary],sets:meta.sets,reps:meta.reps,restSeconds:meta.restSeconds,
+  lastKg:null,suggestedKg:null,progressionHint:'Freiwillige Übung; Gewicht und Dauer selbst wählen.',reason:idea.reason,
+  optional:true,extraMinutes:idea.estimatedExtraMinutes,order:4};
 }

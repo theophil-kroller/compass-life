@@ -4,7 +4,7 @@
 import './strength-guided-v5775920.css';
 import {guidedPlanFromSession,resumeExerciseIndex} from './strength-workout-resume-v57759405.js';
 import {validRir34} from './strength-adaptive-v5775934.js';
-import {exerciseImagePair89,NEW_EXERCISES_BY_ID_89} from './strength-exercise-library-v0589.js';
+import {exerciseImagePair89,NEW_EXERCISES_BY_ID_89,guidedBonusCandidate92} from './strength-exercise-library-v0589.js';
 import './strength-visual-v0589.css';
 import './strength-adaptive-v5775934.css';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,6 +20,7 @@ export function validPlateWeight(value,place,exerciseId=''){const n=Number(value
 export function makeGuidedSnapshot(plan,startedAt=new Date().toISOString(),id=(globalThis.crypto?.randomUUID?.()||`guided-${Date.now()}-${Math.random().toString(36).slice(2)}`)){
  return {id,source:'compass-guided-v5920',startedAt,finishedAt:null,completed:false,goal:plan.goal,equipment:plan.equipment,planTitle:plan.title,mode:plan.mode||'smart',variant:plan.variant||null,
   currentExerciseIndex:0,started:false,restUntilAt:null,workingWeights:{},
+  optionalChoice:plan.optionalChoice||'skipped',optionalExerciseId:plan.optionalExerciseId||null,
   planSnapshot:{title:plan.title,goal:plan.goal,equipment:plan.equipment,exercises:plan.exercises.map(e=>({id:e.id,title:e.title,primary:e.primary||'',sets:e.sets,reps:e.reps,restSeconds:e.restSeconds,lastKg:e.lastKg??null,warmupSets:e.warmupSets||[],progressionHint:e.progressionHint||'',targetReps:Array.isArray(e.targetReps)?e.targetReps.slice(0,e.sets):null}))},
   exercises:plan.exercises.map(e=>({exerciseId:e.id,title:e.title,plannedSets:e.sets,plannedReps:e.reps,targetReps:Array.isArray(e.targetReps)?e.targetReps.slice(0,e.sets):null,restSeconds:e.restSeconds,primary:e.primary||'',confirmedSets:[]})),
   updatedAt:startedAt};
@@ -90,8 +91,24 @@ export function exerciseMovementSvg(exerciseId){
 export function openGuidedWorkout({plan,onSession=async()=>{},resumeSession=null}={}){
  if(resumeSession)plan=guidedPlanFromSession(resumeSession);
  if(!plan?.exercises?.length)throw Error('Kein Workout-Plan vorhanden.');
+ // A four-card onboarding view exposes, but does not automatically schedule,
+ // the day's optional movement. Resumed workouts retain their saved decisions.
+ const bonusCandidate=!resumeSession?guidedBonusCandidate92(plan):null;
+ let optionalChoice=resumeSession?.optionalChoice||'pending';
+ const coreExercises=plan.exercises.map(e=>({...e}));
+
  let ex=resumeSession?resumeExerciseIndex(resumeSession):0,started=Boolean(resumeSession),resting=false,restSeconds=0,restUntil=0,restTimer=null,restVibrated=false,closed=false,completed=false,active=Boolean(resumeSession),wakeLock=null,plateKg=null;
  let snapshot=resumeSession?structuredClone(resumeSession):makeGuidedSnapshot(plan),before=document.activeElement,saveChain=Promise.resolve(),saveStatus='saved',saveSerial=0;
+ let overview=!resumeSession;
+ // Do not store a fourth confirmed exercise merely for viewing a suggestion.
+ const setBonusChoice=(choice)=>{
+  if(started)return;
+  optionalChoice=choice;
+  plan={...plan,exercises:choice==='accepted'&&bonusCandidate?[...coreExercises,bonusCandidate]:coreExercises};
+  snapshot=makeGuidedSnapshot({...plan,optionalChoice:choice,optionalExerciseId:bonusCandidate?.id||null});
+  snapshot.optionalChoice=choice;snapshot.optionalExerciseId=bonusCandidate?.id||null;
+ };
+
  snapshot.workingWeights||={};
  const previousLoad=i=>{const saved=snapshot.workingWeights?.[i];const kg=saved===null?null:Number.isFinite(saved)?saved:plan.exercises[i]?.lastKg;return Number.isFinite(kg)&&kg>=0&&validPlateWeight(kg,plan.equipment,plan.exercises[i]?.id)?kg:null;};
  plateKg=previousLoad(0);
@@ -124,6 +141,18 @@ export function openGuidedWorkout({plan,onSession=async()=>{},resumeSession=null
  const onPageHide=()=>{if(started&&!closed)void persist().catch(console.warn);};window.addEventListener('pagehide',onPageHide);
  function setRest(seconds){const total=plan.mode==='stronglifts'?Math.max(60,seconds):Math.max(180,seconds);restVibrated=false;resting=total>0;restSeconds=total;restUntil=performance.now()+total*1000;snapshot.restUntilAt=new Date(Date.now()+total*1000).toISOString();clearInterval(restTimer);if(resting)restTimer=setInterval(timerTick,250);}
  function render(){
+  if(overview){
+   const chosen=optionalChoice==='accepted';
+   el.innerHTML=`<header class="str620-head"><div><small>COMPASS · DEIN TRAINING</small><h2>${esc(plan.title)}</h2><p>3 Hauptübungen · ${bonusCandidate?'1 freiwilliger Vorschlag':'kein sicherer Zusatzvorschlag'}</p></div><button type="button" data-act="close" class="str620-close" aria-label="Schließen">×</button></header>
+    <section class="str92-overview" aria-label="Vier Trainingsfelder">${coreExercises.map((exercise,i)=>`<article class="str92-tile"><small>ÜBUNG ${i+1} · FEST</small><strong>${esc(exercise.title)}</strong><span>${exercise.sets} × ${esc(exercise.reps)}</span></article>`).join('')}
+     <article class="str92-tile str92-optional"><small>ÜBUNG 4 · FREIWILLIG</small>${bonusCandidate?`<strong>${esc(bonusCandidate.title)}</strong><span>${bonusCandidate.sets} × ${esc(bonusCandidate.reps)} · ca. ${bonusCandidate.extraMinutes} Minuten zusätzlich</span><p>${esc(bonusCandidate.reason)}</p><div class="str92-choice"><button type="button" data-act="accept-bonus" aria-pressed="${chosen}">✓ Machen</button><button type="button" data-act="skip-bonus" aria-pressed="${optionalChoice==='skipped'}">Überspringen</button></div><small>${chosen?'✓ Im Training enthalten':optionalChoice==='skipped'?'Übersprungen – keine Sätze verbucht':'Nicht automatisch eingeplant'}</small>`:'<strong>Heute kein sicherer Zusatz</strong><span>Die drei Übungen bleiben unverändert.</span>'}</article></section>
+    <footer class="str620-bottom"><small>Dein 25-Minuten-Plan bleibt mit drei Übungen erhalten. Eine vierte Übung verlängert den Plan nur nach deiner Wahl.</small><button type="button" class="str620-primary" data-act="start-workout">▶ Training beginnen</button></footer>`;
+   el.querySelector('[data-act="close"]').onclick=()=>close();
+   el.querySelector('[data-act="accept-bonus"]')?.addEventListener('click',()=>{setBonusChoice('accepted');render();});
+   el.querySelector('[data-act="skip-bonus"]')?.addEventListener('click',()=>{setBonusChoice('skipped');render();});
+   el.querySelector('[data-act="start-workout"]').onclick=()=>{if(optionalChoice!=='accepted')setBonusChoice('skipped');overview=false;started=true;active=true;void wake();void persist().catch(console.warn);render();};
+   return;
+  }
   const curr=plan.exercises[ex],record=snapshot.exercises[ex],done=record.confirmedSets.length,allDone=done>=curr.sets;
   const circles=Array.from({length:curr.sets},(_,i)=>{
     const old=record.confirmedSets.find(r=>r.setNumber===i+1&&r.confirmed);
@@ -143,7 +172,7 @@ export function openGuidedWorkout({plan,onSession=async()=>{},resumeSession=null
   el.querySelector('[data-act="close"]').onclick=()=>close();
   el.querySelector('[data-act="retry-save"]')?.addEventListener('click',()=>{if(started)void persist().catch(console.warn);});
   el.querySelector('[data-act="prev"]').onclick=()=>{if(ex===0)return;stopRest();ex--;plateKg=previousLoad(ex);void persist().catch(console.warn);render();};
-  el.querySelector('[data-act="start"]')?.addEventListener('click',()=>{started=true;active=true;void wake();void persist().catch(console.warn);render();});
+  el.querySelector('[data-act="start"]')?.addEventListener('click',()=>{started=true; active=true;void wake();void persist().catch(console.warn);render();});
   el.querySelector('[data-act="skip-rest"]')?.addEventListener('click',()=>{stopRest();render();});
   const weightBox=el.querySelector('[data-plates]');
   const setWeight=value=>{

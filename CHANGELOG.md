@@ -1,6 +1,6 @@
-## 0.5.91.1 · Happy Harvest Steinofen-Kornspitz
+## 0.5.91.2 · Happy Harvest Steinofen-Kornspitz
 
-- 1 Stück (75 g), Produktetikett-Makros und Zutaten; konsistente Stück-/Gramm-Eingabe. Siehe RELEASE_0.5.91.1.md.
+- 1 Stück (75 g), Produktetikett-Makros und Zutaten; konsistente Stück-/Gramm-Eingabe. Siehe RELEASE_0.5.91.2.md.
 
 ## 0.5.91 · V-Taper Training-Start Trend + 96% CI
 - Datumsbasierte Kurzzeittrends seit dem dokumentierten Krafttrainingsbeginn; ältere Gewichtshistorie bleibt separat erhalten.

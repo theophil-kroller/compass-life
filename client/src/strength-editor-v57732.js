@@ -79,6 +79,10 @@ export const STRONGLIFTS_5X5=Object.freeze({
  B:Object.freeze([{exerciseId:'squat',sets:5,reps:5},{exerciseId:'military-press',sets:5,reps:5},{exerciseId:'deadlift',sets:1,reps:5}])
 });
 const byId=new Map(EXERCISES.map(x=>[x.id,x]));
+// FIT exercise_title values can be text labels. Map only unique, exact labels,
+// not broad categories (e.g. 'Row') or summaries without exercise_name.
+const normGarminTitle92=s=>String(s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+
 
 /** English first, German clarification second; titles are practical English aliases,
  * not a claim that every Garmin firmware uses exactly the same wording. IDs are stable. */
@@ -145,19 +149,51 @@ const strengthRecentIds=state=>{
  return [...new Set(rows.map(x=>x.id))].slice(0,10);
 };
 
+const GARMIN_ALIASES_92=new Map();
+for(const entry of EXERCISES){
+ for(const label of [entry.name,STRENGTH_ENGLISH_NAMES[entry.id]]){
+  if(!label)continue;
+  const key=normGarminTitle92(label);
+  if(key.length<7)continue; // no vague 2-3 letter aliases
+  const prev=GARMIN_ALIASES_92.get(key);
+  GARMIN_ALIASES_92.set(key,prev&&prev!==entry.id?null:entry.id);
+ }
+}
+for(const [id,aliases] of Object.entries({
+ 'one-arm-dumbbell-snatch':['Dumbbell Snatch','Single Arm Dumbbell Snatch','Single-Arm Dumbbell Snatch'],
+ 'dumbbell-front-squat':['Dumbbell Front Squat','Front Squat with Dumbbells'],
+ 'dumbbell-walking-lunge':['Dumbbell Walking Lunge','Walking Lunge with Dumbbells'],
+ 'sled-push':['Sled Push','Prowler Push'],
+ 'farmers-walk':['Farmers Walk','Farmer Carry','Farmers Carry','Farmer\'s Walk'],
+ 'dumbbell-bench-press':['Dumbbell Bench Press','DB Bench Press']
+}))for(const label of aliases){const key=normGarminTitle92(label),prev=GARMIN_ALIASES_92.get(key);GARMIN_ALIASES_92.set(key,prev&&prev!==id?null:id);}
+/** Annotate an identified FIT title without changing Garmin raw data or guessing
+ * the identity of a broad set category. A user's saved edit always takes priority.
+ */
+export function canonicalGarminExercise92(set){
+ if(set?.exerciseId&&byId.has(set.exerciseId))return set.exerciseId;
+ if(set?.identified!==true||typeof set.exercise!=='string')return null;
+ return GARMIN_ALIASES_92.get(normGarminTitle92(set.exercise))||null;
+}
+function withRecognizedGarminMuscles92(set){
+ if(!set||set.exerciseId&&manualExerciseMuscles(set.exerciseId).known)return set;
+ const id=canonicalGarminExercise92(set);if(!id)return set;
+ const x=manualExerciseMuscles(id);
+ return {...set,exerciseId:id,primary:x.primary,secondary:[...x.secondary],knownMuscles:true,garminTitleMatched:true};
+}
 export function manualExerciseMuscles(id){const x=byId.get(id);return x?{name:x.name,primary:x.primary,secondary:x.secondary,known:true}:{name:'Übung offen',primary:null,secondary:[],known:false};}
 export function strengthAnnotationKey(s){return String(s?.id||'');}
 const offsetMatch=(a,b)=>{const x=Date.parse(a||''),y=Date.parse(b||'');return Number.isFinite(x)&&Number.isFinite(y)&&[0,-2,-1,1,2].some(h=>Math.abs(x-y+h*3600000)<150000);};
 const matches=(annotation,session)=>annotation.sessionId===session.id||annotation.start===session.start||offsetMatch(annotation.start,session.start);
 export function findStrengthAnnotation(state,session){return (state?.strengthJournal?.annotations||[]).filter(a=>matches(a,session)).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||null;}
 export function applyStrengthAnnotations(state,sessions=[]){return sessions.map(session=>{
- const ann=findStrengthAnnotation(state,session);if(!ann)return session;
+ const ann=findStrengthAnnotation(state,session);if(!ann)return {...session,sets:(session.sets||[]).map(withRecognizedGarminMuscles92)};
  const base=Array.isArray(session.sets)?session.sets:[];
  // Fresh imports may add sets; keep new Garmin sets while preserving manually corrected fields.
  const count=Math.max(base.length,ann.sets.length),sets=[];
  for(let i=0;i<count;i++){
   const raw=base[i]||{index:i,start:session.start,end:session.end,category:null,subtype:null,exercise:'Übung nicht zugeordnet',reps:null,weightKg:null};
-  const edit=ann.sets[i];if(!edit){sets.push(raw);continue;}
+  const edit=ann.sets[i];if(!edit){sets.push(withRecognizedGarminMuscles92(raw));continue;}
   const x=manualExerciseMuscles(edit.exerciseId);sets.push({...raw,index:i,exerciseId:edit.exerciseId||null,exercise:edit.exerciseId?x.name:raw.exercise,reps:edit.reps,weightKg:edit.weightKg,primary:x.primary,secondary:x.secondary,knownMuscles:x.known,manuallyEdited:true});
  }
  return {...session,sets,summaryOnly:false,manuallyAnnotated:true};
