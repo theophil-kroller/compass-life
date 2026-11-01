@@ -1,3 +1,5 @@
+import {economicFlowIndex,economicPresentationRows} from './finance-economic-flows-v05914.js';
+import {financeReviewProposal,applyFinanceReviewProposal} from './finance-review-commit-v05915.js';
 import {capacityForecast,capacitySettings} from './capacity-engine-v44.js';
 import {familyEvents,familySuggestions,familyRules,familyPersonPanel,familyTodayPanel,familyTodayObservations,familyAccept,familyAcceptProject,familyChoose} from './family-radar-v5775931.js';
 import {todayBirthdayHighlights,todayBirthdayPanel} from './today-birthdays-v5775940255.js';
@@ -267,7 +269,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.4';
+const COMPASS_CLIENT_VERSION='0.5.91.5';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -4038,28 +4040,49 @@ function bind() {
   for(const [id,set] of [['explore-x',v=>exploreX=v],['explore-y',v=>exploreY=v],['explore-lag',v=>exploreLag=Number(v)]]){
     const select=app.querySelector('#'+id);if(select)select.onchange=()=>{set(select.value);render();};
   }
-  app.querySelectorAll('form[data-finance-confirm]').forEach(form=>form.onsubmit=async ev=>{
-    ev.preventDefault();const id=form.dataset.financeConfirm,old=(state.financeTransactions||[]).find(t=>t.id===id);if(!old||!old.needsReview)return;
-    const fd=new FormData(form),category=String(fd.get('category')||''),flow=String(fd.get('flow')||''),remember=fd.get('remember')==='yes',applyAll=fd.get('applyAll')==='yes';
-    if(!validCategory(category)||category==='Prüfen / Noch ungeklärt')return toast('Bitte eine konkrete Kategorie auswählen.',true);
-    try{
-      if(state?.privateDeviceMirror?.mode==='receiver'){
-       // Expanded groups are explicit opt-in. Only the known matching book entries are queued.
-       const candidateRows=applyAll?(state.financeTransactions||[]).filter(t=>t.needsReview&&merchantKey(t.merchant)===merchantKey(old.merchant)&&(t.amountCents>0)===(old.amountCents>0)&&t.flow===old.flow):[old];
-       await mutate(s=>{for(const row of candidateRows)queueFinanceMobileDecision(s,row.id,category,flow,new Date().toISOString(),crypto.randomUUID(),remember);});
-       toast(`${candidateRows.length} Zuordnung(en) verschlüsselt für das Hauptgerät vorgemerkt.`);return;
-      }
-      let approved=0;await mutate(s=>{s.financeTransactions??=[];s.financeRules??=[];
-      const key=merchantKey(old.merchant);
-      const same=t=>merchantKey(t.merchant)===key&&(t.amountCents>0)===(old.amountCents>0)&&t.flow===old.flow;
-      for(let i=0;i<s.financeTransactions.length;i++){
-        const t=s.financeTransactions[i];if(!t.needsReview||!(t.id===id||(applyAll&&same(t))))continue;
-        s.financeTransactions[i]=categorizeTransaction(t,category,flow);approved++;
-      }
-      if(remember&&key&&safeMerchantRule(old.merchant)){s.financeRules=s.financeRules.filter(r=>r.merchantKey!==key);s.financeRules.push({merchantKey:key,category,flow});}
-    });const count=financeReviewGroups(state.financeTransactions).length;
-      financeReviewPage=Math.min(financeReviewPage,Math.max(0,Math.ceil(count/15)-1));toast(`${approved} Buchung(en) bestätigt`+(remember?' · Regel für künftige Buchungen gespeichert':'')+'.');
-    }catch(e){toast(e.message,true);}
+  app.querySelectorAll('form[data-finance-confirm]').forEach(form=>{
+    const categorySelect=form.querySelector('select[name="category"]');
+    const flowSelect=form.querySelector('select[name="flow"]');
+    const feedback=form.querySelector('[data-finance-review-feedback]');
+    const message=(text,bad=false)=>{if(feedback){feedback.textContent=text;feedback.dataset.status=bad?'error':'info';feedback.hidden=!text;}};
+    // Keep category and flow consistent, but never silently turn an incoming
+    // positive amount into an expense; the saving validator explains that.
+    categorySelect?.addEventListener('change',()=>{
+      const family=categorySelect.value.split(' / ')[0];
+      const kind=({Einnahmen:'income',Rückerstattung:'refund',Transfer:'transfer',Bargeld:'cash'})[family]||'expense';
+      if(flowSelect)flowSelect.value=kind;
+      message('');
+    });
+    flowSelect?.addEventListener('change',()=>message(''));
+    form.onsubmit=async ev=>{
+      ev.preventDefault();
+      const id=form.dataset.financeConfirm;
+      const fd=new FormData(form),category=String(fd.get('category')||''),flow=String(fd.get('flow')||''),remember=fd.get('remember')==='yes',applyAll=fd.get('applyAll')==='yes';
+      const button=form.querySelector('button[type="submit"]');
+      if(button?.disabled)return;
+      try{
+        // Re-evaluate the economic projection BEFORE looking for the raw row.
+        // In 0.5.91.4 projected-open rows were dropped by `!old.needsReview`.
+        const proposal=financeReviewProposal(state.financeTransactions||[],id,{category,flow,applyAll});
+        if(remember&&!proposal.ruleAllowed)throw Error('Für diesen Zahlungspartner kann keine pauschale Händlerregel erstellt werden. Bitte die Regel abwählen.');
+        if(button)button.disabled=true;
+        message(`${proposal.changes.length} Buchung(en) werden gespeichert …`);
+        if(state?.privateDeviceMirror?.mode==='receiver'){
+          await mutate(s=>{for(const row of proposal.changes)queueFinanceMobileDecision(s,row.id,category,flow,new Date().toISOString(),crypto.randomUUID(),remember);});
+          toast(`${proposal.changes.length} Zuordnung(en) verschlüsselt am Zweitgerät vorgemerkt. Bis zum Abgleich bleiben sie offen.`);
+        }else{
+          await mutate(s=>{applyFinanceReviewProposal(s,proposal,{remember,category,flow});});
+          const current=economicPresentationRows(state.financeTransactions||[],economicFlowIndex(state.financeTransactions||[]));
+          const groups=financeReviewGroups(current).length;
+          financeReviewPage=Math.min(financeReviewPage,Math.max(0,Math.ceil(groups/15)-1));
+          toast(`${proposal.changes.length} Buchung(en) bestätigt${remember?' · Regel für künftige Buchungen gespeichert':''}.`);
+        }
+      }catch(ex){
+        // Visible next to the form: avoids the previous silent no-op, especially
+        // when a screenshot is scrolled deep into the review page.
+        message(ex?.message||'Die Zuordnung konnte nicht gespeichert werden.',true);
+      }finally{if(button?.isConnected)button.disabled=false;}
+    };
   });
   const healthUpload=app.querySelector('#health-import-input');
   if(healthUpload)healthUpload.onchange=async()=>{

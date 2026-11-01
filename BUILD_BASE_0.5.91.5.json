@@ -1,0 +1,14 @@
+{
+  "version": "0.5.91.5",
+  "base_version": "0.5.91.4",
+  "base_commit": "01644135791da1a67c9102729c9dabcaf62c4b4d",
+  "base_zip_name": "Compass_Life_0.5.91.4_FINANCE_CASHFLOW_BALANCES_FULL_SOURCE.zip",
+  "test_results": {
+    "passed": 1911,
+    "total": 1946,
+    "historic_failures": 35,
+    "new_failures": 0,
+    "deployment_tests_passed": 33
+  },
+  "build": "Source validated; Vite production bundle not run locally"
+}

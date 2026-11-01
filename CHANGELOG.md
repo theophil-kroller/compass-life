@@ -1,3 +1,11 @@
+## 0.5.91.5 · Finanzprüfung & Buchungs-Nachweis
+
+- „Auswahl bestätigen“ verarbeitet jetzt auch wirtschaftlich offene Buchungen, die im verschlüsselten Original noch kein `needsReview` tragen.
+- Einzel- und Sammelbestätigungen validieren Vorzeichen, Art und Kategorie und zeigen Fehler direkt im Formular an.
+- Monatswerte für Einnahmen, Rückerstattungen, Konsumausgaben sowie Netto-Cashflow sind aufklappbar und führen die Buchungen / Berechnungen auf.
+- Relevante Kategorien für Bank-Eingänge / -Ausgänge getrennt; keine automatische Zuordnung positiver Buchungen zu Konsum.
+- Keine Änderung an gespeicherten Finanzdaten ohne aktive Bestätigung. Siehe RELEASE_0.5.91.5.md.
+
 ## 0.5.91.4 · Externe Geldflüsse, Diagramm zuerst, Saldo-Brücken
 
 - Eigenüberträge und Bargeldbewegungen bleiben aus Einnahmen, Konsum, Kategorien und Netto-Cashflow heraus. Alte grobe Kategorien ohne gesicherten wirtschaftlichen Zweck werden separat als ungeklärt ausgewiesen; gespeicherte Buchungen bleiben unverändert.

@@ -1,0 +1,15 @@
+Compass 0.5.91.5 · QA und Packaging
+
+Basis: 0.5.91.4 · GitHub main 01644135791da1a67c9102729c9dabcaf62c4b4d (2026-11-01 16:04:56Z)
+
+Neue gezielte Tests: 7/7 bestanden.
+
+Deployment-Check: 33/33 bestanden; Importgraph 265 Module, Worker-Syntax.
+
+Gesamtsuite: 1911/1946 bestanden, identische 35 historische Fehltests wie Version 0.5.91.4; keine neuen Fehler.
+
+Build-Check: node --check geänderte .js Dateien bestanden. Vite-Produktions-Bundle nicht lokal möglich (vite/node_modules fehlen); Deploy-Validierung muss in GitHub Actions laufen.
+
+Keine Migration, keine Änderungen an Original-Bankbuchungen ohne Nutzerauswahl.
+
+Patch-Replay und ZIP-integrität werden im Packaging geprüft.

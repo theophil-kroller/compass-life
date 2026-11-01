@@ -116,15 +116,35 @@ function financeAccountBalances(state,today,period){
  <p class="fin53-balance-note">Buchungsdatum ≠ Saldo-Stichtag. ${accounts.provisional?'Fortgeschriebene Werte sind rechnerische Rekonstruktionen aus importierten Buchungen, keine bestätigten Bankstände. Fehlende Buchungen können die Werte verändern. ':''}Eigenüberträge wirken auf einzelne Konten, aber nicht auf Einkommen oder Konsum. Ohne passende Snapshot-Zuordnung keine Schätzung.</p></section>`;
 }
 const financeFocusMonth=(period,today)=>/^\d{4}-(?:0[1-9]|1[0-2])$/.test(period)?period:period==='current'?today.slice(0,7):offsetMonth(today,-1);
+/** Detailed audit trail: the SAME economic index, month and account filter as KPI totals. */
+export function financeMonthBreakdown(state={},selection='all',focus='',today=new Date().toLocaleDateString('sv-SE')){
+ const tx=Array.isArray(state.financeTransactions)?state.financeTransactions:[];
+ const economic=economicFlowIndex(tx);
+ const rows={income:[],refund:[],expense:[]};
+ for(const t of tx){
+  if(!correctDay(t?.day)||t.day.slice(0,7)!==focus||!accountMatches(t,selection)||!Number.isSafeInteger(t.amountCents))continue;
+  const kind=economicFlowKind(t,economic);
+  if(kind==='income'&&t.amountCents>0||kind==='refund'&&t.amountCents>0||kind==='expense'&&t.amountCents<0)rows[kind].push(t);
+ }
+ for(const list of Object.values(rows))list.sort((a,b)=>b.day.localeCompare(a.day)||Math.abs(b.amountCents)-Math.abs(a.amountCents));
+ return rows;
+}
+const maskedText=t=>String(t?.description||'').replace(/\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b/g,'[IBAN]').trim().slice(0,190);
+const financeDrillRow=(t,kind)=>`<li class="fin53-drill-item"><span class="fin53-drill-date">${e(t.day)}</span><div><strong>${e(t.merchantDisplayName||t.merchant||'Unbekannter Zahlungspartner')}</strong><small>${e(t.category||'Ohne Kategorie')} · ${e(accountLabel(t))}</small>${maskedText(t)?`<small class="fin53-drill-description">${e(maskedText(t))}</small>`:''}</div><b class="${kind==='expense'?'fin53-drill-out':'fin53-drill-in'}">${kind==='expense'?'−':'+'}${e(euro(Math.abs(t.amountCents)))}</b></li>`;
+function financeDrillGroup(label,total,rows,kind){
+ const sum=rows.reduce((n,t)=>n+Math.abs(t.amountCents),0);
+ return `<details class="fin53-month-drill" data-finance-drill="${kind}"><summary><span>${e(label)} <small class="fin53-drill-toggle">Buchungen ansehen</small></span><strong>${e(euro(total))}</strong></summary><div class="fin53-drill-body"><p class="fin53-drill-summary">${rows.length} Buchung(en) · Summe ${e(euro(sum))}${sum!==total?' · Hinweis: Summen bitte erneut abgleichen':''}</p>${rows.length?`<ol class="fin53-drill-list">${rows.map(t=>financeDrillRow(t,kind)).join('')}</ol>`:'<p class="fin53-drill-empty">Keine bestätigten Buchungen für diese Position.</p>'}</div></details>`;
+}
 function financeMonthSummary(state,selection,period,today){
  const focus=financeFocusMonth(period,today);
  const m=premiumFinanceModel(state,{period:focus,account:selection,today});
+ const rows=financeMonthBreakdown(state,selection,focus,today);
  return `<section class="fin53-month-summary" aria-label="Monatliche Einnahmen und Ausgaben"><div class="fin53-section-head"><div><small>MONAT AUF EINEN BLICK</small><h3>${e(monthLabel(focus))}</h3></div><span class="fin53-asof">${period==='current'?'laufender Monat':'Kalendermonat'}</span></div>
  <div class="fin53-month-nav"><button type="button" data-action="finance-month-step" data-id="-1" aria-label="Vorheriger Monat">‹</button><span>${e(focus)}</span><button type="button" data-action="finance-month-step" data-id="1" aria-label="Nächster Monat" ${focus>=today.slice(0,7)?'disabled':''}>›</button></div>
- <div class="fin53-month-row"><span>Einnahmen</span><strong>${e(euro(m.income))}</strong></div>
- <div class="fin53-month-row"><span>Rückerstattungen</span><strong>${e(euro(m.refund))}</strong></div>
- <div class="fin53-month-row"><span>Ausgaben · Konsum</span><strong>${e(euro(m.expense))}</strong></div>
- <div class="fin53-month-row fin53-month-net"><span>Externer Netto-Cashflow / Sparspielraum</span><strong class="${m.flow<0?'fin53-negative-text':''}">${e(euro(m.flow))}</strong></div>
+ ${financeDrillGroup('Einnahmen',m.income,rows.income,'income')}
+ ${financeDrillGroup('Rückerstattungen',m.refund,rows.refund,'refund')}
+ ${financeDrillGroup('Ausgaben · Konsum',m.expense,rows.expense,'expense')}
+ <details class="fin53-month-drill fin53-month-net" data-finance-drill="net"><summary><span>Externer Netto-Cashflow / Sparspielraum <small class="fin53-drill-toggle">Berechnung anzeigen</small></span><strong class="${m.flow<0?'fin53-negative-text':''}">${e(euro(m.flow))}</strong></summary><div class="fin53-drill-body"><p>Externe Einnahmen ${e(euro(m.income))} + Rückerstattungen ${e(euro(m.refund))} − Konsumausgaben ${e(euro(m.expense))} = <strong>${e(euro(m.flow))}</strong>.</p><p>Umbuchungen und wirtschaftlich ungeklärte Posten sind nicht enthalten. Der rechnerische Sparspielraum ist kein bestätigter Kontozuwachs.</p></div></details>
  ${m.income+m.refund>0?`<div class="fin53-saving-bar" role="img" aria-label="Anteil externer Ausgaben an externen Einnahmen und Rückerstattungen: ${Math.round(m.expense/(m.income+m.refund)*100)} Prozent"><span style="width:${Math.min(100,100*m.expense/Math.max(m.income+m.refund,m.expense,1)).toFixed(1)}%"></span><i style="width:${Math.max(0,100*m.flow/Math.max(m.income+m.refund,m.expense,1)).toFixed(1)}%"></i></div><small class="fin53-saving-label">${m.flow>=0?`Rechnerischer Sparspielraum: ${Math.round(100*m.flow/(m.income+m.refund))} % der externen Zuflüsse`:'Externe Ausgaben übersteigen die Zuflüsse dieses Monats'}</small>`:''}
  <p class="fin53-month-note">${m.records} Buchungen · ${m.review} wirtschaftlich ungeklärt · ${m.transfers} interne Umbuchungen. Unbestätigte Ein- und Ausgänge sind nicht in der Berechnung enthalten. Sparspielraum ist kein bestätigter Vermögenszuwachs.${m.records?'':' Für diesen Monat liegen noch keine importierten Buchungen vor.'}</p></section>`;
 }
