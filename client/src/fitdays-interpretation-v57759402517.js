@@ -183,7 +183,7 @@ function reportSummary(row,{targetWeightKg=null}={}){
   <h4>Obesity assessment <small>· Fitdays-Stil</small></h4>
   ${reportStrip({label:'BMI',value:bmi,unit:'',bands:bmiBands,source:row.bmiOrigin==='computed'?'Aus Gewicht und Größe': 'Fitdays-Messwert'})}
   ${reportStrip({label:'Body fat rate · Körperfett',value:fat,unit:'%',bands:fatBands,source:'Kategorien nur optisch nachgebildet – keine validierten Fitdays-Grenzen',neutral:true})}
-  ${reportStrip({label:'Obesity · Gewicht / Zielgewicht',value:ratio,unit:'%',bands:targetBands,source:validTarget?`Zielgewicht ${num(target)} kg`:'Kein Zielgewicht hinterlegt – kein Prozentwert berechnet',neutral:true})}
+  ${validTarget?reportStrip({label:'Gewicht / freiwilliges Zielgewicht',value:ratio,unit:'%',bands:targetBands,source:`Zielgewicht ${num(target)} kg`,neutral:true}):'<p class="fdi-strip-source">Kein Zielgewicht hinterlegt – der leere Zielgewichts-Balken entfällt. Für V-Taper sind Körperfetttrend und Taille aussagekräftiger.</p>'}
   <h4 class="fdi-other-title">Other indicators <small>· Weitere Kennzahlen</small></h4>
   <div class="fdi-report-indicators">${indicators.map(([label,value,unit,source],idx)=>`<div><span>${esc(label)}${source?` <small>· ${esc(source)}</small>`:''}</span><strong>${value===null?'–':esc(num(value,idx===0?0:1))+' '+esc(unit)}</strong></div>`).join('')}</div>
   ${fatFreeDerived!==null?'<p class="fdi-strip-source">Fettfreie Masse aus Gewicht und Körperfett berechnet; kein eigener Fitdays-Exportwert.</p>':''}

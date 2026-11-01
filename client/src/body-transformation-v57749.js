@@ -1,3 +1,4 @@
+import {trendModel96,trendSvg96,trendExtent96} from './trend-statistics-v0591.js';
 /** Compass 0.5.77.49 — Body Transformation Intelligence.
  * Local, read-only join of documented Fitdays, Garmin strength and nutrition data.
  * Body impedance estimates are not direct muscle/fat measurements; observations
@@ -91,8 +92,10 @@ export function bodyTransformationModel(state,{today=new Date().toLocaleDateStri
 function plot(points,{start,today,label,unit,decimals=1,color='#397D74',empty='Keine dokumentierten Messwerte.'}={}){
  if(!points.length)return `<p class="bt749-empty">${esc(empty)}</p>`;
  const W=660,H=164,L=48,R=20,T=17,B=39;
- const values=points.map(p=>p.value),lo=Math.min(...values),hi=Math.max(...values),pad=Math.max((hi-lo)*.18,Math.abs(lo)*.012,.25);
- const ymin=lo-pad,ymax=hi+pad;
+ const values=points.map(p=>p.value);
+ const trend=trendModel96(points);const ext=trendExtent96(trend,values);
+ const lo=Math.min(...ext),hi=Math.max(...ext),pad=Math.max((hi-lo)*.13,Math.abs(lo)*.008,.25);
+ const ymin=(unit==='Sätze'||unit==='g')?0:lo-pad,ymax=Math.max(hi+pad,1);
  const from=start||points[0].day,to=today||points.at(-1).day;
  const first=Date.parse(from+'T12:00:00Z'),last=Date.parse(to+'T12:00:00Z'),span=Math.max(86400000,last-first);
  const X=d=>L+(Date.parse(d+'T12:00:00Z')-first)/span*(W-L-R);
@@ -100,26 +103,26 @@ function plot(points,{start,today,label,unit,decimals=1,color='#397D74',empty='K
  const xgrid=[0,.25,.5,.75,1].map(f=>{const x=L+f*(W-L-R);return `<line x1="${x.toFixed(2)}" y1="${T}" x2="${x.toFixed(2)}" y2="${H-B}" stroke="currentColor" opacity=".07"/>`;}).join('');
  const ticks=[0,.5,1].map(f=>{const y=Y(ymin+(ymax-ymin)*f);return `<text x="${L-7}" y="${(y+3).toFixed(2)}" text-anchor="end">${esc(number(ymin+(ymax-ymin)*f,decimals))}</text>`;}).join('');
  const dots=points.map(p=>`<circle cx="${X(p.day).toFixed(2)}" cy="${Y(p.value).toFixed(2)}" r="${points.length>180?2.5:4.5}" fill="${p.partial||p.estimated?'#fff':color}" stroke="${color}" stroke-width="${p.partial||p.estimated?2:1.2}" tabindex="0"><title>${esc(fmtDate(p.day))}: ${esc(number(p.value,decimals))} ${esc(unit)}${p.partial||p.estimated?' · geschätzter oder partieller Protokollwert':''}</title></circle>`).join('');
- return `<svg class="bt749-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)} · ${points.length} einzelne dokumentierte Werte ohne Interpolation"><g class="bt749-grid">${xgrid}${ticks}</g>${dots}<text x="${L}" y="${H-9}">${esc(fmtDate(from))}</text><text x="${W-R}" y="${H-9}" text-anchor="end">${esc(fmtDate(to))}</text></svg>`;
+ return `<svg class="bt749-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)} · ${points.length} einzelne dokumentierte Werte und ggf. beobachteter Trend mit 96 Prozent Konfidenzband"><g class="bt749-grid">${xgrid}${ticks}</g>${trendSvg96(trend,{X,Y,color})}${dots}<text x="${L}" y="${H-9}">${esc(fmtDate(from))}</text><text x="${W-R}" y="${H-9}" text-anchor="end">${esc(fmtDate(to))}</text></svg>`;
 }
 const stale=(d,today)=>!d?'Noch kein Import':`${fmtDate(d)}${(Date.parse(today)-Date.parse(d))/86400000>30?' · älter als 30 Tage':''}`;
 function metricCard(m,model){
  const change=m.delta===null?'Noch kein Vergleich möglich':`${m.delta>0?'+':''}${number(m.delta,m.digits)} ${m.unit} · erste vs. letzte Messung im Zeitraum`;
- return `<article class="bt749-metric"><div class="bt749-label"><span>${esc(m.label)}</span><small>${m.count} Messdatum${m.count===1?'':'en'}</small></div><div class="bt749-number">${m.last?esc(number(m.last.value,m.digits))+' <small>'+esc(m.unit)+'</small>':'–'}</div><p class="bt749-change">${esc(change)}</p>${plot(m.points,{...m,start:model.start,today:model.today,label:m.label,unit:m.unit,decimals:m.digits,color:m.color})}</article>`;
+ return `<article class="bt749-metric"><div class="bt749-label"><span>${esc(m.label)}</span><small>${m.count} ${m.count===1?'Messdatum':'Messdaten'}</small></div><div class="bt749-number">${m.last?esc(number(m.last.value,m.digits))+' <small>'+esc(m.unit)+'</small>':'–'}</div><p class="bt749-change">${esc(change)}</p>${plot(m.points,{...m,start:model.start,today:model.today,label:m.label,unit:m.unit,decimals:m.digits,color:m.color})}</article>`;
 }
 function occupancy(rows,metricName,color,start,today){
- const points=rows.filter(r=>Number.isFinite(r[metricName])).map(r=>({day:r.day,value:r[metricName],partial:r.partial,estimated:r.estimated}));
- return plot(points,{start,today,label:metricName==='protein'?'Protokolliertes Protein':'Garmin Krafttraining',unit:metricName==='protein'?'g':'Sätze',decimals:0,color,empty:metricName==='protein'?'Keine quantifizierbaren Proteinprotokolle.':'Keine Krafttrainings-Sätze im Import.'});
+ const points=rows.filter(r=>Number.isFinite(r[metricName])&&(metricName!=='sets'||r[metricName]>0)).map(r=>({day:r.day,value:r[metricName],partial:r.partial,estimated:r.estimated}));
+ return plot(points,{start,today,label:metricName==='protein'?'Protokolliertes Protein':'Garmin Krafttraining',unit:metricName==='protein'?'g':'Sätze',decimals:0,color,empty:metricName==='protein'?'Keine quantifizierbaren Proteinprotokolle.':'Satzdaten fehlen: Trainingstage sind dokumentiert, aber keine bestätigten Satzzahlen verfügbar.'});
 }
 export function bodyTransformationView(state,options={}){
  const m=bodyTransformationModel(state,options),c=m.sourceCounts;
  return `<section class="bt749-shell" aria-label="Body Transformation Intelligence">
- <header class="bt749-head"><div><span class="bt749-kicker">RELAXED CONTROL · BODY TRANSFORMATION</span><h2>Körper, Training &amp; Ernährung</h2><p>Individuelle Messpunkte statt geglätteter Kurven. Drei Datenquellen auf einer Zeitachse, ohne aus einzelnen Werten einen Trainingserfolg zu behaupten.</p></div><span class="bt749-period">${esc(m.start?`${fmtDate(m.start)} – ${fmtDate(m.today)}`:'Gesamte Datenhistorie')}</span></header>
+ <header class="bt749-head"><div><span class="bt749-kicker">RELAXED CONTROL · BODY TRANSFORMATION</span><h2>Körper, Training &amp; Ernährung</h2><p>Individuelle Messpunkte mit optionaler datumsbasierter Trendlinie und 96-%-Konfidenzband für den Mittelwert (ab 5 Messtagen / 7 Tagen Beobachtung). Keine Interpolation fehlender Tage und ohne aus einzelnen Werten einen Trainingserfolg zu behaupten.</p></div><span class="bt749-period">${esc(m.start?`${fmtDate(m.start)} – ${fmtDate(m.today)}`:'Gesamte Datenhistorie')}</span></header>
  <div class="bt749-cards">${m.metrics.map(metric=>metricCard(metric,m)).join('')}</div>
  <div class="bt749-support">
-  <article class="bt749-observations"><div class="bt749-row"><h3>💪 Garmin Krafttraining</h3><strong>${c.strengthSessions} Sessions · ${c.sets} Sätze</strong></div><p>${c.strength} Trainingstag(e) dokumentiert; Einzelsätze und CSV-Gesamtzahlen werden nicht doppelt gezählt, sofern sie zuvor als dieselbe Session zusammengeführt wurden.</p>${occupancy(m.strength,'sets','#4C809E',m.start,m.today)}</article>
+  <article class="bt749-observations"><div class="bt749-row"><h3>💪 Garmin Krafttraining</h3><strong>${c.strengthSessions} Sessions · ${c.sets?c.sets+' Sätze':'Sätze unbekannt'}</strong></div><p>${c.strength} Trainingstag(e) dokumentiert; nicht übertragene Satzdetails sind keine 0-Satz-Trainingstage. Einzelsätze und CSV-Gesamtzahlen werden nicht doppelt gezählt, sofern sie zuvor als dieselbe Session zusammengeführt wurden.</p>${occupancy(m.strength,'sets','#4C809E',m.start,m.today)}</article>
   <article class="bt749-observations"><div class="bt749-row"><h3>🌱 Ernährungsjournal · Protein</h3><strong>${m.avgProteinObserved===null?'–':number(m.avgProteinObserved,0)+' g'} <small>Ø erfasster Tage</small></strong></div><p>${c.protein} Tag(e) mit quantifizierter Proteinzufuhr; davon ${c.proteinPartial} mit unvollständigen, geschätzten oder Mindestwerten. Fehlende Tage zählen ausdrücklich nicht als 0 g. Offene Kreise kennzeichnen teilweise bekannte oder geschätzte Tage.</p>${occupancy(m.nutrition,'protein','#9C769B',m.start,m.today)}</article>
  </div>
- <div class="bt749-footer"><div><strong>Datenabdeckung</strong><p>Fitdays: ${c.fitdays} Messtag(e), letzter ${esc(stale(m.last.fitdays,m.today))}. Garmin Krafttraining: ${c.strength} Tag(e), letzter ${esc(stale(m.last.strength,m.today))}. Protein: ${c.protein} Tag(e), letzter ${esc(stale(m.last.protein,m.today))}.</p><p>Training und Protein am selben Tag dokumentiert: <strong>${c.joinedProteinStrengthDays}</strong> Tag(e). Das ist eine zeitliche Überlappung, kein Wirksamkeitsnachweis.</p></div><p class="bt749-disclaimer"><strong>Methodik:</strong> Fitdays ist eine BIA-Schätzung; Gewichtsschwankungen, Hydratation, Messzeit und Gerätealgorithmus können Fett- und Muskelwerte beeinflussen. Die Deltas zeigen ausschließlich erste und letzte Messung des gewählten Zeitraums und sind keine Wachstumsdiagnose. Ernährungsdaten sind protokollierte Teilmengen; aus fehlenden Einträgen lässt sich kein Kaloriendefizit bestimmen. Keine automatische Gesundheitsbewertung oder Trainingsempfehlung.</p></div>
+ <div class="bt749-footer"><div><strong>Datenabdeckung</strong><p>Fitdays: ${c.fitdays} Messtag(e), letzter ${esc(stale(m.last.fitdays,m.today))}. Garmin Krafttraining: ${c.strength} Tag(e), letzter ${esc(stale(m.last.strength,m.today))}. Protein: ${c.protein} Tag(e), letzter ${esc(stale(m.last.protein,m.today))}.</p><p>Training und Protein am selben Tag dokumentiert: <strong>${c.joinedProteinStrengthDays}</strong> Tag(e). Das ist eine zeitliche Überlappung, kein Wirksamkeitsnachweis.</p></div><p class="bt749-disclaimer"><strong>Methodik:</strong> Fitdays ist eine BIA-Schätzung; Gewichtsschwankungen, Hydratation, Messzeit und Gerätealgorithmus können Fett- und Muskelwerte beeinflussen. Die 96-%-Konfidenzbänder quantifizieren nur Regressionstrend-Unsicherheit unter Modellannahmen, nicht Hydratationsfehler oder individuelle Prognosen. Deltas zeigen ausschließlich erste und letzte Messung des gewählten Zeitraums und sind keine Wachstumsdiagnose. Ernährungsdaten sind protokollierte Teilmengen; aus fehlenden Einträgen lässt sich kein Kaloriendefizit bestimmen. Keine automatische Gesundheitsbewertung oder Trainingsempfehlung.</p></div>
  </section>`;
 }

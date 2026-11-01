@@ -1,3 +1,4 @@
+import {trendModel96,trendSvg96,trendExtent96} from './trend-statistics-v0591.js';
 /** Compass .40.25.22 · dynamically scaled, illustrative body-fat mass comparison.
  * All numerical values are derived from the user's selected Fitdays observations;
  * the tissue motif is a stylized illustration, not a volumetric/anatomical scan.
@@ -17,16 +18,17 @@ export function fatMassPoints(rows=[]){
 }
 function makeTrend(points){
  if(points.length<2)return '<p class="cfat-trend-empty">Für einen Verlauf sind mindestens zwei echte Fitdays-Messungen nötig.</p>';
- const series=points.slice(-80); const all=series.map(p=>p.fatKg);
- const lo=Math.max(0,Math.min(...all)-.7),hi=Math.max(lo+1,Math.max(...all)+.7);
- const times=series.map(p=>Date.parse(p.at));const min=Math.min(...times),max=Math.max(...times);const W=770,H=104,L=18,R=20,T=15,B=24;
+ const series=points.slice(-80); const trend=trendModel96(series.map(p=>({day:p.day,value:p.fatKg})));
+ const all=trendExtent96(trend,series.map(p=>p.fatKg));
+ const lo=Math.max(0,Math.min(...all)-.5),hi=Math.max(lo+1,Math.max(...all)+.5);
+ const times=series.map(p=>Date.parse(p.at));const min=Math.min(...times),max=Math.max(...times);const W=770,H=124,L=48,R=20,T=15,B=24;
  const X=(t,i)=>max===min?L+(W-L-R)*i/Math.max(1,series.length-1):L+(W-L-R)*(t-min)/(max-min);
  const Y=n=>T+(H-T-B)*(hi-n)/(hi-lo);
  const xs=series.map((p,i)=>X(times[i],i)),ys=series.map(p=>Y(p.fatKg));
  const dots=series.map((p,i)=>`<circle cx="${xs[i].toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3.8" fill="#247d78"><title>${esc(p.day)}: ${fmt(p.fatKg)} kg</title></circle>`).join('');
- const path=series.length>=2?`<path d="M ${series.map((_,i)=>`${xs[i].toFixed(1)} ${ys[i].toFixed(1)}`).join(' L ')}" stroke="#32887e" stroke-width="2" fill="none"/>`:'';
+ const path=series.length>=2?`<path d="M ${series.map((_,i)=>`${xs[i].toFixed(1)} ${ys[i].toFixed(1)}`).join(' L ')}" stroke="#32887e" stroke-width="1.4" opacity=".22" fill="none"/>`:'';
  const first=series[0],last=series.at(-1),diff=Math.round((last.fatKg-first.fatKg)*10)/10;
- return `<div class="cfat-history"><div class="cfat-history-head"><strong>Fettmasse · einzelne Messpunkte</strong><span>${diff>0?'+':''}${fmt(diff)} kg seit ${esc(first.day)}</span></div><svg class="cfat-history-plot" viewBox="0 0 ${W} ${H}" role="img" aria-label="Verlauf der berechneten Fettmasse von ${fmt(first.fatKg)} bis ${fmt(last.fatKg)} Kilogramm"><line x1="${L}" x2="${W-R}" y1="${Y(lo).toFixed(1)}" y2="${Y(lo).toFixed(1)}" stroke="#e0eae4"/>${path}${dots}<text x="${L}" y="${H-5}" fill="#657b74" font-size="11">${esc(first.day)}</text><text x="${W-R}" y="${H-5}" text-anchor="end" fill="#657b74" font-size="11">${esc(last.day)}</text></svg></div>`;
+ return `<div class="cfat-history"><div class="cfat-history-head"><strong>Fettmasse · einzelne Messpunkte & 96-%-Trendband</strong><span>${diff>0?'+':''}${fmt(diff)} kg seit ${esc(first.day)}</span></div><svg class="cfat-history-plot" viewBox="0 0 ${W} ${H}" role="img" aria-label="Verlauf der berechneten Fettmasse von ${fmt(first.fatKg)} bis ${fmt(last.fatKg)} Kilogramm">${[0,.5,1].map(f=>{const v=lo+(hi-lo)*f;return `<line x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#e0eae4"/><text x="${L-6}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#657b74">${fmt(v)} kg</text>`;}).join('')}${trendSvg96(trend,{X:d=>X(Date.parse(d+'T12:00:00Z'),0),Y,color:'#32887e'})}${path}${dots}<text x="${L}" y="${H-5}" fill="#657b74" font-size="11">${esc(first.day)}</text><text x="${W-R}" y="${H-5}" text-anchor="end" fill="#657b74" font-size="11">${esc(last.day)}</text></svg></div>`;
 }
 export function fatMassVisualView(rows=[]){
  const points=fatMassPoints(rows),latest=points.at(-1);
@@ -46,6 +48,6 @@ export function fatMassVisualView(rows=[]){
   }).join('')}</div>
   <div class="cfat-metrics"><div class="cfat-ring" role="img" aria-label="${fmt(fat)} Prozent Fettmasse, ${fmt(100-fat)} Prozent fettfreie Masse" style="--fat:${Math.min(100,Math.max(0,fat)).toFixed(2)}%"><div><strong>${fmt(weight)} kg</strong><span>Gesamt</span></div></div><div class="cfat-data"><div><i class="cfat-dot-fat"></i><span>Fettmasse</span><strong>${fmt(fatKg)} kg · ${fmt(fat)} %</strong></div><div><i class="cfat-dot-free"></i><span>Fettfreie Masse</span><strong>${fmt(fatFreeKg)} kg · ${fmt(100-fat)} %</strong></div><p>Fettfreie Masse enthält auch Wasser, Organe und Knochen – nicht nur Muskeln.</p></div></div>
   ${makeTrend(points)}
-  <p class="cfat-note">Illustration zur Größenordnung, <strong>nicht maßstabsgetreu</strong>: Form, Dichte und Verteilung von Körperfett variieren. Fettmasse aus Gewicht × BIA-Körperfettanteil berechnet. Alle Vergleichsprozente beziehen sich auf dein aktuelles Gewicht; keine medizinische Risikoeinstufung.</p>
+  <p class="cfat-note">Illustration zur Größenordnung, <strong>nicht maßstabsgetreu</strong>: Form, Dichte und Verteilung von Körperfett variieren. Fettmasse aus Gewicht × BIA-Körperfettanteil berechnet. Alle Vergleichsprozente beziehen sich auf dein aktuelles Gewicht; keine medizinische Risikoeinstufung. Das 96-%-Band beschreibt ausschließlich die statistische Unsicherheit des mittleren Trends, nicht die Messunsicherheit der BIA.</p>
  </section>`;
 }

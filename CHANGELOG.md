@@ -1,3 +1,9 @@
+## 0.5.91 · V-Taper Training-Start Trend + 96% CI
+- Datumsbasierte Kurzzeittrends seit dem dokumentierten Krafttrainingsbeginn; ältere Gewichtshistorie bleibt separat erhalten.
+- 96-%-Student-t-Konfidenzbänder der linearen Mittelwert-Trends für Fitdays-/Körper-/Protein-/Trainings-Dotplots bei ausreichender Datenabdeckung; sichtbare Y-Achsen.
+- Zielgewichts-Leerbalken entfernt; fehlende Garmin-Sätze sind keine 0-Sätze.
+- Kein langfristiger Körperfett-Forecast ohne belastbare Daten. Siehe RELEASE_0.5.91.md.
+
 ## 0.5.90 — Schlafdaten-Korrektur, kompakte Proteinanzeige, Übungsidee, persönliche Joghurt-Rezepte
 Siehe RELEASE_0.5.90.md.
 
