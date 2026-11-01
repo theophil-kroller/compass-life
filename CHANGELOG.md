@@ -1,3 +1,7 @@
+## 0.5.91.1 · Happy Harvest Steinofen-Kornspitz
+
+- 1 Stück (75 g), Produktetikett-Makros und Zutaten; konsistente Stück-/Gramm-Eingabe. Siehe RELEASE_0.5.91.1.md.
+
 ## 0.5.91 · V-Taper Training-Start Trend + 96% CI
 - Datumsbasierte Kurzzeittrends seit dem dokumentierten Krafttrainingsbeginn; ältere Gewichtshistorie bleibt separat erhalten.
 - 96-%-Student-t-Konfidenzbänder der linearen Mittelwert-Trends für Fitdays-/Körper-/Protein-/Trainings-Dotplots bei ausreichender Datenabdeckung; sichtbare Y-Achsen.

@@ -34,6 +34,7 @@ export const FOOD_PRESETS=[
  ['monin-caramel','🍮','Monin Salted Caramel Sirup','Zutaten','10 ml',32,33],
  ['matcha-powder','🍃','MatchaTherapy 30+ Matchapulver','Zutaten','1 TL (2 g)',5,9],
  ['bio-kornbrot','🍞','Zurück zum Ursprung Bio Nur-Kornbrot','Zutaten','1 Scheibe (50 g)',134,134],
+ ['happy-harvest-steinofen-kornspitz','🥖','Happy Harvest Steinofen-Kornspitz · HOFER','Snacks','1 Stück',218,218],
  ['butter-hofer','🧈','Hofer Bio-Butter','Zutaten','10 g',72,76],
  ['water-glass','💧','Wasser','Getränke','1 Glas (250 ml)',0,0],
  ['smoothie','🥤','Smoothie','Getränke','1 Glas (300 ml)',120,280],['green-tea-chinese','🍵','Chinesischer Grüntee · ungesüßt','Getränke','1 Tasse (250 ml)',0,3],['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['tea-honey','🫖','Tee mit Honig','Getränke','1 Tasse (250 ml)',20,75],
@@ -84,6 +85,7 @@ export const FOOD_PRESETS=[
  ...(id==='koro-pistachio-puree'?{recipeNote:'KoRo Bio Pistazienmus, Herstellerwert 658 kcal/100 g (Produkt MUS_060), 15 g Esslöffel geschätzt.'}:{}),
  ...(id==='koro-black-tahini'?{recipeNote:'KoRo Bio Schwarzes Tahin, Herstellerwert 616 kcal/100 g (Produkt MUS_037), 15 g Esslöffel geschätzt.'}:{}),
  ...(['lyttos-pistachio-breakfast','lyttos-tahini-breakfast'].includes(id)?{recipeNote:'Persönlicher Joghurt-Snack: Standard 150 g Joghurt, 15 g Honig und 15 g Mus; alle Grammangaben im Tagebuch editierbar. Joghurt generischer Drittanbieterwert, Mus KoRo Hersteller.'}:{}),
+ ...(id==='happy-harvest-steinofen-kornspitz'?{recipeNote:'1 Stück = 75 g (HOFER-Packung 300 g / 4 Stück). Etikett 2026-11-01: je 100 g 290 kcal, Fett 3,7 g (gesättigt 0,5 g), Kohlenhydrate 49 g (Zucker 2,0 g), Eiweiß 11 g, Salz 1,2 g. Ballaststoffe nicht angegeben. Enthält Weizen, Roggen, Gerste, Soja und Sesam; kann Spuren von Lupinen, Milch und Schalenfrüchten enthalten. Energie und Makros pro Stück rechnerisch umgerechnet; bei Backverlust durch Wasser kann das Endgewicht variieren.'}:{}),
  ...(id==='kitkat-chunky-peanut-butter'?{recipeNote:'1 Riegel = 42 g = 222 kcal laut offizieller KitKat-Produktseite. Fett 12,7 g (gesättigt 6,4 g), Kohlenhydrate 21,9 g (Zucker 18,1 g), Ballaststoffe 1,2 g, Eiweiß 4,5 g, Salz 0,26 g. Quelle: https://www.kitkat.de/produkt/kitkat-chunky-peanut-butter ; das österreichische Packungsetikett hat bei Rezepturänderungen Vorrang.'}:{}),
  ...(id==='hofer-germknoedel'?{recipeNote:'HOFER Germknödel · 187 g nach Drittanbieter-Nährwertdaten, etwa 500 kcal pro Portion. Variante, Vanillesauce/Mohn-Zucker und Packungsangabe bitte gegen Verpackung prüfen; nicht als offizieller HOFER-Etikettwert bestätigt.'}:{}),
  ...(id==='banana'?{recipeNote:'Eine mittelgroße Banane = geschätzt 120 g essbarer Anteil ohne Schale; Fruchtgröße und Reifegrad variieren. Makro-/Mikronährstoffe aus generischer USDA-Referenz. Zählt zum Daily Dozen (andere Früchte).'}:{}),
@@ -220,6 +222,13 @@ export function nutritionKcalEstimate(food,amount,recipe=null){
  // Matcha is a recipe, not a uniform-calorie beverage: don't multiply oat milk
  // calories by total drink volume. The old 250-ml matcha logs had no breakdown,
  // so we use the same explicitly documented 75-ml estimate for those as well.
+ if(food.id==='happy-harvest-steinofen-kornspitz'){
+  const weight=given.match(/(\d+(?:[.,]\d+)?)\s*(?:g|gramm)\b/i);
+  const pieces=given.match(/(\d+(?:[.,]\d+)?)\s*(?:stück(?:e)?|stueck(?:e)?)\b/i);
+  const grams=weight?Number(weight[1].replace(',','.')):pieces?Number(pieces[1].replace(',','.'))*75:given===original?75:null;
+  if(!Number.isFinite(grams)||grams<=0||grams>1500)return null;
+  const kcal=Math.round(290*grams/100);return {low:kcal,high:kcal,kind:'Verpackungsetikett · rechnerisch'};
+ }
  if(food.id==='water-glass'){
   const m=given.match(/(\d+(?:[.,]\d+)?)\s*(ml|l(?:iter)?|glas|gläser|glaeser)\b/i);
   if(!m&&given!==original)return null;
