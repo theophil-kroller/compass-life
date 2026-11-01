@@ -36,7 +36,10 @@ export function mergeStrengthJournal(local={},remote={}){
   else out[idx]=choose(out[idx],next);
  }
  out.sort((a,b)=>text(a.start).localeCompare(text(b.start))||text(a.sessionId).localeCompare(text(b.sessionId)));
- return {annotations:out};
+ const x=a.strongliftsSettings88,y=b.strongliftsSettings88;
+ const settings=!x?y:!y?x:String(x.updatedAt||'')>=String(y.updatedAt||'')?x:y;
+ const p=a.safety88,q=b.safety88,safety=!p?q:!q?p:String(p.updatedAt||'')>=String(q.updatedAt||'')?p:q;
+ return {annotations:out,...(settings?{strongliftsSettings88:settings}:{}),...(safety?{safety88:safety}:{})};
 }
 export function strengthSyncStatus(state){
  const annotations=entries(state?.strengthJournal).length;

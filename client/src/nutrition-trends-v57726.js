@@ -45,7 +45,7 @@ function summarize(day,b){
  }
  return {day,entries:items.length,totals,coverage};
 }
-const entryFingerprint=e=>JSON.stringify([e.id,e.foodId,e.at,e.amount,e.note,e.updatedAt,e.deleted]);
+const entryFingerprint=e=>JSON.stringify([e.id,e.foodId,e.at,e.amount,e.note,e.updatedAt,e.deleted,e.foodSnapshot]);
 /** Recalculate only dirty dates. Both edits and changed product profiles invalidate
  * the correct cache partitions, without adding new keys to the encrypted vault. */
 export function nutritionTrendsIndex(state){
@@ -63,7 +63,7 @@ export function nutritionTrendsIndex(state){
   if(old)unlink(old);
   if(entry.deleted||!Number.isFinite(Date.parse(entry.at))){index.rows.delete(id);continue;}
   const day=dayOf(entry.at);if(!day){index.rows.delete(id);continue;}
-  const data=nutrientEntry(foodById.get(entry.foodId),entry),values={...data.values};
+  const data=nutrientEntry(foodById.get(entry.foodId)||entry.foodSnapshot,entry),values={...data.values};
   const estimated=new Set(data.estimatedKeys),partial=new Set(data.partialKeys),minimum=new Set();
   // Bioactive ingredient values are per part. Never count a compound twice.
   // A minimum/estimate stays labelled even when there are mixed-source meals.

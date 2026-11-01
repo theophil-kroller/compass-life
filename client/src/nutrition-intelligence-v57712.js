@@ -233,7 +233,7 @@ export function nutrientEntry(food,entry){
 const dateLocal=at=>{const d=new Date(at);return Number.isFinite(d.getTime())?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'';};
 export function nutritionDay(state,day){
  const foods=new Map(nutritionFoods(state).map(f=>[f.id,f]));
- const rows=nutritionEntries(state).filter(e=>dateLocal(e.at)===day).map(e=>nutrientEntry(foods.get(e.foodId),e));
+ const rows=nutritionEntries(state).filter(e=>dateLocal(e.at)===day).map(e=>nutrientEntry(foods.get(e.foodId)||e.foodSnapshot,e));
  const totals={},coverage={};for(const key of Object.keys(N))coverage[key]={known:0,unknown:0,partial:0,estimated:0};
  for(const r of rows)for(const key of Object.keys(N)){
    if(r.knownKeys.has(key)){coverage[key].known++;if(r.partialKeys.has(key))coverage[key].partial++;if(r.estimatedKeys.has(key))coverage[key].estimated++;totals[key]=round((totals[key]||0)+(r.values[key]||0));}
