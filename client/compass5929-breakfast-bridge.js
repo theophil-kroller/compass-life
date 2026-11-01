@@ -13,6 +13,7 @@ export function compass5929BreakfastBridge(){
   let s=source;
   const patch=(a,b,label)=>{s=replaceOnce(s,a,b,label);};
   if(path.endsWith('/client/src/personal-journal-v5692.js')){
+   if(s.includes("['lyttos-pistachio-breakfast'"))return null; // now native
    patch(" ['supplement-bcaa-alphaminos'",` ['lyttos-greek-natur','🥣','Lyttos Greek Style Natur · Hofer','Zutaten','150 g',173,173],
  ['honey','🍯','Honig','Zutaten','15 g (1 EL; angenommen)',45,47],
  ['koro-pistachio-puree','🥜','KoRo Bio Pistazienmus pur','Zutaten','15 g (1 EL; angenommen)',98,99],
@@ -43,6 +44,7 @@ export function compass5929BreakfastBridge(){
    return {code:s,map:null};
   }
   if(path.endsWith('/client/src/nutrition-intelligence-v57712.js')){
+   if(s.includes("'lyttos-greek-natur':profile("))return null; // now native
    patch(" 'supplement-bcaa-alphaminos':profile(",` 'lyttos-greek-natur':profile('Lyttos Greek Style Natur · Hofer',100,'g',
   {kcal:115,protein:3.33,fat:9.4,saturated:6.33,carbs:3.53,sugar:3.53},
   'Vorläufiger Drittanbieter-Datenbankwert (Fitatu); Etikett nachreichen',{},'150 g = ca. 173 kcal, tatsächliche Verpackung prüfen.'),

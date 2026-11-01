@@ -267,7 +267,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.89';
+const COMPASS_CLIENT_VERSION='0.5.90';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -2077,7 +2077,7 @@ let compass56RecommendationMarkup='';
 let compass56RecommendationDay='';
 let compass56PlanningOpen=false;
 function compass56RecommendationButton(){
- return '<section class="compass56-inspector-peek"><button type="button" class="compass56-smart-button" data-action="compass56-recommend" title="Empfehlungen jetzt berechnen">'+ico('spark',17)+' Empfehlungen berechnen</button></section>';
+ return '<section class="compass56-inspector-peek"><button type="button" class="compass56-smart-button" data-action="compass56-recommend" title="Empfehlungen jetzt berechnen">'+ico('spark',17)+' Empfehlungen berechnen</button>'+(state?proteinTodayMarkup88(state,selectedDay,{compact:true}):'')+'</section>'; 
 }
 function compass56RecommendationPanel(){
  return '<div class="compass56-recommend-result"><div class="compass56-recommend-actions"><button type="button" data-action="compass56-recommend" title="Vorschläge neu berechnen">↻</button><button type="button" data-action="compass56-recommend-close" aria-label="Vorschläge schließen" title="Schließen">×</button></div>'+compass56RecommendationMarkup+'</div>';
@@ -2131,7 +2131,7 @@ function mensaQuickStatus(){
 }
 function mensaTodayCompact(){return state?mensaTodayButton(state,new Date()):'';}
 function todayScreen(){const coreStarted=performanceTrace.start();const workspace=compass56TodayWorkspace();performanceTrace.end('Heute: Aufgaben und Kalender',tab,coreStarted);
-   const chromeStarted=performanceTrace.start();const html=chrome(mensaTodayCompact()+(state?proteinTodayMarkup88(state,localDate()):'')+workspace);performanceTrace.end('Heute: Shell und Hinweise',tab,chromeStarted);return html;}
+   const chromeStarted=performanceTrace.start();const html=chrome(mensaTodayCompact()+workspace);performanceTrace.end('Heute: Shell und Hinweise',tab,chromeStarted);return html;}
 function homeScreen(){
  const k=state?.krakenPortfolio,valuation=k?.balances?krakenWealthSummary(k):null;
  const kraken=valuation?`<section class="work-card compass-kraken-home"><div><span class="page-overline">WEALTH / KRAKEN</span><strong>${valuation.covered?((valuation.totalEur).toLocaleString('de-AT',{style:'currency',currency:'EUR'})):'Noch nicht bewertet'}</strong><small>${valuation.complete?'Kraken Spot · EUR-Marktwert':'Nur teilweise bewertete Kraken-Positionen · keine Gesamtvermögenssumme'}</small></div><button type="button" data-tab="finance" class="secondary-btn">Finanz-Dashboard öffnen →</button></section>`:'';
@@ -4524,7 +4524,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='t577-edit'){touchEditingId=id;render();return;}
  if(action==='t577-cancel'){touchEditingId='';render();return;}
  if(action==='t577-delete'){if(!state||!confirm('Diesen Nähe-Eintrag entfernen?'))return;try{await mutate(s=>deleteTouch(s,id));touchEditingId='';toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
- if(action==='ci88-food-open'){nutritionQuickOpen=true;render();requestAnimationFrame(()=>{const panel=app.querySelector('.ci88-open-food');if(panel){panel.open=true;panel.scrollIntoView?.({block:'center'});panel.querySelector('[name=title]')?.focus?.({preventScroll:true});}});return;}
+ if(action==='ci88-food-open'){if(tab==='today'){tab='insights';insightTab='nutrition';calmNavGroup='insights';}nutritionQuickOpen=true;render();requestAnimationFrame(()=>{const panel=app.querySelector('.ci88-open-food');if(panel){panel.open=true;panel.scrollIntoView?.({block:'center'});panel.querySelector('[name=title]')?.focus?.({preventScroll:true});}});return;}
  if(action==='ci88-copy-food-prompt'){const title=app.querySelector('#ci88-open-food-form [name=title]')?.value||'[Mahlzeit eingeben]';try{await navigator.clipboard.writeText(OPEN_FOOD_PROMPT88+title);toast('GPT-Schätzprompt kopiert.');}catch{toast('Zwischenablage nicht verfügbar.',true);}return;}
  if(action==='ci88-horizon'){if([3,6,12,24].includes(Number(id))){coachHorizon88=Number(id);render();}return;}
  if(action==='pj92-food-open'){if(!state&&!sealedCaptureAvailable)return toast('Bitte zuerst einmal den Tresor entsperren.',true);nutritionQuickOpen=true;habitQuickOpen=false;worktimeQuickOpen=false;feelingOverlayOpen=false;captureOverlayOpen=false;render();return;}

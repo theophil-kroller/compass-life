@@ -14,18 +14,59 @@ export const NEW_EXERCISES_BY_ID_89=new Map(NEW_EXERCISES_89.map(e=>[e.id,e]));
 const normal=s=>String(s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 export function resolveExerciseAlias89(value){const needle=normal(value);return NEW_EXERCISES_89.find(e=>[e.id,e.english,e.german,...e.aliases].some(alias=>normal(alias)===needle))?.id||null;}
 /** No new program: an explicitly picked extra substitutes one exercise and is never auto-prescribed. */
-export function insertOptionalExercise89(ids,{optionalExercise='',equipment='home',strongLifts=false,techniqueApproved=false,pain=false,healthAttention=false}={}){
+export function insertOptionalExercise89(ids,{optionalExercise='',equipment='home',strongLifts=false,techniqueApproved=false,pain=false,healthAttention=false,append=false}={}){
  const original=Array.isArray(ids)?[...ids]:[];
  const entry=NEW_EXERCISES_BY_ID_89.get(optionalExercise);
  if(!entry||strongLifts)return {ids:original,reason:entry&&strongLifts?'StrongLifts-Plan bleibt unverändert.':''};
  if(!entry.places.includes(equipment))return {ids:original,reason:'Die gewählte Übung benötigt Ausstattung am anderen Trainingsort.'};
  if(entry.requiresApproval&&(!techniqueApproved||pain||healthAttention))return {ids:original,reason:'Snatch nur nach expliziter Technikfreigabe und ohne akute Beschwerden.'};
  if(original.includes(entry.id))return {ids:original,selected:entry.id};
+ // A longer, explicitly accepted workout may add the movement; short sessions swap.
+ if(append&&original.length<6)return {ids:[...original,entry.id],selected:entry.id,mode:'bonus',reason:'Freiwillige Zusatzübung, ausschließlich nach Bestätigung.'};
  const replacement=original.findIndex(id=>entry.replaces.includes(id));
  if(replacement>=0)original.splice(replacement,1,entry.id);
  else if(original.length)original.splice(original.length-1,1,entry.id);
  else original.push(entry.id);
- return {ids:original,selected:entry.id,reason:'Freiwillige Auswahl ersetzt eine Übung statt das Trainingsvolumen automatisch zu erhöhen.'};
+ return {ids:original,selected:entry.id,mode:'swap',reason:'Freiwillige Auswahl ersetzt eine Übung statt das Trainingsvolumen automatisch zu erhöhen.'};
 }
 export const NEW_EXERCISE_IMAGE_ROOT_89='strength-visuals-v0589/';
 export function exerciseImagePair89(id,base='/'){const info=NEW_EXERCISES_BY_ID_89.get(id);if(!info)return null;const root=String(base).replace(/\/?$/,'/')+NEW_EXERCISE_IMAGE_ROOT_89;return {start:root+info.slug+'_start.webp',end:root+info.slug+'_end.webp'};}
+
+/** Compass 0.5.90 · ONE opt-in daily idea. Uses the SAME exercise metadata and
+ * documented coach history as the core planner. Never mutates a workout.
+ * Unknown training history is not interpreted as recovered muscle.
+ */
+export function suggestOptionalExercise90({plannedIds=[],goal='vtaper',equipment='home',minutes=25,availableMinutes=0,history=null,today='',pain=false,healthAttention=false,strongLifts=false}={}){
+ if(strongLifts||pain||healthAttention)return null;
+ const current=new Set(plannedIds||[]);
+ const target={
+  vtaper:{'farmers-walk':6,'dumbbell-bench-press':3,'dumbbell-front-squat':3,'dumbbell-walking-lunge':3,'sled-push':1},
+  strength:{'dumbbell-front-squat':7,'dumbbell-bench-press':7,'dumbbell-walking-lunge':5,'farmers-walk':4,'sled-push':4},
+  balance:{'dumbbell-walking-lunge':7,'farmers-walk':6,'dumbbell-front-squat':6,'dumbbell-bench-press':5,'sled-push':3},
+  abs:{'farmers-walk':8,'dumbbell-walking-lunge':6,'dumbbell-front-squat':5,'sled-push':3,'dumbbell-bench-press':2}
+ };
+ const targets=target[goal]||target.balance;
+ const age=(day)=>/\d{4}-\d{2}-\d{2}/.test(String(day||''))&&/^\d{4}-\d{2}-\d{2}$/.test(String(today||''))?
+  Math.round((Date.parse(today+'T12:00:00Z')-Date.parse(day+'T12:00:00Z'))/86400000):null;
+ const candidates=NEW_EXERCISES_89.filter(e=>e.places.includes(equipment)&&!e.requiresApproval&&!current.has(e.id)).map(e=>{
+  const recent=[e.primary,...e.secondary].map((g,i)=>({g,i,days:age(history?.last?.[g]),sets:Number(history?.counts7?.[g]||0)}));
+  // An acute training burden on the primary or important secondary groups
+  // must not trigger a next-day optional recommendation.
+  if(recent.some(x=>x.days!==null&&x.days>=0&&x.days<=1&&x.sets>=(x.i===0?3:4)))return null;
+  const present=plannedIds.some(id=>e.replaces.includes(id));
+  const extraTime=Math.ceil(e.sets*.8+Math.max(0,e.sets-1)*e.restSeconds/60);
+  if(!present&&extraTime>Number(availableMinutes||0))return null; // no unrelated core exercise replacement
+  const recently=recent.some(x=>x.days!==null&&x.days>=0&&x.days<=2&&x.sets>=2);
+  const score=(targets[e.id]||0)+(present?2:0)-(recently?4:0)+(e.places.length===1?0:.1)+(extraTime<=Number(availableMinutes||0)?1:0);
+  const reason=present?'Passt als Variation zu einer bereits geplanten Übung.':
+   'Setzt einen ergänzenden Trainingsreiz neben den geplanten Hauptübungen.';
+  return {...e,score,reason,replaceId:plannedIds.find(id=>e.replaces.includes(id))||null,extraTime};
+ }).filter(Boolean).sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id));
+ const pick=candidates[0];if(!pick)return null;
+ return {id:pick.id,title:pick.german,english:pick.english,primary:pick.primary,
+  reason:pick.reason+' '+pick.cue,
+  replacement:pick.replaceId,sets:pick.sets,reps:pick.reps,restSeconds:pick.restSeconds,
+  // Suggest an actual add-on only when the routine's remaining time allows it.
+  mode:pick.extraTime<=Number(availableMinutes||0)?'conditional-bonus':'swap',
+  estimatedExtraMinutes:pick.extraTime};
+}

@@ -53,6 +53,9 @@ const LABELLED={
    caffeine:{label:'Koffein',value:28,unit:'mg',mode:'minimum'},
    lTheanine:{label:'L-Theanin',value:null,unit:'mg',note:'Keine quantifizierte Herstellerangabe'}
  },'Bestätigte Sorte 30+. 1 TL ≈ 2 g Pulver geschätzt; Gehalte sind Mindestwerte (mg/g), keine exakten Analysedurchschnitte. Quelle: https://matchatherapy.com/de-at'),
+ 'lyttos-greek-natur':profile('Lyttos Greek Style Natur · Hofer',100,'g',{kcal:115,protein:3.33,fat:9.4,saturated:6.33,carbs:3.53,sugar:3.53},'Vorläufiges generisches Drittanbieterprofil; Etikett prüfen',{},'150 g ca. 173 kcal.'),
+ 'koro-pistachio-puree':profile('KoRo Bio Pistazienmus pur',100,'g',{kcal:658,fat:56,saturated:6,carbs:12,sugar:5,fiber:6,protein:22,salt:0},'KoRo Hersteller, MUS_060',{},'Esslöffel mit 15 g angenommen.'),
+ 'koro-black-tahini':profile('KoRo Schwarzes Bio Tahin',100,'g',{kcal:616,fat:52,saturated:7.4,carbs:12,sugar:0,fiber:12,protein:19,salt:0.03},'KoRo Hersteller, MUS_037',{},'Esslöffel mit 15 g angenommen.'),
  'honey':profile('Honig, 1 TL',7,'g',{kcal:21,carbs:5.7,sugar:5.7},'Schätzung',{},'Teelöffel ≈ 7 g; kein Markenetikett.'),
  'espresso':profile('Espresso · Richtwert 60 ml',1,'Portion',{kcal:2},'Schätzung / EFSA',{caffeine:{label:'Koffein',value:80,unit:'mg',mode:'estimate'}},'EFSA-Richtwert 80 mg je 60 ml Espresso; tatsächliche Shotgröße, Bohne und Zubereitung schwanken.'),
  'green-tea-chinese':profile('Chinesischer Grüntee · aufgebrüht, ohne Zucker',250,'ml',{kcal:2,fat:0,saturated:0,carbs:0,sugar:0,potassium:20,magnesium:2.5,manganese:.46,vitaminB2:.15},'Generischer Grüntee; USDA FDC 171917, NCBI Bookshelf',{caffeine:{label:'Koffein (Teein)',value:38,unit:'mg',mode:'estimate'},catechins:{label:'Catechine gesamt (50–100 mg/250 ml)',value:75,unit:'mg',mode:'estimate'}},'Generischer Grüntee, 250 ml Tasse; Mineralien und Koffein geschätzt, abhängig von Sorte und Ziehzeit.'),
@@ -188,6 +191,13 @@ export function nutritionParts(foodId,amount='',food=null,recipe=null){
  const fake={foodId,amount};
  const value=quantityFor(fake,source);
  const piece=(id,qty,unit,part)=>rescale(LABELLED[id],qty,unit,part);
+ if(foodId==='lyttos-pistachio-breakfast'||foodId==='lyttos-tahini-breakfast'){
+  const a=String(amount||source.defaultAmount||'');
+  const mass=(name,fallback)=>{const m=a.match(new RegExp('([0-9]+(?:[.,][0-9]+)?)\\s*g\\s*'+name+'\\b','i'));return m?amountNumber(m[1]):fallback;};
+  const yogurt=mass('joghurt',150),honey=mass('honig',15),spread=mass(foodId==='lyttos-pistachio-breakfast'?'pistazienmus':'tahini',15);
+  if(![yogurt,honey,spread].every(Number.isFinite)||[yogurt,honey,spread].some(x=>x<0)||yogurt>1000||honey>150||spread>150)return [];
+  return [piece('lyttos-greek-natur',yogurt,'g','Joghurt'),piece('honey',honey,'g','Honig'),piece(foodId==='lyttos-pistachio-breakfast'?'koro-pistachio-puree':'koro-black-tahini',spread,'g','Nuss-/Sesammus')].filter(Boolean);
+ }
  if(foodId==='chocolate-cookie-cream'){
   const entry=String(amount||source.defaultAmount||'');
   const grams=key=>{const match=entry.match(new RegExp('(\\d+(?:[.,]\\d+)?)\\s*g\\s*'+key,'i'));return match?amountNumber(match[1]):null;};

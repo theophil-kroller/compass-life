@@ -22,14 +22,36 @@ const groupByDay=(rows,field,low,high,today)=>{
  return [...m.values()].sort((a,b)=>a.day.localeCompare(b.day));
 };
 const rounded=(v,precision=1)=>v===null?null:Number(v.toFixed(precision));
+// Garmin nightly exports use totals.deep/light/rem. Other imports may expose
+// sleepMinutes directly. Do not change or migrate the original imported rows.
+export function coachSleepMinutes90(row){
+ const direct=safeNum(row?.sleepMinutes,60,960);
+ if(direct!==null)return direct;
+ const t=row?.totals||{};
+ const stages=[t.deep,t.light,t.rem];
+ if(!stages.some(v=>Number.isFinite(v)&&v>=0))return null;
+ const minutes=stages.reduce((sum,v)=>sum+(Number.isFinite(v)&&v>=0?v:0),0);
+ return safeNum(minutes,60,960);
+}
+const sleepObservations=(rows,today)=>{
+ const normalized=(Array.isArray(rows)?rows:[]).map(r=>({...r,coachSleepMinutes:coachSleepMinutes90(r)}));
+ return groupByDay(normalized,'coachSleepMinutes',60,960,today);
+};
+const observedOverview=(rows,field,today)=>{
+ const valid=(Array.isArray(rows)?rows:[]).filter(r=>dayOK(r?.day)&&r.day<=today&&Number.isFinite(field(r)));
+ const days=[...new Set(valid.map(r=>r.day))].sort();
+ return {totalDays:days.length,lastDay:days.at(-1)||null};
+};
 /** Sleep = median of 3 recent nights versus 10+ prior observed nights (day -3 to -45).
  * HRV = median of 3 recent nightly averages versus 10+ older nights (day -3 to -45).
  * Thresholds are conservative trend flags, not diagnostics or workout clearances.
  */
 export function strengthCoachHealthContext(state,{today=new Date().toISOString().slice(0,10)}={}){
  const imports=state?.healthImports||{};
- const nights=groupByDay(imports.garminNights,'sleepMinutes',60,960,today);
+ const nights=sleepObservations(imports.garminNights,today);
  const hrv=groupByDay(imports.garminHrv,'nightAverageMs',5,250,today);
+ const sleepOverview=observedOverview(imports.garminNights,coachSleepMinutes90,today);
+ const hrvOverview=observedOverview(imports.garminHrv,r=>safeNum(r?.nightAverageMs,5,250),today);
  const recent=(rows)=>rows.filter(x=>age(x.day,today)<=2);
  const baseline=(rows)=>rows.filter(x=>{const a=age(x.day,today);return a>=3&&a<=45;});
  const sleepRecent=recent(nights),sleepBaseline=baseline(nights);
@@ -66,14 +88,14 @@ export function strengthCoachHealthContext(state,{today=new Date().toISOString()
  const guidance=status==='attention'?'Beide beobachteten Signale liegen deutlich unter deinen persönlichen Vergleichswerten. Training heute konservativ planen oder eine Pause erwägen; keine automatische Trainingssperre.':
   status==='notice'?'Ein beobachtetes Signal liegt deutlich unter deinem Vergleichswert. Belastung und subjektives Befinden besonders berücksichtigen.':
   status==='observed'?'Kein starkes negatives Signal anhand der verfügbaren persönlichen Vergleichsfenster – das ist keine Trainingsfreigabe.':
-  'Für einen persönlichen Vergleich fehlen genügend aktuelle Nächte bzw. historische Messungen.';
+  'Ein persönlicher Kurzfristvergleich ist derzeit nicht vollständig: prüfe die jüngsten Schlaf-/HRV-Nächte. Historische Messungen sind weiterhin verfügbar; das ist keine Aussage über deinen Erholungszustand.';
  const bodyNote=bodyTrend?
   `Fitdays ${bodyTrend.from}–${bodyTrend.to}: Gewicht ${bodyTrend.weightKgDelta>0?'+':''}${bodyTrend.weightKgDelta} kg${bodyTrend.bodyFatPctDelta!==null?`, Körperfett ${bodyTrend.bodyFatPctDelta>0?'+':''}${bodyTrend.bodyFatPctDelta} Prozentpunkte`:''}${bodyTrend.muscleKgDelta!==null?`, Geräte-Muskelmasse ${bodyTrend.muscleKgDelta>0?'+':''}${bodyTrend.muscleKgDelta} kg`:''}. ${bodyTrend.reliableForTrend?'Über mehrere Messungen bestätigt werden muss der Verlauf dennoch.':'Nur wenige Messungen: allenfalls Richtungsindiz, kein verlässlicher Wachstumstrend.'}`:
   'Fitdays: Für einen längerfristigen Vergleich sind Messungen mit mindestens 21 Tagen Abstand erforderlich.';
  return {
   today,status,reasons,guidance,bodyNote,attention:sleepLow&&hrvLow,
-  sleep:{recentCount:sleepRecent.length,baselineCount:sleepBaseline.length,usable:sleepUsable,recentMinutes:sleepUsable?rounded(sleepLatest,0):null,baselineMinutes:sleepUsable?rounded(sleepRef,0):null,deltaMinutes:sleepChange,flag:sleepLow},
-  hrv:{recentCount:hrvRecent.length,baselineCount:hrvBaseline.length,usable:hrvUsable,recentMs:hrvUsable?rounded(hrvLatest,1):null,baselineMs:hrvUsable?rounded(hrvRef,1):null,deltaPct:hrvChange,flag:hrvLow},
+  sleep:{recentCount:sleepRecent.length,baselineCount:sleepBaseline.length,...sleepOverview,usable:sleepUsable,recentMinutes:rounded(sleepLatest,0),baselineMinutes:rounded(sleepRef,0),deltaMinutes:sleepChange,flag:sleepLow},
+  hrv:{recentCount:hrvRecent.length,baselineCount:hrvBaseline.length,...hrvOverview,usable:hrvUsable,recentMs:rounded(hrvLatest,1),baselineMs:rounded(hrvRef,1),deltaPct:hrvChange,flag:hrvLow},
   body:{latest:latestBody?{day:latestBody.day,weightKg:latestBody.weightKg,bodyFatPct:safeNum(latestBody.bodyFatPct,1,75),muscleKg:safeNum(latestBody.muscleKg,2,200)}:null,trend:bodyTrend,count:bodySeries.length},
   method:'Schlaf/HRV: Median der letzten 3 Kalendertage (mind. 2 Werte) gegen Median der 3–45 Tage davor (mind. 10 Werte). Signalgrenzen −60 min bzw. −15 %. Fitdays: mindestens 21 Tage Abstand; BIA-Körperfett-/Muskelangaben schwanken mit Flüssigkeit und Messbedingungen. Kein validierter Regenerations- oder Hypertrophie-Score.'
  };

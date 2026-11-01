@@ -20,6 +20,13 @@ export const TIME_AREAS=[
 export const FOOD_PRESETS=[
  // Existing `matcha` ID deliberately retained: older nutrition entries remain compatible.
  // 500 ml describes the prepared drink (mostly water), not 500 ml of oat milk.
+ // 0.5.90 · restored personal recipes with stable IDs; old log entries stay valid.
+ ['lyttos-greek-natur','🥣','Lyttos Greek Style Natur · Hofer','Zutaten','150 g',173,173],
+ ['honey','🍯','Honig','Zutaten','15 g',45,47],
+ ['koro-pistachio-puree','🥜','KoRo Bio Pistazienmus pur','Zutaten','15 g',98,99],
+ ['koro-black-tahini','⚫','KoRo schwarzes Bio Tahini','Zutaten','15 g',92,93],
+ ['lyttos-pistachio-breakfast','🥣','Griechischer Joghurt mit Honig & Pistazienmus','Frühstück','150 g Joghurt + 15 g Honig + 15 g Pistazienmus',315,319],
+ ['lyttos-tahini-breakfast','🥣','Griechischer Joghurt mit Honig & schwarzem Tahini','Frühstück','150 g Joghurt + 15 g Honig + 15 g Tahini',308,313],
  ['matcha-oat-plain','🍵','MatchaTherapy mit Hafermilch (ohne Honig)','Frühstück','1 Becher (ca. 500 ml; 75 ml Hafermilch)',41,45],
  ['matcha','🍯','MatchaTherapy mit Hafermilch & Honig','Frühstück','1 Becher (ca. 500 ml; 75 ml Hafermilch)',62,67],
  ['oat-latte','☕','Hafermilch-Latte mit Monin Salted Caramel','Getränke','200 ml Hafermilch; 10 ml Sirup',125,140],
@@ -72,6 +79,11 @@ export const FOOD_PRESETS=[
 ].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({
  id,emoji,title,group,defaultAmount,kcalLow,kcalHigh,
  ...(id==='apple-shortcrust-cake'?{recipeNote:'1 Stück = ca. 125 g (nicht abgewogen). Referenz: Bundeslebensmittelschlüssel (BLS 4.0), Apfelkuchen gedeckt (Mürbeteig), Energieangabe je 100 g in der Referenzdatenbank; je nach Rezept/Portionsgröße starke Abweichungen möglich. Menge im Tagebuch anpassbar.'}:{}),
+ ...(id==='lyttos-greek-natur'?{recipeNote:'150 g Lyttos Greek Style Natur: ca. 173 kcal. Vorläufige Drittanbieter-Schätzung, Produktetikett bitte prüfen.'}:{}),
+ ...(id==='honey'?{recipeNote:'1 EL = ca. 15 g, angenommene Portionsmenge. Generische Honigwerte.'}:{}),
+ ...(id==='koro-pistachio-puree'?{recipeNote:'KoRo Bio Pistazienmus, Herstellerwert 658 kcal/100 g (Produkt MUS_060), 15 g Esslöffel geschätzt.'}:{}),
+ ...(id==='koro-black-tahini'?{recipeNote:'KoRo Bio Schwarzes Tahin, Herstellerwert 616 kcal/100 g (Produkt MUS_037), 15 g Esslöffel geschätzt.'}:{}),
+ ...(['lyttos-pistachio-breakfast','lyttos-tahini-breakfast'].includes(id)?{recipeNote:'Persönlicher Joghurt-Snack: Standard 150 g Joghurt, 15 g Honig und 15 g Mus; alle Grammangaben im Tagebuch editierbar. Joghurt generischer Drittanbieterwert, Mus KoRo Hersteller.'}:{}),
  ...(id==='kitkat-chunky-peanut-butter'?{recipeNote:'1 Riegel = 42 g = 222 kcal laut offizieller KitKat-Produktseite. Fett 12,7 g (gesättigt 6,4 g), Kohlenhydrate 21,9 g (Zucker 18,1 g), Ballaststoffe 1,2 g, Eiweiß 4,5 g, Salz 0,26 g. Quelle: https://www.kitkat.de/produkt/kitkat-chunky-peanut-butter ; das österreichische Packungsetikett hat bei Rezepturänderungen Vorrang.'}:{}),
  ...(id==='hofer-germknoedel'?{recipeNote:'HOFER Germknödel · 187 g nach Drittanbieter-Nährwertdaten, etwa 500 kcal pro Portion. Variante, Vanillesauce/Mohn-Zucker und Packungsangabe bitte gegen Verpackung prüfen; nicht als offizieller HOFER-Etikettwert bestätigt.'}:{}),
  ...(id==='banana'?{recipeNote:'Eine mittelgroße Banane = geschätzt 120 g essbarer Anteil ohne Schale; Fruchtgröße und Reifegrad variieren. Makro-/Mikronährstoffe aus generischer USDA-Referenz. Zählt zum Daily Dozen (andere Früchte).'}:{}),
@@ -192,6 +204,14 @@ export function nutritionEntries(state){return (state?.nutritionJournal?.entries
 /** An indicative range only, not a nutritional measurement. Explicitly edited quantities
  * override presets when a compatible count or g/ml amount can be parsed. */
 export function nutritionKcalEstimate(food,amount,recipe=null){
+ if(food&&['lyttos-pistachio-breakfast','lyttos-tahini-breakfast'].includes(food.id)){
+  const text=String(amount||food.defaultAmount||'');
+  const grams=(kind,def)=>{const m=text.match(new RegExp('([0-9]+(?:[.,][0-9]+)?)\\s*g\\s*'+kind+'\\b','i'));return m?Number(m[1].replace(',','.')):def;};
+  const yogurt=grams('joghurt',150),honey=grams('honig',15),spread=grams(food.id==='lyttos-pistachio-breakfast'?'pistazienmus':'tahini',15);
+  if(![yogurt,honey,spread].every(Number.isFinite)||yogurt<0||honey<0||spread<0||yogurt>1000||honey>150||spread>150)return null;
+  const kcal=yogurt*1.15+honey*3.04+spread*(food.id==='lyttos-pistachio-breakfast'?6.58:6.16);
+  return {low:Math.max(0,Math.round(kcal)-2),high:Math.round(kcal)+2,kind:'Zutatenbasierte Schätzung'};
+ }
  if(food?.id==='smoothie-personal')return smoothieKcalEstimate(recipe,amount);
  if(PERSONAL_RECIPE_IDS.includes(food?.id))return personalRecipeKcal(food.id,recipe);
  if(!food||!Number.isFinite(food.kcalLow)||!Number.isFinite(food.kcalHigh))return null;

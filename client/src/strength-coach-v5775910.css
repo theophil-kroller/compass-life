@@ -70,3 +70,15 @@
  .str621-location-switch button{padding:10px}
  .str619-exercise{padding:11px}
 }
+
+/* 0.5.90 - one quiet opt-in contextual exercise suggestion. */
+.str590-daily-extra{border:1px solid #c6dacf;border-radius:14px;background:#f4f8f5;padding:12px 14px;margin:10px 0;color:#214e41}
+.str590-extra-head{display:flex;justify-content:space-between;gap:7px;align-items:baseline;flex-wrap:wrap}
+.str590-extra-head small{color:#58746b;font-size:11px}
+.str590-extra-title{font-weight:700;margin:7px 0 3px}
+.str590-extra-title small{font-weight:400;color:#55746a}
+.str590-daily-extra p{font-size:12px;line-height:1.45;margin:0 0 10px}
+.str590-extra-actions{display:flex;gap:8px;flex-wrap:wrap}
+.str590-extra-actions button{border:1px solid #b9d4c8;border-radius:9px;padding:7px 11px;background:white;color:#235648;font-weight:600;cursor:pointer}
+.str590-extra-actions .str590-accept{background:#277a5d;color:white;border-color:#277a5d}
+@media(max-width:540px){.str590-daily-extra{padding:10px}.str590-extra-actions button{flex:1}}

@@ -1,3 +1,6 @@
+## 0.5.90 — Schlafdaten-Korrektur, kompakte Proteinanzeige, Übungsidee, persönliche Joghurt-Rezepte
+Siehe RELEASE_0.5.90.md.
+
 ## 0.5.89 · Personalised Exercise Library (2026-11-01)
 
 Sechs optionale Übungen, zwölf KI-Start-/Endbilder als separate WebP-Dateien und Integration in den bestehenden Coach; siehe `RELEASE_0.5.89.md`.

@@ -5,9 +5,10 @@
 import {strengthPeriod} from './strength-insights-v57728.js';
 import {strongliftsNextVariant88,strengthenStrongliftsPlan88,strongliftsSettingsMarkup88,saveStrongliftsSettings88} from './stronglifts-v0588.js';
 import {strengthCoachHealthContext} from './strength-coach-recovery-v5775926.js';
+import {coachHealthCoverageMarkup90} from './coach-health-coverage-v0590.js';
 import {detailedMuscleData} from './strength-anatomy-v57737.js';
 import {EXERCISES,strengthExerciseLabel} from './strength-editor-v57732.js';
-import {NEW_EXERCISES_89,NEW_EXERCISES_BY_ID_89,insertOptionalExercise89} from './strength-exercise-library-v0589.js';
+import {NEW_EXERCISES_89,NEW_EXERCISES_BY_ID_89,insertOptionalExercise89,suggestOptionalExercise90} from './strength-exercise-library-v0589.js';
 import './strength-coach-v5775910.css';
 import {resumableGuidedSession,guidedPlanFromSession} from './strength-workout-resume-v57759405.js';
 import './strength-workout-resume-v57759405.css';
@@ -255,7 +256,7 @@ function nextStrongLiftsVariant(history){
 /** Proposed plan: deterministic, equipment-filtered, with honest uncertainty.
  * It never prescribes load increases or treats missing data as a zero load.
  */
-export function planNextWorkout(state,{goal='balance',equipment='home',minutes=45,today,mode='smart',optionalExercise='',techniqueApproved=false}={}){
+export function planNextWorkout(state,{goal='balance',equipment='home',minutes=45,today,mode='smart',optionalExercise='',optionalAppend=false,techniqueApproved=false}={}){
  const todayValue=/^\d{4}-\d{2}-\d{2}$/.test(String(today||''))?today:new Date().toISOString().slice(0,10);
  const selectedGoal=GOALS[goal]?goal:'balance';
  const location=equipment==='gym'?'gym':'home';
@@ -293,7 +294,12 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  ids=ids.slice(0,limit);
  // The optional 0.5.89 movement only replaces a planned exercise on explicit user choice.
  // Never append excess work to 25-minute home routine; never modify StrongLifts A/B.
- const optional89=typeof insertOptionalExercise89==='function'?insertOptionalExercise89(ids,{optionalExercise,equipment:location,strongLifts,techniqueApproved,pain,healthAttention:health.attention===true}):{ids,selected:null,reason:''};
+ // Approximation for whether an opt-in extra can fit the selected training budget.
+ const roughDuration=(arr)=>Math.round(5+arr.reduce((total,id)=>{const [n,r,rest]=WORKOUT_SETS[id]||[3,'8–12',90];return total+n*(r==='5'?1:.8)+(n-1)*rest/60;},0));
+ const suggestedOptional=typeof suggestOptionalExercise90==='function'?suggestOptionalExercise90({plannedIds:ids,goal:selectedGoal,equipment:location,minutes:budget,availableMinutes:Math.max(0,budget-roughDuration(ids)),history,today:todayValue,pain,healthAttention:health.attention===true,strongLifts}):null;
+ // Never silently extend training: add only if the user accepts AND time fits.
+ const canAppend=Boolean(optionalAppend&&ids.length<6&&roughDuration([...ids,optionalExercise])<=budget);
+ const optional89=typeof insertOptionalExercise89==='function'?insertOptionalExercise89(ids,{optionalExercise,equipment:location,strongLifts,techniqueApproved,pain,healthAttention:health.attention===true,append:canAppend}):{ids,selected:null,reason:''};
  ids=optional89.ids;
  let exercises=ids.map((id,index)=>{
   const item=catalog.get(id);
@@ -339,7 +345,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  ]:[];
  const planned={goal:selectedGoal,equipment:location,budget,mode:strongLifts?'stronglifts':'smart',trainingFocus:strongLifts?'Kraft · schweres 5×5':selectedGoal==='vtaper'?'Hypertrophie · kontrollierte 8–15+ Wiederholungen':'Zielorientiertes Training',homeEquipment:location==='home'?{...HOME_EQUIPMENT}:null,profile,variant,exercises,estimatedMinutes,timeFit,
   cautious,recentlyTrained,latestAge,suggestRecovery,evidence,known,missing,history,sourceStats:history.sourceStats,balances,health,adaptive,cycle,
-  optionalExercise:optional89.selected||null,optionalReason:optional89.reason||'',
+  optionalExercise:optional89.selected||null,optionalReason:optional89.reason||'',suggestedOptional,optionalMode:optional89.mode||null,
   title:strongLifts?`StrongLifts 5×5 · Workout ${variant}`:selectedGoal==='vtaper'?'V-Taper · Rücken & Schultern':selectedGoal==='abs'?'Core & Ganzkörper':selectedGoal==='strength'?`Kraft · ${location==='gym'?'Gym':'Zuhause'}`:'Muskelbalance · Ganzkörper',
   recoveryNote:suggestRecovery?'Rücken/Schultern oder andere geplante Muskeln wurden erst kürzlich mehrfach beansprucht. Heute ggf. Pause, Mobilität oder andere Muskelgruppen wählen; keine exakt berechnete biologische Regeneration.':cautious?'Letztes bestätigtes Coach- oder zugeordnetes Garmin-Training heute/gestern. Diesen Vorschlag erst am nächsten geeigneten Trainingstag umsetzen; vorher Erholung und Leistungsfähigkeit prüfen.':
    evidence==='none'?'Keine zugeordneten Übungssätze vorhanden: Es gibt keine belastbare Aussage zur Regeneration.':
@@ -347,8 +353,8 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  return strongLifts&&typeof strengthenStrongliftsPlan88==='function'?strengthenStrongliftsPlan88(state,planned,{healthAttention:health.attention===true,pain}):planned;
 }
 function coachPrefs(){
- try{const o=JSON.parse(localStorage.getItem(WORKOUT_PREF_KEY)||'{}');return {goal:GOALS[o.goal]?o.goal:'balance',equipment:o.equipment==='gym'?'gym':'home',minutes:[25,45,65].includes(Number(o.minutes))?Number(o.minutes):25,mode:o.mode==='stronglifts'?'stronglifts':'smart',optionalExercise:'',techniqueApproved:false};}
- catch{return {goal:'balance',equipment:'home',minutes:25,mode:'smart',optionalExercise:'',techniqueApproved:false};}
+ try{const o=JSON.parse(localStorage.getItem(WORKOUT_PREF_KEY)||'{}');return {goal:GOALS[o.goal]?o.goal:'balance',equipment:o.equipment==='gym'?'gym':'home',minutes:[25,45,65].includes(Number(o.minutes))?Number(o.minutes):25,mode:o.mode==='stronglifts'?'stronglifts':'smart',optionalExercise:'',optionalAppend:false,techniqueApproved:false};}
+ catch{return {goal:'balance',equipment:'home',minutes:25,mode:'smart',optionalExercise:'',optionalAppend:false,techniqueApproved:false};}
 }
 function saveCoachPrefs(p){try{const {goal,equipment,minutes,mode}=p;localStorage.setItem(WORKOUT_PREF_KEY,JSON.stringify({goal,equipment,minutes,mode}));}catch{}} // Optional movements and technique clearance are per-dialog, never persisted.
 function coachCopyText(plan){
@@ -360,6 +366,10 @@ function coachCopyText(plan){
 export function readStrengthCoachPreferences(){return coachPrefs();}
 export function openStrengthCoach({state,today,onSession=async()=>{},onSettings=async()=>{}}){
  let prefs=coachPrefs();
+ const skipKey='compass:coach:optional-skip-v590';
+ const skippedKey=()=>[today,prefs.goal,prefs.equipment,prefs.minutes,prefs.mode].join('|');
+ const isSkipped=()=>{try{const saved=JSON.parse(localStorage.getItem(skipKey)||'{}');return saved?.key===skippedKey();}catch{return false;}};
+ const skip=()=>{try{localStorage.setItem(skipKey,JSON.stringify({key:skippedKey()}));}catch{};draw();};
  const host=document.createElement('div');host.className='str610-backdrop';
  host.innerHTML='<section class="str610-dialog str619-dialog" role="dialog" aria-modal="true" aria-label="Compass Coach"></section>';
  document.body.append(host);
@@ -380,14 +390,15 @@ export function openStrengthCoach({state,today,onSession=async()=>{},onSettings=
   </div>
   ${prefs.equipment==='gym'?`<div class="str621-method" role="group" aria-label="Trainingsmethode"><span>Trainingsmethode</span><button type="button" data-mode="smart" aria-pressed="${prefs.mode!=='stronglifts'}" class="${prefs.mode!=='stronglifts'?'active':''}">Intelligenter Mix</button><button type="button" data-mode="stronglifts" aria-pressed="${prefs.mode==='stronglifts'}" class="${prefs.mode==='stronglifts'?'active':''}">StrongLifts 5×5</button></div>`:''}
   <label class="sl88-safety"><input type="checkbox" id="sl88-pain" ${(state?.strengthJournal?.safety88?.day===today&&state?.strengthJournal?.safety88?.pain)?'checked':''}> Rücken-/HWS-Schmerzen oder andere Trainingsbeschwerden heute · Steigerungen aussetzen</label>
-  <details class="str623-more str589-extras" ${prefs.optionalExercise?'open':''}><summary>＋ Weitere Übungen (freiwillig)</summary><label>Eine Übung für diesen Trainingsplan gezielt auswählen<select class="str589-exercise"><option value="">Keine zusätzliche Übung</option>${NEW_EXERCISES_89.filter(e=>e.places.includes(prefs.equipment)).map(e=>`<option value="${safe(e.id)}" ${prefs.optionalExercise===e.id?'selected':''}>${safe(e.english)} · ${safe(e.german)}</option>`).join('')}</select></label><p style="font-size:12px;line-height:1.5;margin:8px 0">Gewählte Übung ersetzt eine Übung gleicher Bewegungsart oder eine andere geplante Übung, statt den kurzen Trainingsplan zu verlängern. Keine Änderung an StrongLifts A/B.</p>${prefs.optionalExercise==='one-arm-dumbbell-snatch'?`<label><input type="checkbox" class="str589-technique" ${prefs.techniqueApproved?'checked':''}> Technikfreigabe nach eigenständiger Prüfung bestätigt · nur ohne HWS-/Rückenschmerzen</label>`:''}<small>${safe(plan.optionalReason)}</small></details>
+  ${!prefs.optionalExercise&&plan.suggestedOptional&&!isSkipped()?`<aside class="str590-daily-extra" aria-label="Freiwillige Übung für diesen Trainingstag"><div class="str590-extra-head"><strong>✦ Übungsidee für heute · freiwillig</strong><small>${plan.suggestedOptional.mode==='conditional-bonus'?`Zeitbudget ${prefs.minutes} Min. · ca. ${plan.suggestedOptional.estimatedExtraMinutes} Min. Bonus`:`Zeitbudget ${prefs.minutes} Min. · als Übungstausch`}</small></div><div class="str590-extra-title">${safe(plan.suggestedOptional.title)} <small>· ${safe(plan.suggestedOptional.sets)} × ${safe(plan.suggestedOptional.reps)}</small></div><p>${safe(plan.suggestedOptional.reason)}</p><div class="str590-extra-actions"><button type="button" class="str590-accept">✓ Übernehmen</button><button type="button" class="str590-skip">Überspringen</button></div></aside>`:''}
+  <details class="str623-more str589-extras" ${prefs.optionalExercise?'open':''}><summary>＋ Weitere Übungen (freiwillig)</summary><label>Eine Übung für diesen Trainingsplan gezielt auswählen<select class="str589-exercise"><option value="">Keine zusätzliche Übung</option>${NEW_EXERCISES_89.filter(e=>e.places.includes(prefs.equipment)).map(e=>`<option value="${safe(e.id)}" ${prefs.optionalExercise===e.id?'selected':''}>${safe(e.english)} · ${safe(e.german)}</option>`).join('')}</select></label><p style="font-size:12px;line-height:1.5;margin:8px 0">Bei ausreichendem Zeitbudget wird die akzeptierte Übung als Bonus hinzugefügt. Andernfalls ersetzt sie nur eine passende bestehende Übung; der Trainingsplan verlängert sich nicht ungefragt. Keine Änderung an StrongLifts A/B.</p>${prefs.optionalExercise==='one-arm-dumbbell-snatch'?`<label><input type="checkbox" class="str589-technique" ${prefs.techniqueApproved?'checked':''}> Technikfreigabe nach eigenständiger Prüfung bestätigt · nur ohne HWS-/Rückenschmerzen</label>`:''}<small>${safe(plan.optionalReason)}${plan.optionalMode==='bonus'?' · Als Bonus hinzugefügt.':plan.optionalMode==='swap'?' · Als Tausch übernommen.':''}</small></details>
   ${prefs.equipment==='gym'?strongliftsSettingsMarkup88(state):''}
   <details class="str623-more"><summary>Equipmentdetails</summary><div class="str621-equipment-note">${prefs.equipment==='home'?'Zuhause: zwei verstellbare Kurzhanteln, nahezu gewichtslose Verbindungsstange, Ab Wheel · vier Scheiben je 2,5 / 2 / 1,5 / 1 kg = 28 kg Scheiben insgesamt; Bei zwei symmetrisch beladenen Kurzhanteln wären das je höchstens 14 kg Scheiben; für eine einzelne Hantel können mehr Scheiben verwendet werden. Griffgewichte separat erfassen.':'Gym: schwere Langhanteln, Maschinen und Kabelzug · StrongLifts nur auf Wunsch.'}</div></details>
   <section class="str626-context" aria-label="Persönlicher Schlaf-HRV-Körpertrend" style="margin:10px 0;padding:14px;border:1px solid #c8dcd3;border-radius:14px;background:rgba(238,247,242,.65)">
    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>🌙 Schlaf · ♥ HRV · Fitdays</strong><small>${plan.health.status==='attention'?'Zwei Trends unter Vergleich':'Persönliche Vergleichswerte · kein Recovery-Score'}</small></div>
    <small class="str405-window-hint">Garmin-Vergleich: letzte 3 Kalendertage gegen 3–45 Tage davor. Nicht ab Trainingsbeginn.</small><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px">
-    <div><small>Schlaf · Median</small><strong style="display:block">${plan.health.sleep.usable?`${safe(Math.round(plan.health.sleep.recentMinutes))} / ${safe(Math.round(plan.health.sleep.baselineMinutes))} min`:'Zu wenig Werte'}</strong><small>${plan.health.sleep.usable?`Δ ${safe(plan.health.sleep.deltaMinutes)} min · ${plan.health.sleep.recentCount} Nächte`:`${plan.health.sleep.recentCount}/2 letzte 3 Tage · ${plan.health.sleep.baselineCount}/10 Referenznächte (Tag 3–45)`}</small></div>
-    <div><small>Nächtliche HRV · Median</small><strong style="display:block">${plan.health.hrv.usable?`${safe(plan.health.hrv.recentMs)} / ${safe(plan.health.hrv.baselineMs)} ms`:'Zu wenig Werte'}</strong><small>${plan.health.hrv.usable?`Δ ${safe(plan.health.hrv.deltaPct)} % · ${plan.health.hrv.recentCount} Nächte`:`${plan.health.hrv.recentCount}/2 letzte 3 Tage · ${plan.health.hrv.baselineCount}/10 Referenznächte (Tag 3–45)`}</small></div>
+    <div><small>Schlaf · Median</small>${coachHealthCoverageMarkup90(plan.health.sleep,{kind:'sleep'})}</div>
+    <div><small>Nächtliche HRV · Median</small>${coachHealthCoverageMarkup90(plan.health.hrv,{kind:'hrv'})}</div>
     <div><small>Fitdays</small><strong style="display:block">${plan.health.body.latest?`${safe(plan.health.body.latest.weightKg)} kg`:'Noch keine Messung'}</strong><small>${plan.health.body.latest?`${safe(plan.health.body.latest.day)} · ${plan.health.body.latest.bodyFatPct===null?'KF unbekannt':safe(plan.health.body.latest.bodyFatPct)+' % KF'}`:'Kein Körpertrend möglich'}</small></div>
    </div><p style="font-size:12px;margin:10px 0 4px">${safe(plan.health.guidance)}</p><details><summary>Körperkomposition · Vergleich · Methodik</summary><p>${safe(plan.health.bodyNote)}</p><p>${safe(plan.health.method)}</p></details>
   </section>
@@ -406,13 +417,20 @@ export function openStrengthCoach({state,today,onSession=async()=>{},onSettings=
   const slForm=dialog.querySelector('#sl88-settings-form');if(slForm)slForm.onsubmit=async ev=>{ev.preventDefault();const fd=new FormData(slForm),weights={},steps={};for(const [key,value] of fd){if(key.startsWith('weight:'))weights[key.slice(7)]=value;if(key.startsWith('step:'))steps[key.slice(5)]=value;}try{await onSettings({barKg:fd.get('barKg'),restSeconds:fd.get('restSeconds'),deloadPercent:fd.get('deloadPercent'),failuresBeforeDeload:fd.get('failuresBeforeDeload'),weights,steps});draw();}catch(e){window.alert(e.message);}};
   dialog.querySelector('#sl88-pain')?.addEventListener('change',async ev=>{try{await onSettings({pain:Boolean(ev.target.checked),day:today});draw();}catch(e){window.alert(e.message);}});
   dialog.querySelector('.str610-close').onclick=close;
-  const update=(key,val)=>{prefs={...prefs,[key]:val};saveCoachPrefs(prefs);draw();};
+  const update=(key,val)=>{const reset=['goal','equipment','minutes','mode'].includes(key);prefs={...prefs,[key]:val,...(reset?{optionalExercise:'',optionalAppend:false,techniqueApproved:false}:{})};saveCoachPrefs(prefs);draw();};
+  const updateOptionalSuggestion90=(idea)=>{prefs={...prefs,optionalExercise:idea.id,optionalAppend:idea.mode==='conditional-bonus',techniqueApproved:false};saveCoachPrefs(prefs);draw();};
   dialog.querySelectorAll('[data-cycle35]').forEach(button=>button.onclick=()=>{if(saveCycleAction35(button.dataset.cycle35,today))draw();});
   dialog.querySelector('.str610-goal').onchange=e=>update('goal',e.target.value);
   dialog.querySelectorAll('[data-place]').forEach(button=>button.onclick=()=>update('equipment',button.dataset.place));
-  dialog.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>{prefs={...prefs,mode:button.dataset.mode,...(button.dataset.mode==='stronglifts'?{goal:'strength'}:{})};saveCoachPrefs(prefs);draw();});
+  dialog.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>{prefs={...prefs,mode:button.dataset.mode,optionalExercise:'',optionalAppend:false,techniqueApproved:false,...(button.dataset.mode==='stronglifts'?{goal:'strength'}:{})};saveCoachPrefs(prefs);draw();});
   dialog.querySelector('.str619-minutes').onchange=e=>update('minutes',Number(e.target.value));
-  dialog.querySelector('.str589-exercise')?.addEventListener('change',e=>update('optionalExercise',e.target.value));
+  dialog.querySelector('.str590-accept')?.addEventListener('click',()=>{
+   const idea=plan.suggestedOptional;
+   if(!idea)return;
+   updateOptionalSuggestion90(idea);
+  });
+  dialog.querySelector('.str590-skip')?.addEventListener('click',skip);
+  dialog.querySelector('.str589-exercise')?.addEventListener('change',e=>{prefs={...prefs,optionalAppend:false};update('optionalExercise',e.target.value);});
   dialog.querySelector('.str589-technique')?.addEventListener('change',e=>update('techniqueApproved',Boolean(e.target.checked)));
   dialog.querySelector('.str405-resume-now')?.addEventListener('click',async()=>{
    const guide=await import('./strength-guided-v5775920.js');
