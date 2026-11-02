@@ -86,6 +86,14 @@ export function dailyDozenIngredientEvidence404(state,day){
     // Protein powder is NOT a berry portion; flavour alone gives no berries.
     // Only the recorded WATER amount is credited as a drink, not the powder.
     add('beverages',(by.water||0)/350,'IronMaxx Proteinshake · Wasseranteil (ml ≈ g)',sourceId);
+   } else if(id==='korean-spicy-tofu-vegetable-strudel'){
+    // Tofu is a soy/bean food, but only an ESTIMATED ingredient quantity is known.
+    add('beans',(by.tofu||0)/125,'Gemüse-Tofu-Strudel · Tofu (~125 g = 1/2 Tasse, Menge geschätzt)',sourceId);
+    add('vegetables',(by['mixed-vegetables']||0)/80,'Gemüse-Tofu-Strudel · Gemüsemix (Zusammensetzung/Gramm geschätzt)',sourceId);
+    notes.cruciferous.push('Gemüse-Tofu-Strudel: Gemüsesorten nicht bestätigt; keine Kreuzblütler-Gutschrift');
+   } else if(['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g','homemade-topfentorte-slice'].includes(id)){
+    // Dairy/cheesecake protein and calcium do not fulfill plant-specific Daily Dozen categories.
+    notes.beans.push('Milchprodukt/Topfentorte: Eiweiß ist keine Hülsenfruchtportion');
    } else if(id==='homemade-poppy-cake-chocolate-personal'){
     // Cake has NO known recipe or measured poppy-seed mass. Do not award nuts,
     // wholegrain or cocoa/berry portions from an unverified generic cake proxy.

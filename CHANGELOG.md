@@ -1,3 +1,14 @@
+## 0.5.91.12 · Bio-Skyr, Bio-Magertopfen, Topfentorte & scharfer Gemüse-Tofu-Strudel (02.11.2026)
+
+- Vier neue Speisen im bestehenden Compass-Ernährungsmenü (zwei Frühstücksprodukte, Snack-Torte, Gemüse-Tofu-Mahlzeit) als editierbare Rezept-/Etikett-Zutatenprofile.
+- SPAR free from Bio-Skyr (250 g) und Bio-Magertopfen (250 g) mit den fotografierten Etikettenwerten; nicht deklarierte Mikronährstoffe als generische Schätzungen markiert und fehlende Werte unbekannt.
+- Ein Stück Topfentorte (geschätzt 160 g) und koreanisch inspirierter scharfer Gemüse-Tofu-Strudel (geschätzt 288 g) mit vorsichtiger Zutaten-, Makro- und Mikroschätzung; Gewichte sowie Rezepte unbekannt und editierbar.
+- Daily Dozen: Tofu- und Gemüsemenge des Strudels nur vorläufig; keine Pflanzengutschrift für Milchprodukte/Torte, kein erfundenes Vollkorn/Beeren/Kreuzblütler oder fermentierte Lebensmittel.
+- Anti-Aging Eight: dokumentierte Proteinmenge aus allen vier Speisen und nur passende pflanzliche Nahrungsindikatoren; keine Behauptung von Proteinrestriktion, Postbiotika oder Verjüngung.
+- Keine Vorabeintragung für 03.11.2026 und keine Änderungen am verschlüsselten Ernährungsjournal oder an vorhandenen Rezepten.
+- Vollständige Tests: 1968/2003, gleiche 35 historischen Fehler wie 0.5.91.11; 33/33 Deployment-Tests, acht neue Tests erfolgreich. Vite-Produktionsbuild lokal blockiert (vite: not found).
+- Details: `RELEASE_0.5.91.12.md`.
+
 ## 0.5.91.11 · IronMaxx Mixed Berries Proteinshake
 
 - Originaletikett 30-g-Portion + 300 ml Wasser als editierbares persönliches Getränkerezept.

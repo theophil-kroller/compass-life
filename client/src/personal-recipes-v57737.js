@@ -3,7 +3,7 @@
  * An unrecorded optional ingredient is initialized at 0g for this SPECIFIC recipe only.
  * No missing micronutrient or fatty acid is implicitly zero.
  */
-const ing=(id,label,grams,values,source='USDA FoodData Central · generisches Lebensmittel',optional=false,labelVerified=false)=>Object.freeze({id,label,grams,values,source,optional,labelVerified});
+const ing=(id,label,grams,values,source='USDA FoodData Central · generisches Lebensmittel',optional=false,labelVerified=false,estimatedKeys=[])=>Object.freeze({id,label,grams,values,source,optional,labelVerified,estimatedKeys});
 const RAW=Object.freeze({
  'salad-personal':{name:'Mein großer grüner Salat',icon:'🥗',ingredients:[
   ing('lettuce','Grüner Blattsalat',150,{kcal:15,protein:1.36,carbs:2.87,fiber:1.3,fat:.15,potassium:194,folate:38,vitaminC:9.2,vitaminK:126}),
@@ -73,6 +73,27 @@ const RAW=Object.freeze({
   ing('protein-powder','IronMaxx Vegan Protein Zero · Mixed Berries Pulver',30,{kcal:119/0.3,protein:22/0.3,carbs:1.4/0.3,fat:2.4/0.3,saturated:0.4/0.3,salt:1.3/0.3,sodium:520/0.3},'IronMaxx Originaletikett · Nutzerfoto 02.11.2026 · 30-g-Portion; Natrium aus Salz berechnet',false,true),
   ing('water','Trinkwasser · 300 ml ≈ 300 g',300,{kcal:0,protein:0,carbs:0,fat:0,saturated:0,salt:0},'Trinkwasser · nur Energie/Makros bekannt; Mineralien je Wasserquelle unbekannt')
  ]},
+ 'spar-freefrom-bio-skyr-250g':{name:'SPAR free from · laktosefreier Bio-Skyr (250 g)',icon:'🥣',ingredients:[
+  // Label photographed 02.11.2026. Only calcium/B12/phosphorus/potassium/magnesium are generic dairy estimates.
+  // Fat '<0.5 g/100 g' and saturated '<0.1' are bounds: 0.3 and 0.05 are marked approximations, not label measurements.
+  ing('skyr','SPAR free from · laktosefreier Bio-Skyr, natur',250,{kcal:62,protein:11,carbs:4,sugar:4,fat:.3,saturated:.05,salt:.10,sodium:40,calcium:120,potassium:150,phosphorus:195,magnesium:12,vitaminB12:.8},'Originaletikett 02.11.2026: kcal/Protein/KH/Zucker/Salz. Fett <0,5, gesättigt <0,1 g/100 g; die eingetragenen Fettwerte und nicht deklarierten Mikronährstoffe sind generische Milchprodukt-Schätzwerte.',false,true,['fat','saturated','calcium','potassium','phosphorus','magnesium','vitaminB12'])
+ ]},
+ 'bio-magertopfen-250g':{name:'Bio-Magertopfen · mager, streichfähig (250 g)',icon:'🥣',ingredients:[
+  ing('quark','Bio-Magertopfen, mager, streichfähig',250,{kcal:70,protein:12,carbs:4.1,sugar:4.1,fat:.2,saturated:.1,salt:.10,sodium:40,calcium:90,potassium:150,phosphorus:190,magnesium:11,vitaminB12:.7},'Originaletikett 02.11.2026: kcal/Protein/KH/Zucker/Fett/gesättigte Fette/Salz. Natrium aus Salz gerechnet; nicht deklarierte Mikronährstoffe sind generische Magerquark-Schätzwerte.',false,true,['calcium','potassium','phosphorus','magnesium','vitaminB12'])
+ ]},
+ 'homemade-topfentorte-slice':{name:'Topfentorte · gebackenes Stück mit Boden',icon:'🍰',ingredients:[
+  // The photographed cake has a pale baked cheese filling and a thin base. No recipe or measured weight.
+  ing('cheese-filling','Gebackene Topfenfüllung · geschätzt',125,{kcal:178,protein:11,carbs:18,sugar:15,fat:7.2,saturated:3.2,fiber:.1,calcium:100,potassium:135,phosphorus:145,vitaminB12:.55},'Generischer Topfentorten-Füllungsproxy, NICHT Rezept oder Etikett dieses Stücks; Zucker/Fett/Eigelbanteil unbekannt'),
+  ing('cake-base','Kuchen-/Mürbteigboden · geschätzt',35,{kcal:425,protein:6,carbs:51,sugar:17,fat:22,saturated:10,fiber:2.5,calcium:25,iron:1.1,magnesium:16},'Generischer gebackener Kuchenboden, der tatsächliche Boden kann anders zusammengesetzt sein')
+ ]},
+ 'korean-spicy-tofu-vegetable-strudel':{name:'Scharfer Gemüse-Tofu-Strudel · koreanisch inspiriert',icon:'🥟',ingredients:[
+  // Photo shows a browned layered pastry with vegetable filling. Ingredients and net weight not verified.
+  ing('strudel-pastry','Strudelteig/Blätterteig · Rechenproxy',80,{kcal:365,protein:6,carbs:39,sugar:2,fat:22,saturated:9,fiber:2.5,salt:.8,iron:1.4},'Generisches blättriges Strudel-/Blätterteigprofil; Teigart nicht bestätigt'),
+  ing('tofu','Tofu · in der Füllung, geschätzt',90,{kcal:123,protein:15,carbs:2.5,sugar:.4,fat:7,saturated:1.1,fiber:1.1,calcium:120,iron:2.5,magnesium:35,phosphorus:150,potassium:150},'Generisches Tofuprofil; Art, Gerinnungsmittel (Calcium), Menge und Marinade unbekannt'),
+  ing('mixed-vegetables','Gemüsefüllung · Mix unbekannt',100,{kcal:42,protein:2.2,carbs:7.5,sugar:3.5,fat:.5,fiber:2.8,vitaminC:22,folate:40,potassium:220,vitaminA:90},'Generisches Gemüse-Mischprofil; Gemüsesorten unbekannt, Kreuzblütler NICHT automatisch zugeordnet'),
+  ing('oil','Öl in Teig/Füllung zusätzlich · geschätzt',6,{kcal:884,fat:100,saturated:13.8,mono:73,poly:10.5},'Zusätzliches Öl geschätzt; Teigprofil enthält bereits Teigfett, NICHT doppelt addieren'),
+  ing('spicy-seasoning','Scharfe koreanisch inspirierte Würzung/Sauce · geschätzt',12,{kcal:190,protein:4,carbs:40,sugar:22,fat:1,salt:4},'Generischer scharfer Saucenproxy; kein Nachweis für Gochujang, fermentierte Zutaten oder bestimmte Chilis')
+ ]},
  'fried-egg-personal':{name:'Mein Spiegelei · Olivenöl, Kala Namak, Kurkuma, Chili',icon:'🍳',ingredients:[
   ing('egg','Hühnerei · 1 Stück ohne Schale',55,{kcal:143,protein:12.56,carbs:.72,fat:9.51,saturated:3.126,cholesterol:372,vitaminB12:.89,vitaminD:2,selenium:30.7},'USDA · ganzes rohes Ei; Fettaufnahme beim Braten hängt von Ölmenge ab'),
   ing('olive-oil','Natives Olivenöl extra · zum Braten',5,{kcal:884,fat:100,saturated:13.8,mono:73,poly:10.5,vitaminE:14.35},'USDA · Olivenöl; tatsächlich aufgenommenes Öl nicht gemessen'),
@@ -84,10 +105,18 @@ const RAW=Object.freeze({
 export const PERSONAL_RECIPE_IDS=Object.freeze(Object.keys(RAW));
 export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>Object.freeze({
  id,title:RAW[id].name,emoji:RAW[id].icon,
- group:id==='ironmaxx-vegan-protein-shake-mixed-berries'?'Getränke':id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':id==='homemade-poppy-cake-chocolate-personal'?'Snacks':'Mahlzeiten',
- defaultAmount:id==='ironmaxx-vegan-protein-shake-mixed-berries'?'1 Glas (30 g Pulver + 300 ml Wasser)':id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
+ group:id==='ironmaxx-vegan-protein-shake-mixed-berries'?'Getränke':['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'Frühstück':id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':['homemade-poppy-cake-chocolate-personal','homemade-topfentorte-slice'].includes(id)?'Snacks':'Mahlzeiten',
+ defaultAmount:['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'1 Becher (250 g)':id==='homemade-topfentorte-slice'?'1 Stück (ca. 160 g)':id==='korean-spicy-tofu-vegetable-strudel'?'1 Portion (ca. 288 g)':id==='ironmaxx-vegan-protein-shake-mixed-berries'?'1 Glas (30 g Pulver + 300 ml Wasser)':id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
  kcalLow:null,kcalHigh:null,
- recipeNote:id==='ironmaxx-vegan-protein-shake-mixed-berries'
+ recipeNote:id==='spar-freefrom-bio-skyr-250g'
+ ?'SPAR free from laktosefreier Bio-Skyr Natur · 250 g je Becher. Etikett 02.11.2026: pro 100 g 62 kcal, Protein 11 g, KH/Zucker 4 g, Salz 0,10 g; Fett <0,5 g und gesättigte Fettsäuren <0,1 g. Fett 0,3/0,05 g und Milchprodukt-Mikros (Calcium, Phosphor, Magnesium, Kalium, B12) nur generisch geschätzt. Daily Dozen: Milchprodukt, keine Pflanzenportion. Anti-Aging Eight: Protein als dokumentierte Aufnahme, KEIN Nachweis von Proteinrestriktion oder Anti-Aging-Wirkung. Morgen geplant: beim tatsächlichen Essen eintragen, nicht automatisch vorausbuchen.'
+ :id==='bio-magertopfen-250g'
+ ?'Bio-Magertopfen mager/streichfähig · 250 g Becher. Etikett 02.11.2026: pro 100 g 70 kcal, 12 g Protein, 4,1 g KH/Zucker, 0,2 g Fett, gesättigt 0,1 g, Salz 0,10 g. Calcium, B12, Phosphor, Kalium und Magnesium sind generische Milchprodukt-Schätzungen, keine Etikettwerte. Keine Daily-Dozen-Pflanzenportion; Anti-Aging Eight zeigt nur dokumentierte Proteinzufuhr.'
+ :id==='homemade-topfentorte-slice'
+ ?'Topfentorte nach Foto 02.11.2026, ein Stück ≈160 g (125 g Topfenfüllung + 35 g Boden), NICHT gewogen und ohne Rezept. Generische Schätzwerte einschließlich Calcium, Phosphor und Vitamin B12; bei Zucker/Fett/Teigart hohe Unsicherheit. Mengen sind im Inspektor editierbar. Daily Dozen: keine bestätigte pflanzliche Portion. Anti-Aging Eight: nur geschätztes Protein, keine Anti-Aging-Wirkung behaupten.'
+ :id==='korean-spicy-tofu-vegetable-strudel'
+ ?'Scharfer Gemüse-Tofu-Strudel (koreanisch inspiriert) nach Foto 02.11.2026. Geschätzte Portion 288 g: 80 g blättriger Teig, 90 g Tofu, 100 g gemischtes Gemüse, 6 g zusätzliches Öl, 12 g pikante Würzung. Teig, Saucenart, Gewicht und Gemüse nicht bestätigt. Daily Dozen: vorläufig anteilige Tofu-Hülsenfrucht- und Gemüseportion; keine automatische Kreuzblütler-, Vollkorn- oder Fermentationsgutschrift. Anti-Aging Eight: nur Ernährungsevidenz zu Pflanzenanteil, Ballaststoffen und Protein; keine gemessenen Postbiotika. Alle generischen Mikronährstoffe und Zutatenmengen sind Schätzungen.'
+ :id==='ironmaxx-vegan-protein-shake-mixed-berries'
  ?'IronMaxx 100% Vegan Protein Zero Mixed Berries. 1 Glas: 30 g Pulver mit ca. 300 ml Wasser, beide Mengen einzeln im Rezept-Inspektor editierbar. Originaletikett 02.11.2026: je 30 g 119 kcal, 22 g Protein, 1,4 g Kohlenhydrate, davon Zucker <0,5 g (nicht exakt bekannt), 2,4 g Fett, 0,4 g gesättigte Fette, 1,3 g Salz. Natrium ~520 mg aus Salz rechnerisch abgeleitet, kein eigener Laborwert. Ballaststoffe und Vitamine/Mineralien sind NICHT deklariert: unbekannt, nicht null. Daily Dozen: nur belegte Wassermenge als Getränk; Proteinpulver und Beeren-Geschmack sind keine Beeren-/Hülsenfruchtportionen. Anti-Aging Eight: dokumentiertes Protein für die Proteinanalyse; kein Nachweis einer gesundheitlichen Anti-Aging-Wirkung. Mit Milch/Haferdrink neu als separate Zutat erfassen, Wasser nicht einfach weiterzählen.'
  :id==='oven-potatoes-sesame-personal'
  ?'Eine breite Suppenschüssel mit im Ofen gebackenen Bio-Kartoffelwürfeln samt Schale, zweimal mit Olivenöl übergossen, Salz, schwarzem Sesam und Chiliflocken. Anfangsannahmen: 300 g Kartoffeln roh, Olivenöl insgesamt 20 g (nicht zweimal 20 g), 10 g Sesam, 0,5 g Chili, 1 g Salz. Bei 5 g mehr Öl ca. 44 kcal zusätzlich. Alle Zutatenmengen im Inspektor änderbar; Nährstoffe nur generisch geschätzt, Vitamin C nach dem Backen nicht quantifiziert.'
@@ -110,8 +139,8 @@ export function personalRecipeParts(id,recipe,amount='1 Portion'){
  const def=RAW[id];if(!def)return [];
  // Existing recipes retain their prior per-entry logic. The oven-potato bowl
  // additionally supports an explicit count (e.g. '2 Portionen' or '2 Schüsseln').
- const count= ['oven-potatoes-sesame-personal','basmati-lentil-dal-broccoli-personal','homemade-poppy-cake-chocolate-personal','ironmaxx-vegan-protein-shake-mixed-berries'].includes(id)
-  ? String(amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion(?:en)?|glas|gläser|glaeser|glaser|schüssel(?:n)?|schuessel(?:n)?|teller|stück(?:e)?|stueck(?:e)?)\b/i)
+ const count= ['oven-potatoes-sesame-personal','basmati-lentil-dal-broccoli-personal','homemade-poppy-cake-chocolate-personal','ironmaxx-vegan-protein-shake-mixed-berries','spar-freefrom-bio-skyr-250g','bio-magertopfen-250g','homemade-topfentorte-slice','korean-spicy-tofu-vegetable-strudel'].includes(id)
+  ? String(amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion(?:en)?|becher|glas|gläser|glaeser|glaser|schüssel(?:n)?|schuessel(?:n)?|teller|stück(?:e)?|stueck(?:e)?)\b/i)
   : null;
  const factor=count?Number(count[1].replace(',','.')):1;
  if(!Number.isFinite(factor)||factor<=0||factor>20)return [];
@@ -123,7 +152,7 @@ export function personalRecipeParts(id,recipe,amount='1 Portion'){
   const grams=round(row.grams*factor);
   const values=Object.fromEntries(Object.entries(ingredient.values).map(([key,n])=>[key,round(n*grams/100)]));
   return {name:ingredient.label,part:'Persönliches Rezept',amount:grams,unit:'g',source:ingredient.source,values,
-   estimatedKeys:ingredient.labelVerified?['sodium']:ingredient.id==='water'?[]:Object.keys(values),extra:[],note:ingredient.labelVerified?'Etikettangaben linear skaliert und gerundet; Natrium aus Salz abgeleitet; weitere Mikronährstoffe unbekannt':ingredient.id==='water'?'Reines Wasser ohne Energie; Mineralstoffe je Quelle unbekannt':row.assumed?'Menge vorläufig, bitte bei Bedarf abwiegen; generisches Nährstoffprofil':'Menge persönlich editiert; Nährstoffprofil weiterhin geschätzt'};
+   estimatedKeys:ingredient.labelVerified?[...new Set(['sodium',...(ingredient.estimatedKeys||[])])]:ingredient.id==='water'?[]:Object.keys(values),extra:[],note:ingredient.labelVerified?'Etikettwerte linear skaliert und gerundet; Natrium aus Salz abgeleitet. Nicht auf dem Etikett deklarierte Nährstoffe sind als generische Schätzung markiert oder bleiben unbekannt.':ingredient.id==='water'?'Reines Wasser ohne Energie; Mineralstoffe je Quelle unbekannt':row.assumed?'Menge vorläufig, bitte bei Bedarf abwiegen; generisches Nährstoffprofil':'Menge persönlich editiert; Nährstoffprofil weiterhin geschätzt'};
  }).filter(Boolean);
 }
 export function personalRecipeKcal(id,recipe,amount){
@@ -132,7 +161,7 @@ export function personalRecipeKcal(id,recipe,amount){
  if(!k.length)return null;
  const subtotal=k.reduce((n,p)=>n+p.values.kcal,0);
  const incomplete=parts.some(x=>!Number.isFinite(x.values.kcal));
- return {low:Math.round(subtotal),high:Math.round(subtotal),kind:incomplete?'Rezept-Teilsumme (unvollständig)':id==='ironmaxx-vegan-protein-shake-mixed-berries'?'Etikettwert · rechnerisch skaliert':'Rezept-Schätzung',incomplete};
+ return {low:Math.round(subtotal),high:Math.round(subtotal),kind:incomplete?'Rezept-Teilsumme (unvollständig)':['ironmaxx-vegan-protein-shake-mixed-berries','spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'Etikettwert · rechnerisch skaliert':'Rezept-Schätzung',incomplete};
 }
 export function personalRecipeEditor(entry){
  if(!PERSONAL_RECIPE_IDS.includes(entry?.foodId))return '';
