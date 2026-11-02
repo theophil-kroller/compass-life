@@ -381,6 +381,7 @@ export function mergeFeelingCheckins(local=[],remote=[]){
 }
 function mergeTouchRecords(a={},b={}){const map=new Map();for(const e of [...(a?.entries||[]),...(b?.entries||[])]){if(!e?.id)continue;const x=map.get(e.id);if(!x||String(e.updatedAt||'')>String(x.updatedAt||'')||(String(e.updatedAt||'')===String(x.updatedAt||'')&&e.deleted===true))map.set(e.id,e);}return {entries:[...map.values()].sort((x,y)=>String(x.id).localeCompare(String(y.id)))};}
 import {mergeFamilyRadar37} from './family-planning-v5775937.js';
+import {mergeTeachingRadar} from './teaching-preparation-radar-v05919.js';
 import {mergeHabitTimeSessions} from './habit-time-v57759402525.js';
 import {mergeFinanceMobileDecisions} from './finance-mobile-decisions-v0579.js';
 import {mergeLifeWeekEvents} from './life-weeks-v0582.js';
@@ -411,6 +412,7 @@ export function mergeJournalData(local,remote){
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),
   ...(lc.calendarArchive||rc.calendarArchive?{calendarArchive:mergeCalendarArchives(lc.calendarArchive,rc.calendarArchive)}:{}),
   ...(lc.familyRadar||rc.familyRadar?{familyRadar:mergeFamilyRadar37(lc.familyRadar,rc.familyRadar)}:{}),
+  ...(lc.teachingRadar||rc.teachingRadar?{teachingRadar:mergeTeachingRadar(lc.teachingRadar,rc.teachingRadar)}:{}),
   ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{}),
   ...((lc.people||rc.people||lc.peopleDeleted||rc.peopleDeleted)?mergePeopleDirectory(lc.people,rc.people,lc.peopleDeleted,rc.peopleDeleted):{})
  };

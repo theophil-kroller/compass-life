@@ -1,0 +1,26 @@
+{
+  "release": "0.5.91.9",
+  "base_version": "0.5.91.8",
+  "base_commit": "1d372841c643be7cd88e9c7f5d2ac69f528537d5",
+  "files": {
+    "CHANGELOG.md": "75a4d3861f9ee9a9ffc8855515b6921e6a16640b00f13c00e3cab67fd5918265",
+    "PATCH_INSTALL_0.5.91.9.md": "f387ae99bb39c373ccf85cef24a098dc774ca366367e310e9ded4e226b9f301c",
+    "RELEASE_0.5.91.9.md": "73223794663c5b299824f68660084fab2f51c501d13b45eee4abe0cc29ac4e65",
+    "client/package.json": "90e34b8537871a9e89c5aad364d93d966e07fb8b0ad2480da7f44fe8415713ce",
+    "client/src/compass-release-v57759402519.js": "cf4e2ea22c978602843288469684851c4cf6cdf39eb8e7bf843829d8fa670de7",
+    "client/src/main-full-v57759402510.js": "d14c7c2a23a8579b89e061fdb48be4456789ac4212e1c038c6fe611d01f59117",
+    "client/src/personal-journal-v5692.js": "d0cf7365be3149cb6a9130836686b2531b670b86d0ca05168760d657316791ac",
+    "client/src/teaching-preparation-radar-v05919.css": "91aa7898bb0c81bcb86171c83952d22ab4009f689464e7d9d47dbab0500571e5",
+    "client/src/teaching-preparation-radar-v05919.js": "511c24004f9c97848ed321a86b737d91be879ecd4945f54856dc4cadfdd8dfc3",
+    "package.json": "85e4d74f6f87855c1b3e90d175c91a3b1fcd1542fe092984da2a5e79f52b7db6",
+    "tests/compass-05919-teaching-radar.test.mjs": "5032c22a0983011449283a9ff6fd0a1c80aafbc9f3ff81eda8bec899fab49206"
+  },
+  "deleted": [],
+  "verification": {
+    "new_tests": "10/10",
+    "deployment": "33/33",
+    "full_tests": "1945/1980",
+    "historic_failures": 35,
+    "production_build": "not verified: vite unavailable"
+  }
+}

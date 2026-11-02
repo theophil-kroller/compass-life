@@ -2,6 +2,8 @@ import {economicFlowIndex,economicPresentationRows} from './finance-economic-flo
 import {financeReviewProposal,applyFinanceReviewProposal} from './finance-review-commit-v05915.js';
 import {capacityForecast,capacitySettings} from './capacity-engine-v44.js';
 import {familyEvents,familySuggestions,familyRules,familyPersonPanel,familyTodayPanel,familyTodayObservations,familyAccept,familyAcceptProject,familyChoose} from './family-radar-v5775931.js';
+import {teachingRadarEntries,teachingRadarPanel,teachingRadarAccept,teachingRadarSnooze} from './teaching-preparation-radar-v05919.js';
+import './teaching-preparation-radar-v05919.css';
 import {todayBirthdayHighlights,todayBirthdayPanel} from './today-birthdays-v5775940255.js';
 import './today-birthdays-v5775940255.css';
 import './family-radar-v5775931.css';
@@ -270,7 +272,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.8';
+const COMPASS_CLIENT_VERSION='0.5.91.9';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -470,7 +472,7 @@ if(typeof window!=='undefined'){
 if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')automaticJournalResume743();});
 let weeklyOffset746=0;
 let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLastConfirmedAt=0;
-function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.strengthJournal||null,s?.dreamJournal||null,s?.receiptJournal||null,s?.mensaCatalog||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.familyRadar||null,s?.taskInspiration||null,s?.habitTimeSessions||null,s?.makkoHoSessions||null,s?.strengthGuidedSessions||null,s?.financeMobileDecisions||null,s?.lifeWeekEvents||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
+function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.strengthJournal||null,s?.dreamJournal||null,s?.receiptJournal||null,s?.mensaCatalog||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.familyRadar||null,s?.teachingRadar||null,s?.taskInspiration||null,s?.habitTimeSessions||null,s?.makkoHoSessions||null,s?.strengthGuidedSessions||null,s?.financeMobileDecisions||null,s?.lifeWeekEvents||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
 function scheduleJournalSync(delay=0){
  clearTimeout(journalSyncTimer);journalSyncTimer=null;
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
@@ -1161,7 +1163,7 @@ function chrome(content){
  if(state&&tab==='forecast'){
   const today=localDate();
   const entries=familyForecastEntries37(calendarEvents,state.people||{},state,{today});
-  content=familyForecastPanel37(entries,calendarEvents,state,{selectedId:familyStudyEventId37,coverage:calendarCoverage,updatedAt:calendarUpdatedAt,now:new Date(),today})+content;
+  content=teachingRadarPanel(teachingRadarEntries(calendarEvents,state,{today,limit:30}),{view:'forecast'})+familyForecastPanel37(entries,calendarEvents,state,{selectedId:familyStudyEventId37,coverage:calendarCoverage,updatedAt:calendarUpdatedAt,now:new Date(),today})+content;
  }
  // Family radar reuses the cached Google Calendar and person records. No extra API call.
  if(state&&(tab==='people'||tab==='today')){
@@ -1175,7 +1177,7 @@ function chrome(content){
    performanceTrace.end('Heute: Geburtstage sofort',tab,birthdayStarted);
    const key=core259FamilyKeyNow();core259FamilyKey=key;
    const fromWorker=core259FamilyCache.peek(key);
-   content=todayBirthdayPanel(birthdays)+'<div data-core259-family style="display:contents">'+(fromWorker??'')+'</div>'+content;
+   content=teachingRadarPanel(teachingRadarEntries(calendarEvents,state,{today:familyNow}),{view:'today'})+todayBirthdayPanel(birthdays)+'<div data-core259-family style="display:contents">'+(fromWorker??'')+'</div>'+content;
    performanceTrace.end('Heute: Familien- und Geburtstagsradar',tab,familyStarted);
   }else{
    familyVisible=calendarEvents.filter(e=>e.status!=='cancelled'&&String(e.summary||'').includes(':')&&(!eventAppearance(e).hidden||showHiddenCalendarEvents));
@@ -2272,8 +2274,8 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},mensaCatalog:st.mensaCatalog||{schemaVersion:1,entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,taskInspiration:st.taskInspiration||[],habitTimeSessions:st.habitTimeSessions||[],makkoHoSessions:st.makkoHoSessions||[],strengthGuidedSessions:st.strengthGuidedSessions||[],financeMobileDecisions:st.financeMobileDecisions||[],lifeWeekEvents:st.lifeWeekEvents||[],...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
-function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.mensaCatalog=m.mensaCatalog;st.feelingCheckins=m.feelingCheckins;st.taskInspiration=m.taskInspiration||[];st.habitTimeSessions=m.habitTimeSessions||[];st.makkoHoSessions=m.makkoHoSessions||[];st.strengthGuidedSessions=m.strengthGuidedSessions||[];st.financeMobileDecisions=m.financeMobileDecisions||[];st.lifeWeekEvents=m.lifeWeekEvents||[];if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},mensaCatalog:st.mensaCatalog||{schemaVersion:1,entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,taskInspiration:st.taskInspiration||[],habitTimeSessions:st.habitTimeSessions||[],makkoHoSessions:st.makkoHoSessions||[],strengthGuidedSessions:st.strengthGuidedSessions||[],financeMobileDecisions:st.financeMobileDecisions||[],lifeWeekEvents:st.lifeWeekEvents||[],...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.teachingRadar?{teachingRadar:st.teachingRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.mensaCatalog=m.mensaCatalog;st.feelingCheckins=m.feelingCheckins;st.taskInspiration=m.taskInspiration||[];st.habitTimeSessions=m.habitTimeSessions||[];st.makkoHoSessions=m.makkoHoSessions||[];st.strengthGuidedSessions=m.strengthGuidedSessions||[];st.financeMobileDecisions=m.financeMobileDecisions||[];st.lifeWeekEvents=m.lifeWeekEvents||[];if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.teachingRadar)st.teachingRadar=m.teachingRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
 async function syncPersonalJournal(){
  // One E2EE journal flight per device. Mutations during flight queue an immediate
  // follow-up instead of being hidden by a generic "synced" status.
@@ -4293,6 +4295,24 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
+ if(action==='tr919-create'){
+  const item=teachingRadarEntries(calendarEvents,state,{today:localDate(),limit:60}).find(x=>x.key===id);
+  if(!item)return toast('Kalendertermin ist nicht mehr verfügbar. Bitte synchronisieren.',true);
+  let result;
+  try{await mutate(s=>{result=teachingRadarAccept(s,item,{today:localDate(),uuid:()=>crypto.randomUUID()});if(result.project&&(!validProject(result.project)||result.tasks.some(t=>!validLocalTask(t))))throw Error('Vorbereitungsprojekt ist ungültig.');});}
+  catch(ex){return toast('Projekt nicht angelegt: '+ex.message,true);}
+  if(result?.project){selectedProjectId=result.project.id;selectedTaskId=null;projectCollapsed.delete(result.project.id);tab='projects';calmNavGroup='plan';}
+  toast(result?.reason==='existing'?'Vorbereitungsprojekt bereits vorhanden.':'Vorbereitungsprojekt und vier Schritte angelegt.');return;
+ }
+ if(action==='tr919-snooze'){
+  const item=teachingRadarEntries(calendarEvents,state,{today:localDate(),limit:60}).find(x=>x.key===id);
+  if(!item)return;
+  await mutate(s=>{teachingRadarSnooze(s,id,localDate());});toast('Hinweis für drei Tage zurückgestellt.');return;
+ }
+ if(action==='tr919-project-open'){
+  if(!state?.projects?.[id])return;selectedProjectId=id;selectedTaskId=null;projectCollapsed.delete(id);tab='projects';calmNavGroup='plan';render();return;
+ }
+
  if(action==='ctx46-cycle'){
   if(!state)return;
   const from=effectiveContext39(state).kind;

@@ -1,3 +1,7 @@
+## 0.5.91.9 · Lehr- und Event-Vorbereitungsradar
+
+- `(kro)` inkl. kombinierter Lehrendenkürzel, Business Model Workshop und Final Pitch: Countdown und GTD-Projektvorschläge. Siehe `RELEASE_0.5.91.9.md`.
+
 ## 0.5.91.8 · Coach-Sätze vereinheitlicht; Smart Tape vorbereitet (Import AUS)
 
 - Body Transformation verwendet jetzt die bestehenden bestätigten Coach-Sätze über die gleiche Coach-/Garmin-Session-Zusammenführung wie die Muscle Map.
