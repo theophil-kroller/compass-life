@@ -1,3 +1,10 @@
+## 0.5.91.15 · Equipment-aware V-Taper Progression
+
+- Konfigurierbares Scheibeninventar, reale Gewichtsstufen (auch für zwei identische Hanteln), unknown Griffgewicht.
+- RIR-/Recovery-gesteuerte reale Gewichtsvorschläge statt pauschaler +2 kg.
+- Mobile Inline-SVG-Scheibenvisualisierung im Coach und geführten Workout; +/- springt durch verfügbare Stufen.
+- Alte Trainings-/StrongLifts-Daten unverändert. Tests: 2002/2037, 35 historische Fehler, 33/33 Deployment; Vite lokal nicht verfügbar.
+
 ## 0.5.91.14 · Automatische Trainingszyklen & adaptiver Review (02.11.2026)
 
 - Vorhandene Garmin-/Coach-Trainingshistorie bestimmt den Start eines sechs Wochen langen V-Taper-Blocks; manuelle Erstaktivierung entfällt.

@@ -49,7 +49,8 @@ export function rirProgression46(state,exerciseId,{today,reps,plannedSets=3,last
  const trustLoad=R.length>=Math.min(2,plannedSets)&&sets.length>=plannedSets;
  const atUpper=sets.length>=plannedSets&&sets.slice(0,plannedSets).every(s=>s.reps>=range.hi);
  const step=Number(weightStepKg)||2;
- const smallStep=!bodyweight&&step>0&&step/lastKg<=.075&&(equipment!=='home'||lastKg+step<=28); // 7.5% is a conservative default, not a clinical threshold.
+ const relativeLimit=exerciseId==='dumbbell-lateral-raise'?.12:['dumbbell-row','goblet-squat','dumbbell-pullover','farmers-walk'].includes(exerciseId)?.18:.15;
+ const smallStep=!bodyweight&&step>0&&step/lastKg<=(equipment==='home'?relativeLimit:.075); // Equipment gate verifies inventory separately.
  const next=sets.slice(0,plannedSets).map(s=>{
   const rir=Number.isInteger(s.rir)&&s.rir>=0&&s.rir<=4?s.rir:null;
   const base=Math.max(1,Math.min(range.hi,s.reps));
@@ -69,7 +70,7 @@ export function rirProgression46(state,exerciseId,{today,reps,plannedSets=3,last
  if(atUpper){
   // 4+ signals large reserve but does not license a 25% dumbbell jump.
   if(trustLoad&&smallStep&&R.every(s=>s.rir>=2))return {action:'increase-load',targetReps:[],lastRir:avg,confidence:'moderate',suggestedKg:Math.round((lastKg+step)*100)/100,
-   message:`Alle ${plannedSets} Arbeitssätze an der Obergrenze bei RIR ≥2. +${step.toLocaleString('de-AT')} kg als optionaler nächster Versuch (Lastsprung ≤7,5 %).`};
+   message:`Alle ${plannedSets} Arbeitssätze an der Obergrenze bei RIR ≥2. +${step.toLocaleString('de-AT')} kg als optionaler nächster Versuch (Lastsprung innerhalb der übungsabhängigen Orientierungsgrenze).`};
   return {action:'hold-at-cap',targetReps:repsNow.map(r=>Math.min(range.hi,r)),lastRir:avg,confidence:trustLoad?'moderate':'low',suggestedKg:null,
    message:bodyweight?'Körpergewichtsübung am Zielbereich: anspruchsvollere Variante oder kontrollierte Ausführung prüfen, keine fiktive Gewichtssteigerung.':'Obergrenze erreicht. Erst kontrollierte Wiederholungen bestätigen; großer Lastsprung oder unvollständige RIR-Daten – feinere Gewichte bzw. Übungsvariante prüfen.'};
  }

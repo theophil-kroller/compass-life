@@ -1,0 +1,12 @@
+{
+  "version": "0.5.91.15",
+  "base_version": "0.5.91.14",
+  "base_commit": "65dd5ca2374d92832b767418755999d9e8a0acfb",
+  "feature": "equipment-aware symmetric dumbbells; progressive loading; SVG plate display",
+  "compiled_production_build": false,
+  "build_blocker": "vite not found",
+  "tests_total": 2037,
+  "tests_pass": 2002,
+  "tests_historical_fail": 35,
+  "deployment_tests_pass": 33
+}

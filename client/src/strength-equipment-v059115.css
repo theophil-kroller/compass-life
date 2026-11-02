@@ -1,0 +1,17 @@
+/* Compact Compass equipment schematic; no images/fonts/network needed. */
+.str115-load{border:1px solid #dce7df;background:#f7faf7;border-radius:11px;padding:9px 11px;margin:8px 0;color:#345849;min-width:0}
+.str115-load-top{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;align-items:center;font-size:11px}
+.str115-load-top span{font-weight:650;color:#416d5b}
+.str115-load>strong{font-size:13px}
+.str115-plates-svg{width:100%;height:auto;max-height:96px;display:block;margin:3px auto}
+.str115-load small{display:block;font-size:10px;line-height:1.45;color:#607d6b}
+.str115-load details{font-size:11px;margin-top:7px}
+.str115-load summary{cursor:pointer;color:#316d52;font-weight:650}
+.str115-load p{line-height:1.45;font-size:11px;margin:6px 0;color:#476758}
+.str115-equipment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:9px 0}
+.str115-equipment-grid label{display:grid;gap:4px;min-width:0;font-size:11px;color:#4c7060}
+.str115-equipment-grid input{box-sizing:border-box;min-width:0;width:100%;border-radius:8px;border:1px solid #d3e1d7;background:#fff;padding:8px;color:#254635}
+.str115-save{margin:5px 0 8px}
+.str115-guided{margin:8px 0 13px;text-align:center}
+.str115-guided details{text-align:left}
+@media(max-width:560px){.str115-equipment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.str115-load{padding:8px}.str115-plates-svg{max-height:80px}}

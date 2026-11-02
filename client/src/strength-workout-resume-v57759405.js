@@ -17,11 +17,11 @@ export function guidedPlanFromSession(session){
   const last=[...(e.confirmedSets||[])].reverse().find(s=>Number.isFinite(s.weightKg))?.weightKg;
   return {id:e.exerciseId,title:e.title||item.title||e.exerciseId,primary:item.primary||e.primary||'',
    sets:e.plannedSets,reps:e.plannedReps,restSeconds:Number.isFinite(e.restSeconds)?e.restSeconds:Number.isFinite(item.restSeconds)?item.restSeconds:180,
-   lastKg:Number.isFinite(last)?last:Number.isFinite(item.lastKg)?item.lastKg:null,
+   lastKg:Number.isFinite(last)?last:Number.isFinite(item.lastKg)?item.lastKg:null,suggestedKg:Number.isFinite(item.suggestedKg)?item.suggestedKg:null,
    progressionHint:item.progressionHint||'',warmupSets:item.warmupSets||[],targetReps:Array.isArray(e.targetReps)?e.targetReps:Array.isArray(item.targetReps)?item.targetReps:null,order:i+1};
  });
  return {mode:session.mode||'smart',variant:session.variant||null,goal:session.goal||old.goal||'balance',equipment:session.equipment==='gym'?'gym':'home',
-  title:session.planTitle||old.title||'Gespeichertes Workout',exercises};
+  title:session.planTitle||old.title||'Gespeichertes Workout',equipmentProfile:old.equipmentProfile||null,exercises};
 }
 export function resumeExerciseIndex(session){
  const n=session?.exercises?.length||0;if(!n)return 0;
