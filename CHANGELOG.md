@@ -1,3 +1,8 @@
+## 0.5.91.10 · Selbstgebackener Mohnkuchen und Basmatireis mit Linsendal & Brokkoli
+
+- Zwei neue persönliche Speisen im vorhandenen Ernährungsmenü mit einzeln editierbaren Zutaten, Makro-/Mikronährstoff-Schätzungen, Tagestrends und Daily-Dozen-/Anti-Aging-Einordnung; siehe `RELEASE_0.5.91.10.md`.
+- Ungewogene Stück-/Tellergrößen und nicht belegte Zutaten klar als Schätzungen; kein automatischer Daily-Dozen-Samenpunkt für unbekannte Mohnmenge, weißer Reis kein Vollkorn.
+
 ## 0.5.91.9 · Lehr- und Event-Vorbereitungsradar
 
 - `(kro)` inkl. kombinierter Lehrendenkürzel, Business Model Workshop und Final Pitch: Countdown und GTD-Projektvorschläge. Siehe `RELEASE_0.5.91.9.md`.

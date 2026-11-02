@@ -85,6 +85,8 @@ test('Anti-Aging Eight runtime works with stubbed nutrition modules, does not in
  for(const name of ['daily-dozen-auto-v57734.js','daily-dozen-v57733.js','anti-aging-eight-v57734.js'])copyFileSync(join(source,name),join(temp,name));
  writeFileSync(join(temp,'personal-journal-v5692.js'),"export const nutritionEntries=s=>s?.nutritionJournal?.entries||[];export const nutritionFoods=s=>s?.nutritionJournal?.customFoods||[];");
  writeFileSync(join(temp,'nutrition-intelligence-v57712.js'),"export const nutrientEntry=(food,entry)=>({knownKeys:new Set(),values:{}});");
+ // Stub the newer optional recipe-evidence dependency in this isolated legacy fixture.
+ writeFileSync(join(temp,'daily-dozen-evidence-v57759404.js'),"export const dailyDozenIngredientEvidence404=()=>({totals:{}});");
  const m=await import(pathToFileURL(join(temp,'anti-aging-eight-v57734.js')).href);
  const model=m.antiAgingEightModel(st([{foodId:'peanuts',amount:'20 g'}]),D);
  assert.equal(m.ANTI_AGING_EIGHT.length,8);assert.equal(model.rows.find(x=>x.id==='nuts').status,'observed');

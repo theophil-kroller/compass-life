@@ -10,7 +10,7 @@ const NAMES={beans:'Hülsenfrüchte',berries:'Beeren',fruit:'Obst',cruciferous:'
 const grams=s=>{const m=String(s||'').match(/(?:^|[^\d])(\d+(?:[.,]\d+)?)\s*g\b/i);return m?Number(m[1].replace(',','.')):null;};
 const ml=s=>{const m=String(s||'').match(/(?:^|[^\d])(\d+(?:[.,]\d+)?)\s*ml\b/i);return m?Number(m[1].replace(',','.')):null;};
 const round=n=>Math.round(n*100)/100;
-function scale(entry){const x=String(entry.amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion|portionen|glas|gläser|glaser)\b/i);return x?Math.max(0,Math.min(4,Number(x[1].replace(',','.')))):1;}
+function scale(entry){const x=String(entry.amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion|portionen|glas|gläser|glaser|teller|schüssel|schüsseln|schuessel|schuesseln|stück|stücke|stueck|stuecke)\b/i);return x?Math.max(0,Math.min(4,Number(x[1].replace(',','.')))):1;}
 function validAmount(n){return typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=2000;}
 /** Returns portions with source hints. One logged recipe is counted once,
  * based on its saved ingredient snapshot; no extra food credit for being a drink.
@@ -76,6 +76,16 @@ export function dailyDozenIngredientEvidence404(state,day){
     const spice=(by.ginger||0)/10+(by.turmeric||0)+(by.cumin||0);if(spice>0){spiceGrams+=spice;notes.spices.push(`Kitcheri · Gewürze (Trockenäquivalent geschätzt): ~${round(spice)} g`);sources.push({id:sourceId,category:'spices',grams:round(spice),source:'Kitcheri · Gewürze'});}
    } else if(id==='fried-egg-personal'){
     const spice=(by.turmeric||0)+(by.chili||0);if(spice>0){spiceGrams+=spice;notes.spices.push(`Spiegelei · Kurkuma/Chili: ~${round(spice)} g`);sources.push({id:sourceId,category:'spices',grams:round(spice),source:'Spiegelei · Kurkuma/Chili'});}
+   } else if(id==='basmati-lentil-dal-broccoli-personal'){
+    // Both quantities are COOKED weights. Rice is WHITE and never earns wholegrain credit.
+    add('beans',(by['lentils-cooked']||0)/90,'Linsendal · gekochte Linsen (Portion geschätzt)',sourceId);
+    add('cruciferous',(by['broccoli-cooked']||0)/80,'Linsendal · Brokkoli (gekocht, geschätzt)',sourceId);
+    const curry=by['curry-powder']||0;
+    if(curry>0){spiceGrams+=curry;notes.spices.push(`Linsendal · Currygewürze: ~${round(curry)} g (geschätzt)`);sources.push({id:sourceId,category:'spices',grams:round(curry),source:'Linsendal · Currygewürze'});}
+   } else if(id==='homemade-poppy-cake-chocolate-personal'){
+    // Cake has NO known recipe or measured poppy-seed mass. Do not award nuts,
+    // wholegrain or cocoa/berry portions from an unverified generic cake proxy.
+    notes.nuts.push('Mohnkuchen: Mohn vorhanden, aber Samenmenge im selbstgebackenen Rezept unbekannt; keine belegte Daily-Dozen-Samenportion');
    } else if(id==='oven-potatoes-sesame-personal'){
     // Only explicitly logged seed/spice weights: starchy potatoes are NOT
     // auto-awarded a Daily Dozen vegetable serving on an unweighed bowl.

@@ -1,0 +1,18 @@
+{
+  "version": "0.5.91.10",
+  "baseVersion": "0.5.91.9",
+  "baseRepo": "theophil-kroller/compass-life",
+  "baseBranch": "main",
+  "baseCommit": "b836076c505f9f175715912cf997e8ee734bff49",
+  "baseFullSourceZipSha256": "ac32dc6a85b86361c6141c8520579f7e84b4829ec462fdf82c5e89913b28c0b3",
+  "release": "RELEASE_0.5.91.10.md",
+  "newTests": 9,
+  "testPass": 1954,
+  "testTotal": 1989,
+  "historicalFailures": 35,
+  "newRegressionFailures": 0,
+  "deployTests": 33,
+  "productionBundleBuilt": false,
+  "productionBundleReason": "vite: not found (dependencies not installed)",
+  "automaticJournalEntriesCreated": false
+}
