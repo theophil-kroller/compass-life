@@ -3,7 +3,7 @@
  * An unrecorded optional ingredient is initialized at 0g for this SPECIFIC recipe only.
  * No missing micronutrient or fatty acid is implicitly zero.
  */
-const ing=(id,label,grams,values,source='USDA FoodData Central · generisches Lebensmittel',optional=false)=>Object.freeze({id,label,grams,values,source,optional});
+const ing=(id,label,grams,values,source='USDA FoodData Central · generisches Lebensmittel',optional=false,labelVerified=false)=>Object.freeze({id,label,grams,values,source,optional,labelVerified});
 const RAW=Object.freeze({
  'salad-personal':{name:'Mein großer grüner Salat',icon:'🥗',ingredients:[
   ing('lettuce','Grüner Blattsalat',150,{kcal:15,protein:1.36,carbs:2.87,fiber:1.3,fat:.15,potassium:194,folate:38,vitaminC:9.2,vitaminK:126}),
@@ -67,6 +67,12 @@ const RAW=Object.freeze({
   ing('curry-powder','Currymischung · Kurkuma/Kumin/Koriander, geschätzt',2,{kcal:325,protein:14,carbs:55,fiber:33,fat:14,iron:7.5,magnesium:220},'Generisches Currypulver · Mischung und Wirkstoffgehalt variieren; keine Curcumin-Messung'),
   ing('salt','Zugesetztes Salz · geschätzt',1,{kcal:0,salt:100},'Zugesetztes Salz nur geschätzt; sonstige Natriumquellen unvollständig')
  ]},
+ 'ironmaxx-vegan-protein-shake-mixed-berries':{name:'IronMaxx 100% Vegan Protein Zero · Mixed Berries (Shake)',icon:'🥤',ingredients:[
+  // Primary source: original label photos supplied 02.11.2026. The 30-g serving
+  // is used for interpolation because rounding differs slightly vs per-100-g declaration.
+  ing('protein-powder','IronMaxx Vegan Protein Zero · Mixed Berries Pulver',30,{kcal:119/0.3,protein:22/0.3,carbs:1.4/0.3,fat:2.4/0.3,saturated:0.4/0.3,salt:1.3/0.3,sodium:520/0.3},'IronMaxx Originaletikett · Nutzerfoto 02.11.2026 · 30-g-Portion; Natrium aus Salz berechnet',false,true),
+  ing('water','Trinkwasser · 300 ml ≈ 300 g',300,{kcal:0,protein:0,carbs:0,fat:0,saturated:0,salt:0},'Trinkwasser · nur Energie/Makros bekannt; Mineralien je Wasserquelle unbekannt')
+ ]},
  'fried-egg-personal':{name:'Mein Spiegelei · Olivenöl, Kala Namak, Kurkuma, Chili',icon:'🍳',ingredients:[
   ing('egg','Hühnerei · 1 Stück ohne Schale',55,{kcal:143,protein:12.56,carbs:.72,fat:9.51,saturated:3.126,cholesterol:372,vitaminB12:.89,vitaminD:2,selenium:30.7},'USDA · ganzes rohes Ei; Fettaufnahme beim Braten hängt von Ölmenge ab'),
   ing('olive-oil','Natives Olivenöl extra · zum Braten',5,{kcal:884,fat:100,saturated:13.8,mono:73,poly:10.5,vitaminE:14.35},'USDA · Olivenöl; tatsächlich aufgenommenes Öl nicht gemessen'),
@@ -78,10 +84,12 @@ const RAW=Object.freeze({
 export const PERSONAL_RECIPE_IDS=Object.freeze(Object.keys(RAW));
 export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>Object.freeze({
  id,title:RAW[id].name,emoji:RAW[id].icon,
- group:id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':id==='homemade-poppy-cake-chocolate-personal'?'Snacks':'Mahlzeiten',
- defaultAmount:id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
+ group:id==='ironmaxx-vegan-protein-shake-mixed-berries'?'Getränke':id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':id==='homemade-poppy-cake-chocolate-personal'?'Snacks':'Mahlzeiten',
+ defaultAmount:id==='ironmaxx-vegan-protein-shake-mixed-berries'?'1 Glas (30 g Pulver + 300 ml Wasser)':id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
  kcalLow:null,kcalHigh:null,
- recipeNote:id==='oven-potatoes-sesame-personal'
+ recipeNote:id==='ironmaxx-vegan-protein-shake-mixed-berries'
+ ?'IronMaxx 100% Vegan Protein Zero Mixed Berries. 1 Glas: 30 g Pulver mit ca. 300 ml Wasser, beide Mengen einzeln im Rezept-Inspektor editierbar. Originaletikett 02.11.2026: je 30 g 119 kcal, 22 g Protein, 1,4 g Kohlenhydrate, davon Zucker <0,5 g (nicht exakt bekannt), 2,4 g Fett, 0,4 g gesättigte Fette, 1,3 g Salz. Natrium ~520 mg aus Salz rechnerisch abgeleitet, kein eigener Laborwert. Ballaststoffe und Vitamine/Mineralien sind NICHT deklariert: unbekannt, nicht null. Daily Dozen: nur belegte Wassermenge als Getränk; Proteinpulver und Beeren-Geschmack sind keine Beeren-/Hülsenfruchtportionen. Anti-Aging Eight: dokumentiertes Protein für die Proteinanalyse; kein Nachweis einer gesundheitlichen Anti-Aging-Wirkung. Mit Milch/Haferdrink neu als separate Zutat erfassen, Wasser nicht einfach weiterzählen.'
+ :id==='oven-potatoes-sesame-personal'
  ?'Eine breite Suppenschüssel mit im Ofen gebackenen Bio-Kartoffelwürfeln samt Schale, zweimal mit Olivenöl übergossen, Salz, schwarzem Sesam und Chiliflocken. Anfangsannahmen: 300 g Kartoffeln roh, Olivenöl insgesamt 20 g (nicht zweimal 20 g), 10 g Sesam, 0,5 g Chili, 1 g Salz. Bei 5 g mehr Öl ca. 44 kcal zusätzlich. Alle Zutatenmengen im Inspektor änderbar; Nährstoffe nur generisch geschätzt, Vitamin C nach dem Backen nicht quantifiziert.'
  :id==='homemade-poppy-cake-chocolate-personal'
  ?'Selbstgebackener Mohnkuchen mit Schokolade obenauf; Stückgröße 7 × 6 × 4 cm. Geschätztes Gewicht 140 g (125 g Kuchenbasis plus 15 g Glasur), nicht abgewogen und keine bekannte Rezeptur. Makros und ausgewählte Mikros aus generischen Kuchen-/Schokoladen-Proxys, hohe Unsicherheit; Zutatenmengen editierbar. Daily Dozen: Mohn ist potentiell Samen, aber ohne tatsächliche Mohnmenge keine bestätigte Portion Nüsse/Samen; weder Vollkorn noch Obst automatisch zählen. Anti-Aging Eight: keine belegte Nussportion, kein Nachweis einer Anti-Aging-Wirkung; Eiweißmenge nur geschätzt. Kakao-Polyphenole nicht quantifiziert.'
@@ -102,8 +110,8 @@ export function personalRecipeParts(id,recipe,amount='1 Portion'){
  const def=RAW[id];if(!def)return [];
  // Existing recipes retain their prior per-entry logic. The oven-potato bowl
  // additionally supports an explicit count (e.g. '2 Portionen' or '2 Schüsseln').
- const count= ['oven-potatoes-sesame-personal','basmati-lentil-dal-broccoli-personal','homemade-poppy-cake-chocolate-personal'].includes(id)
-  ? String(amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion(?:en)?|schüssel(?:n)?|schuessel(?:n)?|teller|stück(?:e)?|stueck(?:e)?)\b/i)
+ const count= ['oven-potatoes-sesame-personal','basmati-lentil-dal-broccoli-personal','homemade-poppy-cake-chocolate-personal','ironmaxx-vegan-protein-shake-mixed-berries'].includes(id)
+  ? String(amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion(?:en)?|glas|gläser|glaeser|glaser|schüssel(?:n)?|schuessel(?:n)?|teller|stück(?:e)?|stueck(?:e)?)\b/i)
   : null;
  const factor=count?Number(count[1].replace(',','.')):1;
  if(!Number.isFinite(factor)||factor<=0||factor>20)return [];
@@ -115,7 +123,7 @@ export function personalRecipeParts(id,recipe,amount='1 Portion'){
   const grams=round(row.grams*factor);
   const values=Object.fromEntries(Object.entries(ingredient.values).map(([key,n])=>[key,round(n*grams/100)]));
   return {name:ingredient.label,part:'Persönliches Rezept',amount:grams,unit:'g',source:ingredient.source,values,
-   estimatedKeys:Object.keys(values),extra:[],note:row.assumed?'Menge vorläufig, bitte bei Bedarf abwiegen; generisches Nährstoffprofil':'Menge persönlich editiert; Nährstoffprofil weiterhin geschätzt'};
+   estimatedKeys:ingredient.labelVerified?['sodium']:ingredient.id==='water'?[]:Object.keys(values),extra:[],note:ingredient.labelVerified?'Etikettangaben linear skaliert und gerundet; Natrium aus Salz abgeleitet; weitere Mikronährstoffe unbekannt':ingredient.id==='water'?'Reines Wasser ohne Energie; Mineralstoffe je Quelle unbekannt':row.assumed?'Menge vorläufig, bitte bei Bedarf abwiegen; generisches Nährstoffprofil':'Menge persönlich editiert; Nährstoffprofil weiterhin geschätzt'};
  }).filter(Boolean);
 }
 export function personalRecipeKcal(id,recipe,amount){
@@ -124,11 +132,11 @@ export function personalRecipeKcal(id,recipe,amount){
  if(!k.length)return null;
  const subtotal=k.reduce((n,p)=>n+p.values.kcal,0);
  const incomplete=parts.some(x=>!Number.isFinite(x.values.kcal));
- return {low:Math.round(subtotal),high:Math.round(subtotal),kind:incomplete?'Rezept-Teilsumme (unvollständig)':'Rezept-Schätzung',incomplete};
+ return {low:Math.round(subtotal),high:Math.round(subtotal),kind:incomplete?'Rezept-Teilsumme (unvollständig)':id==='ironmaxx-vegan-protein-shake-mixed-berries'?'Etikettwert · rechnerisch skaliert':'Rezept-Schätzung',incomplete};
 }
 export function personalRecipeEditor(entry){
  if(!PERSONAL_RECIPE_IDS.includes(entry?.foodId))return '';
  const def=RAW[entry.foodId],rows=recipeSnapshot(entry.foodId,entry.recipe);
- return `<fieldset class="r737-edit"><legend>${esc(def.icon)} ${esc(def.name)} · Zutaten</legend><p>Alle Grammzahlen sind editierbar. Optionale Zutaten mit 0 g wurden für diesen Eintrag nicht verwendet. Die Nährwerte stammen aus generischen Referenzen, nicht von deiner Markenverpackung.</p><div class="r737-fields">${rows.map(row=>{const x=def.ingredients.find(i=>i.id===row.id);return `<label>${esc(x.label)}${x.optional?' <small>(optional)</small>':''}<span><input name="recipe737-${esc(row.id)}" type="number" min="0" max="2000" step="0.1" inputmode="decimal" value="${row.grams}" required> g</span></label>`;}).join('')}</div></fieldset>`;
+ return `<fieldset class="r737-edit"><legend>${esc(def.icon)} ${esc(def.name)} · Zutaten</legend><p>Alle Grammzahlen sind editierbar. Optionale Zutaten mit 0 g wurden für diesen Eintrag nicht verwendet. Etikettwerte werden als solche gekennzeichnet; nicht deklarierte Mikronährstoffe bleiben unbekannt. Sonstige Rezepte beruhen auf generischen Referenzen.</p><div class="r737-fields">${rows.map(row=>{const x=def.ingredients.find(i=>i.id===row.id);return `<label>${esc(x.label)}${x.optional?' <small>(optional)</small>':''}<span><input name="recipe737-${esc(row.id)}" type="number" min="0" max="2000" step="0.1" inputmode="decimal" value="${row.grams}" required> g</span></label>`;}).join('')}</div></fieldset>`;
 }
 export function readPersonalRecipe(id,fd){return recipeSnapshot(id,RAW[id]?.ingredients.map(x=>({id:x.id,grams:fd.get('recipe737-'+x.id),assumed:false}))||[]);}

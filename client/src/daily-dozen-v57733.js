@@ -28,13 +28,12 @@ export const shiftDailyDozenDate=(day,n)=>{const dt=new Date(day+'T12:00:00');dt
 export function dailyDozenSummary(state,day){
  const record=state?.nutritionJournal?.dailyDozen?.[day]||{};
  const evidence=dailyDozenEvidence(state,day);
- // The legacy tracker does not parse personal recipes. Add only this new dal
- // (the legacy source cannot include it), so the main tracker and modern
- // ingredient-ledger agree without double-crediting previous foods.
- const dalEntries=(state?.nutritionJournal?.entries||[]).filter(e=>e?.foodId==='basmati-lentil-dal-broccoli-personal');
- const dalEvidence=dailyDozenIngredientEvidence404({nutritionJournal:{entries:dalEntries}},day);
- const rows=DAILY_DOZEN.map(c=>{const partial=Math.max(0,(Number(evidence.totals[c.id])||0)+(Number(dalEvidence.totals[c.id])||0)),auto=clamp(partial,c.target),manual=record[c.id];
-  const explicit=manual!==undefined;return {...c,count:explicit?clamp(manual?.count??manual,c.target):auto,source:explicit?'manual':partial>0?'auto':'unknown',auto,partial,provenance:[...(evidence.notes[c.id]||[]),...(dalEvidence.notes?.[c.id]||[])],updatedAt:manual?.updatedAt||''};});
+ // The legacy tracker omits these two documented recipes. Use their ingredient
+ // evidence here without touching the existing other-food credit rules.
+ const recipeEntries=(state?.nutritionJournal?.entries||[]).filter(e=>['basmati-lentil-dal-broccoli-personal','ironmaxx-vegan-protein-shake-mixed-berries'].includes(e?.foodId));
+ const recipeEvidence=dailyDozenIngredientEvidence404({nutritionJournal:{entries:recipeEntries}},day);
+ const rows=DAILY_DOZEN.map(c=>{const partial=Math.max(0,(Number(evidence.totals[c.id])||0)+(Number(recipeEvidence.totals[c.id])||0)),auto=clamp(partial,c.target),manual=record[c.id];
+  const explicit=manual!==undefined;return {...c,count:explicit?clamp(manual?.count??manual,c.target):auto,source:explicit?'manual':partial>0?'auto':'unknown',auto,partial,provenance:[...(evidence.notes[c.id]||[]),...(recipeEvidence.notes?.[c.id]||[])],updatedAt:manual?.updatedAt||''};});
  const completed=rows.reduce((n,x)=>n+x.count,0),total=rows.reduce((n,x)=>n+x.target,0);
  return {day,rows,completed,total,percentage:Math.round(completed/total*100),completedGroups:rows.filter(x=>x.count===x.target).length,groups:rows.length,evidence};
 }

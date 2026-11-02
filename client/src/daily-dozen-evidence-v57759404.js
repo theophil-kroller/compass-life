@@ -82,6 +82,10 @@ export function dailyDozenIngredientEvidence404(state,day){
     add('cruciferous',(by['broccoli-cooked']||0)/80,'Linsendal · Brokkoli (gekocht, geschätzt)',sourceId);
     const curry=by['curry-powder']||0;
     if(curry>0){spiceGrams+=curry;notes.spices.push(`Linsendal · Currygewürze: ~${round(curry)} g (geschätzt)`);sources.push({id:sourceId,category:'spices',grams:round(curry),source:'Linsendal · Currygewürze'});}
+   } else if(id==='ironmaxx-vegan-protein-shake-mixed-berries'){
+    // Protein powder is NOT a berry portion; flavour alone gives no berries.
+    // Only the recorded WATER amount is credited as a drink, not the powder.
+    add('beverages',(by.water||0)/350,'IronMaxx Proteinshake · Wasseranteil (ml ≈ g)',sourceId);
    } else if(id==='homemade-poppy-cake-chocolate-personal'){
     // Cake has NO known recipe or measured poppy-seed mass. Do not award nuts,
     // wholegrain or cocoa/berry portions from an unverified generic cake proxy.

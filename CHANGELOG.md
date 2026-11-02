@@ -1,3 +1,10 @@
+## 0.5.91.11 · IronMaxx Mixed Berries Proteinshake
+
+- Originaletikett 30-g-Portion + 300 ml Wasser als editierbares persönliches Getränkerezept.
+- 119 kcal, 22 g Eiweiß, 1,4 g Kohlenhydrate, 2,4 g Fett und 1,3 g Salz je Glas; Natrium circa 520 mg aus Salz rechnerisch abgeleitet. Zucker <0,5 g ist keine exakte 0; nicht deklarierte Vitamine und Mineralien bleiben unbekannt.
+- Daily Dozen führt den Wasseranteil als Getränk, nicht das Beerenaroma als Früchte; Anti-Aging Eight berücksichtigt die erfasste Proteinmenge ohne Erfolgsbehauptungen.
+- Kein neuer Speicher, keine Rückwirkung auf bestehende Tagebucheinträge. Siehe `RELEASE_0.5.91.11.md`.
+
 ## 0.5.91.10 · Selbstgebackener Mohnkuchen und Basmatireis mit Linsendal & Brokkoli
 
 - Zwei neue persönliche Speisen im vorhandenen Ernährungsmenü mit einzeln editierbaren Zutaten, Makro-/Mikronährstoff-Schätzungen, Tagestrends und Daily-Dozen-/Anti-Aging-Einordnung; siehe `RELEASE_0.5.91.10.md`.
