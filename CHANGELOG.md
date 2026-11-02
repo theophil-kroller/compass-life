@@ -1,3 +1,11 @@
+## 0.5.91.14 · Automatische Trainingszyklen & adaptiver Review (02.11.2026)
+
+- Vorhandene Garmin-/Coach-Trainingshistorie bestimmt den Start eines sechs Wochen langen V-Taper-Blocks; manuelle Erstaktivierung entfällt.
+- Synchronisierte, archivierungsfähige Zyklus-Metadaten und konservative Migration der alten lokalen Einstellung; keine Veränderung bestätigter Sessions.
+- Pause, Verlängerung, Deload, Startdatum und neuer Block als optionale Aktionen im kompakten Coach-Detailbereich. StrongLifts verwendet dieselbe Historie.
+- Review A/B/C/D nach sechs Wochen mit bestätigten Sätzen, Trainingstagen, RIR, Volumen, dokumentierter Progression und wiederverwendeter Plateauauswertung; fehlende Werte bleiben unbekannt, keine automatische Programmänderung.
+- 15 neue Tests bestanden, 9/9 angepasste Altzyklustests, 33/33 Deployment-Tests. Gesamtsuite 1988/2023, 35 bereits vorhandene Fehler. Lokaler Vite-Produktionsbuild wegen nicht auflösbarer npm-Registry nicht ausführbar. Siehe `RELEASE_0.5.91.14.md`.
+
 ## 0.5.91.13 · Korrektur: Krautroulade mit Räuchertofu (02.11.2026)
 
 - Der vorherige „Gemüse-Tofu-Strudel“ war tatsächlich eine **Krautroulade mit Räuchertofu**. Stable foodId bleibt erhalten, damit bestehende Einträge nicht dupliziert werden.

@@ -1,3 +1,4 @@
+import {mergeStrengthCycles35} from './strength-cycle-v5775935.js';
 import {activityToJournalArea} from './worktime-category-v0587.js';
 import {mergePeopleDirectory} from './people-sync-v57719.js';
 import {mergeMorningData} from './miracle-morning-v570.js';
@@ -409,6 +410,7 @@ export function mergeJournalData(local,remote){
   lifeWeekEvents:mergeLifeWeekEvents(lc.lifeWeekEvents,rc.lifeWeekEvents),
   makkoHoSessions:byId(lc.makkoHoSessions,rc.makkoHoSessions),
   strengthGuidedSessions:byId(lc.strengthGuidedSessions,rc.strengthGuidedSessions),
+  ...(lc.strengthCycle||rc.strengthCycle?{strengthCycle:mergeStrengthCycles35(lc.strengthCycle,rc.strengthCycle)}:{}),
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),
   ...(lc.calendarArchive||rc.calendarArchive?{calendarArchive:mergeCalendarArchives(lc.calendarArchive,rc.calendarArchive)}:{}),
   ...(lc.familyRadar||rc.familyRadar?{familyRadar:mergeFamilyRadar37(lc.familyRadar,rc.familyRadar)}:{}),

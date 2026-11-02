@@ -1,0 +1,8 @@
+{
+  "version": "0.5.91.14",
+  "base_version": "0.5.91.13",
+  "base_commit": "c12af22adadd6657d7994c4111052fb282c35302",
+  "origin": "https://github.com/theophil-kroller/compass-life",
+  "tests": "1988/2023, 35 historic failures; deployment 33/33; new 15/15",
+  "productionBuild": "not compiled locally: registry.npmjs.org EAI_AGAIN"
+}

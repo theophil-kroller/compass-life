@@ -40,16 +40,17 @@ test('Observational exam deduplicates a same-event actionable math suggestion',(
  assert.equal((html.match(/Mathematik-Schularbeit/g)||[]).length,1);
  assert.equal((html.match(/Englisch-Schularbeit/g)||[]).length,1);
 });
-test('Longer-term cycle is opt-in, never inferred from one night of Garmin data',()=>{
+test('Cycle requires a confirmed training record, not opening the coach or one night of Garmin data',()=>{
  const no=coachCycle35({}, {today,health:{attention:true},history:{valid:[]}});
  assert.equal(no.week,null);assert.equal(no.suggestDeload,false);assert.equal(no.deloadActive,false);
- const active=coachCycle35({}, {today:'2026-11-03',cycle:{startDay:today},history:{valid:[]}});
+ const confirmed={strengthGuidedSessions:[{source:'compass-guided-v5920',id:'confirmed',startedAt:'2026-10-26T09:00:00Z',exercises:[{exerciseId:'dumbbell-row',confirmedSets:[{confirmed:true,reps:12,weightKg:12}]}]}]};
+ const active=coachCycle35(confirmed, {today:'2026-11-03',cycle:{startDay:today},history:{valid:[]}});
  assert.equal(active.week,2);assert.equal(active.phase,'build');
- const review=coachCycle35({}, {today:'2026-12-09',cycle:{startDay:today},history:{valid:[]}});
+ const review=coachCycle35(confirmed, {today:'2026-12-09',cycle:{startDay:today},history:{valid:[]}});
  assert.equal(review.dueReview,true);assert.equal(review.phase,'review');
 });
 test('Multi-signal deload remains advice and explicit user choice',()=>{
- const state={strengthGuidedSessions:[{source:'compass-guided-v5920',startedAt:'2026-10-25T09:00:00Z',exercises:[{confirmedSets:[0,0,0,1,1].map(rir=>({confirmed:true,rir}))}]}]};
+ const state={strengthGuidedSessions:[{source:'compass-guided-v5920',startedAt:'2026-10-25T09:00:00Z',exercises:[{exerciseId:'dumbbell-row',confirmedSets:[0,0,0,1,1].map(rir=>({confirmed:true,rir}))}]}]};
  const recommended=coachCycle35(state,{today,goal:'vtaper',health:{attention:true},history:{valid:[]},cycle:{startDay:today}});
  assert.equal(recommended.suggestDeload,true);assert.equal(recommended.deloadActive,false);
  const noHealth=coachCycle35(state,{today,goal:'vtaper',health:{attention:false},history:{valid:[]},cycle:{startDay:today}});

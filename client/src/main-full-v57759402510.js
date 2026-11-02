@@ -185,6 +185,7 @@ import {proteinTodayMarkup88,proteinInsightsMarkup88,vTaperView88,openFoodView88
 import './coach-integration-v0588.css';
 import {saveStrongliftsSettings88} from './stronglifts-v0588.js';
 import {strengthPeriod} from './strength-insights-v57728.js';
+import {applyCycleAction35} from './strength-cycle-v5775935.js';
 import './body-transformation-v57749.css';
 import {lifeWeeksView,lifeYearRange,lifeWeekCells,lifeAgeAt,calendarLifeCandidates,putLifeEvent,deleteLifeEvent,LIFE_EVENT_CATEGORIES,parseLifeEventsImport,applyLifeEventsImport} from './life-weeks-v0582.js';
 import {buildLifeWeeksPdf} from './life-weeks-pdf-v0583.js';
@@ -272,7 +273,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.13';
+const COMPASS_CLIENT_VERSION='0.5.91.14';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -472,7 +473,7 @@ if(typeof window!=='undefined'){
 if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')automaticJournalResume743();});
 let weeklyOffset746=0;
 let journalSyncTimer=null,journalSyncInFlight=null,journalRevision=0,journalLastConfirmedAt=0;
-function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.strengthJournal||null,s?.dreamJournal||null,s?.receiptJournal||null,s?.mensaCatalog||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.familyRadar||null,s?.teachingRadar||null,s?.taskInspiration||null,s?.habitTimeSessions||null,s?.makkoHoSessions||null,s?.strengthGuidedSessions||null,s?.financeMobileDecisions||null,s?.lifeWeekEvents||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
+function journalFingerprint(s){return JSON.stringify([s?.quickWorktime||null,s?.timeJournal||null,s?.nutritionJournal||null,s?.touchJournal||null,s?.strengthJournal||null,s?.dreamJournal||null,s?.receiptJournal||null,s?.mensaCatalog||null,s?.miracleMorning||null,s?.feelingCheckins||null,s?.habitsQuick||null,s?.calendarArchive?.updatedAt||null,s?.familyRadar||null,s?.teachingRadar||null,s?.taskInspiration||null,s?.habitTimeSessions||null,s?.makkoHoSessions||null,s?.strengthGuidedSessions||null,s?.strengthCycle||null,s?.financeMobileDecisions||null,s?.lifeWeekEvents||null,s?.peopleSyncEnabled?{people:s.people||{},deleted:s.peopleDeleted||{}}:null]);}
 function scheduleJournalSync(delay=0){
  clearTimeout(journalSyncTimer);journalSyncTimer=null;
  if(!state||!authToken||!state.privateDeviceMirror?.key||!navigator.onLine)return;
@@ -1388,6 +1389,10 @@ async function storeStrengthGuidedSession(session){
    const updated={...session};
    if(at<0)st.strengthGuidedSessions=[...previous,updated].slice(-150);
    else {const next=previous.slice();next[at]=updated;st.strengthGuidedSessions=next;}
+   // A verified set, not opening the coach, is the trigger. The cycle stores
+   // only metadata; confirmation data remains in its original workout record.
+   if(updated.exercises?.some(e=>e.confirmedSets?.some(x=>x.confirmed===true)))
+     applyCycleAction35(st,{action:'init',today:localDate()});
  },null,true);
 }
 function habitQuickOverlay(){
@@ -2274,8 +2279,8 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},mensaCatalog:st.mensaCatalog||{schemaVersion:1,entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,taskInspiration:st.taskInspiration||[],habitTimeSessions:st.habitTimeSessions||[],makkoHoSessions:st.makkoHoSessions||[],strengthGuidedSessions:st.strengthGuidedSessions||[],financeMobileDecisions:st.financeMobileDecisions||[],lifeWeekEvents:st.lifeWeekEvents||[],...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.teachingRadar?{teachingRadar:st.teachingRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
-function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.mensaCatalog=m.mensaCatalog;st.feelingCheckins=m.feelingCheckins;st.taskInspiration=m.taskInspiration||[];st.habitTimeSessions=m.habitTimeSessions||[];st.makkoHoSessions=m.makkoHoSessions||[];st.strengthGuidedSessions=m.strengthGuidedSessions||[];st.financeMobileDecisions=m.financeMobileDecisions||[];st.lifeWeekEvents=m.lifeWeekEvents||[];if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.teachingRadar)st.teachingRadar=m.teachingRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},mensaCatalog:st.mensaCatalog||{schemaVersion:1,entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,taskInspiration:st.taskInspiration||[],habitTimeSessions:st.habitTimeSessions||[],makkoHoSessions:st.makkoHoSessions||[],strengthGuidedSessions:st.strengthGuidedSessions||[],...(st.strengthCycle?{strengthCycle:st.strengthCycle}:{}),financeMobileDecisions:st.financeMobileDecisions||[],lifeWeekEvents:st.lifeWeekEvents||[],...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.teachingRadar?{teachingRadar:st.teachingRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.mensaCatalog=m.mensaCatalog;st.feelingCheckins=m.feelingCheckins;st.taskInspiration=m.taskInspiration||[];st.habitTimeSessions=m.habitTimeSessions||[];st.makkoHoSessions=m.makkoHoSessions||[];st.strengthGuidedSessions=m.strengthGuidedSessions||[];if(m.strengthCycle)st.strengthCycle=m.strengthCycle;st.financeMobileDecisions=m.financeMobileDecisions||[];st.lifeWeekEvents=m.lifeWeekEvents||[];if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.teachingRadar)st.teachingRadar=m.teachingRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
 async function syncPersonalJournal(){
  // One E2EE journal flight per device. Mutations during flight queue an immediate
  // follow-up instead of being hidden by a generic "synced" status.
@@ -4861,7 +4866,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='strength-coach-open'){
    if(!state)return toast('Für persönliche Trainingsvorschläge bitte Tresor entsperren.',true);
    const mod=await import('./strength-coach-v5775910.js');
-   mod.openStrengthCoach({state,today:localDate(),onSession:storeStrengthGuidedSession,onSettings:async cfg=>{await mutate(st=>{if('pain' in cfg){st.strengthJournal??={annotations:[]};st.strengthJournal.safety88={day:cfg.day,pain:cfg.pain,updatedAt:stamp()};}else saveStrongliftsSettings88(st,cfg);});},onExperiment:async data=>{
+   mod.openStrengthCoach({state,today:localDate(),onSession:storeStrengthGuidedSession,onCycle:async data=>{await mutate(st=>{applyCycleAction35(st,data);},null,true);},onSettings:async cfg=>{await mutate(st=>{if('pain' in cfg){st.strengthJournal??={annotations:[]};st.strengthJournal.safety88={day:cfg.day,pain:cfg.pain,updatedAt:stamp()};}else saveStrongliftsSettings88(st,cfg);});},onExperiment:async data=>{
     if(data.kind==='start'){await mutate(s=>coachTrialStart48(s,{exerciseId:data.id,exerciseTitle:data.exerciseTitle,strategy:data.strategy,primary:data.primary,today:data.today}));return;}
     if(data.kind==='finish'){await mutate(s=>coachTrialFinish48(s,data.id,data.today));return;}
    }});return;
