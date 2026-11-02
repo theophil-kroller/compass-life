@@ -10,7 +10,7 @@ const NAMES={beans:'Hülsenfrüchte',berries:'Beeren',fruit:'Obst',cruciferous:'
 const grams=s=>{const m=String(s||'').match(/(?:^|[^\d])(\d+(?:[.,]\d+)?)\s*g\b/i);return m?Number(m[1].replace(',','.')):null;};
 const ml=s=>{const m=String(s||'').match(/(?:^|[^\d])(\d+(?:[.,]\d+)?)\s*ml\b/i);return m?Number(m[1].replace(',','.')):null;};
 const round=n=>Math.round(n*100)/100;
-function scale(entry){const x=String(entry.amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion|portionen|glas|gläser|glaser|teller|schüssel|schüsseln|schuessel|schuesseln|stück|stücke|stueck|stuecke)\b/i);return x?Math.max(0,Math.min(4,Number(x[1].replace(',','.')))):1;}
+function scale(entry){const x=String(entry.amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion|portionen|glas|gläser|glaser|teller|schüssel|schüsseln|schuessel|schuesseln|stück|stücke|stueck|stuecke|krautroulade|krautrouladen)\b/i);return x?Math.max(0,Math.min(4,Number(x[1].replace(',','.')))):1;}
 function validAmount(n){return typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=2000;}
 /** Returns portions with source hints. One logged recipe is counted once,
  * based on its saved ingredient snapshot; no extra food credit for being a drink.
@@ -87,10 +87,12 @@ export function dailyDozenIngredientEvidence404(state,day){
     // Only the recorded WATER amount is credited as a drink, not the powder.
     add('beverages',(by.water||0)/350,'IronMaxx Proteinshake · Wasseranteil (ml ≈ g)',sourceId);
    } else if(id==='korean-spicy-tofu-vegetable-strudel'){
-    // Tofu is a soy/bean food, but only an ESTIMATED ingredient quantity is known.
-    add('beans',(by.tofu||0)/125,'Gemüse-Tofu-Strudel · Tofu (~125 g = 1/2 Tasse, Menge geschätzt)',sourceId);
-    add('vegetables',(by['mixed-vegetables']||0)/80,'Gemüse-Tofu-Strudel · Gemüsemix (Zusammensetzung/Gramm geschätzt)',sourceId);
-    notes.cruciferous.push('Gemüse-Tofu-Strudel: Gemüsesorten nicht bestätigt; keine Kreuzblütler-Gutschrift');
+    // 02.11.2026 user correction: CABBAGE ROULADE with SMOKED TOFU, no pastry.
+    // Cabbage is a cruciferous vegetable; never double-count the same cabbage
+    // as generic vegetables. Tofu belongs to soy/beans regardless of smoking.
+    add('beans',(by.tofu||0)/125,'Krautroulade · Räuchertofu (Soja, Menge geschätzt)',sourceId);
+    add('cruciferous',(by.cabbage||0)/80,'Krautroulade · gegartes Kraut (Menge geschätzt)',sourceId);
+    add('vegetables',(by['mixed-vegetables']||0)/80,'Krautroulade · zusätzliches Gemüse (nur wenn tatsächlich eingetragen)',sourceId);
    } else if(['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g','homemade-topfentorte-slice'].includes(id)){
     // Dairy/cheesecake protein and calcium do not fulfill plant-specific Daily Dozen categories.
     notes.beans.push('Milchprodukt/Topfentorte: Eiweiß ist keine Hülsenfruchtportion');

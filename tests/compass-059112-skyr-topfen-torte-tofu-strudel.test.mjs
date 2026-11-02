@@ -35,13 +35,13 @@ test('Bio Magertopfen label protein 12g / 100g and no invented label micronutrie
  assert.equal(d.coverage.protein.estimated,0);assert.equal(d.coverage.calcium.estimated,1);assert.equal(d.coverage.vitaminB12.estimated,1);
  assert.equal(d.coverage.vitaminD.unknown,1);assert.equal(d.coverage.fiber.unknown,1);
 });
-test('one photo-estimated cheesecake slice and tofu strudel give plausible macro/micro estimates',()=>{
+test('one photo-estimated cheesecake slice and corrected smoked-tofu cabbage roulade give plausible macro/micro estimates',()=>{
  const c=totals(IDS[2]),s=totals(IDS[3]);
- assert.equal(personalRecipeKcal(IDS[2]).low,371);assert.equal(personalRecipeKcal(IDS[3]).low,521);
+ assert.equal(personalRecipeKcal(IDS[2]).low,371);assert.equal(personalRecipeKcal(IDS[3]).low,286);
  assert.ok(c.protein>12&&c.protein<22);assert.ok(c.calcium>100&&c.calcium<250);
- assert.ok(s.protein>18&&s.protein<25);assert.ok(s.fiber>5&&s.fiber<8);
+ assert.ok(s.protein>18&&s.protein<25);assert.ok(s.fiber>4&&s.fiber<7);
  assert.ok(s.iron>2&&s.potassium>300);
- assert.match(food(IDS[2]).recipeNote,/NICHT gewogen/);assert.match(food(IDS[3]).recipeNote,/nicht bestätigt/i);
+ assert.match(food(IDS[2]).recipeNote,/NICHT gewogen/);assert.match(food(IDS[3]).recipeNote,/nicht gewogen|nicht bestätigt|keine bestätigten/i);
  for(const id of IDS.slice(2)){const d=nutritionDay(state(id),DAY);assert.equal(d.coverage.kcal.estimated,d.entries.length?d.entries.length:1);}
 });
 test('ingredients are editable and 2 Becher/2 Stück/2 Portionen scale everything exactly once',()=>{
@@ -55,19 +55,19 @@ test('ingredients are editable and 2 Becher/2 Stück/2 Portionen scale everythin
  const form=new FormData();for(const row of recipe)form.set('recipe737-'+row.id,String(row.grams));
  assert.equal(readPersonalRecipe(IDS[3],form).find(r=>r.id==='tofu').grams,180);
 });
-test('Daily Dozen: dairy and cake do not get plant-food credits; strudel tofu & vegetables provisional',()=>{
+test('Daily Dozen: dairy and cake get no plant credits; roulade smoked tofu & cabbage provisional',()=>{
  for(const id of IDS.slice(0,3)){
   const d=dailyDozenIngredientEvidence404(state(id),DAY);
   for(const k of ['beans','berries','fruit','greens','cruciferous','vegetables','nuts','wholegrains'])assert.equal(d.totals[k],0,`${id}:${k}`);
  }
  const d=dailyDozenIngredientEvidence404(state(IDS[3]),DAY);
- assert.ok(Math.abs(d.totals.beans-90/125)<1e-10);assert.equal(d.totals.vegetables,1.25);
- assert.equal(d.totals.cruciferous,0);assert.equal(d.totals.wholegrains,0);assert.equal(d.totals.spices,0);
+ assert.ok(Math.abs(d.totals.beans-100/125)<1e-10);assert.equal(d.totals.vegetables,0);
+ assert.equal(d.totals.cruciferous,170/80);assert.equal(d.totals.wholegrains,0);assert.equal(d.totals.spices,0);
  const legacy=dailyDozenSummary(state(IDS[3]),DAY);
  assert.equal(legacy.rows.find(x=>x.id==='beans').count,1);
- assert.equal(legacy.rows.find(x=>x.id==='vegetables').count,1);
+ assert.equal(legacy.rows.find(x=>x.id==='cruciferous').count,1);
 });
-test('Anti-Aging Eight reports protein for all; strudel gives only nutritional evidence, not measured postbiotics',()=>{
+test('Anti-Aging Eight reports protein for all; cabbage roulade gives only nutritional evidence, not measured postbiotics',()=>{
  for(const id of IDS){const a=antiAgingEightModel(state(id),DAY);const protein=a.rows.find(x=>x.id==='protein');assert.equal(protein.status,'partial');assert.match(protein.value,/Protein/);assert.equal(a.rows.find(x=>x.id==='nad').status,'unmeasurable');}
  const tofu=antiAgingEightModel(state(IDS[3]),DAY);
  assert.equal(tofu.rows.find(x=>x.id==='microbiome').status,'partial');

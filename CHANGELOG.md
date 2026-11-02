@@ -1,3 +1,10 @@
+## 0.5.91.13 · Korrektur: Krautroulade mit Räuchertofu (02.11.2026)
+
+- Der vorherige „Gemüse-Tofu-Strudel“ war tatsächlich eine **Krautroulade mit Räuchertofu**. Stable foodId bleibt erhalten, damit bestehende Einträge nicht dupliziert werden.
+- Teig-/Blätterteig-Annahme vollständig entfernt, generisches Kraut- und Räuchertofuprofil ergänzt. Öl und Würzung nur als explizite, editierbare Schätzung; bei fehlendem Rezept keine unbekannten zusätzlichen Gemüsesorten unterstellen.
+- Daily Dozen berücksichtigt **Kreuzblütler (Kraut)** und **Soja/Hülsenfrüchte (Räuchertofu)**; kein zweifaches Zählen von Kraut als weiteres Gemüse; keine Fermentations-/Vollkorngutschrift.
+- Energie und Nährstoffe werden aus den korrigierten Zutatengramm berechnet. Es wird nichts automatisch als gegessen verbucht. Siehe `RELEASE_0.5.91.13.md`.
+
 ## 0.5.91.12 · Bio-Skyr, Bio-Magertopfen, Topfentorte & scharfer Gemüse-Tofu-Strudel (02.11.2026)
 
 - Vier neue Speisen im bestehenden Compass-Ernährungsmenü (zwei Frühstücksprodukte, Snack-Torte, Gemüse-Tofu-Mahlzeit) als editierbare Rezept-/Etikett-Zutatenprofile.

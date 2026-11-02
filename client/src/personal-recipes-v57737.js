@@ -86,13 +86,17 @@ const RAW=Object.freeze({
   ing('cheese-filling','Gebackene Topfenfüllung · geschätzt',125,{kcal:178,protein:11,carbs:18,sugar:15,fat:7.2,saturated:3.2,fiber:.1,calcium:100,potassium:135,phosphorus:145,vitaminB12:.55},'Generischer Topfentorten-Füllungsproxy, NICHT Rezept oder Etikett dieses Stücks; Zucker/Fett/Eigelbanteil unbekannt'),
   ing('cake-base','Kuchen-/Mürbteigboden · geschätzt',35,{kcal:425,protein:6,carbs:51,sugar:17,fat:22,saturated:10,fiber:2.5,calcium:25,iron:1.1,magnesium:16},'Generischer gebackener Kuchenboden, der tatsächliche Boden kann anders zusammengesetzt sein')
  ]},
- 'korean-spicy-tofu-vegetable-strudel':{name:'Scharfer Gemüse-Tofu-Strudel · koreanisch inspiriert',icon:'🥟',ingredients:[
-  // Photo shows a browned layered pastry with vegetable filling. Ingredients and net weight not verified.
-  ing('strudel-pastry','Strudelteig/Blätterteig · Rechenproxy',80,{kcal:365,protein:6,carbs:39,sugar:2,fat:22,saturated:9,fiber:2.5,salt:.8,iron:1.4},'Generisches blättriges Strudel-/Blätterteigprofil; Teigart nicht bestätigt'),
-  ing('tofu','Tofu · in der Füllung, geschätzt',90,{kcal:123,protein:15,carbs:2.5,sugar:.4,fat:7,saturated:1.1,fiber:1.1,calcium:120,iron:2.5,magnesium:35,phosphorus:150,potassium:150},'Generisches Tofuprofil; Art, Gerinnungsmittel (Calcium), Menge und Marinade unbekannt'),
-  ing('mixed-vegetables','Gemüsefüllung · Mix unbekannt',100,{kcal:42,protein:2.2,carbs:7.5,sugar:3.5,fat:.5,fiber:2.8,vitaminC:22,folate:40,potassium:220,vitaminA:90},'Generisches Gemüse-Mischprofil; Gemüsesorten unbekannt, Kreuzblütler NICHT automatisch zugeordnet'),
-  ing('oil','Öl in Teig/Füllung zusätzlich · geschätzt',6,{kcal:884,fat:100,saturated:13.8,mono:73,poly:10.5},'Zusätzliches Öl geschätzt; Teigprofil enthält bereits Teigfett, NICHT doppelt addieren'),
-  ing('spicy-seasoning','Scharfe koreanisch inspirierte Würzung/Sauce · geschätzt',12,{kcal:190,protein:4,carbs:40,sugar:22,fat:1,salt:4},'Generischer scharfer Saucenproxy; kein Nachweis für Gochujang, fermentierte Zutaten oder bestimmte Chilis')
+ 'korean-spicy-tofu-vegetable-strudel':{name:'Krautroulade mit Räuchertofu · pikant',icon:'🥬',ingredients:[
+  // Corrected by the user 02.11.2026: this is a cabbage roulade with SMOKED tofu,
+  // NOT a pastry strudel. Keep the original foodId so existing saved entries
+  // continue to resolve and are recalculated, with no new duplicate food record.
+  // Portion is STILL UNWEIGHED (~288 g); ingredients beyond cabbage and smoked
+  // tofu are simply illustrative, not a claim about the actual recipe.
+  ing('cabbage','Weißkraut / Krautblätter und Krautfüllung · gegart, geschätzt',170,{kcal:25,protein:1.3,carbs:5.8,sugar:3.2,fat:.1,saturated:.02,fiber:2.5,vitaminC:25,vitaminK:50,vitaminB6:.11,folate:30,calcium:40,iron:.4,magnesium:13,potassium:200},'USDA/Generisches Weißkraut · gekocht, Vitamin C/K durch Garen variabel; Gemüseart bestätigt, Grammmenge NICHT gewogen'),
+  ing('tofu','Räuchertofu · in der Füllung, geschätzt',100,{kcal:163,protein:19,carbs:1.8,sugar:.4,fat:8.7,saturated:1.4,fiber:1.2,salt:1.7,calcium:120,iron:2.5,magnesium:45,potassium:200},'Generischer Räuchertofu-Proxy (Makros/Salz etwa Taifun Räuchertofu Klassik); unbekannte Marke und Gerinnungsmittel. Calcium/Eisen/Magnesium/Kalium sehr unsicher'),
+  ing('oil','Öl zum Garen, nur falls verwendet · vorläufige Annahme',8,{kcal:884,fat:100,saturated:13.8,mono:73,poly:10.5},'Generisches Pflanzenöl als REINE Annahme; tatsächliche Ölmenge und Sorte unbekannt'),
+  ing('spicy-seasoning','Scharfe Würzung/Sauce · vorläufige Annahme',10,{kcal:100,protein:2,carbs:20,sugar:10,fat:.5,salt:3},'Generischer Würzungsproxy; Schärfe aus Erstbeschreibung, weder koreanische Sauce noch Gochujang/Fermentation belegt'),
+  ing('mixed-vegetables','Zusätzliches Gemüse · nur wenn tatsächlich enthalten',0,{kcal:42,protein:2.2,carbs:7.5,sugar:3.5,fat:.5,fiber:2.8,vitaminC:22,folate:40,potassium:220},'Optionaler Gemüsemix, initial 0 g mangels Rezeptinformation',true)
  ]},
  'fried-egg-personal':{name:'Mein Spiegelei · Olivenöl, Kala Namak, Kurkuma, Chili',icon:'🍳',ingredients:[
   ing('egg','Hühnerei · 1 Stück ohne Schale',55,{kcal:143,protein:12.56,carbs:.72,fat:9.51,saturated:3.126,cholesterol:372,vitaminB12:.89,vitaminD:2,selenium:30.7},'USDA · ganzes rohes Ei; Fettaufnahme beim Braten hängt von Ölmenge ab'),
@@ -106,7 +110,7 @@ export const PERSONAL_RECIPE_IDS=Object.freeze(Object.keys(RAW));
 export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>Object.freeze({
  id,title:RAW[id].name,emoji:RAW[id].icon,
  group:id==='ironmaxx-vegan-protein-shake-mixed-berries'?'Getränke':['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'Frühstück':id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':['homemade-poppy-cake-chocolate-personal','homemade-topfentorte-slice'].includes(id)?'Snacks':'Mahlzeiten',
- defaultAmount:['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'1 Becher (250 g)':id==='homemade-topfentorte-slice'?'1 Stück (ca. 160 g)':id==='korean-spicy-tofu-vegetable-strudel'?'1 Portion (ca. 288 g)':id==='ironmaxx-vegan-protein-shake-mixed-berries'?'1 Glas (30 g Pulver + 300 ml Wasser)':id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
+ defaultAmount:['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'1 Becher (250 g)':id==='homemade-topfentorte-slice'?'1 Stück (ca. 160 g)':id==='korean-spicy-tofu-vegetable-strudel'?'1 Krautroulade (ca. 288 g)':id==='ironmaxx-vegan-protein-shake-mixed-berries'?'1 Glas (30 g Pulver + 300 ml Wasser)':id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
  kcalLow:null,kcalHigh:null,
  recipeNote:id==='spar-freefrom-bio-skyr-250g'
  ?'SPAR free from laktosefreier Bio-Skyr Natur · 250 g je Becher. Etikett 02.11.2026: pro 100 g 62 kcal, Protein 11 g, KH/Zucker 4 g, Salz 0,10 g; Fett <0,5 g und gesättigte Fettsäuren <0,1 g. Fett 0,3/0,05 g und Milchprodukt-Mikros (Calcium, Phosphor, Magnesium, Kalium, B12) nur generisch geschätzt. Daily Dozen: Milchprodukt, keine Pflanzenportion. Anti-Aging Eight: Protein als dokumentierte Aufnahme, KEIN Nachweis von Proteinrestriktion oder Anti-Aging-Wirkung. Morgen geplant: beim tatsächlichen Essen eintragen, nicht automatisch vorausbuchen.'
@@ -115,7 +119,7 @@ export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>O
  :id==='homemade-topfentorte-slice'
  ?'Topfentorte nach Foto 02.11.2026, ein Stück ≈160 g (125 g Topfenfüllung + 35 g Boden), NICHT gewogen und ohne Rezept. Generische Schätzwerte einschließlich Calcium, Phosphor und Vitamin B12; bei Zucker/Fett/Teigart hohe Unsicherheit. Mengen sind im Inspektor editierbar. Daily Dozen: keine bestätigte pflanzliche Portion. Anti-Aging Eight: nur geschätztes Protein, keine Anti-Aging-Wirkung behaupten.'
  :id==='korean-spicy-tofu-vegetable-strudel'
- ?'Scharfer Gemüse-Tofu-Strudel (koreanisch inspiriert) nach Foto 02.11.2026. Geschätzte Portion 288 g: 80 g blättriger Teig, 90 g Tofu, 100 g gemischtes Gemüse, 6 g zusätzliches Öl, 12 g pikante Würzung. Teig, Saucenart, Gewicht und Gemüse nicht bestätigt. Daily Dozen: vorläufig anteilige Tofu-Hülsenfrucht- und Gemüseportion; keine automatische Kreuzblütler-, Vollkorn- oder Fermentationsgutschrift. Anti-Aging Eight: nur Ernährungsevidenz zu Pflanzenanteil, Ballaststoffen und Protein; keine gemessenen Postbiotika. Alle generischen Mikronährstoffe und Zutatenmengen sind Schätzungen.'
+ ?'KORREKTUR 02.11.2026: Eine Krautroulade mit Räuchertofu, KEIN Gemüse-Tofu-Strudel und kein angenommener Blätterteig. Gewicht (~288 g) und Zutatengramm sind NICHT gewogen. Beispiel: 170 g gegartes Kraut, 100 g Räuchertofu, 8 g Öl und 10 g Würzung; zusätzliche Gemüsefüllung nur bei Bestätigung. Öl, Sauce und Kraut-/Tofumengen sind ausschließlich editierbare Annahmen, keine bestätigten Rezeptzutaten. Daily Dozen: Kraut gehört zu den Kreuzblütlern, Räuchertofu zu Soja/Hülsenfrüchten; keine Vollkorn-, Fermentations-, sonstige Gemüse- oder Gewürzgutschrift ohne Beleg. Anti-Aging Eight: nur indirekte Ernährungsevidenz zu Gemüse, Ballaststoffen und Protein; keine kausalen Langlebigkeitswirkungen. Nährwerte inkl. Salz und Mikronährstoffe sind GENERISCHE Schätzungen; bei Räuchertofu kann der Salzgehalt stark schwanken. Der alte foodId bleibt für bestehende Einträge erhalten.'
  :id==='ironmaxx-vegan-protein-shake-mixed-berries'
  ?'IronMaxx 100% Vegan Protein Zero Mixed Berries. 1 Glas: 30 g Pulver mit ca. 300 ml Wasser, beide Mengen einzeln im Rezept-Inspektor editierbar. Originaletikett 02.11.2026: je 30 g 119 kcal, 22 g Protein, 1,4 g Kohlenhydrate, davon Zucker <0,5 g (nicht exakt bekannt), 2,4 g Fett, 0,4 g gesättigte Fette, 1,3 g Salz. Natrium ~520 mg aus Salz rechnerisch abgeleitet, kein eigener Laborwert. Ballaststoffe und Vitamine/Mineralien sind NICHT deklariert: unbekannt, nicht null. Daily Dozen: nur belegte Wassermenge als Getränk; Proteinpulver und Beeren-Geschmack sind keine Beeren-/Hülsenfruchtportionen. Anti-Aging Eight: dokumentiertes Protein für die Proteinanalyse; kein Nachweis einer gesundheitlichen Anti-Aging-Wirkung. Mit Milch/Haferdrink neu als separate Zutat erfassen, Wasser nicht einfach weiterzählen.'
  :id==='oven-potatoes-sesame-personal'
@@ -132,7 +136,11 @@ const round=x=>Math.round((x+Number.EPSILON)*100)/100;
 export function recipeSnapshot(id,input){
  const def=RAW[id];if(!def)return [];
  const rows=new Map((Array.isArray(input)?input:[]).filter(x=>x?.id).map(x=>[x.id,x]));
- return def.ingredients.map(x=>{const edited=rows.get(x.id),n=Number(String(edited?.grams??'').replace(',','.'));
+ // Existing snapshot from the incorrectly labeled pastry recipe: carry forward
+ // only intentionally edited ingredient amounts. Never reinterpret a presumed
+ // 100g generic vegetable mix as CONFIRMED vegetables after the correction.
+ const legacyPastry=id==='korean-spicy-tofu-vegetable-strudel'&&rows.has('strudel-pastry');
+ return def.ingredients.map(x=>{const prior=rows.get(x.id),edited=legacyPastry&&(prior?.assumed!==false||(x.id==='mixed-vegetables'&&Number(prior?.grams)===100))?null:prior,n=Number(String(edited?.grams??'').replace(',','.'));
   return {id:x.id,grams:edited&&Number.isFinite(n)&&n>=0&&n<=2000?round(n):x.grams,assumed:edited?.assumed===false?false:true};});
 }
 export function personalRecipeParts(id,recipe,amount='1 Portion'){
@@ -140,7 +148,7 @@ export function personalRecipeParts(id,recipe,amount='1 Portion'){
  // Existing recipes retain their prior per-entry logic. The oven-potato bowl
  // additionally supports an explicit count (e.g. '2 Portionen' or '2 Schüsseln').
  const count= ['oven-potatoes-sesame-personal','basmati-lentil-dal-broccoli-personal','homemade-poppy-cake-chocolate-personal','ironmaxx-vegan-protein-shake-mixed-berries','spar-freefrom-bio-skyr-250g','bio-magertopfen-250g','homemade-topfentorte-slice','korean-spicy-tofu-vegetable-strudel'].includes(id)
-  ? String(amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion(?:en)?|becher|glas|gläser|glaeser|glaser|schüssel(?:n)?|schuessel(?:n)?|teller|stück(?:e)?|stueck(?:e)?)\b/i)
+  ? String(amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion(?:en)?|becher|glas|gläser|glaeser|glaser|schüssel(?:n)?|schuessel(?:n)?|teller|stück(?:e)?|stueck(?:e)?|krautroulade(?:n)?)\b/i)
   : null;
  const factor=count?Number(count[1].replace(',','.')):1;
  if(!Number.isFinite(factor)||factor<=0||factor>20)return [];
