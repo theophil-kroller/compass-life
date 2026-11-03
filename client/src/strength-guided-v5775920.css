@@ -86,3 +86,28 @@
 .str92-choice button[aria-pressed="true"]{background:#2f7657;border-color:#2f7657;color:white}
 .str92-overview+.str620-bottom>small{font-size:11px;color:#72877b;max-width:55%}
 @media(max-width:600px){.str92-overview{grid-template-columns:1fr;gap:7px}.str92-tile{padding:11px;gap:4px}.str92-tile strong{font-size:16px}.str92-tile p{display:none}.str92-overview+.str620-bottom>small{display:none}}
+
+/* 0.5.91.16: flexible, scrollable content; RIR and working sets must remain tappable. */
+.str620-panel{min-height:0}
+.str620-stage{overflow-y:auto;overscroll-behavior:contain;align-items:start;min-height:0;scrollbar-gutter:stable}
+.str620-metadata{min-height:0;padding-bottom:12px}
+.str620-bottom{flex-shrink:0;position:relative;z-index:2;background:#fafbf8}
+.str34-rir-values{position:relative;z-index:1;display:flex;flex-wrap:wrap}
+.str34-rir-values button{pointer-events:auto;touch-action:manipulation}
+@media(max-width:650px){
+ .str620-panel{height:100dvh;max-height:100dvh;overflow:hidden;display:flex;flex-direction:column;padding-bottom:max(14px,env(safe-area-inset-bottom))}
+ .str620-stage{display:flex;flex-direction:column;gap:7px;flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;align-items:stretch;-webkit-overflow-scrolling:touch}
+ .str620-art{flex:0 0 auto;height:auto;min-height:0;max-height:30dvh;overflow:hidden;padding:2px;display:flex;align-items:center;justify-content:center}
+ .str620-premium-figure{height:auto;max-height:29dvh;min-height:0}
+ .str620-premium-figure img{max-height:26dvh!important;width:auto;max-width:100%;object-fit:contain}
+ .str620-metadata{flex:0 0 auto;padding-bottom:12px}
+ .str620-bottom{margin-top:5px;padding-top:5px;padding-bottom:3px;box-shadow:0 -5px 15px #fafbf8}
+ .str620-save-status{flex-shrink:0}
+ .str620-actions{min-width:0}
+ .str620-actions button{min-height:48px}
+}
+
+.str616-progression-details{font-size:12px;line-height:1.4;color:#40715b;margin:6px 0 8px;border-bottom:1px solid #e6ebe6;padding-bottom:5px}
+.str616-progression-details summary{cursor:pointer;font-weight:650;min-height:28px;display:flex;align-items:center}
+.str616-progression-details p{margin:3px 0 6px;font-size:12px}
+@media(max-width:650px){.str620-metadata{order:0}.str620-art{order:1}.str616-progression-details{margin:2px 0 5px}}

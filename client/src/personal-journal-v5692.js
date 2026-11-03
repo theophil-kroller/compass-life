@@ -72,6 +72,8 @@ export const FOOD_PRESETS=[
  ['chocolate','🍫','Schokoriegel','Snacks','1 Riegel (50 g)',220,300],
  ['snickers','🍫','Snickers','Snacks','1 Riegel (50 g)',225,275],
  ['kitkat-chunky-peanut-butter','🍫','KitKat Chunky Peanut Butter','Snacks','1 Riegel (42 g)',222,222],
+ ['zotter-labooko-himbeer-kokos','🍫','Zotter Labooko Himbeer-Kokos · vegan','Snacks','1 Stück (10 g; Annahme)',59,59],
+ ['organic-hemp-fruit-protein-bar-35g','🌱','Schalk Mühle Bio Hanfprotein-Fruchtriegel · Dattel/Rosine/Feige/Maca','Snacks','1 Riegel (35 g)',144,144],
  ['pistachio-butter-cups','🍬','Better Pistachio Butter Cups','Snacks','3 Stück (39 g)',238,242],
  ['pringles','🥔','Pringles','Snacks','1 Dose (165 g)',830,920],
  ['chio-chips','🥔','Chio Chips','Snacks','1 Packung (150 g)',740,830],
@@ -214,6 +216,15 @@ export function nutritionKcalEstimate(food,amount,recipe=null){
   if(![yogurt,honey,spread].every(Number.isFinite)||yogurt<0||honey<0||spread<0||yogurt>1000||honey>150||spread>150)return null;
   const kcal=yogurt*1.15+honey*3.04+spread*(food.id==='lyttos-pistachio-breakfast'?6.58:6.16);
   return {low:Math.max(0,Math.round(kcal)-2),high:Math.round(kcal)+2,kind:'Zutatenbasierte Schätzung'};
+ }
+ if(['zotter-labooko-himbeer-kokos','organic-hemp-fruit-protein-bar-35g'].includes(food?.id)){
+  const a=String(amount||food.defaultAmount||'');
+  const g=a.match(/(\d+(?:[.,]\d+)?)\s*g\b/i),pieces=a.match(/(\d+(?:[.,]\d+)?)\s*(?:st[üu]ck(?:e)?|riegel|tafeln?)\b/i);
+  const base=food.id==='zotter-labooko-himbeer-kokos'?10:35;
+  const grams=pieces?Number(pieces[1].replace(',','.'))*(food.id==='zotter-labooko-himbeer-kokos'&&/tafel/i.test(pieces[0])?35:base):g?Number(g[1].replace(',','.')):base;
+  if(!Number.isFinite(grams)||grams<0||grams>2000)return null;
+  const kcal=Math.round(grams*(food.id==='zotter-labooko-himbeer-kokos'?5.86:4.10));
+  return {low:kcal,high:kcal,kind:'Originaletikett · proportional berechnet'};
  }
  if(food?.id==='smoothie-personal')return smoothieKcalEstimate(recipe,amount);
  if(PERSONAL_RECIPE_IDS.includes(food?.id))return personalRecipeKcal(food.id,recipe,amount);

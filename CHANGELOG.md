@@ -1,3 +1,7 @@
+## 0.5.91.16 · Workbook UX: optionaler Hantelaufbau; Zotter und Bio-Hanfproteinriegel
+
+Siehe RELEASE_0.5.91.16.md.
+
 ## 0.5.91.15 · Equipment-aware V-Taper Progression
 
 - Konfigurierbares Scheibeninventar, reale Gewichtsstufen (auch für zwei identische Hanteln), unknown Griffgewicht.

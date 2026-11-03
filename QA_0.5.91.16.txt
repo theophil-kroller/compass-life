@@ -1,0 +1,9 @@
+COMPASS 0.5.91.16 / QA
+Base: main at 8585ac21658a8bd28c35bbe105b36006571f7e16 (0.5.91.15)
+Content: optional compact equipment icon/disclosure, workout RIR access and mobile scroll, two photo-derived snacks.
+Targeted tests: 18 / 18 passed (0.5.91.15 equipment + new tests).
+Full tests: 2006 / 2041 passed; 35 historical failing tests, 0 newly introduced failures.
+Deployment: npm run check:deploy passed, 33/33 release tests.
+Production assets: npm run build blocked: vite executable not installed; must compile after npm ci in GitHub Actions.
+Data: no changes to existing workout data, nutrition records or encrypted vault.
+Release: see RELEASE_0.5.91.16.md

@@ -95,8 +95,8 @@ export function equipmentDecision115({profile,exerciseId,lastKg,rirModel,previou
 }
 export function equipmentMarkup115(decision,{compact=false}={}){
  if(!decision)return '';
- const load=decision.load;const text=plateText115(load);
- const alternatives=decision.alternatives||[];
+ const load=decision.load, alternatives=decision.alternatives||[];
  const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- return `<div class="str115-load" aria-label="Machbare Kurzhantelbeladung"><div class="str115-load-top"><strong>${decision.action==='increase-load'?'Gewichtsvorschlag':decision.action==='hold-jump'?'Gewicht halten':'Scheibenbeladung'}</strong>${load?`<span>${escape(fmt(load.plateKg))} kg Scheiben/Hantel</span>`:''}</div>${load?plateSvg115(load):''}<small>${escape(text)}</small>${compact?`<details><summary>Beladung & Begründung</summary><p>${escape(decision.message)}</p>${alternatives.map(x=>`<p>${escape(plateText115(x))}</p>`).join('')}</details>`:`<p>${escape(decision.message)}</p><details><summary>Nächste mögliche Stufen</summary>${alternatives.map(x=>`<p>${escape(plateText115(x))}</p>`).join('')||'<p>Keine weitere Stufe verfügbar.</p>'}</details>`}</div>`;
+ const heading=decision.action==='increase-load'?'Gewichtsvorschlag':decision.action==='hold-jump'?'Gewicht halten':'Scheibenbeladung';
+ return `<details class="str115-load str115-collapsible" aria-label="Scheibenbelegung berechnen und anzeigen"><summary class="str115-load-toggle"><span aria-hidden="true">🏋️</span> ${heading} <small>${load?`${escape(fmt(load.plateKg))} kg/Hantel`:'anzeigen'}</small></summary><div class="str115-load-inner">${load?plateSvg115(load):''}<small>${escape(plateText115(load))}</small><p>${escape(decision.message)}</p><details><summary>Nächste baubare Stufen</summary>${alternatives.map(x=>`<p>${escape(plateText115(x))}</p>`).join('')||'<p>Keine weiteren Stufen verfügbar.</p>'}</details></div></details>`;
 }

@@ -10,7 +10,7 @@ const NAMES={beans:'Hülsenfrüchte',berries:'Beeren',fruit:'Obst',cruciferous:'
 const grams=s=>{const m=String(s||'').match(/(?:^|[^\d])(\d+(?:[.,]\d+)?)\s*g\b/i);return m?Number(m[1].replace(',','.')):null;};
 const ml=s=>{const m=String(s||'').match(/(?:^|[^\d])(\d+(?:[.,]\d+)?)\s*ml\b/i);return m?Number(m[1].replace(',','.')):null;};
 const round=n=>Math.round(n*100)/100;
-function scale(entry){const x=String(entry.amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion|portionen|glas|gläser|glaser|teller|schüssel|schüsseln|schuessel|schuesseln|stück|stücke|stueck|stuecke|krautroulade|krautrouladen)\b/i);return x?Math.max(0,Math.min(4,Number(x[1].replace(',','.')))):1;}
+function scale(entry){const x=String(entry.amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion|portionen|glas|gläser|glaser|teller|schüssel|schüsseln|schuessel|schuesseln|stück|stücke|stueck|stuecke|krautroulade|krautrouladen|riegel)\b/i);return x?Math.max(0,Math.min(4,Number(x[1].replace(',','.')))):1;}
 function validAmount(n){return typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=2000;}
 /** Returns portions with source hints. One logged recipe is counted once,
  * based on its saved ingredient snapshot; no extra food credit for being a drink.
@@ -34,6 +34,19 @@ export function dailyDozenIngredientEvidence404(state,day){
    // Provisional partial serving from a *consumed* dish with clearly named vegetables.
    // No weight supplied => DO NOT assert a full serving.
    if(candidates.includes('vegetables')&&/ratatouille|gemüse|gemuese|vegetable/.test(title)){add('vegetables',0.5,'Mensa · Gemüseanteil im Gericht (vorläufig, Menge unbekannt)',sourceId);notes.vegetables.push('Mensa-Portion unbekannt: 0,5 vorläufiger Vergleichswert, bitte Gemüsemenge bestätigen.');}
+   continue;
+  }
+  if(id==='organic-hemp-fruit-protein-bar-35g'){
+   const barMass=/^\s*\d+(?:[.,]\d+)?\s*riegel\b/i.test(a)?35*factor:g!==null?g:35*factor;
+   // 53% total dried fruit is confirmed; proportions of dates/raisins/figs unknown.
+   add('fruit',barMass*.53/40,'Hanf-Fruchtriegel · 53 % Trockenfrüchte (≈, 40 g Referenzportion Trockenobst)',sourceId);
+   notes.nuts.push('Hanfprotein ist keine bestätigte ganze Nuss-/Samenportion.');
+   notes.spices.push('Maca und Zimt vorhanden, Menge unbekannt: keine Gewürzportion.');
+   continue;
+  }
+  if(id==='zotter-labooko-himbeer-kokos'){
+   notes.berries.push('Zotter Himbeer-Kokos: 8 % gefriergetrocknete Himbeeren, keine belegte volle Beerenportion; keine automatische Gutschrift.');
+   notes.nuts.push('Kokos/Kakaobutter: keine automatisch bestätigte Nussportion.');
    continue;
   }
   if(id==='spar-bio-flaxseed'){

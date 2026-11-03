@@ -1,0 +1,57 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {nutritionFoods,nutritionKcalEstimate} from '../client/src/personal-journal-v5692.js';
+import {nutritionDay,PRODUCT_PROFILES,nutritionParts} from '../client/src/nutrition-intelligence-v57712.js';
+import {dailyDozenIngredientEvidence404} from '../client/src/daily-dozen-evidence-v57759404.js';
+import {antiAgingEightModel} from '../client/src/anti-aging-eight-v57734.js';
+const Z='zotter-labooko-himbeer-kokos',B='organic-hemp-fruit-protein-bar-35g',D='2026-11-03';
+const food=id=>nutritionFoods({nutritionJournal:{entries:[],customFoods:[]}}).find(x=>x.id===id);
+const state=(id,amount=food(id).defaultAmount)=>({nutritionJournal:{entries:[{id:'testing',foodId:id,amount,at:D+'T12:00:00',deleted:false}],customFoods:[]}});
+const near=(a,b,tolerance=.02)=>assert.ok(Math.abs(a-b)<=tolerance,`${a} ≈ ${b}`);
+test('Zotter 10g piece uses exact 100g label and adjustable input, no automatic eating',()=>{
+ const f=food(Z);assert.equal(f.group,'Snacks');assert.equal(f.kcalLow,59);
+ const n=nutritionDay(state(Z),D);near(n.totals.kcal,58.6);near(n.totals.saturated,2.6);near(n.totals.sugar,4.8);near(n.totals.protein,.18);
+ assert.equal(n.coverage.magnesium.estimated,1);assert.equal(n.coverage.potassium.estimated,1);assert.equal(n.coverage.vitaminC.unknown,1);
+ assert.equal(n.coverage.kcal.estimated,0);
+ assert.equal(nutritionKcalEstimate(f,'35 g').low,205);
+ near(nutritionDay(state(Z,'2 Stück (10 g)'),D).totals.kcal,117.2);
+ near(nutritionDay(state(Z,'1 Tafel'),D).totals.kcal,205.1);
+ near(nutritionDay(state(Z,'35 g'),D).totals.kcal,205.1);
+ assert.equal(nutritionFoods({nutritionJournal:{entries:[],customFoods:[]}}).filter(x=>x.id===Z).length,1);
+});
+test('Hemp fruit 35g bar macro label exact, micro estimate distinguished from label',()=>{
+ const f=food(B);assert.equal(f.group,'Snacks');
+ const n=nutritionDay(state(B),D);near(n.totals.kcal,143.5);near(n.totals.protein,6.65);near(n.totals.carbs,14.7);near(n.totals.sugar,13.3);near(n.totals.fat,6.3);near(n.totals.saturated,3.47);near(n.totals.salt,.01);
+ for(const k of ['magnesium','iron','zinc','potassium','calcium','fiber'])assert.equal(n.coverage[k].estimated,1,`${k} must be estimate`);
+ for(const k of ['vitaminB12','vitaminD','iodine'])assert.equal(n.coverage[k].unknown,1,`${k} must stay unknown`);
+ assert.equal(n.coverage.protein.estimated,0);assert.equal(n.coverage.kcal.estimated,0);
+ assert.equal(nutritionKcalEstimate(f,'70 g').low,287);
+ near(nutritionDay(state(B,'2 Riegel (35 g)'),D).totals.kcal,287);
+ near(dailyDozenIngredientEvidence404(state(B,'2 Riegel (35 g)'),D).totals.fruit,2*35*.53/40);
+ near(nutritionDay(state(B,'70 g'),D).totals.protein,13.3);
+ assert.match(PRODUCT_PROFILES[B].note,/53 % Trockenfrüchte/);
+});
+test('Daily Dozen accepts fractional dried fruit, never fake full nut/spice or raspberry',()=>{
+ const b=dailyDozenIngredientEvidence404(state(B),D);
+ near(b.totals.fruit,35*.53/40);assert.equal(b.totals.nuts,0);assert.equal(b.totals.spices,0);
+ const z=dailyDozenIngredientEvidence404(state(Z),D);
+ assert.equal(z.totals.berries,0);assert.equal(z.totals.nuts,0);
+ assert.match(z.notes.berries.join(),/8 %/);
+ const a=antiAgingEightModel(state(B),D);
+ assert.equal(a.rows.find(x=>x.id==='protein').status,'partial');
+});
+test('Mobile guided workout disclosure initially closed and RIR controls remain in scroll pane',()=>{
+ const guided=fs.readFileSync(new URL('../client/src/strength-guided-v5775920.js',import.meta.url),'utf8');
+ const eq=fs.readFileSync(new URL('../client/src/strength-equipment-v059115.js',import.meta.url),'utf8');
+ const css=fs.readFileSync(new URL('../client/src/strength-guided-v5775920.css',import.meta.url),'utf8');
+ assert.match(guided,/const loadDetail=activeDumbbells\?`<details class="str115-guide-details"/);
+ assert.doesNotMatch(guided,/<details class="str115-guide-details" open/);
+ assert.match(eq,/<details class="str115-load str115-collapsible"/);
+ assert.match(guided,/data-act="rir"/);assert.match(guided,/data-act="confirm"/);
+ assert.match(guided,/data-act="set-circle"/);
+ assert.match(css,/\.str620-stage\{display:flex;flex-direction:column/);
+ assert.match(css,/\.str620-stage\{overflow-y:auto/);
+ assert.match(css,/\.str620-metadata\{order:0\}/);
+ assert.match(css,/\.str620-bottom\{flex-shrink:0/);
+});
