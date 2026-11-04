@@ -1,0 +1,21 @@
+{
+  "version": "0.5.91.17",
+  "base_version": "0.5.91.16",
+  "base_repo": "theophil-kroller/compass-life",
+  "base_branch": "main",
+  "base_commit": "a8d4951347a4da13424834ed9455b5d56fb2fe40",
+  "base_full_source_sha256": "b2f129498b8b79ba73edc9ae059cd7b451496d6463ace592a9024f5e788687fb",
+  "feature": "Makko-Ho midnight completion guard, worktime retroactive punch, two personalized nutrition recipes",
+  "new_test_file": "tests/compass-059117-makko-meal-manual-worktime.test.mjs",
+  "testBaselineFailures": 37,
+  "newRegressionFailures": 0,
+  "deployChecks": 33,
+  "compiled_production_build": false,
+  "production_build_note": "Vite executable/dependencies absent locally. GitHub Actions must compile after upload.",
+  "nutritionAutoLog": false,
+  "worktimeImportModified": false,
+  "testFinalFailures": 35,
+  "testFinalPass": 2016,
+  "testFinalTotal": 2051,
+  "historicalFailuresResolved": 2
+}

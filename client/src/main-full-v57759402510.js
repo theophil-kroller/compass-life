@@ -1,3 +1,6 @@
+import './worktime-manual-v059117.css';
+import {quickHabitSnapshot117,quickHabitDone117} from './habit-daily-guard-v059117.js';
+import {applyManualPunch117} from './worktime-manual-v059117.js';
 import {economicFlowIndex,economicPresentationRows} from './finance-economic-flows-v05914.js';
 import {financeReviewProposal,applyFinanceReviewProposal} from './finance-review-commit-v05915.js';
 import {capacityForecast,capacitySettings} from './capacity-engine-v44.js';
@@ -273,7 +276,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.16';
+const COMPASS_CLIENT_VERSION='0.5.91.17';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -1281,12 +1284,12 @@ function normalizeQuickPublic(raw){
   if(!item||!item.id)continue;
   habitMap.set(item.id,{id:String(item.id),title:String(item.title||item.id),slot:String(item.slot||''),active:item.active!==false});
  }
- const doneToday=[...new Set((Array.isArray(safe.doneToday)?safe.doneToday:[]).map(String))];
+ const {doneDay,doneToday}=quickHabitSnapshot117(safe,localDate());
  const sessions=(Array.isArray(safe.worktime?.sessions)?safe.worktime.sessions:[])
    .filter(item=>item&&item.start)
    .slice(-12)
    .map(item=>({id:String(item.id||crypto.randomUUID()),start:String(item.start),end:item.end?String(item.end):'',category:item.category||'work',updatedAt:item.updatedAt||item.end||''}));
- return {habits:[...habitMap.values()].filter(item=>item.active!==false),doneToday,worktime:{activeStart:safe.worktime?.activeStart?String(safe.worktime.activeStart):'',activeCategory:safe.worktime?.activeCategory||'work',updatedAt:safe.worktime?.updatedAt||'',sessions}};
+ return {habits:[...habitMap.values()].filter(item=>item.active!==false),doneDay,doneToday,worktime:{activeStart:safe.worktime?.activeStart?String(safe.worktime.activeStart):'',activeCategory:safe.worktime?.activeCategory||'work',updatedAt:safe.worktime?.updatedAt||'',sessions}};
 }
 function readQuickPublic(){
  try{return normalizeQuickPublic(JSON.parse(localStorage.getItem(QUICK_PUBLIC_KEY)||'null'));}
@@ -1313,7 +1316,7 @@ function ensureWorktimeState(target){
  return target.quickWorktime;
 }
 function habitItems(target){return target?(ensureHabitState(target).items.filter(item=>item.active!==false)):publicHabitItems();}
-function habitIsDone(target,habitId,day=localDate()){return target?(ensureHabitState(target).completions.some(item=>item.habitId===habitId&&item.day===day&&item.done!==false)):(quickPublic.doneToday||[]).includes(habitId);}
+function habitIsDone(target,habitId,day=localDate()){return target?(ensureHabitState(target).completions.some(item=>item.habitId===habitId&&item.day===day&&item.done!==false)):quickHabitDone117(quickPublic,habitId,day);}
 function todayHabitIds(target,day=localDate()){return habitItems(target).filter(item=>habitIsDone(target,item.id,day)).map(item=>item.id);}
 function setHabitDoneState(target,habitId,day=localDate(),done=true,doneAt=stamp()){
  const habits=ensureHabitState(target);const idx=habits.completions.findIndex(item=>item.habitId===habitId&&item.day===day);
@@ -1359,11 +1362,11 @@ function applyHabitEvent(target,entry){
 }
 function syncQuickPublicFromState(){
  if(!state)return;const habits=habitItems(state).map(item=>({id:item.id,title:item.title,slot:item.slot||'',active:item.active!==false}));
- quickPublic={habits,doneToday:todayHabitIds(state),worktime:{activeStart:worktimeSource(state).activeStart||'',activeCategory:worktimeSource(state).activeCategory||'work',updatedAt:worktimeSource(state).updatedAt||'',sessions:worktimeSessionsForDay(state).filter(item=>item.end).map(item=>({id:item.id,start:item.start,end:item.end,category:item.category||'work'})).slice(-12)}};
+ quickPublic={habits,doneDay:localDate(),doneToday:todayHabitIds(state),worktime:{activeStart:worktimeSource(state).activeStart||'',activeCategory:worktimeSource(state).activeCategory||'work',updatedAt:worktimeSource(state).updatedAt||'',sessions:worktimeSessionsForDay(state).filter(item=>item.end).map(item=>({id:item.id,start:item.start,end:item.end,category:item.category||'work'})).slice(-12)}};
  writeQuickPublic();
 }
 function syncQuickPublicHabit(habitId,done){
- const set=new Set(quickPublic.doneToday||[]);if(done)set.add(habitId);else set.delete(habitId);quickPublic={...normalizeQuickPublic(quickPublic),doneToday:[...set]};writeQuickPublic();
+ const current=normalizeQuickPublic(quickPublic),set=new Set(current.doneToday);if(done)set.add(habitId);else set.delete(habitId);quickPublic={...current,doneDay:localDate(),doneToday:[...set]};writeQuickPublic();
 }
 function syncQuickPublicWorktime(entry){
  const normalized=normalizeQuickPublic(quickPublic);const at=entry?.at||stamp();
@@ -1379,7 +1382,7 @@ function habitQuickButton(){
 }
 function worktimeQuickOverlay(){
  const source=worktimeSource(state);const active=!!source.activeStart;const sessions=worktimeSessionsForDay(state);const summary=professionalSummaryForDay(state);const total=summary.work;const nonWork=summary.nonWork;
- return `<div class="quick-panel-backdrop" data-action="worktime-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="worktime-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ZEITJOURNAL · SCHNELLERFASSUNG</p><h2 id="worktime-quick-title">Zeit erfassen</h2></div><button type="button" class="capture-modal-close" data-action="worktime-quick-close" aria-label="Arbeitszeit schließen">${ico('x',18)}</button></div><label class="pj92-quick-category">Bereich <select id="pj92-current-category">${timeCategoryOptions(active?source.activeCategory||'work':worktimeSelectedCategory)}</select></label><div class="work569-actions"><button type="button" class="work569-action is-play" data-action="worktime-quick-start">${ico('play',24)}<span>Play</span></button><button type="button" class="work569-action is-stop" data-action="worktime-quick-stop">${ico('stop',24)}<span>Stopp</span></button></div><div class="work569-status ${active?'is-active':''}"><strong>${active?'Erfassung läuft · '+(WORKTIME_CATEGORY_LABELS[source.activeCategory]||'Lebensbereich'):'Keine laufende Erfassung'}</strong><span>${active&&source.activeStart?'Seit '+formatTimeShort(source.activeStart):'Heute Arbeit: '+formatMinutesCompact(total)}</span></div><div class="work569-day"><div class="work569-day-head"><strong>Heute · Berufliche Arbeit</strong><span>${formatMinutesCompact(total)}</span></div><div class="work569-day-head"><small>Andere Lebensbereiche (nicht Arbeitszeit)</small><span>${formatMinutesCompact(nonWork)}</span></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+h(WORKTIME_CATEGORY_LABELS[item.category]||'Sonstiges')+' · '+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Noch kein Arbeitsblock erfasst.</p>'}</div><p class="quick-panel-hint">${state?(journalSyncStatus==='ok'?'Cloud-Abgleich dieses Geräts bestätigt ✓':journalSyncStatus==='abgleich'?'Synchronisierung läuft …':journalSyncStatus==='fehler'?'Abgleich fehlgeschlagen · lokal gesichert':'Lokal gesichert · Abgleich ausstehend'):'Auf diesem Gerät verschlüsselt vorgemerkt'}</p>${state?`<div class="journal-diagnostics"><small>Gerät: ${state.privateDeviceMirror?.key?(state.privateDeviceMirror.mode==='source'?'Hauptgerät':'Zweitgerät'):'Privater Geräteabgleich nicht eingerichtet'} · ${authToken?'angemeldet als '+h(currentUser||'unbekannt'):'nicht angemeldet'}</small><small>Cloud-Prüfung: ${journalLastReadAt?formatTimeShort(new Date(journalLastReadAt).toISOString())+' · Version '+journalRemoteVersion:'noch nicht erfolgt'}${journalRemoteActiveStart?' · Cloud-Timer seit '+formatTimeShort(journalRemoteActiveStart):' · kein aktiver Cloud-Timer bestätigt'}</small>${journalLastError?`<small class="journal-diagnostics-error">${h(journalLastError)}</small>`:''}<button type="button" class="secondary-btn" data-action="pj92-sync-now">Jetzt abgleichen</button></div>`:''}</section></div>`;
+ return `<div class="quick-panel-backdrop" data-action="worktime-quick-close-backdrop"><section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="worktime-quick-title"><div class="quick-panel-head"><div><p class="capture-eyebrow">ZEITJOURNAL · SCHNELLERFASSUNG</p><h2 id="worktime-quick-title">Zeit erfassen</h2></div><button type="button" class="capture-modal-close" data-action="worktime-quick-close" aria-label="Arbeitszeit schließen">${ico('x',18)}</button></div><label class="pj92-quick-category">Bereich <select id="pj92-current-category">${timeCategoryOptions(active?source.activeCategory||'work':worktimeSelectedCategory)}</select></label><div class="work569-actions"><button type="button" class="work569-action is-play" data-action="worktime-quick-start">${ico('play',24)}<span>Play</span></button><button type="button" class="work569-action is-stop" data-action="worktime-quick-stop">${ico('stop',24)}<span>Stopp</span></button></div><div class="work569-status ${active?'is-active':''}"><strong>${active?'Erfassung läuft · '+(WORKTIME_CATEGORY_LABELS[source.activeCategory]||'Lebensbereich'):'Keine laufende Erfassung'}</strong><span>${active&&source.activeStart?'Seit '+formatTimeShort(source.activeStart):'Heute Arbeit: '+formatMinutesCompact(total)}</span></div><div class="work569-day"><div class="work569-day-head"><strong>Heute · Berufliche Arbeit</strong><span>${formatMinutesCompact(total)}</span></div><div class="work569-day-head"><small>Andere Lebensbereiche (nicht Arbeitszeit)</small><span>${formatMinutesCompact(nonWork)}</span></div>${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+h(WORKTIME_CATEGORY_LABELS[item.category]||'Sonstiges')+' · '+formatTimeShort(item.start)+' – '+(item.end?formatTimeShort(item.end):'läuft')+'</span><strong>'+(item.end?formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000)):'aktiv')+'</strong></div>').join('')+'</div>':'<p class="muted-line">Noch kein Arbeitsblock erfasst.</p>'}</div>${state?`<details class="work117-backfill"><summary>✎ Vergessen einzustempeln? Arbeitszeit nachtragen</summary><form id="work117-manual-form"><p>Startzeit rückwirkend erfassen: Ohne Ende läuft der Timer ab dieser Uhrzeit weiter. Mit Ende wird ein bearbeitbarer abgeschlossener Block gespeichert.</p><div class="work117-fields"><label>Datum<input type="date" name="day" value="${localDate()}" max="${localDate()}" required></label><label>Beginn<input type="time" name="start" value="08:00" required></label><label>Ende (optional)<input type="time" name="end" placeholder="Optional"></label></div><button class="secondary-btn" type="submit">Arbeitszeit nachtragen</button><small>Nur auf einem entsperrten Gerät · in deinem verschlüsselten Zeitjournal. Vorhandene Zeiten werden nicht überschrieben.</small></form></details>`:'<p class="muted-line">Für einen Nachtrag bitte Tresor entsperren.</p>'}<p class="quick-panel-hint">${state?(journalSyncStatus==='ok'?'Cloud-Abgleich dieses Geräts bestätigt ✓':journalSyncStatus==='abgleich'?'Synchronisierung läuft …':journalSyncStatus==='fehler'?'Abgleich fehlgeschlagen · lokal gesichert':'Lokal gesichert · Abgleich ausstehend'):'Auf diesem Gerät verschlüsselt vorgemerkt'}</p>${state?`<div class="journal-diagnostics"><small>Gerät: ${state.privateDeviceMirror?.key?(state.privateDeviceMirror.mode==='source'?'Hauptgerät':'Zweitgerät'):'Privater Geräteabgleich nicht eingerichtet'} · ${authToken?'angemeldet als '+h(currentUser||'unbekannt'):'nicht angemeldet'}</small><small>Cloud-Prüfung: ${journalLastReadAt?formatTimeShort(new Date(journalLastReadAt).toISOString())+' · Version '+journalRemoteVersion:'noch nicht erfolgt'}${journalRemoteActiveStart?' · Cloud-Timer seit '+formatTimeShort(journalRemoteActiveStart):' · kein aktiver Cloud-Timer bestätigt'}</small>${journalLastError?`<small class="journal-diagnostics-error">${h(journalLastError)}</small>`:''}<button type="button" class="secondary-btn" data-action="pj92-sync-now">Jetzt abgleichen</button></div>`:''}</section></div>`;
 }
 async function storeStrengthGuidedSession(session){
  if(!state||!session?.id||session.source!=='compass-guided-v5920')return;
@@ -1412,7 +1415,7 @@ function quickWorktimeInsights(){
  const summary=professionalSummaryForDay(state),total=summary.work;
  const weekTotal=[0,1,2,3,4,5,6].reduce((sum,offset)=>{const d=new Date(localDate()+'T12:00:00');d.setDate(d.getDate()-offset);return sum+worktimeMinutesForDay(state,localDateString(d));},0);
  const working=Boolean(source.activeStart&&source.activeCategory==='work');
- return `<section class="work-card work569-insight-card"><div class="work-heading"><span>${ico('clock',18)} Tatsächliche Arbeitszeit</span><button type="button" class="secondary-btn" data-action="pj92-open-timejournal">Zeitjournal öffnen →</button></div><div class="work569-insight-grid"><div><small>Heute · nur Beruf</small><strong>${formatMinutesCompact(total)}</strong></div><div><small>7 Tage · nur Beruf</small><strong>${formatMinutesCompact(weekTotal)}</strong></div><div><small>Status</small><strong>${working?'Arbeitszeit läuft':'Keine laufende Arbeit'}</strong></div></div>${summary.nonWork?`<p class="muted-line">Zusätzlich ${formatMinutesCompact(summary.nonWork)} Sport, Erholung oder andere Lebensbereiche erfasst – nicht als Arbeit gezählt.</p>`:''}${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+formatTimeShort(item.end)+'</span><strong>'+formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000))+'</strong></div>').join('')+'</div>':'<p class="muted-line">Heute noch keine berufliche Arbeit erfasst.</p>'}</section>`;
+ return `<section class="work-card work569-insight-card"><div class="work-heading"><span>${ico('clock',18)} Tatsächliche Arbeitszeit</span><div class="work117-insight-actions"><button type="button" class="secondary-btn" data-action="worktime-quick-open">Zeit nachtragen / stempeln</button><button type="button" class="secondary-btn" data-action="pj92-open-timejournal">Zeitjournal öffnen →</button></div></div><div class="work569-insight-grid"><div><small>Heute · nur Beruf</small><strong>${formatMinutesCompact(total)}</strong></div><div><small>7 Tage · nur Beruf</small><strong>${formatMinutesCompact(weekTotal)}</strong></div><div><small>Status</small><strong>${working?'Arbeitszeit läuft':'Keine laufende Arbeit'}</strong></div></div>${summary.nonWork?`<p class="muted-line">Zusätzlich ${formatMinutesCompact(summary.nonWork)} Sport, Erholung oder andere Lebensbereiche erfasst – nicht als Arbeit gezählt.</p>`:''}${sessions.length?'<div class="work569-intervals">'+sessions.map(item=>'<div><span>'+formatTimeShort(item.start)+' – '+formatTimeShort(item.end)+'</span><strong>'+formatMinutesCompact(Math.round((new Date(item.end).getTime()-new Date(item.start).getTime())/60000))+'</strong></div>').join('')+'</div>':'<p class="muted-line">Heute noch keine berufliche Arbeit erfasst.</p>'}</section>`;
 }
 function makkoTimeInsights(st){
  const rows=(Array.isArray(st?.makkoHoSessions)?st.makkoHoSessions:[]).filter(x=>x&&Number(x.totalSeconds)>0&&Array.isArray(x.holds));
@@ -3216,6 +3219,7 @@ function bind() {
  for(const key of ['people','feelings']){const control=app.querySelector('#clp-'+key);if(control)control.onchange=()=>{lifeReportSettings[key]=control.checked;lifeReportSettings.rankedIds=[];render();};}
  const quickCategory=app.querySelector('#pj92-current-category');if(quickCategory)quickCategory.onchange=()=>{worktimeSelectedCategory=quickCategory.value;};
  for(const [formId,habitId] of [['ht25-wim-form','wim-hof'],['ht25-vocal-form','vocal-image']]){const form=app.querySelector('#'+formId);if(form)form.onsubmit=async ev=>{ev.preventDefault();if(!state)return toast('Bitte Tresor entsperren.',true);const fd=new FormData(form);const date=String(fd.get('day')||localDate());const minutes=Number(fd.get('minutes'));if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||minutes<=0||minutes>180)return toast('Bitte gültiges Datum und 1–180 Minuten eingeben.',true);const mode=habitId==='wim-hof'?String(fd.get('mode')||'evening'):'';try{await mutate(st=>{const at=date+'T12:00:00';putHabitTimeSession(st,{habitId,at,day:date,minutes,mode,source:'manual-backfill'});setHabitDoneState(st,habitId,date,true,stamp());});toast('Einheit und Dauer verschlüsselt gespeichert.');}catch(ex){toast('Nicht gespeichert: '+ex.message,true);}};}
+ const manualWork117=app.querySelector('#work117-manual-form');if(manualWork117)manualWork117.onsubmit=async ev=>{ev.preventDefault();if(!state)return toast('Tresor entsperren, um Arbeitszeit nachzutragen.',true);const fd=new FormData(manualWork117);try{const input={day:String(fd.get('day')||''),startTime:String(fd.get('start')||''),endTime:String(fd.get('end')||'')};let result;await mutate(s=>{result=applyManualPunch117(s,input);});toast(result?.mode==='running'?'Einstempelzeit nachgetragen · Timer läuft.':'Arbeitszeit im Zeitjournal nachgetragen.');}catch(error){toast(error.message,true);}};
  const timeForm=app.querySelector('#pj92-time-form');if(timeForm)timeForm.onsubmit=async ev=>{ev.preventDefault();try{const fd=new FormData(timeForm);const conv=v=>new Date(String(v)).toISOString();const entry=validTimeEntry({id:fd.get('id')||undefined,start:conv(fd.get('start')),end:conv(fd.get('end')),category:String(fd.get('category')),title:fd.get('title'),project:fd.get('project'),updatedAt:stamp()});journalSyncStatus='lokal';await mutate(s=>putTimeEntry(s,entry));timeJournalShowForm=false;timeJournalEditId='';toast('Zeitintervall gespeichert.');}catch(ex){toast(ex.message,true);}};
  const energyGoalForm=app.querySelector('#pj575-energy-form');if(energyGoalForm)energyGoalForm.onsubmit=async ev=>{
   ev.preventDefault();try{const fd=new FormData(energyGoalForm);const old=energyGoalSettings(state?.nutritionJournal?.energyGoal);
@@ -4816,6 +4820,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
    return;
  }
  if(action==='makko-guide-start'){
+   if(!state)return toast('Bitte den Tresor entsperren, um Makko-Ho zu erfassen.',true);
    const mod=await import('./makko-ho-guide-v5775910.js');
    mod.openMakkoGuide({
     onSession:async session=>{
@@ -4824,10 +4829,10 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       await mutate(st=>{
        const prior=Array.isArray(st.makkoHoSessions)?st.makkoHoSessions:[];
        if(prior.some(row=>row.id===session.id))return;
-       st.makkoHoSessions=[...prior,{...session,day:localDate()}].slice(-400);
+       st.makkoHoSessions=[...prior,{...session,day:localDateString(new Date(session.startedAt||session.finishedAt))}].slice(-400);
       });
     },
-    onFinish:async()=>{if(!habitIsDone(state,'hakka-5'))await runAction('habit-toggle','hakka-5');}
+    onFinish:async session=>{if(!state||session?.completed!==true)return;const at=session.finishedAt||stamp(),day=localDateString(new Date(at));await mutate(st=>setHabitDoneState(st,'hakka-5',day,true,at));}
    });
    return;
  }
@@ -4883,7 +4888,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='habit-toggle'){
    try{
      let vocalMinutes=null;if(id==='vocal-image'&&state&&!habitIsDone(state,id)){const entered=window.prompt('Vocal Image: Wie viele Minuten hast du geübt? (Optional – leer lassen = Dauer unbekannt)','30');if(entered!==null&&entered.trim()!==''){vocalMinutes=Number(entered.replace(',','.'));if(!(vocalMinutes>0&&vocalMinutes<=180))return toast('Bitte 1–180 Minuten eingeben.',true);}}
-     if(!state){if((quickPublic.doneToday||[]).includes(id)){toast('Für heute bereits vorgemerkt.',true);return;}const source=publicHabitItems().find(item=>item.id===id);const entry={habitId:id,title:source?.title||id,slot:source?.slot||'',day:localDate(),done:true,at:stamp()};await vault.appendSealedHabit(entry);syncQuickPublicHabit(id,true);render();toast('Habit für heute vorgemerkt.');}
+     if(!state){if(quickHabitDone117(quickPublic,id,localDate())){toast('Für heute bereits vorgemerkt.',true);return;}const source=publicHabitItems().find(item=>item.id===id);const entry={habitId:id,title:source?.title||id,slot:source?.slot||'',day:localDate(),done:true,at:stamp()};await vault.appendSealedHabit(entry);syncQuickPublicHabit(id,true);render();toast('Habit für heute vorgemerkt.');}
      else{let done=false;await mutate(s=>{done=toggleHabitDoneState(s,id,localDate());if(done&&vocalMinutes!==null)putHabitTimeSession(s,{habitId:'vocal-image',at:stamp(),day:localDate(),minutes:vocalMinutes,source:'manual-quick'});});habitQuickOpen=habitQuickOpen;toast(done?'Habit für heute abgehakt.':'Habit für heute wieder geöffnet.');}
    }catch(ex){toast(ex.message,true);}
    return;

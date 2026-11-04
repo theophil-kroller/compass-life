@@ -1,0 +1,11 @@
+.work117-backfill{margin:12px 0 6px;border:1px solid #d5e4d8;background:#f7faf7;border-radius:12px;padding:10px 12px;color:#355d4a}
+.work117-backfill summary{cursor:pointer;font-weight:700;line-height:1.5;touch-action:manipulation}
+.work117-backfill form{display:grid;gap:10px;margin-top:10px}
+.work117-backfill p{margin:0;color:#557363;line-height:1.4;font-size:12px}
+.work117-backfill small{color:#638273;line-height:1.4}
+.work117-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.work117-fields label{display:grid;gap:5px;min-width:0;font-size:12px}
+.work117-fields input{width:100%;box-sizing:border-box;min-width:0;border:1px solid #cad9ce;border-radius:8px;padding:8px;background:#fff;color:#233c31;font:inherit}
+.work117-backfill button{min-height:44px}
+.work117-insight-actions{display:flex;flex-wrap:wrap;gap:6px}
+@media(max-width:550px){.work117-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.work117-fields label:first-child{grid-column:1/-1}.work117-backfill{padding:9px}}

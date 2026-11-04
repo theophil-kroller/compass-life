@@ -52,6 +52,26 @@ const RAW=Object.freeze({
   ing('chili-flakes','Chiliflocken',.5,{kcal:282,protein:12,carbs:50,fiber:28,fat:14},'Generische getrocknete Chiliflocken · Menge geschätzt'),
   ing('salt','Zugesetztes Salz',1,{kcal:0,salt:100},'Zugesetztes Speisesalz, ca. 1 g geschätzt; natürlicher Natriumgehalt separat nicht vollständig bekannt')
  ]},
+ 'steamed-potatoes-sichuan-veg-personal':{name:'Gedämpfte Kartoffeln mit Knoblauch, Ingwer, Chili, Karotten & Sellerie · Sichuan-Art',icon:'🥔',ingredients:[
+  // User-described meal (date unspecified). Only the three small carrots, one celery
+  // stalk and one teaspoon syrup are approximate quantified descriptions.
+  // NO added oil, fat, rice, meat or garnish is inferred.
+  ing('potatoes','Kartoffeln · fein geschnitten, gedämpft (Rohgewicht geschätzt)',300,{kcal:77,protein:2.05,carbs:17.5,sugar:.82,fat:.09,fiber:2.2,potassium:425,magnesium:23,phosphorus:57,iron:.81,calcium:12,zinc:.3,folate:15,vitaminB1:.08,niacin:1.06,vitaminB6:.3,vitaminC:11},'Generische Kartoffel vor dem Dämpfen; 300 g angenommen, Vitamin C als besonders unsichere Schätzung nach Garen'),
+  ing('garlic','Frischer Knoblauch · geschätzt',8,{kcal:149,protein:6.36,carbs:33.06,sugar:1,fat:.5,fiber:2.1,potassium:401,magnesium:25,manganese:1.67,vitaminB6:1.235},'USDA/generischer roher Knoblauch, etwa 2 Zehen; genannte Zutat, Menge nicht abgewogen'),
+  ing('ginger','Frischer Ingwer · geschätzt',10,{kcal:80,protein:1.82,carbs:17.77,sugar:1.7,fat:.75,fiber:2,potassium:415,magnesium:43,vitaminB6:.16},'USDA/generischer frischer Ingwer; Menge geschätzt'),
+  ing('fresh-chili','Frische Chili · geschätzt',5,{kcal:40,protein:1.9,carbs:9,sugar:5.3,fat:.4,fiber:1.5,potassium:322,vitaminC:50},'Generische rote Chili; Vitamin C nach Erwärmen stark abhängig von Zubereitung'),
+  ing('maple-syrup','Ahornsirup · 1 TL ≈ 7 g',7,{kcal:260,carbs:67,sugar:60,potassium:212,manganese:2.9,zinc:1.47},'USDA/generischer Ahornsirup; 1 TL etwa 7 g; zugesetzter Zucker, keine Obstportion'),
+  ing('soy-sauce','Sojasauce · 1 EL geschätzt',15,{kcal:53,protein:8.1,carbs:4.9,sugar:.4,salt:14,sodium:5600},'Generische handelsübliche Sojasauce; 15 g unbestätigt. Natrium aus angenommener Salzkonzentration errechnet; Marke/Lowsalt unbekannt'),
+  ing('chili-flakes','Chiliflocken · 1 Prise',.5,{kcal:282,protein:12,carbs:50,fiber:28,fat:14,iron:7.8},'Generische getrocknete Chiliflocken; Menge geschätzt'),
+  ing('sichuan-pepper','Sichuanpfeffer · geschätzt',1,{kcal:300,protein:10,carbs:55,fiber:30,fat:8,iron:6},'Grober Gewürzproxy, keine gemessene Analyse von Sichuanpfeffer; Alkylamide nicht quantifiziert'),
+  ing('celery','Stangensellerie · 1 Stange ca. 40 g',40,{kcal:14,protein:.69,carbs:2.97,sugar:1.34,fat:.17,fiber:1.6,potassium:260,calcium:40,folate:36,vitaminK:29.3,vitaminC:3.1},'USDA/generischer Stangensellerie; eine Stange ~40 g, Sorte und Größe variieren'),
+  ing('carrots','Kleine Karotten · 3 Stück ca. 150 g',150,{kcal:41,protein:.93,carbs:9.58,sugar:4.74,fat:.24,fiber:2.8,potassium:320,calcium:33,iron:.3,folate:19,vitaminA:835,vitaminK:13.2,vitaminB6:.14},'USDA/generische rohe Karotten; 3 kleine Stück vorläufig 150 g insgesamt')
+ ]},
+ 'black-rice-cooked-personal':{name:'Schwarzer Reis · gekocht (schwarzer Basmati / Vollkornreis)',icon:'🍚',ingredients:[
+  // A pure cooked grain serving. 180 g cooked, not dry. The black-rice wholegrain
+  // claim is valid only if the actual product is naturally black wholegrain rice.
+  ing('black-rice-cooked','Schwarzer Reis · gekocht, ohne zugesetztes Salz (Vollkorn vorausgesetzt)',180,{kcal:132,protein:3.5,carbs:28,sugar:.3,fat:.9,saturated:.2,fiber:2,calcium:10,iron:.9,magnesium:45,phosphorus:110,potassium:80,zinc:1.15,manganese:1.1,vitaminB1:.12,niacin:1.4,folate:6},'Generischer gekochter schwarzer Vollkornreis, Näherung aus Reis-Nährstoffprofilen; KEIN bestätigtes Basmatiprodukt und keine Herstellerwerte, Anthocyane nicht quantifiziert')
+ ]},
  'homemade-poppy-cake-chocolate-personal':{name:'Mein selbstgebackener Mohnkuchen mit Schokolade',icon:'🍰',ingredients:[
   // One 7 × 6 × 4 cm piece is roughly 168 cm³; 140 g is an UNWEIGHED starting assumption.
   // Cake composition is unknown: the two generic proxy profiles do not imply a known baking recipe.
@@ -110,9 +130,13 @@ export const PERSONAL_RECIPE_IDS=Object.freeze(Object.keys(RAW));
 export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>Object.freeze({
  id,title:RAW[id].name,emoji:RAW[id].icon,
  group:id==='ironmaxx-vegan-protein-shake-mixed-berries'?'Getränke':['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'Frühstück':id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':['homemade-poppy-cake-chocolate-personal','homemade-topfentorte-slice'].includes(id)?'Snacks':'Mahlzeiten',
- defaultAmount:['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'1 Becher (250 g)':id==='homemade-topfentorte-slice'?'1 Stück (ca. 160 g)':id==='korean-spicy-tofu-vegetable-strudel'?'1 Krautroulade (ca. 288 g)':id==='ironmaxx-vegan-protein-shake-mixed-berries'?'1 Glas (30 g Pulver + 300 ml Wasser)':id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
+ defaultAmount:id==='black-rice-cooked-personal'?'1 Portion (180 g gekocht)':id==='steamed-potatoes-sichuan-veg-personal'?'1 Portion (Kartoffel-Gemüse-Pfanne gedämpft)': ['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'1 Becher (250 g)':id==='homemade-topfentorte-slice'?'1 Stück (ca. 160 g)':id==='korean-spicy-tofu-vegetable-strudel'?'1 Krautroulade (ca. 288 g)':id==='ironmaxx-vegan-protein-shake-mixed-berries'?'1 Glas (30 g Pulver + 300 ml Wasser)':id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
  kcalLow:null,kcalHigh:null,
- recipeNote:id==='spar-freefrom-bio-skyr-250g'
+ recipeNote:id==='steamed-potatoes-sichuan-veg-personal'
+ ?'Selbst zubereitetes Gericht nach deiner Beschreibung: gedämpfte kleine Kartoffelstücke, Knoblauch, frischer Ingwer, frische Chili, 1 TL Ahornsirup, Sojasauce, Chiliflocken, Sichuanpfeffer, 1 Stange Sellerie und 3 kleine Karotten. Vorläufige Grammannahmen: Kartoffeln 300 g (Rohgewicht), Knoblauch 8 g, Ingwer 10 g, frische Chili 5 g, Ahornsirup 7 g, Sojasauce 15 g, Chiliflocken 0,5 g, Sichuanpfeffer 1 g, Sellerie 40 g, Karotten 150 g. Kein Öl genannt – deshalb kein Öl angesetzt. Alle Grammangaben editierbar; Makro- und Mikros auf generischen Lebensmitteldaten beruhende, GARZEITABHÄNGIGE Schätzwerte. Hoher möglicher Salzanteil aus Sojasauce; Zucker aus Ahornsirup (nicht raffiniert, trotzdem freier Zucker). Daily Dozen: Karotten und Sellerie als andere Gemüse; Gewürze entsprechend dokumentierter Mengen. Kartoffeln als stärkehaltige Beilage hier bewusst nicht als Daily-Dozen-Gemüseportion oder Vollkorn gezählt; keine Nüsse, Hülsenfrüchte oder Beeren ohne Beleg. Anti-Aging Eight: pflanzliche Vielfalt und Ballaststoffe als Ernährungsindikatoren; weder Postbiotika noch Langlebigkeitseffekt gemessen.'
+ :id==='black-rice-cooked-personal'
+ ?'Eine Portion 180 g GEKOCHTER schwarzer Reis ohne zusätzliche Sauce oder Öl (Rohgewicht/Packung nicht bekannt). Nur als echter schwarzer Vollkornreis behandelt, nicht als gewöhnlicher weißer Basmatireis. Schwarzer Reis und Basmati sind nicht identisch; bitte bei Bedarf die Packung bestätigen. Makro- und Mikronährstoffe sind generische Schätzwerte; Anthocyane/Polyphenole können vorhanden sein, aber keine quantifizierte Menge oder Anti-Aging-Wirkung. Daily Dozen: nur bei echtem unpolierten schwarzen Reis ca. 1 Vollkornportion je ~100 g gegart (Orientierung); weißer Basmati zählt nicht. Anti-Aging Eight: geschätzte Ballaststoffzufuhr, kein Beleg für NAD+, Microbiomänderung oder Langlebigkeit.'
+ :id==='spar-freefrom-bio-skyr-250g'
  ?'SPAR free from laktosefreier Bio-Skyr Natur · 250 g je Becher. Etikett 02.11.2026: pro 100 g 62 kcal, Protein 11 g, KH/Zucker 4 g, Salz 0,10 g; Fett <0,5 g und gesättigte Fettsäuren <0,1 g. Fett 0,3/0,05 g und Milchprodukt-Mikros (Calcium, Phosphor, Magnesium, Kalium, B12) nur generisch geschätzt. Daily Dozen: Milchprodukt, keine Pflanzenportion. Anti-Aging Eight: Protein als dokumentierte Aufnahme, KEIN Nachweis von Proteinrestriktion oder Anti-Aging-Wirkung. Morgen geplant: beim tatsächlichen Essen eintragen, nicht automatisch vorausbuchen.'
  :id==='bio-magertopfen-250g'
  ?'Bio-Magertopfen mager/streichfähig · 250 g Becher. Etikett 02.11.2026: pro 100 g 70 kcal, 12 g Protein, 4,1 g KH/Zucker, 0,2 g Fett, gesättigt 0,1 g, Salz 0,10 g. Calcium, B12, Phosphor, Kalium und Magnesium sind generische Milchprodukt-Schätzungen, keine Etikettwerte. Keine Daily-Dozen-Pflanzenportion; Anti-Aging Eight zeigt nur dokumentierte Proteinzufuhr.'
@@ -147,7 +171,7 @@ export function personalRecipeParts(id,recipe,amount='1 Portion'){
  const def=RAW[id];if(!def)return [];
  // Existing recipes retain their prior per-entry logic. The oven-potato bowl
  // additionally supports an explicit count (e.g. '2 Portionen' or '2 Schüsseln').
- const count= ['oven-potatoes-sesame-personal','basmati-lentil-dal-broccoli-personal','homemade-poppy-cake-chocolate-personal','ironmaxx-vegan-protein-shake-mixed-berries','spar-freefrom-bio-skyr-250g','bio-magertopfen-250g','homemade-topfentorte-slice','korean-spicy-tofu-vegetable-strudel'].includes(id)
+ const count= ['oven-potatoes-sesame-personal','basmati-lentil-dal-broccoli-personal','homemade-poppy-cake-chocolate-personal','ironmaxx-vegan-protein-shake-mixed-berries','spar-freefrom-bio-skyr-250g','bio-magertopfen-250g','homemade-topfentorte-slice','korean-spicy-tofu-vegetable-strudel','steamed-potatoes-sichuan-veg-personal','black-rice-cooked-personal'].includes(id)
   ? String(amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion(?:en)?|becher|glas|gläser|glaeser|glaser|schüssel(?:n)?|schuessel(?:n)?|teller|stück(?:e)?|stueck(?:e)?|krautroulade(?:n)?)\b/i)
   : null;
  const factor=count?Number(count[1].replace(',','.')):1;
@@ -160,7 +184,11 @@ export function personalRecipeParts(id,recipe,amount='1 Portion'){
   const grams=round(row.grams*factor);
   const values=Object.fromEntries(Object.entries(ingredient.values).map(([key,n])=>[key,round(n*grams/100)]));
   return {name:ingredient.label,part:'Persönliches Rezept',amount:grams,unit:'g',source:ingredient.source,values,
-   estimatedKeys:ingredient.labelVerified?[...new Set(['sodium',...(ingredient.estimatedKeys||[])])]:ingredient.id==='water'?[]:Object.keys(values),extra:[],note:ingredient.labelVerified?'Etikettwerte linear skaliert und gerundet; Natrium aus Salz abgeleitet. Nicht auf dem Etikett deklarierte Nährstoffe sind als generische Schätzung markiert oder bleiben unbekannt.':ingredient.id==='water'?'Reines Wasser ohne Energie; Mineralstoffe je Quelle unbekannt':row.assumed?'Menge vorläufig, bitte bei Bedarf abwiegen; generisches Nährstoffprofil':'Menge persönlich editiert; Nährstoffprofil weiterhin geschätzt'};
+   estimatedKeys:ingredient.labelVerified?[...new Set(['sodium',...(ingredient.estimatedKeys||[])])]:ingredient.id==='water'?[]:Object.keys(values),extra:
+    id==='black-rice-cooked-personal'&&ingredient.id==='black-rice-cooked'?[{key:'anthocyanins-black-rice',label:'Anthocyane / Anthocyanidine (schwarzer Vollkornreis)',value:null,unit:'mg'}]:
+    id==='steamed-potatoes-sichuan-veg-personal'&&ingredient.id==='ginger'?[{key:'gingerols',label:'Gingerole / Shogaole (Ingwer)',value:null,unit:'mg'}]:
+    id==='steamed-potatoes-sichuan-veg-personal'&&['fresh-chili','chili-flakes'].includes(ingredient.id)?[{key:'capsaicinoids',label:'Capsaicinoide (Chili)',value:null,unit:'mg'}]:
+    id==='steamed-potatoes-sichuan-veg-personal'&&ingredient.id==='sichuan-pepper'?[{key:'sanshools',label:'Sanshoole (Sichuanpfeffer)',value:null,unit:'mg'}]:[],note:ingredient.labelVerified?'Etikettwerte linear skaliert und gerundet; Natrium aus Salz abgeleitet. Nicht auf dem Etikett deklarierte Nährstoffe sind als generische Schätzung markiert oder bleiben unbekannt.':ingredient.id==='water'?'Reines Wasser ohne Energie; Mineralstoffe je Quelle unbekannt':row.assumed?'Menge vorläufig, bitte bei Bedarf abwiegen; generisches Nährstoffprofil':'Menge persönlich editiert; Nährstoffprofil weiterhin geschätzt'};
  }).filter(Boolean);
 }
 export function personalRecipeKcal(id,recipe,amount){

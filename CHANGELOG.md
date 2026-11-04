@@ -1,3 +1,11 @@
+## 0.5.91.17 · Makko-Ho-Tagesstatus, Arbeitszeit-Nachtrag & zwei neue Gerichte (04.11.2026)
+
+- Makko-Ho/Habit-Schnellansicht: vormals datumslose 'doneToday'-Caches sind nicht mehr tagesübergreifend gültig. Nur heutige, datierte Häkchen zählen; Abschluss bestätigt den richtigen Tag statt einen bereits erledigten Habit erneut umzuschalten.
+- Arbeitszeit-Schnellerfassung: Aufklappbarer Formularbereich 'Vergessen einzustempeln?' (Datum + Startuhrzeit + optionales Ende). Start ohne Ende läuft als rückwirkend gestarteter Timer; mit Ende wird das vorhandene verschlüsselte Zeitjournal genutzt, dort bearbeitbar. Schutz vor ungültigen Zeiten und Überschneidungen; kein erfundenes Arbeitszeitende und keine Änderung am Excel-Import.
+- Zwei neue, wiederverwendbare Speisen im Ernährungsmenü: gedämpfte Kartoffeln mit Ingwer, Knoblauch, Chili, Sellerie, Karotten, Sojasauce, Ahornsirup und Sichuanpfeffer (351 kcal, Annahmen) sowie gekochter schwarzer Vollkornreis (238 kcal je angenommene 180 g). Grammangaben einzeln editierbar; Quellen und geschätzte Makro-/Mikronährstoffe; Anti-Aging Eight und beide Daily-Dozen-Ansichten berücksichtigen die dokumentierten Zutaten ohne Doppelzählung.
+- Bioaktive Bestandteile qualitativ vermerkt (z. B. Anthocyane, Gingerole, Capsaicinoide, Sanshoole); Konzentrationen ausdrücklich unbekannt. Keine automatische Buchung ins Tagebuch und keine Migration.
+- Tests 0.5.91.17: 10 neue Regressionstests erfolgreich, 33/33 Deployment-Prüfungen. Vollsuite-Abgleich gegen Originalversion 0.5.91.16: 35 verbleibende historische Fehler gegenüber 37 in der unveränderten Basis 0.5.91.16; keine neuen Fehlertests. Vite-Bundle nur nach Installation von Dependencies kompiliert.
+
 ## 0.5.91.16 · Workbook UX: optionaler Hantelaufbau; Zotter und Bio-Hanfproteinriegel
 
 Siehe RELEASE_0.5.91.16.md.

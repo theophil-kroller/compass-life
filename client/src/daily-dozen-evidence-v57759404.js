@@ -95,6 +95,17 @@ export function dailyDozenIngredientEvidence404(state,day){
     add('cruciferous',(by['broccoli-cooked']||0)/80,'Linsendal · Brokkoli (gekocht, geschätzt)',sourceId);
     const curry=by['curry-powder']||0;
     if(curry>0){spiceGrams+=curry;notes.spices.push(`Linsendal · Currygewürze: ~${round(curry)} g (geschätzt)`);sources.push({id:sourceId,category:'spices',grams:round(curry),source:'Linsendal · Currygewürze'});}
+   } else if(id==='steamed-potatoes-sichuan-veg-personal'){
+    // Small carrots and celery count as other vegetables; not potatoes. No oil
+    // or animal foods were named, and potatoes are not grain servings.
+    add('vegetables',((by.carrots||0)+(by.celery||0))/80,'Gedämpftes Kartoffel-Gemüse · Karotten & Stangensellerie (Mengen geschätzt)',sourceId);
+    const herbs=(by.ginger||0)/10+(by.garlic||0)/10+(by['fresh-chili']||0)/10+(by['chili-flakes']||0)+(by['sichuan-pepper']||0);
+    if(herbs>0){spiceGrams+=herbs;notes.spices.push(`Kartoffel-Gemüse · Ingwer/Knoblauch/Chili/Sichuanpfeffer: ~${round(herbs)} g Trockenäquivalent (grob)`);sources.push({id:sourceId,category:'spices',grams:round(herbs),source:'Kartoffel-Gemüse · Gewürze'});}
+    notes.wholegrains.push('Gedämpfte Kartoffeln sind kein Vollkorn; Ahornsirup und Sojasauce keine Daily-Dozen-Pflanzenportionen.');
+   } else if(id==='black-rice-cooked-personal'){
+    // Separate foodId explicitly means cooked NATURALLY BLACK wholegrain rice.
+    // Not ordinary polished/white basmati. Actual grain/packaging can be edited.
+    add('wholegrains',(by['black-rice-cooked']||0)/100,'Schwarzer Vollkornreis · gekocht (Produktart noch zu bestätigen)',sourceId);
    } else if(id==='ironmaxx-vegan-protein-shake-mixed-berries'){
     // Protein powder is NOT a berry portion; flavour alone gives no berries.
     // Only the recorded WATER amount is credited as a drink, not the powder.
