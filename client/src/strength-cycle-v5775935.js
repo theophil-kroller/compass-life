@@ -1,3 +1,4 @@
+import {guidedSetDay} from './strength-session-days-v059121.js';
 /** Compass 0.5.91.14 · evidence-led V-Taper cycles.
  * Cycle decisions are stored in the existing encrypted journal, never as a
  * second workout log. All statistics use strengthPeriod's Garmin/Coach merge.
@@ -106,9 +107,10 @@ export function cycleBlockEvaluation35(sessions,{startDay,today,health={},state=
   const res=coachPlateau47(state,id,{today,primary:rows.at(-1)?.primary||'back',healthAttention:health.attention===true});
   if(res.status==='possible-plateau')plateaus.push({exerciseId:id,action:res.action,reason:res.reason});
  }
- const knownRir=[...new Map(asArray(state?.strengthGuidedSessions).filter(s=>s?.source==='compass-guided-v5920'&&!s.deleted&&s.startedAt?.slice(0,10)>=startDay&&s.startedAt.slice(0,10)<=stop).map(s=>[String(s.id||s.startedAt),s])).values()]
-  .flatMap(s=>asArray(s.exercises).flatMap(e=>asArray(e.confirmedSets)))
-  .filter(s=>s?.confirmed===true&&Number.isInteger(s.rir)&&s.rir>=0&&s.rir<=4).map(s=>s.rir);
+ const knownRir=asArray(state?.strengthGuidedSessions)
+  .filter(s=>s?.source==='compass-guided-v5920'&&!s.deleted)
+  .flatMap(session=>asArray(session.exercises).flatMap(e=>asArray(e.confirmedSets).filter(set=>set?.confirmed===true&&guidedSetDay(session,set)>=startDay&&guidedSetDay(session,set)<=stop)))
+  .filter(set=>Number.isInteger(set.rir)&&set.rir>=0&&set.rir<=4).map(set=>set.rir);
  const last=asArray(within).at(-1)?.day||null;
  return {startDay,endDay,observedThrough:stop,trainingDays:unique.length,confirmedSets:confirmed.length+countOnly||null,
   knownDetailSets:confirmed.length,unknownSets:anyUnknown,
@@ -144,7 +146,11 @@ export function coachCycle35(state,{today,goal='vtaper',history={},health={},cyc
  const interrupted=daysIdle!==null&&daysIdle>=BREAK_DAYS;
  const recommendation=evaluation?cycleRecommendation35(evaluation,{health,interrupted,deloadActive}):null;
  const shoulder=shoulderRegions35(history,today);
- const recent=asArray(state?.strengthGuidedSessions).filter(s=>s?.source==='compass-guided-v5920'&&String(s.startedAt||'').slice(0,10)<=today).sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt))).slice(0,3).flatMap(s=>asArray(s.exercises).flatMap(e=>asArray(e.confirmedSets))).filter(s=>s.confirmed&&Number.isInteger(s.rir)&&s.rir>=0&&s.rir<=4);
+ const recent=asArray(state?.strengthGuidedSessions).filter(s=>s?.source==='compass-guided-v5920'&&!s.deleted)
+  .flatMap(session=>asArray(session.exercises).flatMap(e=>asArray(e.confirmedSets).filter(set=>set?.confirmed===true&&guidedSetDay(session,set)<=today)
+    .map(set=>({...set,_at:set.completedAt||session.startedAt}))))
+  .filter(set=>Number.isInteger(set.rir)&&set.rir>=0&&set.rir<=4)
+  .sort((a,b)=>String(b._at||'').localeCompare(String(a._at||''))).slice(0,12);
  const hard=recent.length>=4&&recent.filter(s=>s.rir===0).length>=3;
  const suggestDeload=goal==='vtaper'&&health.attention===true&&hard&&!deloadActive;
  const phase=!block?'unconfigured':paused?'paused':deloadActive?'deload':dueReview?'review':'build';

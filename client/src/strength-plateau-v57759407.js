@@ -1,3 +1,4 @@
+import {guidedSetDay} from './strength-session-days-v059121.js';
 /** Compass .59.40.7 — auditable plateau, rest and Fitdays trend evidence.
  * No diagnosis of muscle growth, no fabricated RIR/rest, no automated edits.
  * Evidence rules are conservative product heuristics, not validated clinical cutoffs.
@@ -37,11 +38,16 @@ export function sessionEvidence47(state,exerciseId,today){
  const out=[];
  for(const session of Array.isArray(state?.strengthGuidedSessions)?state.strengthGuidedSessions:[]){
   if(session?.source!=='compass-guided-v5920'||!(session.completed===true||session.finishedAt))continue;
-  const day=String(session.startedAt||'').slice(0,10);if(!goodDay(day)||day>today)continue;
-  const age=deltaDays(day,today);if(age===null||age>100)continue;
+
   for(const exercise of session.exercises||[]){
    if(exercise.exerciseId!==exerciseId)continue;
-   const sets=(exercise.confirmedSets||[]).filter(s=>s?.confirmed&&Number.isInteger(s.reps)&&s.reps>0&&s.reps<=100);
+   const byDay=new Map();
+   for(const set of exercise.confirmedSets||[]){
+    if(set?.confirmed!==true||!Number.isInteger(set.reps)||set.reps<=0||set.reps>100)continue;
+    const d=guidedSetDay(session,set);if(!goodDay(d)||d>today||deltaDays(d,today)>100)continue;
+    const rows=byDay.get(d)||[];rows.push(set);byDay.set(d,rows);
+   }
+   for(const [day,sets] of byDay){
    if(sets.length<2)continue;
    const weighted=sets.filter(s=>Number.isFinite(s.weightKg)&&s.weightKg>0);
    const kilos=median(weighted.map(s=>s.weightKg));
@@ -50,8 +56,9 @@ export function sessionEvidence47(state,exerciseId,today){
    const load=weighted.length===sets.length?kilos:null;
    const reps=median(sets.map(s=>s.reps));
    const validRir=sets.map(s=>s.rir).filter(x=>Number.isInteger(x)&&x>=0&&x<=4);
-   const rest=coachRestEvidence47(exercise);
+   const rest=coachRestEvidence47({...exercise,confirmedSets:sets});
    out.push({day,sessionId:session.id||session.startedAt,exerciseId,reps,load,sets:sets.length,rir:median(validRir),rest:rest.medianMeasuredSeconds,restCount:rest.measuredCount,intervalCount:rest.intervalCount});
+   }
   }
  }
  // More than one occurrence per day is not four independent training days.

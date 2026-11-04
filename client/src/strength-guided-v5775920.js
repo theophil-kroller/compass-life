@@ -212,7 +212,8 @@ export function openGuidedWorkout({plan,onSession=async()=>{},resumeSession=null
       prior.reps=(prior.reps??target)<=0?target:Math.max(0,(prior.reps??target)-1);
       prior.updatedAt=new Date().toISOString();
     }else{
-      sets.push({confirmed:true,setNumber:index,reps:timeBased(ex)?null:proposedReps(ex,index),weightKg:plateKg,completedAt:new Date().toISOString()});
+      const confirmedAt=new Date(),completedAt=confirmedAt.toISOString(),completedDay=confirmedAt.toLocaleDateString('sv-SE');
+      sets.push({confirmed:true,setNumber:index,reps:timeBased(ex)?null:proposedReps(ex,index),weightKg:plateKg,completedAt,completedDay});
       if(sets.length<curr.sets)setRest(curr.restSeconds);
     }
     void persist().catch(console.warn);render();

@@ -8,3 +8,13 @@
 .bp120-whtr,.bp120-bmi{font-size:12px;margin:11px 0;line-height:1.55;padding:10px;background:#f0f7f1;border-radius:10px}.bp120-whtr.elevated,.bp120-whtr.high{background:#fcf4e6}.bp120-explain{font-size:11px;color:#657e73;line-height:1.5;margin:12px 0 0}.bp120-asym{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.bp120-asym h5{width:100%;font-size:12px;margin:0}.bp120-asym span{font-size:11px;padding:6px 9px;border-radius:8px;background:#edf3ef}.bp120-asym strong{color:#315d4c}
 @media(max-width:850px){.bp120-cols{grid-template-columns:1fr}.bp120-svg{max-height:370px;max-width:330px}}
 @media(max-width:420px){.bp120-panel{padding:9px}.bp120-ratio strong{font-size:15px}}
+
+/* 0.5.91.21: one anatomical selection and one trend panel; optional ratios do not duplicate the chart. */
+.bp120-unified{margin-top:8px}
+.bp120-unified .bp120-cols{grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);gap:14px}
+.bp120-unified .bm918-detail{border:1px solid #e2ebe6;border-radius:12px;background:white;padding:14px}
+.bp120-extras{margin-top:12px;border-top:1px solid #dce8e2;padding-top:10px}
+.bp120-extras>summary{cursor:pointer;color:#365e50;font-size:12px;font-weight:650;list-style:revert;padding:8px 2px}
+.bp120-extras[open] .bp120-ratios{margin-top:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.bp120-extras .bp120-ratio{min-width:0}
+@media(max-width:850px){.bp120-unified .bp120-cols{grid-template-columns:1fr}.bp120-extras[open] .bp120-ratios{grid-template-columns:1fr}.bp120-unified .bm918-detail{padding:12px}}

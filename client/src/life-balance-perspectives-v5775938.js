@@ -1,3 +1,4 @@
+import {guidedSetDay} from './strength-session-days-v059121.js';
 /** Compass .59.38 — radar perspectives; no cross-source summing or invented activity. */
 import {buildLifeBalanceRadar,buildLifeBalanceHistory,lifeBalanceRadarView} from './life-balance-radar-v563.js';
 import {joinedFitnessDays} from './insights-fitness.js';
@@ -23,9 +24,11 @@ export function radarMovement38(state={},healthDays=[],today='2026-10-26',period
  const strengthDays=new Set();
  for(const s of sessions)if(strengthSport(s))strengthDays.add(s.day);
  for(const s of Array.isArray(state.strengthGuidedSessions)?state.strengthGuidedSessions:[]){
-  if(!s||!s.startedAt)continue;const d=s.startedAt.slice(0,10);
-  if(d<start||d>today||s.completed!==true)continue;
-  if(Array.isArray(s.exercises)&&s.exercises.some(e=>(e.confirmedSets||[]).some(set=>set.confirmed===true)))strengthDays.add(d);
+  if(s?.source!=='compass-guided-v5920')continue;
+  for(const e of s.exercises||[])for(const set of e.confirmedSets||[]){
+   if(set?.confirmed!==true)continue;
+   const d=guidedSetDay(s,set);if(d&&d>=start&&d<=today)strengthDays.add(d);
+  }
  }
  const count=strengthDays.size;
  const strength=axis('strength38','Krafttraining',count?count/(period*2/7)*100:null,

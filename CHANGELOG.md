@@ -1,3 +1,8 @@
+## 0.5.91.21 (2026-11-04)
+- Fitdays+ Smart-Tape-Ansicht auf eine Silhouette und einen ausgewählten Trend reduziert; Kennzahlen optional.
+- Confirmed-Set-Tageszuordnung in Coach-Historie, Muskelkarte und Regenerationsauswertung korrigiert (Workout kann mehrere Kalendertage umfassen).
+- Keine Datenmigration, GitHub-Pages-Hotfix 0.5.91.20.1 bleibt erhalten.
+
 ## 0.5.91.20 · WHR-Referenzskala, anthropometrische Ratios und proportionale Körperfigur (04.11.2026)
 
 - WHR-Referenzgrafik direkt unter „Weitere Kennzahlen“, mit sichtbarem Wertmarker und expliziten weiblichen/männlichen Orientierungsgrenzen statt bloßem Text.

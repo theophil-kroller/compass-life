@@ -1,3 +1,4 @@
+import {guidedSetDay} from './strength-session-days-v059121.js';
 /** Compass 0.5.88 – explicit StrongLifts specialization of the existing guided
  * session log. No second workout history; Garmin-compatible IDs retained.
  */
@@ -27,7 +28,7 @@ export function strongliftsNextVariant88(state){return strongliftsLastVariant88(
 export function strongliftsExerciseHistory88(state,id){return strongliftsSessions88(state).filter(s=>s.exercises?.some(e=>e.exerciseId===id)).map(s=>{const ex=s.exercises.find(e=>e.exerciseId===id),rows=(ex?.confirmedSets||[]).filter(t=>t.confirmed===true),expected=STRONGLIFTS88.A.concat(STRONGLIFTS88.B).find(x=>x[0]===id)?.[1]||5;
   const work=rows.filter(r=>Number.isInteger(r.reps)&&Number.isFinite(r.weightKg)&&r.weightKg>=0),load=work[0]?.weightKg??null;
   const consistent=load!==null&&work.length>=expected&&work.slice(0,expected).every(r=>r.reps>=5&&Math.abs(r.weightKg-load)<.05);
-  return {sessionId:s.id,day:(s.startedAt||'').slice(0,10),kg:load,sets:work.length,completed:consistent,confirmed:rows.length,expected};});}
+  return {sessionId:s.id,day:rows.length?guidedSetDay(s,rows.at(-1)):(s.startedAt||'').slice(0,10),kg:load,sets:work.length,completed:consistent,confirmed:rows.length,expected};});}
 export function strongliftsProgression88(state,id,{healthAttention=false,pain=false}={}){const cfg=strongliftsSettings88(state),records=strongliftsExerciseHistory88(state,id),last=records.at(-1),initial=cfg.weights[id];
  if(!last||last.kg===null)return {lastKg:null,suggestedKg:initial,action:initial===null?'needs-start':'configured-start',failures:0,message:initial===null?'Bitte ein aktuelles Startgewicht selbst festlegen. Alte Bestleistungen sind keine Startgewichte.':'Manuell konfiguriertes Einstiegsgewicht; Technik und Wohlbefinden prüfen.'};
  let fails=0;for(const x of records.slice().reverse()){if(x.completed)break;fails++;}
@@ -53,6 +54,6 @@ export function strongliftsSettingsMarkup88(state){const c=strongliftsSettings88
 
 /** Epley estimate; a gym trend proxy, never a measured 1RM or current max. */
 export function strongliftsEstimated1RM88(state,id){
- const rows=(state?.strengthGuidedSessions||[]).flatMap(s=>(s.exercises||[]).filter(e=>e.exerciseId===id).flatMap(e=>(e.confirmedSets||[]).filter(x=>x.confirmed===true&&Number.isFinite(x.weightKg)&&Number.isInteger(x.reps)&&x.reps>=1&&x.reps<=10).map(x=>({day:(s.startedAt||'').slice(0,10),value:Math.round(x.weightKg*(1+x.reps/30)*10)/10}))));
+ const rows=(state?.strengthGuidedSessions||[]).flatMap(s=>(s.exercises||[]).filter(e=>e.exerciseId===id).flatMap(e=>(e.confirmedSets||[]).filter(x=>x.confirmed===true&&Number.isFinite(x.weightKg)&&Number.isInteger(x.reps)&&x.reps>=1&&x.reps<=10).map(x=>({day:guidedSetDay(s,x),value:Math.round(x.weightKg*(1+x.reps/30)*10)/10}))));
  return rows.sort((a,b)=>a.day.localeCompare(b.day));
 }

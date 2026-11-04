@@ -1,3 +1,4 @@
+import {guidedSetDay} from './strength-session-days-v059121.js';
 /** Compass .59.40.6 — transparent, conservative, evidence-informed V-Taper progression.
  * RIR is ordinal self-report, 4+ means >=4 (not exactly four), and Garmin has
  * no inferred RIR. Never infer a measured recovery or guarantee hypertrophy.
@@ -13,18 +14,26 @@ const limits=range=>{
 };
 export function latestCoachRirSession46(state,exerciseId,today){
  const cut=dayISO(today)||new Date().toISOString().slice(0,10);
- const sessions=(Array.isArray(state?.strengthGuidedSessions)?state.strengthGuidedSessions:[])
-  .filter(s=>s?.source==='compass-guided-v5920'&&!s.deleted&&(s.completed===true||Boolean(s.finishedAt))&&String(s.startedAt||'').slice(0,10)<=cut&&
-   Array.isArray(s.exercises)&&s.exercises.some(e=>e.exerciseId===exerciseId&&e.confirmedSets?.some(r=>r.confirmed===true)));
- const chosen=sessions.sort((a,b)=>String(b.startedAt||'').localeCompare(String(a.startedAt||'')))[0];
+ const candidates=[];
+ for(const session of Array.isArray(state?.strengthGuidedSessions)?state.strengthGuidedSessions:[]){
+  if(session?.source!=='compass-guided-v5920'||session.deleted||!(session.completed===true||session.finishedAt))continue;
+  for(const exercise of Array.isArray(session.exercises)?session.exercises:[]){
+   if(exercise.exerciseId!==exerciseId)continue;
+   const byDay=new Map();
+   for(const set of exercise.confirmedSets||[]){
+    if(set?.confirmed!==true||!Number.isInteger(set.reps)||set.reps<=0)continue;
+    const day=guidedSetDay(session,set);if(!day||day>cut)continue;
+    const arr=byDay.get(day)||[];arr.push(set);byDay.set(day,arr);
+   }
+   for(const [day,sets] of byDay)candidates.push({day,sets,session,at:sets.map(x=>x.completedAt||session.startedAt).sort().at(-1)});
+  }
+ }
+ const chosen=candidates.sort((a,b)=>b.day.localeCompare(a.day)||String(b.at).localeCompare(String(a.at)))[0];
  if(!chosen)return null;
- const sets=chosen.exercises.filter(e=>e.exerciseId===exerciseId).flatMap(e=>e.confirmedSets||[])
-  .filter(s=>s?.confirmed===true&&Number.isInteger(s.reps)&&s.reps>0)
-  .sort((a,b)=>Number(a.setNumber||0)-Number(b.setNumber||0));
- if(!sets.length)return null;
- const day=String(chosen.startedAt||'').slice(0,10);
+ const sets=chosen.sets.sort((a,b)=>Number(a.setNumber||0)-Number(b.setNumber||0));
+ const day=chosen.day;
  const elapsed=Math.floor((Date.parse(cut+'T12:00:00Z')-Date.parse(day+'T12:00:00Z'))/86400000);
- return {day,elapsed,sets,sessionId:chosen.id||'',isFinished:chosen.completed===true||Boolean(chosen.finishedAt)};
+ return {day,elapsed,sets,sessionId:chosen.session.id||'',isFinished:chosen.session.completed===true||Boolean(chosen.session.finishedAt)};
 }
 /** New rep targets based on latest *confirmed* per-set outcomes at the same actual load.
  * Outcomes deliberately depend on one recorded session (not blended Garmin data).

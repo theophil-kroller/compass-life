@@ -1,3 +1,4 @@
+import {guidedSetDay} from './strength-session-days-v059121.js';
 /** Compass .59.34 – transparent V-Taper feedback from *confirmed* user sets.
  * No synthetic recovery scores, no unverified Garmin RIR, no automatic loading changes.
  */
@@ -11,10 +12,9 @@ export function confirmedRir34(state,exerciseId,today){
  const out=[];
  for(const session of Array.isArray(state?.strengthGuidedSessions)?state.strengthGuidedSessions:[]){
   if(session?.source!=='compass-guided-v5920'||!Array.isArray(session.exercises))continue;
-  const day=String(session.startedAt||'').slice(0,10);
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||day>today)continue;
+
   for(const e of session.exercises){if(e.exerciseId!==exerciseId)continue;
-   for(const set of Array.isArray(e.confirmedSets)?e.confirmedSets:[]){const rir=validRir34(set.rir);if(set.confirmed===true&&rir!==null)out.push({rir,day,at:set.completedAt||session.startedAt});}
+   for(const set of Array.isArray(e.confirmedSets)?e.confirmedSets:[]){const rir=validRir34(set.rir);if(set.confirmed===true&&rir!==null){const day=guidedSetDay(session,set);if(day&&day<=today)out.push({rir,day,at:set.completedAt||session.startedAt});}}
   }
  }
  return out.sort((a,b)=>String(b.at).localeCompare(String(a.at)));

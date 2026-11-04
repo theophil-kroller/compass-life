@@ -173,7 +173,7 @@ export function combinedStrengthEvents(state,period,today){
  for(const session of sessions){
   if(session?.source!=='compass-guided-v5920'||!Number.isFinite(Date.parse(session.startedAt||'')))continue;
   const corresponding=new Set(garminSessions.filter(g=>Math.abs(Date.parse(g.start)-Date.parse(session.startedAt))<=120*60*1000).map(g=>g.id));
-  const ownedSets=(Array.isArray(session.exercises)?session.exercises:[]).flatMap(e=>(Array.isArray(e.confirmedSets)?e.confirmedSets:[]).filter(set=>set?.confirmed===true).map(set=>({exerciseId:e.exerciseId,set,sessionId:session.id,day:localDay(set.completedAt)||localDay(session.startedAt)})));
+  const ownedSets=(Array.isArray(session.exercises)?session.exercises:[]).flatMap(e=>(Array.isArray(e.confirmedSets)?e.confirmedSets:[]).filter(set=>set?.confirmed===true).map(set=>({exerciseId:e.exerciseId,set,sessionId:session.id,day:/^\d{4}-\d{2}-\d{2}$/.test(String(set.completedDay||''))?set.completedDay:(localDay(set.completedAt)||localDay(session.startedAt))})));
   for(const {exerciseId,set,sessionId,day} of ownedSets){
    if(!catalog.has(exerciseId)||ageDays(day,today)===null||ageDays(day,today)>27)continue;
    coachConfirmed++;

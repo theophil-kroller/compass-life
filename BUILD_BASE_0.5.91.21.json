@@ -1,0 +1,9 @@
+{
+  "version": "0.5.91.21",
+  "baseVersion": "0.5.91.20.1",
+  "repository": "theophil-kroller/compass-life",
+  "features": ["Single unified Smart Tape silhouette and selected region trend", "Workout history split by each confirmed set local day", "Per-set completedDay preserves day across timezone changes", "Strength cycle, RIR, plateau, StrongLifts and life balance date corrections"],
+  "schemaMigration": false,
+  "userMeasurementsEmbedded": false,
+  "workflowHotfixPreserved": true
+}

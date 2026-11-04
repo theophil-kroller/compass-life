@@ -59,9 +59,11 @@ export function compass5928VtaperLuxBridge(){
   {lastKg:null,suggestedKg:null,action:'bodyweight',message:'Körpergewicht: Technik, Bewegungsumfang und Wiederholungen schrittweise verbessern.'}:
   strengthProgressionForExercise(history,id,{reps,sets:adjustedSets,equipment:location,strongLifts});`,'bodyweight progression');
    patch("function coachPrefs(){",`function strengthCoachLevel5928(state,today){
+ const setDay=(s,set)=>/^\d{4}-\d{2}-\d{2}$/.test(String(set?.completedDay||''))?set.completedDay:(()=>{const at=Date.parse(set?.completedAt||s?.startedAt||'');return Number.isFinite(at)?new Date(at).toLocaleDateString('sv-SE'):null;})();
  const sessions=(Array.isArray(state?.strengthGuidedSessions)?state.strengthGuidedSessions:[])
-  .filter(s=>s?.source==='compass-guided-v5920'&&s?.exercises?.some(e=>e.confirmedSets?.some(x=>x.confirmed))&&/^\d{4}-\d{2}-\d{2}$/.test(String(s.startedAt||'').slice(0,10))&&String(s.startedAt).slice(0,10)<=today);
- const dates=[...new Set(sessions.map(s=>String(s.startedAt).slice(0,10)))].sort();
+  .filter(s=>s?.source==='compass-guided-v5920'&&s?.exercises?.some(e=>e.confirmedSets?.some(x=>x.confirmed)));
+ const dates=[...new Set(sessions.flatMap(s=>(s.exercises||[]).flatMap(e=>(e.confirmedSets||[])
+  .filter(x=>x.confirmed).map(x=>setDay(s,x)).filter(d=>d&&d<=today))))].sort();
  const span=dates.length>1?Math.round((Date.parse(dates.at(-1)+'T12:00:00Z')-Date.parse(dates[0]+'T12:00:00Z'))/86400000):0;
  const scoredSets=sessions.flatMap(s=>s.exercises||[]).flatMap(e=>e.confirmedSets||[]).filter(x=>x.confirmed);
  const weighted=scoredSets.filter(x=>Number.isFinite(x.weightKg)&&x.weightKg>0).length;

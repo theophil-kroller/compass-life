@@ -1,3 +1,4 @@
+import {guidedSetDay,guidedDayWindow,workoutLocalDay} from './strength-session-days-v059121.js';
 /** Compass 0.5.77.59.26 | Ephemeral unified Coach + Garmin strength read-model.
  * Confirmed Coach sets are mapped to the existing exercise catalog. They are
  * NOT persisted into Garmin FIT rows and they are NOT counted merely on preview.
@@ -45,7 +46,7 @@ export function coachConfirmedStrengthSets(session){
     source:'compass-guided-confirmed',exerciseId:exercise.exerciseId,exercise:muscles.name,
     category:null,primary:muscles.primary,secondary:[...muscles.secondary],knownMuscles:true,
     reps:isPositiveInt(set.reps)?set.reps:null,weightKg:normalizedWeight(set.weightKg),
-    start:set.completedAt||session.startedAt,end:set.completedAt||session.startedAt,
+    start:set.completedAt||session.startedAt,end:set.completedAt||session.startedAt,day:guidedSetDay(session,set),
     setNumber:index,confirmed:true
    });
   }
@@ -68,22 +69,27 @@ export function mergeGuidedStrengthSessions(garminSessions,state,{today=null,sta
   if(seen.has(key))continue;seen.add(key);
   const performed=coachConfirmedStrengthSets(guided);
   if(!performed.length)continue;
-  const stamp=dateValue(guided.startedAt),day=localDay(guided.startedAt);
-  if(!day||(today&&day>today)||(start&&day<start))continue;
+  const groups=new Map();
+  for(const row of performed){if(!row.day)continue;const group=groups.get(row.day)||[];group.push(row);groups.set(row.day,group);}
+  const multiDay=groups.size>1;
+  for(const [day,groupRows] of groups){
+   if((today&&day>today)||(start&&day<start))continue;
+   const window=guidedDayWindow(guided,{day,sets:groupRows.map(row=>({set:{completedAt:row.start}}))});
+   const stamp=dateValue(window.start);
   const candidates=sessions.map((s,i)=>({s,i,delta:Math.abs((dateValue(s.start)??Infinity)-stamp)}))
-   .filter(x=>x.s.source!=='compass-guided-v5920'&&x.delta<=120*60000)
+   .filter(x=>x.s.source!=='compass-guided-v5920'&&x.delta<=120*60000&&(!x.s.day||x.s.day===day))
    .sort((a,b)=>a.delta-b.delta);
   const target=candidates[0]?.s||null;
   if(!target){
-   sessions.push({id:`coach|${key}`,source:'compass-guided-v5920',day,start:guided.startedAt,
-    end:guided.finishedAt||guided.updatedAt||guided.startedAt,sets:performed,activeSets:performed.length,
-    reportedSets:performed.length,summaryOnly:false,coachOnly:true,completed:Boolean(guided.completed)});
-   sources.coachOnlySessions++;sources.coachSets+=performed.length;
+   sessions.push({id:`coach|${key}${multiDay?'|'+day:''}`,source:'compass-guided-v5920',day,start:window.start,
+    end:window.end,sets:groupRows,activeSets:groupRows.length,
+    reportedSets:groupRows.length,summaryOnly:false,coachOnly:true,completed:window.completed,continued:multiDay});
+   sources.coachOnlySessions++;sources.coachSets+=groupRows.length;
    continue;
   }
   const consumed=new Set();
   // The same Garmin row cannot be paired with two Coach confirmations.
-  for(const coach of performed){
+  for(const coach of groupRows){
    let exact=target.sets.findIndex((g,i)=>!consumed.has(i)&&originalGarminSet(g)&&g?.exerciseId===coach.exerciseId&&compatibleReps(g.reps,coach.reps)&&closeLoad(normalizedWeight(g.weightKg),coach.weightKg));
    if(exact>=0){consumed.add(exact);sources.matchedSets++;continue;}
    // Repair only evidence-compatible *unassigned* Garmin sets. No index guessing.
@@ -105,6 +111,7 @@ export function mergeGuidedStrengthSessions(garminSessions,state,{today=null,sta
   target.coachLinked=true;
   target.reportedSets=Math.max(Number.isInteger(target.reportedSets)?target.reportedSets:0,target.sets.length);
   target.summaryOnly=false;
+  }
  }
  sessions.sort((a,b)=>String(a.start||'').localeCompare(String(b.start||'')));
  return {sessions,sources};

@@ -17,6 +17,15 @@ const localDay=(value)=>{
  const local=new Date(stamp).toLocaleDateString('sv-SE');
  return /^\d{4}-\d{2}-\d{2}$/.test(local)?local:null;
 };
+// Self-contained day readers preserve standalone Muscle Map compatibility.
+const guidedSetDay=(session,set)=>/^\d{4}-\d{2}-\d{2}$/.test(String(set?.completedDay||''))?set.completedDay:(localDay(set?.completedAt)||localDay(session?.startedAt));
+const guidedDayWindow=(session,group)=>{
+ const times=group.sets.map(x=>x.set.completedAt).filter(x=>dateValue(x)!==null).sort();
+ const started=localDay(session.startedAt)===group.day?session.startedAt:null;
+ const finished=localDay(session.finishedAt)===group.day?session.finishedAt:null;
+ return {start:started||times[0]||session.startedAt,end:finished||times.at(-1)||started||session.startedAt,
+  completed:Boolean(session.completed)&&Boolean(finished)};
+};
 const isPositiveInt=value=>Number.isInteger(value)&&value>0&&value<=500;
 const validLoad=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=500;
 const normalizedWeight=value=>validLoad(value)?value:null;
@@ -46,7 +55,7 @@ function coachConfirmedStrengthSets(session){
     source:'compass-guided-confirmed',exerciseId:exercise.exerciseId,exercise:muscles.name,
     category:null,primary:muscles.primary,secondary:[...muscles.secondary],knownMuscles:true,
     reps:isPositiveInt(set.reps)?set.reps:null,weightKg:normalizedWeight(set.weightKg),
-    start:set.completedAt||session.startedAt,end:set.completedAt||session.startedAt,
+    start:set.completedAt||session.startedAt,end:set.completedAt||session.startedAt,day:guidedSetDay(session,set),
     setNumber:index,confirmed:true
    });
   }
@@ -69,22 +78,27 @@ function mergeGuidedStrengthSessions(garminSessions,state,{today=null,start=null
   if(seen.has(key))continue;seen.add(key);
   const performed=coachConfirmedStrengthSets(guided);
   if(!performed.length)continue;
-  const stamp=dateValue(guided.startedAt),day=localDay(guided.startedAt);
-  if(!day||(today&&day>today)||(start&&day<start))continue;
+  const groups=new Map();
+  for(const row of performed){if(!row.day)continue;const group=groups.get(row.day)||[];group.push(row);groups.set(row.day,group);}
+  const multiDay=groups.size>1;
+  for(const [day,groupRows] of groups){
+   if((today&&day>today)||(start&&day<start))continue;
+   const window=guidedDayWindow(guided,{day,sets:groupRows.map(row=>({set:{completedAt:row.start}}))});
+   const stamp=dateValue(window.start);
   const candidates=sessions.map((s,i)=>({s,i,delta:Math.abs((dateValue(s.start)??Infinity)-stamp)}))
-   .filter(x=>x.s.source!=='compass-guided-v5920'&&x.delta<=120*60000)
+   .filter(x=>x.s.source!=='compass-guided-v5920'&&x.delta<=120*60000&&(!x.s.day||x.s.day===day))
    .sort((a,b)=>a.delta-b.delta);
   const target=candidates[0]?.s||null;
   if(!target){
-   sessions.push({id:`coach|${key}`,source:'compass-guided-v5920',day,start:guided.startedAt,
-    end:guided.finishedAt||guided.updatedAt||guided.startedAt,sets:performed,activeSets:performed.length,
-    reportedSets:performed.length,summaryOnly:false,coachOnly:true,completed:Boolean(guided.completed)});
-   sources.coachOnlySessions++;sources.coachSets+=performed.length;
+   sessions.push({id:`coach|${key}${multiDay?'|'+day:''}`,source:'compass-guided-v5920',day,start:window.start,
+    end:window.end,sets:groupRows,activeSets:groupRows.length,
+    reportedSets:groupRows.length,summaryOnly:false,coachOnly:true,completed:window.completed,continued:multiDay});
+   sources.coachOnlySessions++;sources.coachSets+=groupRows.length;
    continue;
   }
   const consumed=new Set();
   // The same Garmin row cannot be paired with two Coach confirmations.
-  for(const coach of performed){
+  for(const coach of groupRows){
    let exact=target.sets.findIndex((g,i)=>!consumed.has(i)&&originalGarminSet(g)&&g?.exerciseId===coach.exerciseId&&compatibleReps(g.reps,coach.reps)&&closeLoad(normalizedWeight(g.weightKg),coach.weightKg));
    if(exact>=0){consumed.add(exact);sources.matchedSets++;continue;}
    // Repair only evidence-compatible *unassigned* Garmin sets. No index guessing.
@@ -106,6 +120,7 @@ function mergeGuidedStrengthSessions(garminSessions,state,{today=null,start=null
   target.coachLinked=true;
   target.reportedSets=Math.max(Number.isInteger(target.reportedSets)?target.reportedSets:0,target.sets.length);
   target.summaryOnly=false;
+  }
  }
  sessions.sort((a,b)=>String(a.start||'').localeCompare(String(b.start||'')));
  return {sessions,sources};

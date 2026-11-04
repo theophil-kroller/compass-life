@@ -13,3 +13,10 @@
 .bm918-history{padding-left:18px}.bm918-history li{display:grid;grid-template-columns:1fr auto auto;gap:8px;font-size:12px;margin:5px 0}.bm918-history small{color:#7a9087}.bm918-caveat{margin:14px 0 0}
 @media(max-width:750px){.bm918-workspace{grid-template-columns:minmax(0,1fr)}.bm918-body-map{max-height:300px}.bm918-map-panel,.bm918-detail{padding:12px}.bm918-regions{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:420px){.bm918-regions{grid-template-columns:repeat(2,minmax(0,1fr))}.bm918-heading .secondary-btn{width:100%}}
+
+/* Compact optional region switcher; replaces the duplicated permanent value grid. */
+.bm918-chooser{margin-top:12px;border-top:1px solid #dfe9e3;padding-top:9px}
+.bm918-chooser summary{font-size:12px;font-weight:650;color:#376558;cursor:pointer;padding:6px 0}
+.bm918-chooser .bm918-regions{margin-top:10px}
+.bm918-chooser .bm918-region{display:flex;justify-content:center;align-items:center;text-align:center;min-height:38px}
+.bm918-chooser .bm918-region span{font-size:11px}
