@@ -33,14 +33,15 @@ test('Outside diagram bounds has no fake plotted marker; missing BMI uses missin
  const missing=fitdaysInterpretationView([{...sample,bmi:null}],{today:'2026-10-30',heightCm:null});
  assert.match(missing,/BMI wird nicht aus einer angenommenen Körpergröße berechnet/);
 });
-test('Only selected body matrix visualization changes; transformation, 184cm, release and original measurements remain',()=>{
+test('Only selected body matrix visualization changes; transformation, configured height, release and original measurements remain',()=>{
  const main=readFileSync(new URL('../client/src/main-full-v57759402510.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../client/src/compass-release-v57759402519.js',import.meta.url),'utf8');
  assert.match(main,/insightTab==='body'\?fitdaysInterpretationView/);
- assert.match(main,/heightCm:184,targetWeightKg:/);
+ assert.match(main,/heightCm:bodyHeightCm,targetWeightKg:/);
+ assert.doesNotMatch(main,/heightCm:184,targetWeightKg:/);
  assert.match(main,/\+bodyTransformationView\(state,/);
  assert.match(main,/\+healthBodyView\(/);
- assert.match(release,/0\.5\.77\.59\.40\.25\.22/);
+ assert.match(release,/0\.5\.91\.20/);
  const b=JSON.stringify(sample);make();assert.equal(JSON.stringify(sample),b);
  assert.equal(resolvedBodyMetrics(sample,184).bmiOrigin,'computed');
 });

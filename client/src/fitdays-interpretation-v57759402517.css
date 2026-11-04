@@ -78,3 +78,14 @@
 .fdi-whr-explain{display:grid;gap:5px;margin-top:12px;padding:11px 12px;border:1px solid #e2e9e4;border-radius:10px;background:#f4f8f6;line-height:1.45}
 .fdi-whr-explain strong{font-size:.84rem;color:#265a50;font-weight:740}
 .fdi-whr-explain small{font-size:.72rem;color:#667d74}
+
+/* 0.5.91.20 · requested always-visible WHR categorization, not hidden in details */
+.fdi-whr-graphic{margin:7px 0 9px;padding:11px 11px 9px;background:#fff;border:1px solid #dce8e1;border-radius:11px;min-width:0}
+.fdi-whr-graphic-header{display:flex;justify-content:space-between;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:12px;color:#426a60}
+.fdi-whr-graphic-header strong{color:#24574b;font-size:12px}.fdi-whr-graphic-header span{font-size:15px;font-weight:750;font-variant-numeric:tabular-nums}
+.fdi-whr-ruler{height:19px;position:relative;margin:24px 8px 0;background:#e7ece8;border-radius:5px}
+.fdi-whr-band{position:absolute;top:0;height:100%}.fdi-whr-band.reference{background:#91c5b0}.fdi-whr-band.uncertain{background:#e6d7ae}.fdi-whr-band.higher{background:#e6b38f}.fdi-whr-ruler .fdi-whr-band:first-child{border-radius:5px 0 0 5px}.fdi-whr-ruler .fdi-whr-band:last-of-type{border-radius:0 5px 5px 0}
+.fdi-whr-threshold{position:absolute;z-index:2;top:-5px;height:30px;width:2px;background:#776e5b;transform:translateX(-50%);opacity:.8}.fdi-whr-threshold.female{border-left:1px dotted white}.fdi-whr-threshold.male{background:#594e40}
+.fdi-whr-pointer{position:absolute;z-index:3;width:4px;height:31px;top:-7px;transform:translateX(-50%);background:#20576b;border-radius:3px;box-shadow:0 0 0 1px white}.fdi-whr-pointer b{display:block;position:absolute;top:-8px;left:50%;transform:translateX(-50%);border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #20576b}
+.fdi-whr-ticks{position:relative;display:flex;justify-content:space-between;gap:5px;font-size:10px;color:#6d857b;margin:9px 5px}.fdi-whr-graphic-caption{font-size:11px;line-height:1.48;color:#607b70;margin:8px 0 0}
+@media(max-width:420px){.fdi-whr-graphic{padding:8px}.fdi-whr-graphic-header span{font-size:13px}.fdi-whr-ticks{font-size:9px}}

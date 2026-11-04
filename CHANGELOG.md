@@ -1,3 +1,11 @@
+## 0.5.91.20 · WHR-Referenzskala, anthropometrische Ratios und proportionale Körperfigur (04.11.2026)
+
+- WHR-Referenzgrafik direkt unter „Weitere Kennzahlen“, mit sichtbarem Wertmarker und expliziten weiblichen/männlichen Orientierungsgrenzen statt bloßem Text.
+- Dynamische Smart-Tape-Körpersilhouette aus zusammengehörenden Messungen: echte Umfänge plus offen dokumentierte Annahmen für Frontalbreiten, anklickbare Regionen und vorhandene rechte Verlaufsansicht.
+- Neue Messkennzahlen: WHtR (NICE), Schulter/Taille, Brust/Taille, Schulter/Hüfte, BMI bei dokumentierter Größe/Gewicht, Seitenunterschiede. Keine fingierten „V-Taper-Idealwerte“.
+- Hardcodierte Körpergröße von 184 cm aus Insights entfernt; jetzt nur aus persönlichen Einstellungen, damit kein falscher „Maßstab“ entsteht.
+- Keine automatische Veränderung der Coach-Progression. Details in `RELEASE_0.5.91.20.md`.
+
 ## 0.5.91.19 · WHR-Referenz & Smart-Tape-/Fitdays-Kennzahlenbrücke (04.11.2026)
 
 - Fehlendes `Waist-to-hip ratio · WHR` unter Insights → Körper behoben: alte Fitdays-„Other indicators“ lesen nun auch im Tresor bestätigte, paarige Fitdays+-Smart-Tape-Umfänge. Priorität nach tatsächlichem Messdatum; gleiche Zeitquelle und Methode, keine Vermischung von historischen Waagen-Schätzwerten.

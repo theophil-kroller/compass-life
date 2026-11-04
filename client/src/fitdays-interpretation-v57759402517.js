@@ -193,6 +193,25 @@ function reportStrip({label,value,unit='',bands,source='',estimated=false,neutra
   ${source?`<p class="fdi-strip-source">${esc(source)}${estimated?' · berechnet':''}</p>`:''}
  </div>`;
 }
+/** Always-visible WHR category graphic. Health orientation, not an aesthetic score.
+ * Without a configured reference parameter, the intermediate zone .85–.90 is
+ * explicitly ambiguous rather than guessed from the user's name or profile.
+ */
+export function whrReferenceGraphic(whr,{sex=''}={}){
+ if(!validWhr(whr))return '<p class="fdi-whr-no-plot">Ohne tatsächlich gemessene oder dokumentiert geschätzte Taille-Hüfte-Relation keine Positionsmarkierung.</p>';
+ const lo=.70,hi=1.10,position=percent(whr,lo,hi),male=sex==='male',female=sex==='female';
+ const femalePos=percent(.85,lo,hi),malePos=percent(.90,lo,hi);
+ const leftBoundary=female?femalePos:male?malePos:femalePos;
+ const segments=male?[[lo,.90,'reference'],[.90,hi,'higher']]:female?[[lo,.85,'reference'],[.85,hi,'higher']]:[[lo,.85,'reference'],[.85,.90,'uncertain'],[.90,hi,'higher']];
+ const band=segments.map(([from,to,type])=>`<span class="fdi-whr-band ${type}" style="left:${percent(from,lo,hi).toFixed(3)}%;width:${(percent(to,lo,hi)-percent(from,lo,hi)).toFixed(3)}%"></span>`).join('');
+ const boundaryLabel=male?'0,90 · Männer':female?'0,85 · Frauen':'Frauen 0,85 · Männer 0,90';
+ return `<div class="fdi-whr-graphic" role="img" aria-label="WHR-Referenzgrafik, aktueller Wert ${whrNum(whr)}, Referenzgrenze ${esc(boundaryLabel)}; kein individueller Risikonachweis">
+  <div class="fdi-whr-graphic-header"><strong>WHR-Referenzskala</strong><span>Dein Wert: ${whrNum(whr)}</span></div>
+  <div class="fdi-whr-ruler">${band}${!male?`<i class="fdi-whr-threshold female" style="left:${femalePos.toFixed(3)}%" title="Orientierungswert Frauen: 0,85"></i>`:''}${!female?`<i class="fdi-whr-threshold male" style="left:${malePos.toFixed(3)}%" title="Orientierungswert Männer: 0,90"></i>`:''}<i class="fdi-whr-pointer" style="left:${position.toFixed(3)}%"><b></b></i></div>
+  <div class="fdi-whr-ticks"><span>0,70</span><span>0,85</span><span>0,90</span><span>1,10</span></div>
+  <p class="fdi-whr-graphic-caption">${male?'Orientierungsgrenze für Männer: 0,90.':female?'Orientierungsgrenze für Frauen: 0,85.':'Ohne persönlichen Referenzparameter zeigen wir beide Grenzen; zwischen 0,85 und 0,90 ist die Einordnung abhängig vom verwendeten Referenzparameter.'} Jenseits der jeweiligen Grenze: statistischer Marker für erhöhtes Gesundheitsrisiko, keine Diagnose.</p>
+ </div>`;
+}
 function whrReferenceMarkup(row,{whrReferenceSex='',whrHistory=[]}={}){
  const value=get(row,'whr');if(value===null)return '';
  const interpretation=whrInterpretation(value,whrReferenceSex);
@@ -204,7 +223,7 @@ function whrReferenceMarkup(row,{whrReferenceSex='',whrHistory=[]}={}){
  const observations=Array.isArray(whrHistory)?whrHistory:[];
  const delta=observations.length>=2?observations.at(-1).ratio-observations.at(-2).ratio:null;
  const trendNote=delta===null?'Erste WHR-Messung dieser Quelle · noch kein Trend':`Veränderung zur vorherigen Messung derselben Quelle: ${delta>0?'+':''}${whrNum(delta,3)}`;
- return `<div class="fdi-whr-explain" aria-label="Waist-to-hip ratio Referenzeinordnung"><strong>WHR ${whrNum(value)} · ${esc(interpretation.label)}</strong><small>${esc(boundary)} · Messung ${esc(baseDate)} · ${esc(values)}</small><small>${esc(trendNote)}. Populationsbezogene Risikomarkierung, keine Diagnose und kein direktes Maß für den V-Taper.</small></div>`;
+ return `<div class="fdi-whr-explain" aria-label="Waist-to-hip ratio Referenzeinordnung"><strong>WHR ${whrNum(value)} · ${esc(interpretation.label)}</strong>${whrReferenceGraphic(value,{sex:whrReferenceSex})}<small>${esc(boundary)} · Messung ${esc(baseDate)} · ${esc(values)}</small><small>${esc(trendNote)}. Populationsbezogene Risikomarkierung, keine Diagnose und kein direktes Maß für den V-Taper.</small></div>`;
 }
 function reportSummary(row,{targetWeightKg=null,whrReferenceSex='',whrHistory=[]}={}){
  const bmi=get(row,'bmi'),fat=get(row,'bodyFatPct'),weight=get(row,'weightKg');

@@ -1,0 +1,19 @@
+{
+  "version": "0.5.91.20",
+  "baseVersion": "0.5.91.19",
+  "repository": "theophil-kroller/compass-life",
+  "baseArtifact": "Compass_Life_0.5.91.19_SMART_TAPE_WHR_FIX_FULL_SOURCE.zip",
+  "baseFullSourceZipSha256": "2fb2e3f3d071ca19bea9593011f9b4359eaf6c6d4854721cf4c8bc9c2438aecb",
+  "feature": "WHR category chart always visible; Fitdays+ tape-based anthropometric ratios and parameterized 2D silhouette; height from settings, not hardcoded",
+  "newTests": 14,
+  "targetedTestsPassed": 40,
+  "targetedTestsTotal": 40,
+  "deployTestsPassed": 33,
+  "deployTestsTotal": 33,
+  "fullSuitePassed": 2046,
+  "fullSuiteTotal": 2080,
+  "historicalFailures": 34,
+  "productionBuildCompleted": false,
+  "reason": "vite package not installed in current environment",
+  "privateImportedFileBundled": false
+}

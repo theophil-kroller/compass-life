@@ -1,0 +1,10 @@
+/* Compass 0.5.91.20 – responsive measurement-derived proportion illustration */
+.bp120-panel,.bp120-empty{margin:12px 0 17px;padding:14px;border:1px solid #dce8e2;border-radius:15px;background:#fbfdfb;color:#284b43;min-width:0}
+.bp120-head h3,.bp120-empty h3{font-size:18px;margin:3px 0}.bp120-head small{font-size:11px;font-weight:750;letter-spacing:.1em;color:#577b6c}.bp120-head p,.bp120-empty p{font-size:12px;color:#72877c;margin:4px 0 12px}
+.bp120-cols{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1fr);gap:15px;align-items:start}.bp120-cols>div{min-width:0}.bp120-cols h4{font-size:15px;margin:4px 0 9px;color:#335c50}
+.bp120-svg{display:block;width:100%;max-width:440px;height:auto;max-height:450px;margin:0 auto;border-radius:12px;background:linear-gradient(160deg,#fcfefc,#f3f8f4)}
+.bp120-ruler text{fill:#7b9389;font-size:11px}.bp120-ruler line{stroke:#91ada4}.bp120-node{cursor:pointer;outline:none}.bp120-node:focus circle,.bp120-node:hover circle{stroke:#d3ab63;stroke-width:4}
+.bp120-ratios{display:grid;gap:7px}.bp120-ratio{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #e3ebe6;border-radius:10px;padding:9px 10px;background:white}.bp120-ratio span{font-size:13px;font-weight:650}.bp120-ratio small{display:block;font-weight:400;font-size:11px;color:#72877d;margin-top:3px;line-height:1.35}.bp120-ratio strong{font-size:17px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bp120-whtr,.bp120-bmi{font-size:12px;margin:11px 0;line-height:1.55;padding:10px;background:#f0f7f1;border-radius:10px}.bp120-whtr.elevated,.bp120-whtr.high{background:#fcf4e6}.bp120-explain{font-size:11px;color:#657e73;line-height:1.5;margin:12px 0 0}.bp120-asym{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.bp120-asym h5{width:100%;font-size:12px;margin:0}.bp120-asym span{font-size:11px;padding:6px 9px;border-radius:8px;background:#edf3ef}.bp120-asym strong{color:#315d4c}
+@media(max-width:850px){.bp120-cols{grid-template-columns:1fr}.bp120-svg{max-height:370px;max-width:330px}}
+@media(max-width:420px){.bp120-panel{padding:9px}.bp120-ratio strong{font-size:15px}}
