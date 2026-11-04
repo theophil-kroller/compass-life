@@ -1,9 +1,9 @@
-/** Compass 0.5.91.8 · Fitdays+ Smart Tape preparation (NOT a production import).
+/** Compass 0.5.91.18 · Fitdays+ Smart Tape live Health Import Hub integration.
  * Reuses nutritionJournal.bodyMeasures88, the same encrypted journal already
  * used by Coach waist/shoulder input. No second database, network or Bluetooth.
- * Only confirmed measured values; no interpolated circumferences or forecasts.
+ * Only imported actual readings; no interpolated circumferences or forecasts.
  */
-export const SMART_TAPE_FLAGS = Object.freeze({import:false,dashboard:false,adaptive:false,manualEntry:false});
+export const SMART_TAPE_FLAGS = Object.freeze({import:true,dashboard:true,adaptive:false,manualEntry:false});
 export const BODY_MEASUREMENT_REGIONS = Object.freeze([
  ['shoulder','Schulterumfang',50,220],['chest','Brustumfang',45,220],
  ['waist','Taillenumfang',40,200],['hip','Hüftumfang',45,220],
@@ -35,22 +35,23 @@ export function normalizeBodyMeasurement(raw,{now=stamp(),newId=id()}={}){
  const originalValue=raw.originalValue??raw.valueCm;
  const valueCm=bodyTapeToCm(originalValue,originalUnit);
  if(valueCm<region.minCm||valueCm>region.maxCm)throw Error(`Messwert ${region.label} außerhalb plausibler Grenzen.`);
- const at=iso(raw.at);if(!at||!dayValid(String(raw.at).slice(0,10)))throw Error('Messzeitpunkt fehlt oder ist ungültig.');
+ const sourceDay=String(raw.day||raw.at||'').slice(0,10);
+ const at=iso(raw.at);if(!at||!dayValid(sourceDay))throw Error('Messzeitpunkt fehlt oder ist ungültig.');
  if(!sourceValues.has(raw.source))throw Error('Messquelle unbekannt.');
  const updatedAt=iso(raw.updatedAt||now),createdAt=iso(raw.createdAt||now);
  if(!updatedAt||!createdAt)throw Error('Erstellungs-/Änderungszeitpunkt ungültig.');
  if(raw.qualityStatus&&!qualityValues.has(raw.qualityStatus))throw Error('Qualitätsstatus ungültig.');
  const clean=s=>s==null?null:String(s).trim().slice(0,160);
- return {id:String(raw.id||newId).slice(0,120),day:at.slice(0,10),at,regionId:region.id,
+ return {id:String(raw.id||newId).slice(0,120),day:sourceDay,at,regionId:region.id,
   valueCm,originalValue,originalUnit,source:raw.source,
-  importBatchId:clean(raw.importBatchId),method:clean(raw.method),protocol:clean(raw.protocol),
+  importBatchId:clean(raw.importBatchId),method:clean(raw.method),protocol:clean(raw.protocol),sourceLocalTime:clean(raw.sourceLocalTime),
   qualityStatus:raw.qualityStatus||'unreviewed',createdAt,updatedAt,deleted:raw.deleted===true};
 }
 /** Fingerprint deliberately includes precise timestamp: two same-day readings are separate.
  * importBatchId is EXCLUDED so reimporting the same export doesn't duplicate.
  */
 export function measurementFingerprint(m){
- return [m.source,m.regionId,m.at,Number(m.valueCm).toFixed(2),m.method||'',m.protocol||''].join('|');
+ return [m.source,m.regionId,m.sourceLocalTime||m.at,Number(m.valueCm).toFixed(2),m.method||'',m.protocol||''].join('|');
 }
 export const existingBodyMeasurements=state=>Array.isArray(state?.nutritionJournal?.bodyMeasures88)?state.nutritionJournal.bodyMeasures88:[];
 /** Creates/updates rows in the EXISTING encrypted journal. Never overwrites legacy Coach rows.
@@ -125,24 +126,55 @@ export function bodyMeasurementDashboardModel(state,{today,range='90'}={}){
  const rows=bodyMeasurementObservations(state,{today:reference}).filter(x=>!start||x.day>=start);
  const series=BODY_MEASUREMENT_REGIONS.map(r=>{const points=rows.filter(x=>x.regionId===r.id);
   return {...r,points,latest:points.at(-1)||null,changeCm:points.length>1?two(points.at(-1).valueCm-points[0].valueCm):null,
-   changePct:points.length>1?two((points.at(-1).valueCm/points[0].valueCm-1)*100):null,trend:bodyMeasurementTrend(points)};});
+   changePct:points.length>1?two((points.at(-1).valueCm/points[0].valueCm-1)*100):null,
+   lastDeltaCm:points.length>1?two(points.at(-1).valueCm-points.at(-2).valueCm):null,
+   lastDeltaPct:points.length>1?two((points.at(-1).valueCm/points.at(-2).valueCm-1)*100):null,
+   trend:bodyMeasurementTrend(points)};});
  const ratios=bodyMeasurementRatioSeries(state,{today:reference}).filter(x=>!start||x.day>=start);
- return {today:reference,range,start,series,ratios,ratioLatest:ratios.at(-1)||null,features:SMART_TAPE_FLAGS,
-  enabled:false,hasData:rows.length>0,measurements:rows.length};
+ const paired=new Map();for(const m of rows){if(m.regionId!=='waist'&&m.regionId!=='hip')continue;const v=paired.get(m.at)||{};v[m.regionId]=m;paired.set(m.at,v);}
+ const waistHip=[...paired.values()].filter(x=>x.waist&&x.hip&&x.hip.valueCm>0).map(x=>({at:x.waist.at,day:x.waist.day,ratio:two(x.waist.valueCm/x.hip.valueCm)})).sort((a,b)=>a.at.localeCompare(b.at));
+ return {today:reference,range,start,series,ratios,ratioLatest:ratios.at(-1)||null,waistHip,waistHipLatest:waistHip.at(-1)||null,features:SMART_TAPE_FLAGS,
+  enabled:true,hasData:rows.length>0,measurements:rows.length};
 }
-/** Renderable, opt-in-only future dashboard: NOT wired into production navigation. */
-export function bodyMeasurementDashboardHtml(model){
- const cards=model.series.map(r=>`<article class="bm918-card"><h3>${esc(r.label)}</h3><strong>${r.latest?esc(r.latest.valueCm.toLocaleString('de-AT'))+' cm':'–'}</strong><small>${r.points.length} Messungen · ${r.changeCm===null?'kein Vergleich':`${r.changeCm>0?'+':''}${esc(r.changeCm)} cm / ${esc(r.changePct)} %`}</small>${r.trend?`<small>Beobachteter Trend: ${r.trend.slopeCmPer30Days>0?'+':''}${esc(r.trend.slopeCmPer30Days)} cm/30 Tage · nur im Messfenster</small>`:''}${measurementDots(r.points)}</article>`).join('');
- return `<section class="bm918-dashboard" aria-label="Body Measurements und V-Taper"><header><h2>Body Measurements &amp; V-Taper</h2><p>Messungen · Dot-Plots · keine Interpolation oder Prognose</p></header><div class="bm918-grid">${cards}</div><p>V-Taper Ratio (Schulterumfang / Taillenumfang): ${model.ratioLatest?esc(model.ratioLatest.ratio):'–'} · ${model.ratios.length} gemeinsame Messtage. Kein universeller Zielbereich.</p>${measurementDots(model.ratios.map(x=>({day:x.day,valueCm:x.ratio})), 'Ratio')}<p>Smart-Tape-Import und adaptive Trainingsänderungen bleiben bis zur Originaldatei und ausreichenden Messhistorie deaktiviert.</p></section>`;
+/** Production dashboard: rendered in Insights > Körper. */
+/** Clickable schematic body map: coordinates are interface targets, never anatomical estimates. */
+const BODY_MAP_POINTS=Object.freeze({
+ head:[170,31],neck:[170,64],shoulder:[170,82],chest:[170,114],waist:[170,165],hip:[170,206],
+ leftUpperArm:[236,126],rightUpperArm:[104,126],leftThigh:[199,269],rightThigh:[141,269],
+ leftCalf:[196,364],rightCalf:[144,364]
+});
+const number=(x,digits=1)=>Number(x).toLocaleString('de-AT',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+const signed=x=>`${x>0?'+':''}${number(x)}`;
+const shortDay=x=>{try{return new Date(x+'T12:00:00Z').toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'UTC'});}catch{return String(x||'');}};
+const regionTitle=(x)=>x?.label||'Messstelle';
+export function bodyTapeLinePlot(points=[],label='Umfang'){
+ if(!points.length)return '<div class="bm918-empty">Noch keine Messung für diesen Bereich vorhanden.</div>';
+ const sorted=[...points].sort((a,b)=>a.at.localeCompare(b.at)),w=660,H=248,L=56,R=28,T=30,B=44;
+ const ts=sorted.map(x=>Date.parse(x.at)),tMin=Math.min(...ts),tMax=Math.max(...ts),timeSpan=Math.max(3600000,tMax-tMin);
+ const vals=sorted.map(x=>x.valueCm),min=Math.min(...vals),max=Math.max(...vals),pad=Math.max(0.8,(max-min)*0.22),lo=Math.max(0,min-pad),hi=max+pad;
+ const xx=(t)=>L+(tMax===tMin?.5:(t-tMin)/timeSpan)*(w-L-R),yy=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+ const pts=sorted.map((p,i)=>[xx(ts[i]),yy(p.valueCm)]);
+ const path=pts.map(([x,y],i)=>`${i?'L':'M'}${x.toFixed(2)} ${y.toFixed(2)}`).join(' ');
+ const ticks=[0,.5,1].map(q=>{const v=lo+(hi-lo)*q,y=yy(v);return `<line x1="${L}" y1="${y}" x2="${w-R}" y2="${y}" stroke="#dfe8e7" stroke-dasharray="4 5"/><text x="${L-8}" y="${y+4}" text-anchor="end" font-size="11" fill="#637b79">${number(v)}</text>`;}).join('');
+ return `<svg class="bm918-trend" viewBox="0 0 ${w} ${H}" role="img" aria-label="${esc(label)}: ${points.length} tatsächliche Messpunkte in cm" preserveAspectRatio="xMidYMid meet">${ticks}${sorted.length>1?`<path d="${path}" fill="none" stroke="#2c6f68" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`:''}${sorted.map((p,i)=>`<circle cx="${pts[i][0].toFixed(2)}" cy="${pts[i][1].toFixed(2)}" r="5.5" fill="#d8ad63" stroke="#1e5150" stroke-width="2"><title>${esc(shortDay(p.day))} · ${number(p.valueCm)} cm</title></circle>`).join('')}<text x="${L}" y="${H-12}" font-size="12" fill="#607571">${esc(shortDay(sorted[0].day))}</text><text x="${w-R}" y="${H-12}" text-anchor="end" font-size="12" fill="#607571">${esc(shortDay(sorted.at(-1).day))}</text><text x="${L}" y="16" font-size="12" fill="#607571">Umfang · cm</text></svg>`;
 }
-function measurementDots(points,unit='cm'){
- if(!points.length)return '<p class="bm918-empty">Keine Messung</p>';
- const W=250,H=70,L=12,R=12,T=12,B=16;
- const left=time(points[0].day),right=time(points.at(-1).day),span=Math.max(86400000,right-left);
- const values=points.map(x=>x.valueCm),min=Math.min(...values),max=Math.max(...values),pad=Math.max(1,(max-min)*.15);
- return `<svg role="img" aria-label="${points.length} individuelle Messpunkte" viewBox="0 0 ${W} ${H}">${points.map(x=>{const cx=L+(time(x.day)-left)/span*(W-L-R),cy=T+(max+pad-x.valueCm)/Math.max(1,max-min+pad*2)*(H-T-B);return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.4" fill="#597d8c"><title>${esc(x.day)} · ${esc(x.valueCm)} ${esc(unit)}</title></circle>`;}).join('')}<text x="${L}" y="${H-2}" font-size="8" fill="#697d77">${esc(points[0].day)}</text><text x="${W-R}" y="${H-2}" text-anchor="end" font-size="8" fill="#697d77">${esc(points.at(-1).day)}</text></svg>`;
+function bodyTapeSchematic(selected){
+ return `<svg class="bm918-body-map" viewBox="0 0 340 440" role="img" aria-label="Körperübersicht: auf eine markierte Messstelle klicken">
+ <defs><linearGradient id="bm918-body-gradient" x1="0" x2="1"><stop offset="0" stop-color="#c8d8d6"/><stop offset="1" stop-color="#edf3ef"/></linearGradient></defs>
+ <g fill="url(#bm918-body-gradient)" stroke="#79938f" stroke-width="2"><ellipse cx="170" cy="40" rx="25" ry="33"/><path d="M158 70 L157 80 Q117 78 108 92 L88 191 Q82 215 96 222 Q108 227 114 205 L133 138 L131 193 Q132 215 136 234 L131 330 L134 407 Q137 422 151 419 L159 330 L169 248 L182 330 L191 419 Q206 422 208 407 L209 329 L204 233 Q209 209 208 194 L208 138 L226 205 Q232 227 244 222 Q257 216 250 192 L231 93 Q221 78 182 80 L182 70 Z"/></g>
+ <path d="M134 143 Q170 151 206 143 M131 191 Q170 200 208 191 M134 228 Q170 237 205 228" fill="none" stroke="#9ab0ac" stroke-dasharray="3 4"/>
+ ${BODY_MEASUREMENT_REGIONS.map(r=>{const [x,y]=BODY_MAP_POINTS[r.id],chosen=r.id===selected;return `<g tabindex="0" role="button" data-action="smart-tape-region" data-id="${r.id}" aria-label="${esc(r.label)} wählen" aria-pressed="${chosen}" class="bm918-map-target ${chosen?'chosen':''}"><circle cx="${x}" cy="${y}" r="${chosen?15:12}" fill="${chosen?'#a77732':'#245f61'}" stroke="#fff" stroke-width="3"/><circle cx="${x}" cy="${y}" r="4" fill="#fff"/><title>${esc(r.label)}</title></g>`;}).join('')}</svg>`;
 }
-/** Framework for VERIFIED future exports. No assumed vendor columns or schema. */
+export function bodyMeasurementDashboardHtml(model,{selectedRegionId='shoulder'}={}){
+ const selected=model.series.find(x=>x.id===selectedRegionId)||model.series[0];
+ const change=selected.lastDeltaCm===null?'<span class="bm918-unknown">Baseline – noch kein Vergleich möglich</span>':`<strong class="bm918-delta ${Math.abs(selected.lastDeltaCm)<.5?'near-zero':selected.lastDeltaCm>0?'increased':'decreased'}">${signed(selected.lastDeltaCm)} cm <small>(${signed(selected.lastDeltaPct)} %)</small></strong><span>gegenüber der vorherigen Messung</span>`;
+ const latest=selected.latest;
+ const cards=model.series.map(r=>`<button type="button" class="bm918-region ${r.id===selected.id?'selected':''}" data-action="smart-tape-region" data-id="${r.id}" aria-pressed="${r.id===selected.id}"><span>${esc(r.label)}</span><strong>${r.latest?number(r.latest.valueCm)+' cm':'–'}</strong><small>${r.lastDeltaCm!==null?`${signed(r.lastDeltaCm)} cm`:'Ausgangswert'}</small></button>`).join('');
+ return `<section class="bm918-dashboard" aria-label="Smart Tape · Körperumfänge"><div class="bm918-heading"><div><small>FITDAYS+ · SMART TAPE</small><h2>Körpermaße &amp; Entwicklung</h2><p>Zwölf Messstellen · echte Umfangsmessungen · Verlauf nach Körperregion</p></div><button type="button" class="secondary-btn" data-action="smart-tape-import" aria-label="Smart Tape in Health Import Hub importieren">⇩ Messwerte importieren</button></div>
+ <div class="bm918-totals"><span><strong>${model.series.filter(x=>x.points.length).length}/12</strong> Regionen mit Daten</span><span><strong>${new Set(model.series.flatMap(x=>x.points.map(p=>p.day))).size}</strong> Messtage</span><span><strong>${model.ratioLatest?number(model.ratioLatest.ratio,2):'–'}</strong> Schulter / Taille</span><span><strong>${model.waistHipLatest?number(model.waistHipLatest.ratio,2):'–'}</strong> Taille / Hüfte</span></div>
+ <div class="bm918-workspace"><div class="bm918-map-panel"><h3>Körperübersicht</h3>${bodyTapeSchematic(selected.id)}<p class="bm918-help">Messpunkt oder Körperregion antippen. Links/rechts beziehen sich auf deine Körperseiten.</p><div class="bm918-regions">${cards}</div></div><div class="bm918-detail" id="bm918-detail"><small>MESSVERLAUF · ${esc(regionTitle(selected))}</small><h3>${esc(regionTitle(selected))}</h3><div class="bm918-metric"><strong>${latest?number(latest.valueCm)+' cm':'–'}</strong><span>${latest?`Letzte Messung am ${esc(shortDay(latest.day))}`:'Noch nicht erfasst'}</span></div><div class="bm918-change">${change}</div>${bodyTapeLinePlot(selected.points,selected.label)}<p class="bm918-insight">${selected.points.length<2?'Nach der nächsten Messung zeigt Compass hier die Veränderung in cm und Prozent.':`Veränderung seit dem ersten Messpunkt im gewählten Zeitraum: ${signed(selected.changeCm)} cm (${signed(selected.changePct)} %).`}${selected.trend?` Beobachteter Trend: ${signed(selected.trend.slopeCmPer30Days)} cm je 30 Tage (${selected.trend.n} Messungen über ${selected.trend.spanDays} Tage).`:''}</p><details><summary>Einzelmessungen (${selected.points.length})</summary>${selected.points.length?`<ol class="bm918-history">${[...selected.points].reverse().map(p=>`<li><span>${esc(shortDay(p.day))}</span><strong>${number(p.valueCm)} cm</strong><small>${esc(p.source==='fitdays-plus'?'Fitdays+':p.source==='legacy-coach'?'Coach':'Manuell')}</small></li>`).join('')}</ol>`:'<p>Noch keine Werte</p>'}</details></div></div>
+ <p class="bm918-caveat">Umfangsänderungen sind kein direkter Nachweis für Muskelzuwachs oder Fettabbau. Gleiche Messposition, Tageszeit und Bandspannung verbessern die Vergleichbarkeit. Eine Messung ist lediglich die Baseline; es gibt keine künstlich ergänzten Kurvenpunkte und keine automatische Trainingsplanänderung.</p></section>`;
+}
 export function detectMeasurementFileContainer(bytes,filename=''){
  const b=bytes instanceof Uint8Array?bytes:null;if(!b||b.byteLength<2)return 'unknown';
  if(b[0]===0x50&&b[1]===0x4b)return 'zip-container'; // XLSX is zipped, but not every ZIP is XLSX
@@ -162,7 +194,51 @@ export function mapVerifiedMeasurementFields(raw,mapping){
  }
  return result;
 }
-export function importFitdaysSmartTape(){throw Error('Fitdays+-Smart-Tape-Import ist deaktiviert. Originalexport und validiertes Mapping erforderlich.');}
+// Verified against original Fitdays+ device export on 2026-11-04. Despite a .csv
+// extension, the sample is an OLE2 BIFF .xls workbook. Values include " cm".
+export const FITDAYS_TAPE_HEADER_MAP=Object.freeze({
+ 'Head':'head','Neck':'neck','Shoulder':'shoulder','Chest':'chest','Waist':'waist',
+ 'Hip':'hip','L Arm':'leftUpperArm','R Arm':'rightUpperArm',
+ 'L Thigh':'leftThigh','R Thigh':'rightThigh','L Calf':'leftCalf','R Calf':'rightCalf'
+});
+const normalizedHeader=x=>String(x??'').replace(/\s+/g,' ').trim().toLowerCase();
+const tapeNumeric=(v,unit='cm')=>{const str=String(v??'').trim();
+ if(!str)return null;
+ const match=str.match(/^([0-9]+(?:[.,][0-9]+)?)\s*(cm|in)?$/i);
+ if(!match)throw Error(`Ungültiger Fitdays+-Umfang "${str.slice(0,32)}".`);
+ if(typeof v==='string'&&!match[2])throw Error('Die Maßeinheit cm/in fehlt im Umfangsexport.');
+ return {value:Number(match[1].replace(',','.')),unit:(match[2]||unit).toLowerCase()};
+};
+const tapeDate=x=>{const match=String(x??'').trim().match(/^(20\d\d-\d\d-\d\d)[ T](\d\d:\d\d)(?::(\d\d))?$/);
+ if(!match||!dayValid(match[1]))throw Error('Ungültiges Fitdays+-Smart-Tape-Datum.');
+ const stamp=`${match[1]}T${match[2]}:${match[3]||'00'}`;
+ if(!Number.isFinite(Date.parse(stamp))||Number(match[2].slice(0,2))>23||Number(match[2].slice(3))>59)return null;
+ return {localStamp:stamp,day:match[1]};
+};
+/** Returns null when the sheet is not a tape export; never mistake body-scale
+ * data for tape measurements. Throws for a recognized but malformed tape sheet.
+ */
+export function parseFitdaysSmartTapeRows(rows){
+ if(!Array.isArray(rows))return null;
+ const headerIdx=rows.findIndex(row=>Array.isArray(row)&&row.some(x=>normalizedHeader(x)==='time')&&row.some(x=>normalizedHeader(x)==='shoulder')&&row.some(x=>normalizedHeader(x)==='l arm')&&row.some(x=>normalizedHeader(x)==='waist'));
+ if(headerIdx<0)return null;
+ const keys=rows[headerIdx].map(normalizedHeader);
+ const indexes=Object.entries(FITDAYS_TAPE_HEADER_MAP).map(([key,regionId])=>{const idx=keys.indexOf(normalizedHeader(key));if(idx<0)throw Error(`Fitdays+ Tape: Spalte ${key} fehlt.`);return [idx,regionId];});
+ const t=keys.indexOf('time'),out=[];
+ for(const row of rows.slice(headerIdx+1)){
+  if(!Array.isArray(row)||row.every(x=>String(x??'').trim()===''))continue;
+  const date=tapeDate(row[t]);if(!date)throw Error('Ungültige Smart-Tape-Uhrzeit.');
+  for(const [index,regionId] of indexes){const measure=tapeNumeric(row[index]);if(!measure)continue;
+   out.push(normalizeBodyMeasurement({regionId,originalValue:measure.value,originalUnit:measure.unit,
+    source:'fitdays-plus',at:date.localStamp,day:date.day,sourceLocalTime:date.localStamp,
+    method:'smart-tape',protocol:'Fitdays+ Smart Tape'},{}));
+  }
+ }
+ if(!out.length)throw Error('Fitdays+ Tape erkannt, aber keine Körperumfänge vorhanden.');
+ return out;
+}
+export function importFitdaysSmartTape(rows){const results=parseFitdaysSmartTapeRows(rows);if(!results)throw Error('Kein verifiziertes Fitdays+-Smart-Tape-Schema gefunden.');return results;}
+
 export function adaptiveBodyMeasurementRecommendation(){return {enabled:false,reason:'Messhistorie und Qualitätsprüfung stehen aus. Bestehende RIR-, Plateau- und Deload-Logik bleibt maßgeblich.',suggestion:null};}
 
 /** Evidence adapter for a FUTURE opt-in Coach rule engine: read only.

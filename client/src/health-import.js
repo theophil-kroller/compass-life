@@ -1,4 +1,5 @@
 import {isGarminActivitiesCsv,parseGarminActivitiesCsv} from './garmin-activities-csv.js';
+import {parseFitdaysSmartTapeRows,putBodyMeasurement,measurementFingerprint} from './body-measurements-v05918.js';
 import {decodeGarminFit,garminWellnessFromRecords,garminSleepJson,garminStressEnergyFromRecords,garminMonitoringFromRecords,garminSessionsFromRecords} from './garmin-fit.js';
 
 // File formats are detected from bytes; Fitdays .csv exports are often actually XLS (OLE/BIFF).
@@ -62,7 +63,7 @@ export function parseFitdaysRows(rows){
  if(!output.length)throw Error('Keine verwertbaren Fitdays-Messungen gefunden');
  return output;
 }
-export async function parseFitdaysFile(bytes){
+async function readFitdaysRows(bytes){
  const XLS=await import('xlsx');let rows;
  if(isXls(bytes)||bytes[0]===80&&bytes[1]===75){
   const book=XLS.read(bytes,{type:'array',cellDates:false,codepage:65001});
@@ -73,7 +74,13 @@ export async function parseFitdaysFile(bytes){
   const book=XLS.read(content,{type:'string'});
   rows=XLS.utils.sheet_to_json(book.Sheets[book.SheetNames[0]],{header:1,defval:'',raw:false});
  }
- return parseFitdaysRows(rows);
+ return rows;
+}
+export async function parseFitdaysFile(bytes){return parseFitdaysRows(await readFitdaysRows(bytes));}
+/** Unified Fitdays body composition / Smart Tape detection by header, not filename. */
+export async function parseHealthTableFile(bytes){
+ const rows=await readFitdaysRows(bytes),tape=parseFitdaysSmartTapeRows(rows);
+ return tape?{fitdays:[],bodyTape:tape}:{fitdays:parseFitdaysRows(rows),bodyTape:[]};
 }
 function mergeGarmin(records){
  const nights=new Map(),hrvs=new Map(),wellness=new Map(),fitness=new Map(),sessions=new Map();
@@ -109,7 +116,7 @@ export async function parseGarminFile(bytes,name=''){
 }
 export async function inspectHealthFiles(files){
  if(!files?.length)throw Error('Bitte Dateien auswählen');
- const result={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],errors:[],processed:0,fileResults:[]};
+ const result={fitdays:[],bodyTape:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],errors:[],processed:0,fileResults:[]};
  if(files.length>75)throw Error('Bitte maximal 75 Dateien gleichzeitig wählen');
  for(const file of files){
   let partial=false;
@@ -118,8 +125,8 @@ export async function inspectHealthFiles(files){
    const bytes=new Uint8Array(await file.arrayBuffer());
    if(/\.csv$/i.test(file.name)&&isGarminActivitiesCsv(new TextDecoder('utf-8').decode(bytes.subarray(0,2048)))){
     result.garminSessions.push(...parseGarminActivitiesCsv(new TextDecoder('utf-8').decode(bytes)));
-   }else if(isXls(bytes)||/fitdays/i.test(file.name)||/\.(csv|xls|xlsx)$/i.test(file.name)&&!isZip(bytes)){
-    result.fitdays.push(...await parseFitdaysFile(bytes));
+   }else if(isXls(bytes)||/fitdays/i.test(file.name)||/\.(csv|xls|xlsx)$/i.test(file.name)){
+    const tabular=await parseHealthTableFile(bytes);result.fitdays.push(...tabular.fitdays);result.bodyTape.push(...tabular.bodyTape);
    }else{
     const v=await parseGarminFile(bytes,file.name);result.garminNights.push(...v.nights);result.garminHrv.push(...v.hrvs);result.garminWellness.push(...(v.wellness||[]));result.garminFitness.push(...(v.fitness||[]));result.garminSessions.push(...(v.sessions||[]));
     if(v.failed?.length){partial=true;result.errors.push(`${file.name}: ${v.failed.length} FIT-Datei(en) nicht lesbar`);}
@@ -131,6 +138,7 @@ export async function inspectHealthFiles(files){
  // Multiple overlapping archives and repeated exports are common.
  const unique=(rows,key,prefer=()=>true)=>{const map=new Map();for(const row of rows){const k=key(row),old=map.get(k);if(!old||prefer(old,row))map.set(k,row);}return [...map.values()];};
  result.fitdays=unique(result.fitdays,x=>x.id).sort((a,b)=>a.at.localeCompare(b.at));
+ result.bodyTape=unique(result.bodyTape,x=>measurementFingerprint(x)).sort((a,b)=>a.at.localeCompare(b.at)||a.regionId.localeCompare(b.regionId));
  result.garminNights=unique(result.garminNights,x=>x.day,(old,n)=>n.stages.length>=(old.stages?.length||0)).sort((a,b)=>a.day.localeCompare(b.day));
  result.garminHrv=unique(result.garminHrv,x=>x.day).sort((a,b)=>a.day.localeCompare(b.day));
  result.garminWellness=unique(result.garminWellness,x=>x.at).sort((a,b)=>a.at.localeCompare(b.at));
@@ -142,6 +150,9 @@ export function commitHealthImport(s,preview){
  s.healthImports??={fitdays:[],garminNights:[],garminHrv:[],garminWellness:[],garminFitness:[],garminSessions:[],lastImportAt:null};
  const target=s.healthImports;const merge=(a,b,key,quality=false)=>{const map=new Map();for(const x of [...a,...b]){const old=map.get(key(x));if(!old||!quality||(x.stages?.length||0)>=(old.stages?.length||0))map.set(key(x),x);}return [...map.values()].sort((x,y)=>(x.at||x.day).localeCompare(y.at||y.day));};
  const before=[target.fitdays.length,target.garminNights.length,target.garminHrv.length];
+ // Tape circumferences go to existing E2E-encrypted Coach journal, NOT the Health Connect store.
+ // Reimports of the same vendor timestamp/region/value are fingerprint-deduplicated.
+ let bodyTapeNew=0;for(const row of preview.bodyTape||[]){if(putBodyMeasurement(s,row).status==='created')bodyTapeNew++;}
  // Enriched reimports keep prior optional measurements when the newly supplied
  // file has no such column. Stable identity remains compatible with old Vaults.
  const fitById=new Map((target.fitdays||[]).map(x=>[x.id,x]));
@@ -162,7 +173,10 @@ export function commitHealthImport(s,preview){
  const sessionMap=new Map((target.garminSessions||[]).map(x=>[x.id,x]));for(const row of preview.garminSessions||[])sessionMap.set(row.id,row);
  target.garminSessions=[...sessionMap.values()].sort((a,b)=>a.start.localeCompare(b.start));
  target.lastImportAt=new Date().toISOString();
- return [target.fitdays.length-before[0],target.garminNights.length-before[1],target.garminHrv.length-before[2]];
+ const legacyCounts=[target.fitdays.length-before[0],target.garminNights.length-before[1],target.garminHrv.length-before[2]];
+ // Preserve the 3-element legacy return contract for all existing Health integrations.
+ Object.defineProperty(legacyCounts,'bodyTapeAdded',{value:bodyTapeNew,enumerable:false});
+ return legacyCounts;
 }
 export function missingGarminDays(nights,today,cap=21){
  const have=new Set(nights.map(x=>x.day)),dates=[];

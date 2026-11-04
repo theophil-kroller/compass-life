@@ -70,8 +70,8 @@ test('legacy Coach measurements and new rows stay in the SAME bodyMeasures88 sto
  assert.equal(bodyMeasurementRatioSeries(state).length,2);
  const model=bodyMeasurementDashboardModel(state,{today:'2026-11-02',range:'90'});
  assert.equal(model.ratioLatest.ratio,1.42);
- assert.equal(model.features.dashboard,false);
- assert.match(bodyMeasurementDashboardHtml(model),/Body Measurements &amp; V-Taper/);
+ assert.equal(model.features.dashboard,true);
+ assert.match(bodyMeasurementDashboardHtml(model),/Körpermaße &amp; Entwicklung/);
  assert.match(bodyMeasurementDashboardHtml(model),/<circle/);
  assert.deepEqual(bodyMeasurementObservations(state,{regionId:'waist'}).map(x=>x.day),['2026-10-20','2026-11-01']);
 });
@@ -88,12 +88,12 @@ test('format candidates and opt-in verified mappings: no guessed Fitdays+ file s
  assert.equal(detectMeasurementFileContainer(new TextEncoder().encode('a,b\n1,2'),'x.csv'),'csv-candidate');
  assert.throws(()=>mapVerifiedMeasurementFields({meas:10},{fields:{originalValue:'meas'}}),/verifiziert/);
  assert.deepEqual(mapVerifiedMeasurementFields({meas:10},{verified:true,fields:{originalValue:'meas'}}),{originalValue:10});
- assert.throws(()=>importFitdaysSmartTape(new Uint8Array()),/deaktiviert/);
+ assert.throws(()=>importFitdaysSmartTape(new Uint8Array()),/Schema/);
 });
-test('Smart Tape / manual UI / adaptive suggestions stay OFF, app never imports module in initial shell',()=>{
- assert.deepEqual(SMART_TAPE_FLAGS,{import:false,dashboard:false,adaptive:false,manualEntry:false});
+test('Smart Tape import/dashboard ON; manual entry and autonomous training adjustment remain OFF',()=>{
+ assert.deepEqual(SMART_TAPE_FLAGS,{import:true,dashboard:true,adaptive:false,manualEntry:false});
  assert.equal(adaptiveBodyMeasurementRecommendation().suggestion,null);
  assert.equal(bodyMeasurementCoachEvidence({}).readyForAutomaticAdjustment,false);
  const app=readFileSync(new URL('../client/src/main-full-v57759402510.js',import.meta.url),'utf8');
- assert.doesNotMatch(app,/body-measurements-v05918/);
+ assert.match(app,/body-measurements-v05918/);
 });

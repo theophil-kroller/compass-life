@@ -1,3 +1,12 @@
+## 0.5.91.18 · Fitdays+ Smart Tape Live-Import & interaktive Körperübersicht (04.11.2026)
+
+- Echten Fitdays+-Umfangsexport verifiziert: `.csv`-Dateiname ist intern ein Excel-XLS/BIFF-Container, mit zwölf Umfangsspalten und lokalem Zeitstempel. Der Health Import Hub erkennt und importiert die Inhalte statt sie fälschlich als reinen CSV-Text zu lesen.
+- Alle Messstellen über den bestehenden verschlüsselten `nutritionJournal.bodyMeasures88`-Speicher, kein Doppelimport und keine neue Datenbank. Bestehende Fitdays-Waagen- und Garmin-Importe bleiben kompatibel.
+- **Insights → Körper:** anklickbare Körperkarte links, Detailverlauf rechts (mobil darunter) mit echten Messpunkten, Umfängen, Änderung gegenüber vorheriger Messung und Baseline-Vergleich. Bei erstem Messwert keine erfundene Wachstumsbehauptung. Schulter/Taille und Taille/Hüfte aus echten Messwerten.
+- Private Nutzermessungen werden nicht in die Quellarchive aufgenommen; zum Befüllen der App den Fitdays+-Export selbst im Health Import Hub importieren. Kein automatisches Verstellen von Coach-Trainingslasten.
+- Gezielte Tests 24/24; Deployment-Prüfungen 33/33. Historische Vollsuite in dieser Umgebung nach 120 Sekunden unterbrochen; kein vollständiges Testergebnis behauptet. Vite-Produktionsbuild erfordert GitHub Actions.
+- Installationsanleitung und Details: `PATCH_INSTALL_0.5.91.18.md`, `RELEASE_0.5.91.18.md`.
+
 ## 0.5.91.17 · Makko-Ho-Tagesstatus, Arbeitszeit-Nachtrag & zwei neue Gerichte (04.11.2026)
 
 - Makko-Ho/Habit-Schnellansicht: vormals datumslose 'doneToday'-Caches sind nicht mehr tagesübergreifend gültig. Nur heutige, datierte Häkchen zählen; Abschluss bestätigt den richtigen Tag statt einen bereits erledigten Habit erneut umzuschalten.

@@ -1,8 +1,15 @@
-/* Prepared only; NOT loaded in active Compass navigation while feature disabled. */
-.bm918-dashboard{color:var(--ink,#163c39);padding:14px}
-.bm918-dashboard .bm918-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
-.bm918-dashboard .bm918-card{border:1px solid #dce8e2;border-radius:14px;background:#fff;padding:12px;display:grid;gap:4px}
-.bm918-dashboard .bm918-card h3{font-size:13px;margin:0}
-.bm918-dashboard .bm918-card strong{font-size:22px}
-.bm918-dashboard .bm918-card small{color:#667d77}
-.bm918-dashboard svg{width:100%;height:76px;overflow:visible}
+/* Compass 0.5.91.18 · verified Fitdays+ Smart Tape. No UI overlays. */
+.bm918-dashboard{color:var(--ink,#213e3b);margin:12px 0 20px;border:1px solid #dae7e1;border-radius:18px;padding:clamp(12px,2.5vw,22px);background:linear-gradient(155deg,#fff,#f7faf8)}
+.bm918-dashboard *{box-sizing:border-box}.bm918-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.bm918-heading h2{margin:4px 0 6px;font-size:clamp(18px,2vw,24px);color:#214943}.bm918-heading small,.bm918-detail>small{font-size:11px;letter-spacing:.12em;font-weight:700;color:#6b827c}
+.bm918-heading p,.bm918-help,.bm918-insight,.bm918-caveat{font-size:13px;color:#647d76;line-height:1.5}
+.bm918-totals{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0}.bm918-totals span{background:#edf4f0;padding:8px 11px;border-radius:11px;font-size:12px;color:#668078}.bm918-totals strong{color:#264c45;font-size:16px;margin-right:4px}
+.bm918-workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:14px;align-items:start}.bm918-map-panel,.bm918-detail{background:#fff;border:1px solid #e2ebe6;border-radius:15px;padding:14px;min-width:0}
+.bm918-map-panel h3,.bm918-detail h3{margin:0 0 5px;font-size:18px;color:#254f49}.bm918-body-map{width:100%;max-height:410px;display:block;margin:0 auto}.bm918-map-target{cursor:pointer;outline:none}.bm918-map-target circle{transition:fill .15s,stroke .15s}.bm918-map-target:focus circle,.bm918-map-target:hover circle{stroke:#f6cb76;stroke-width:5}.bm918-regions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.bm918-region{border:1px solid #e3ece6;background:#f8fbf9;padding:8px 9px;border-radius:10px;text-align:left;display:grid;gap:2px;min-width:0;color:#3e5d56;cursor:pointer}.bm918-region.selected{border-color:#b99652;background:#fff8e9}.bm918-region span{font-size:11px;white-space:normal}.bm918-region strong{font-size:15px;color:#23443f}.bm918-region small{font-size:10px;color:#748983}
+.bm918-metric{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.bm918-metric strong{font-size:clamp(26px,4vw,36px);font-variant-numeric:tabular-nums;color:#194e49}.bm918-metric span{font-size:12px;color:#688078}
+.bm918-change{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:12px 0;font-size:12px;color:#6d817a}.bm918-delta{font-size:18px;color:#205951;font-variant-numeric:tabular-nums}.bm918-delta.decreased{color:#516987}.bm918-delta.near-zero{color:#7c7c79}.bm918-delta small{font-size:12px}
+.bm918-trend{display:block;width:100%;height:auto;max-height:270px;margin:14px auto 4px}.bm918-unknown{font-weight:600;color:#97733e}.bm918-empty{padding:36px 12px;background:#f5f9f7;border-radius:12px;color:#667a73}
+.bm918-history{padding-left:18px}.bm918-history li{display:grid;grid-template-columns:1fr auto auto;gap:8px;font-size:12px;margin:5px 0}.bm918-history small{color:#7a9087}.bm918-caveat{margin:14px 0 0}
+@media(max-width:750px){.bm918-workspace{grid-template-columns:minmax(0,1fr)}.bm918-body-map{max-height:300px}.bm918-map-panel,.bm918-detail{padding:12px}.bm918-regions{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:420px){.bm918-regions{grid-template-columns:repeat(2,minmax(0,1fr))}.bm918-heading .secondary-btn{width:100%}}

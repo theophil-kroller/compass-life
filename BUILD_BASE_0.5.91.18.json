@@ -1,0 +1,18 @@
+{
+  "version": "0.5.91.18",
+  "baseVersion": "0.5.91.17",
+  "baseRepository": "theophil-kroller/compass-life",
+  "baseBranch": "main",
+  "baseCommit": "4878948460728faf9a2108ac8fc6c0c51c0ce4ff",
+  "feature": "Fitdays+ Smart Tape verified Excel-XLS import, encrypted 12-region history, clickable body map, measured deltas and time-series",
+  "newProductionDatabase": false,
+  "realUserMeasurementsBundled": false,
+  "targetedTestsPassed": 24,
+  "targetedTestsTotal": 24,
+  "deployTestsPassed": 33,
+  "deployTestsTotal": 33,
+  "fullSuiteCompleted": false,
+  "fullSuiteLimitation": "npm test exceeded 120 seconds; 1893 results recorded with 35 historic failures",
+  "compiledViteBuild": false,
+  "compiledViteBuildReason": "node_modules / vite dependency not installed"
+}

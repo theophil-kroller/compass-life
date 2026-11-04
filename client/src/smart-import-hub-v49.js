@@ -7,11 +7,11 @@ import {detectFinanceFormat} from './finance-account-import.js';
 import {importStatusMarkup} from './import-status-v558.js';
 
 export const SMART_IMPORT_SOURCES=Object.freeze([
- {id:'health',label:'Health Daten',hint:'C:\\Users\\kroll\\Documents\\Health Daten'},
+ {id:'health',label:'Health Daten (Garmin / Fitdays / Smart Tape)',hint:'C:\\Users\\kroll\\Documents\\Health Daten'},
  {id:'finance',label:'Konto Daten',hint:'C:\\Users\\kroll\\Documents\\Konto Daten'}
 ]);
 export const SMART_IMPORT_KINDS=Object.freeze({
- bank:'Bankbuchungen',health:'Garmin / Fitdays',worktime:'Arbeitszeit-Excel',places:'Google Timeline',project:'Compass-Projektplan',kraken:'Kraken-Export',flatex:'flatex-Depotstand',unknown:'Manuell zuordnen'
+ bank:'Bankbuchungen',health:'Garmin / Fitdays / Smart Tape',worktime:'Arbeitszeit-Excel',places:'Google Timeline',project:'Compass-Projektplan',kraken:'Kraken-Export',flatex:'flatex-Depotstand',unknown:'Manuell zuordnen'
 });
 const MAX_FILE_BYTES=125*1024*1024;
 const MAX_HASH_BYTES=12*1024*1024;
@@ -172,7 +172,7 @@ export function smartImportHubView({entries=[],history=[],folderStatus={},notice
  return `<section class="work-card smart49-hub" id="smart-import-hub" aria-label="Smart Import Hub">
  <div class="work-heading"><span>⇩ Smart Import Hub</span><span class="quiet-tag">Lokal · mit Vorschau</span></div>
  <p class="muted-line">Ordner verbinden oder Dateien ablegen. Compass prüft lokal und zeigt vor dem Import, was neu ist. Importiert wird erst nach deiner Bestätigung.</p>
- <details class="smart558-coverage"><summary>Datenaktualität aller Quellen anzeigen</summary>${importStatusMarkup(state)}</details>
+ <details class="smart558-coverage"><summary>Datenaktualität aller Quellen anzeigen</summary>${importStatusMarkup(state)}<p class="muted-line">Smart Tape: ${(state?.nutritionJournal?.bodyMeasures88||[]).filter(x=>x?.source==='fitdays-plus'&&!x.deleted).length} gespeicherte Umfangsmesswerte (verschlüsseltes Coach-Journal).</p></details>
  <div class="smart49-drop" id="smart49-drop" tabindex="0" role="group" aria-label="Dateien zum Smart Import ziehen">
  <label class="secondary-btn smart49-file-btn">Dateien auswählen<input id="smart49-files" type="file" multiple accept=".csv,.json,.zip,.fit,.xls,.xlsx,.txt,.pdf,.ics,.gpx,.ris,.ofx"></label><span>oder Dateien hierher ziehen</span>
  </div>
@@ -181,7 +181,7 @@ export function smartImportHubView({entries=[],history=[],folderStatus={},notice
  ${hasHealth?`<div class="smart494-file-period" aria-label="Zeitraum der erkannten Gesundheitsdateien">${filePeriodMarkup(healthPeriod)}<small>Aus Dateinamen abgeleitet – keine Aussage über tatsächlich gespeicherte Messwerte</small></div>`:''}
  ${storedCoverage&&(hasHealth||source==='health')?`<div class="smart494-stored">${healthCoverageMarkup(storedCoverage)}</div>`:''}
  ${healthJob?`<div id="smart49-health-review" class="health-import-preview smart494-preview" role="status"><strong>Gesundheitsimport · ${healthJob.done}/${healthJob.total}</strong><progress max="${healthJob.total}" value="${healthJob.done}"></progress><p>${esc(healthJob.message)}</p><button class="secondary-btn" type="button" data-action="health-import-stop">Nach diesem Stapel stoppen</button></div>`:''}
- ${healthPreview&&!healthJob?`<div id="smart49-health-review" class="health-import-preview smart494-preview"><strong>Gesundheitsimport prüfen</strong><p>${healthPreview.processed} Beispieldateien ausgewertet · ${healthPreview.garminNights.length} Nächte · ${(healthPreview.garminWellness||[]).length} Stress-/Energiepunkte. Die übrigen Archive werden nach Bestätigung automatisch verarbeitet.</p><p>Vorschaudaten noch nicht gespeichert.</p><div class="health-import-preview-actions"><button type="button" class="primary-btn" data-action="health-import-confirm">${entries.filter(e=>e.kind==='health'&&!e.duplicate).length} Gesundheitsdateien übernehmen</button><button type="button" class="secondary-btn" data-action="health-import-cancel">Abbrechen</button></div></div>`:''}
+ ${healthPreview&&!healthJob?`<div id="smart49-health-review" class="health-import-preview smart494-preview"><strong>Gesundheitsimport prüfen</strong><p>${healthPreview.processed} Beispieldateien ausgewertet · ${healthPreview.garminNights.length} Nächte · ${(healthPreview.bodyTape||[]).length} Smart-Tape-Messstellen · ${(healthPreview.garminWellness||[]).length} Stress-/Energiepunkte. Die übrigen Archive werden nach Bestätigung automatisch verarbeitet.</p><p>Vorschaudaten noch nicht gespeichert.</p><div class="health-import-preview-actions"><button type="button" class="primary-btn" data-action="health-import-confirm">${entries.filter(e=>e.kind==='health'&&!e.duplicate).length} Gesundheitsdateien übernehmen</button><button type="button" class="secondary-btn" data-action="health-import-cancel">Abbrechen</button></div></div>`:''}
  ${entries.length?`<div class="smart49-results"><div class="smart49-overview"><strong>${entries.length} Dateien · ${groups.length} Gruppen</strong><small>${pending} zu prüfen${duplicates?` · ${duplicates} identische Datei(en) bereits erkannt`:''}</small></div>
  ${entries.some(e=>e.kind==='health'&&e.duplicate)?`<button type="button" class="secondary-btn" data-action="smart49-health-backfill" ${busy?'disabled':''}>Ältere Gesundheitsarchive erneut auf fehlende Messwerte prüfen</button>`:''}
  ${totals.map(([kind,count])=>`<button type="button" class="secondary-btn" data-action="smart49-preview-kind" data-id="${kind}" ${busy?'disabled':''}>${esc(SMART_IMPORT_KINDS[kind])} · ${count} →</button>`).join('')}

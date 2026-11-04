@@ -190,19 +190,19 @@ function reportSummary(row,{targetWeightKg=null}={}){
  </section>`;
 }
 
-export function fitdaysInterpretationView(fitdays=[],{today='',range='28',heightCm=null,targetWeightKg=null}={}){
+export function fitdaysInterpretationView(fitdays=[],{today='',range='28',bodyTapeDashboard='',heightCm=null,targetWeightKg=null}={}){
  const days=range==='all'?20000:Number(range)||28;
  const until=/^\d{4}-\d{2}-\d{2}$/.test(today)?today:'9999-12-31';
  const d=new Date(until+'T12:00:00Z');const from=Number.isFinite(d.getTime())&&days<10000?(d.setUTCDate(d.getUTCDate()-(days-1)),d.toISOString().slice(0,10)):'0000-01-01';
  const selected=(Array.isArray(fitdays)?fitdays:[]).filter(x=>x?.day>=from&&x?.day<=until&&typeof x.at==='string').sort((a,b)=>a.at.localeCompare(b.at)).map(x=>resolvedBodyMetrics(x,heightCm));
  const latest=selected.at(-1);
- if(!latest)return '<section class="fdi-root"><header><h3>Fitdays · Werte verstehen</h3></header><p class="fdi-subtle">Im gewählten Zeitraum sind keine Fitdays-Messungen vorhanden.</p></section>';
+ if(!latest)return bodyTapeDashboard+'<section class="fdi-root"><header><h3>Fitdays · Werte verstehen</h3></header><p class="fdi-subtle">Im gewählten Zeitraum sind keine Fitdays-Messungen vorhanden.</p></section>';
  const primary=['bmi','bodyFatPct','visceralFat','subcutaneousFatPct','whr'].map(k=>measures.find(m=>m.key===k));
  const secondary=measures.filter(m=>!primary.includes(m));
  const measured=measures.filter(m=>get(latest,m.key)!==null).length;
  const height=Number(heightCm);
  const heightNote=Number.isFinite(height)&&height>=120&&height<=230?`Körpergröße ${esc(num(height,0))} cm${latest.bmiOrigin==='computed'?' · BMI aus dem Gewicht berechnet':''}`:'Körpergröße nicht hinterlegt';
- return `<section class="fdi-root" id="fitdays-interpretation" aria-label="Fitdays Referenz- und Werteinterpretation">
+ return bodyTapeDashboard+`<section class="fdi-root" id="fitdays-interpretation" aria-label="Fitdays Referenz- und Werteinterpretation">
   <header class="fdi-head"><div><span class="fdi-eyebrow">KÖRPERANALYSE · REFERENZEN</span><h3>Deine Körperwerte – auf einen Blick</h3><p>Fitdays-artige Statusbalken und die elf beschrifteten Körperregionen; bestehende Dot-Plots und Segmentanalysen folgen darunter.</p></div><small>${esc(latest.day)} · ${selected.length} Messungen</small></header>
   <div class="fdi-personal"><strong>${esc(heightNote)}</strong><span>${measured} von ${measures.length} Werten verfügbar · Fitdays-Werte sind BIA-Schätzungen</span></div>
   <div class="fdi-layout fdi-report-layout">${reportSummary(latest,{targetWeightKg})}<aside class="fdi-matrix-card"><h4>Body type assessment <small>· Körpertyp</small></h4>${bodyMatrix(latest)}<details><summary>Zur Einordnung</summary><p>Die elf bezeichneten Bereiche orientieren sich an der Fitdays-Vorlage. Die genaue Hersteller-Referenztabelle ist nicht verfügbar. Farben und Felder sind eine Annäherung zur Visualisierung, keine medizinische Einstufung.</p></details></aside></div>
