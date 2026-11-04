@@ -1,52 +1,110 @@
 name: Deploy Compass Web
 
+# Compass 0.5.91.20 · Pages delivery hotfix 1.
+# The app bundle is unchanged. Build/artifact stages stay separate from delivery.
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      recovery_attempt:
+        description: 'Internal bounded retry; leave at 0 for manual deployments'
+        type: choice
+        required: false
+        options: ['0', '1']
+        default: '0'
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  # Needed only to dispatch ONE new workflow run after a Pages backend timeout.
+  actions: write
 
+# Never interrupt an active Pages deployment with a newer push.
+# New Pages artifacts are named per build attempt to prevent ambiguity on reruns.
 concurrency:
   group: github-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      pages_artifact: ${{ steps.artifact-name.outputs.name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node scripts/check-import-graph.mjs
-      - run: npm install --no-audit --no-fund
-      # Snapshot build: original transform-chain tests remain available via npm test,
-      # but the frozen deploy entry uses release-specific integration tests.
-      - run: npm run check:deploy
-      - run: npm run build
+      - name: Validate import graph
+        run: node scripts/check-import-graph.mjs
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate deploy
+        run: npm run check:deploy
+      - name: Compile Compass Web
+        run: npm run build
         env:
           VITE_BASE_PATH: /compass-life/
-      # Only successful source-and-build validations produce a full source snapshot.
-      # The snapshot can be downloaded by ChatGPT's read-only GitHub connection for
-      # a complete, reproducible future Full Build. No secrets or node_modules.
+      - name: Verify built entry
+        run: |
+          test -s client/dist/index.html
+          echo 'Pages payload (human readable):'
+          du -sh client/dist
+          find client/dist -type f | wc -l
+      # Preserve the exact validated source archive used by previous builds.
       - name: Package validated source snapshot
         run: git archive --format=zip --output=compass-full-source.zip HEAD
       - uses: actions/upload-artifact@v4
         with:
-          name: compass-full-source
+          name: compass-full-source-${{ github.run_id }}-${{ github.run_attempt }}
           path: compass-full-source.zip
           if-no-files-found: error
           retention-days: 30
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Create unambiguous Pages artifact name
+        id: artifact-name
+        shell: bash
+        run: echo "name=github-pages-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
         with:
+          name: ${{ steps.artifact-name.outputs.name }}
           path: client/dist
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          retention-days: 7
+
+  deploy:
+    name: Publish Compass Web
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish validated artifact
+        id: deployment
+        uses: actions/deploy-pages@v5.0.1
+        with:
+          artifact_name: ${{ needs.build.outputs.pages_artifact }}
+          # GitHub Pages has a service-side 10-minute deployment limit.
+          timeout: 600000
+          reporting_interval: 10000
+          error_count: 20
+      - name: Summarize deployment failure
+        if: ${{ failure() && steps.deployment.outcome == 'failure' }}
+        env:
+          PAGES_ARTIFACT: ${{ needs.build.outputs.pages_artifact }}
+        run: |
+          echo '### GitHub Pages deployment did not finish' >> "$GITHUB_STEP_SUMMARY"
+          echo 'App compilation and artifact upload already passed. This is a Pages publication failure, not evidence of an app compilation failure.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifact: \`$PAGES_ARTIFACT\`" >> "$GITHUB_STEP_SUMMARY"
+          echo 'For persistent timeouts, check Settings → Pages → Build and deployment → Source = GitHub Actions; review environment protection rules. If the Pages service continues to hang, contact GitHub Support with this Run ID.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Start one fresh delivery attempt after Pages failure
+        if: ${{ failure() && steps.deployment.outcome == 'failure' && (github.event_name == 'push' || inputs.recovery_attempt != '1') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          echo 'Pages backend failed; starting exactly ONE fresh workflow run to avoid inherited artifacts.'
+          gh workflow run deploy-pages.yml --ref "$REF_NAME" -f recovery_attempt=1
