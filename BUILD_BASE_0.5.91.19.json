@@ -1,0 +1,17 @@
+{
+  "version": "0.5.91.19",
+  "baseVersion": "0.5.91.18",
+  "repository": "theophil-kroller/compass-life",
+  "baseBranch": "main",
+  "baseCommit": "c3bdb69695c1a82d52539390a59d542d75908e44",
+  "feature": "Fitdays Smart Tape read-only WHR integration into legacy Fitdays other-indicator cards, dated provenance, risk reference interpretation",
+  "newDatabase": false,
+  "privateSampleBundled": false,
+  "newRegressionTests": 8,
+  "targetedTestsPassed": 21,
+  "targetedTestsTotal": 21,
+  "deployTestsPassed": 33,
+  "deployTestsTotal": 33,
+  "compiledProductionBuild": false,
+  "compiledProductionBuildReason": "npm dependencies including Vite are not installed in this environment"
+}

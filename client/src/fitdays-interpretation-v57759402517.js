@@ -6,7 +6,39 @@ import {fitdaysDynamicBodyView} from './body-comparison-v57759402524.js';
  */
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(x,digits=1)=>Number(x).toLocaleString('de-AT',{maximumFractionDigits:digits});
+const whrNum=(x,digits=3)=>Number(x).toLocaleString('de-AT',{minimumFractionDigits:digits,maximumFractionDigits:digits});
 const get=(x,k)=>Number.isFinite(x?.[k])?x[k]:null;
+const validWhr=x=>Number.isFinite(x)&&x>=.45&&x<=1.6;
+/** WHO/NLM-style general reference, not a diagnosis or aesthetic V-taper scale.
+ * Sex-specific interpretation is only applied if a parameter was configured.
+ */
+export function whrInterpretation(whr,sex=''){
+ if(!validWhr(whr))return {available:false,label:'Nicht bestimmt',threshold:null,kind:'unknown'};
+ const threshold=sex==='male'?.90:sex==='female'?.85:null;
+ if(threshold!==null)return {available:true,threshold,kind:whr>=threshold?'above-reference':'below-reference',
+  label:whr>=threshold?'Oberhalb des Orientierungswerts':'Unterhalb des Orientierungswerts'};
+ return {available:true,threshold:null,kind:whr>=.90?'above-both':whr>=.85?'sex-dependent':'below-both',
+  label:whr>=.90?'Über beiden geschlechtsspezifischen Orientierungswerten':whr>=.85?'Einordnung abhängig vom Referenzparameter':'Unter beiden Orientierungswerten'};
+}
+/** Read-only merge of genuinely recorded ratios. Smart Tape never mutates old
+ * scale observations. The newest available dated ratio wins, with Tape winning
+ * same-day ties because it is computed from directly measured circumferences.
+ */
+export function currentWhrEvidence(fitdays=[],smartTapeWhrSeries=[]){
+ const scale=(Array.isArray(fitdays)?fitdays:[]).filter(x=>validWhr(get(x,'whr'))&&/^\d{4}-\d{2}-\d{2}$/.test(x?.day||''))
+  .map(x=>({day:x.day,at:x.at||x.day+'T00:00:00',ratio:x.whr,origin:x.whrOrigin==='circumferences'?'circumferences':'fitdays',
+   waistCm:get(x,'waistCm'),hipCm:get(x,'hipCm')})).sort((a,b)=>a.day.localeCompare(b.day)||a.at.localeCompare(b.at));
+ const tape=(Array.isArray(smartTapeWhrSeries)?smartTapeWhrSeries:[])
+  .filter(x=>validWhr(x?.ratio)&&Number.isFinite(x.waistCm)&&Number.isFinite(x.hipCm)&&x.hipCm>0&&x.qualityStatus!=='questionable'
+   &&/^\d{4}-\d{2}-\d{2}$/.test(x?.day||''))
+  .map(x=>({day:x.day,at:x.at||x.day+'T00:00:00',ratio:x.ratio,origin:'smart-tape',waistCm:x.waistCm,hipCm:x.hipCm,
+   sourceIds:x.sourceIds||[]})).sort((a,b)=>a.day.localeCompare(b.day)||a.at.localeCompare(b.at));
+ const newestScale=scale.at(-1)||null,newestTape=tape.at(-1)||null;
+ const latest=newestTape&&(!newestScale||newestTape.day>=newestScale.day)?newestTape:newestScale;
+ const history=latest?.origin==='smart-tape'?tape:scale;
+ return {latest:latest||null,history};
+}
+
 /** Dynamic per-measurement calculations. Nothing is written to the vault.
  * Garmin activity calories are not daily resting calories and never become BMR.
  * WHR needs a per-record device estimate OR the two actual circumferences.
@@ -68,7 +100,7 @@ function gauge(row,rows,model){
  const sources={bmi:{computed:'Gewicht / Größe² · berechnet',fitdays:'Fitdays · importiert'},
   fatFreeKg:{calculated:'Gewicht × (1 − Körperfettanteil) · berechnet',fitdays:'Fitdays · importiert'},
   bmrKcal:{'katch-mcardle':'Katch–McArdle · geschätzt',fitdays:'Fitdays · Schätzung'},
-  whr:{circumferences:'Taille / Hüfte · berechnet',fitdays:'Fitdays · Schätzung'},
+  whr:{circumferences:'Taille / Hüfte · berechnet',fitdays:'Fitdays · Schätzung','smart-tape':'Fitdays+ Smart Tape · Taille / Hüfte gemessen'},
   asmi:{'segment-proxy':'4 Segment-Muskelmassen / Größe² · Näherung',fitdays:'Fitdays · importiert'}};
  const originKey={bmi:'bmiOrigin',fatFreeKg:'fatFreeOrigin',bmrKcal:'bmrOrigin',whr:'whrOrigin',asmi:'asmiOrigin'}[model.key];
  const source=has?(sources[model.key]?.[row[originKey]]||'Fitdays · importiert'):'Nicht im Export / nicht berechenbar';
@@ -77,7 +109,7 @@ function gauge(row,rows,model){
  const band=isBmi?bmiBands():'<span class="fdi-neutral-band"></span>';
  const rangeText=isBmi?'BMI-Referenz für Erwachsene':'Messwertskala (ohne gesicherte Referenzbereiche)';
  return `<article class="fdi-gauge ${has?'':'fdi-gauge-empty'}" aria-label="${esc(model.label)}: ${has?esc(num(value)):'nicht erfasst'}">
-  <div class="fdi-gauge-title"><strong>${esc(model.label)}</strong><span class="fdi-observed">${has?esc(num(value,model.key==='whr'?2:1))+' '+esc(model.unit):'–'}</span></div>
+  <div class="fdi-gauge-title"><strong>${esc(model.label)}</strong><span class="fdi-observed">${has?esc((model.key==='whr'?whrNum(value):num(value,1)))+' '+esc(model.unit):'–'}</span></div>
   <div class="fdi-origin">${esc(source)}</div>
   <div class="fdi-track-caption">${esc(rangeText)}</div>
   <div class="fdi-track" role="img" aria-label="${esc(model.label)}: ${has?esc(num(value)): 'nicht verfügbar'}${isBmi?', BMI-Kategorien für Erwachsene':' – geräteneutrale Messwertskala'}">${band}${has?`<span class="fdi-marker" style="left:${position.toFixed(2)}%" aria-hidden="true"><i></i></span>`:''}</div>
@@ -161,7 +193,20 @@ function reportStrip({label,value,unit='',bands,source='',estimated=false,neutra
   ${source?`<p class="fdi-strip-source">${esc(source)}${estimated?' · berechnet':''}</p>`:''}
  </div>`;
 }
-function reportSummary(row,{targetWeightKg=null}={}){
+function whrReferenceMarkup(row,{whrReferenceSex='',whrHistory=[]}={}){
+ const value=get(row,'whr');if(value===null)return '';
+ const interpretation=whrInterpretation(value,whrReferenceSex);
+ const boundary=interpretation.threshold!==null?`Referenz ${whrReferenceSex==='male'?'Männer':'Frauen'}: ${whrNum(interpretation.threshold,2)}`:'Orientierung: Männer 0,90 · Frauen 0,85';
+ const baseDate=row.whrDay||row.day||'';
+ const tape=row.whrOrigin==='smart-tape';
+ const knownWaist=get(row,'whrWaistCm'),knownHip=get(row,'whrHipCm');
+ const values=tape&&knownWaist!==null&&knownHip!==null?`Taille ${num(knownWaist,1)} cm ÷ Hüfte ${num(knownHip,1)} cm`:'Verhältnis aus verfügbaren Daten';
+ const observations=Array.isArray(whrHistory)?whrHistory:[];
+ const delta=observations.length>=2?observations.at(-1).ratio-observations.at(-2).ratio:null;
+ const trendNote=delta===null?'Erste WHR-Messung dieser Quelle · noch kein Trend':`Veränderung zur vorherigen Messung derselben Quelle: ${delta>0?'+':''}${whrNum(delta,3)}`;
+ return `<div class="fdi-whr-explain" aria-label="Waist-to-hip ratio Referenzeinordnung"><strong>WHR ${whrNum(value)} · ${esc(interpretation.label)}</strong><small>${esc(boundary)} · Messung ${esc(baseDate)} · ${esc(values)}</small><small>${esc(trendNote)}. Populationsbezogene Risikomarkierung, keine Diagnose und kein direktes Maß für den V-Taper.</small></div>`;
+}
+function reportSummary(row,{targetWeightKg=null,whrReferenceSex='',whrHistory=[]}={}){
  const bmi=get(row,'bmi'),fat=get(row,'bodyFatPct'),weight=get(row,'weightKg');
  const target=Number(targetWeightKg),validTarget=Number.isFinite(target)&&target>=35&&target<=300;
  const ratio=validTarget&&weight!==null?Math.round(weight/target*1000)/10:null;
@@ -176,7 +221,7 @@ function reportSummary(row,{targetWeightKg=null}={}){
   ['Visceral fat grade · Viszeralfett',get(row,'visceralFat'),'Index'],
   ['Basal metabolic rate · Grundumsatz',get(row,'bmrKcal'),'kcal',row.bmrOrigin==='katch-mcardle'?'Katch–McArdle · berechnet':'Fitdays · Schätzung'],
   ['Fat-free body weight · Fettfreie Masse',fatFree,'kg',row.fatFreeOrigin==='calculated'?'Aus Körperfett berechnet':'Fitdays · importiert'],
-  ['Waist-to-hip ratio · WHR',get(row,'whr'),' ',row.whrOrigin==='circumferences'?'Taille / Hüfte · berechnet':row.whrOrigin==='fitdays'?'Fitdays · Schätzung':''],
+  ['Waist-to-hip ratio · WHR',get(row,'whr'),' ',row.whrOrigin==='smart-tape'?'Fitdays+ Smart Tape · direkt aus Umfangsmessungen':row.whrOrigin==='circumferences'?'Taille / Hüfte · berechnet':row.whrOrigin==='fitdays'?'Fitdays · Schätzung':''],
   ['Muskelindex Arme/Beine',get(row,'asmi'),'kg/m²',row.asmiOrigin==='segment-proxy'?'4 Segmente / Größe² · Näherung':row.asmiOrigin==='fitdays'?'Fitdays · importiert':'']
  ];
  return `<section class="fdi-report-summary" aria-label="Fitdays Bericht: Körperstatus und Kennzahlen">
@@ -185,18 +230,28 @@ function reportSummary(row,{targetWeightKg=null}={}){
   ${reportStrip({label:'Body fat rate · Körperfett',value:fat,unit:'%',bands:fatBands,source:'Kategorien nur optisch nachgebildet – keine validierten Fitdays-Grenzen',neutral:true})}
   ${validTarget?reportStrip({label:'Gewicht / freiwilliges Zielgewicht',value:ratio,unit:'%',bands:targetBands,source:`Zielgewicht ${num(target)} kg`,neutral:true}):'<p class="fdi-strip-source">Kein Zielgewicht hinterlegt – der leere Zielgewichts-Balken entfällt. Für V-Taper sind Körperfetttrend und Taille aussagekräftiger.</p>'}
   <h4 class="fdi-other-title">Other indicators <small>· Weitere Kennzahlen</small></h4>
-  <div class="fdi-report-indicators">${indicators.map(([label,value,unit,source],idx)=>`<div><span>${esc(label)}${source?` <small>· ${esc(source)}</small>`:''}</span><strong>${value===null?'–':esc(num(value,idx===0?0:1))+' '+esc(unit)}</strong></div>`).join('')}</div>
+  <div class="fdi-report-indicators">${indicators.map(([label,value,unit,source],idx)=>`<div><span>${esc(label)}${source?` <small>· ${esc(source)}</small>`:''}</span><strong>${value===null?'–':esc(idx===3?whrNum(value):num(value,idx===0?0:1))+' '+esc(unit)}</strong></div>`).join('')}</div>
+  ${whrReferenceMarkup(row,{whrReferenceSex,whrHistory})}
   ${fatFreeDerived!==null?'<p class="fdi-strip-source">Fettfreie Masse aus Gewicht und Körperfett berechnet; kein eigener Fitdays-Exportwert.</p>':''}
  </section>`;
 }
 
-export function fitdaysInterpretationView(fitdays=[],{today='',range='28',bodyTapeDashboard='',heightCm=null,targetWeightKg=null}={}){
+export function fitdaysInterpretationView(fitdays=[],{today='',range='28',bodyTapeDashboard='',heightCm=null,targetWeightKg=null,smartTapeWhrSeries=[],whrReferenceSex=''}={}){
  const days=range==='all'?20000:Number(range)||28;
  const until=/^\d{4}-\d{2}-\d{2}$/.test(today)?today:'9999-12-31';
  const d=new Date(until+'T12:00:00Z');const from=Number.isFinite(d.getTime())&&days<10000?(d.setUTCDate(d.getUTCDate()-(days-1)),d.toISOString().slice(0,10)):'0000-01-01';
  const selected=(Array.isArray(fitdays)?fitdays:[]).filter(x=>x?.day>=from&&x?.day<=until&&typeof x.at==='string').sort((a,b)=>a.at.localeCompare(b.at)).map(x=>resolvedBodyMetrics(x,heightCm));
- const latest=selected.at(-1);
- if(!latest)return bodyTapeDashboard+'<section class="fdi-root"><header><h3>Fitdays · Werte verstehen</h3></header><p class="fdi-subtle">Im gewählten Zeitraum sind keine Fitdays-Messungen vorhanden.</p></section>';
+ const tapeInRange=(Array.isArray(smartTapeWhrSeries)?smartTapeWhrSeries:[]).filter(x=>x?.day>=from&&x?.day<=until);
+ const whrEvidence=currentWhrEvidence(selected,tapeInRange);
+ const latestScale=selected.at(-1)||null;
+ const latest=latestScale?{...latestScale}:null;
+ if(whrEvidence.latest&&latest){latest.whr=whrEvidence.latest.ratio;latest.whrOrigin=whrEvidence.latest.origin;latest.whrDay=whrEvidence.latest.day;
+  latest.whrWaistCm=whrEvidence.latest.waistCm;latest.whrHipCm=whrEvidence.latest.hipCm;}
+ if(!latest){const tape=whrEvidence.latest;
+  return bodyTapeDashboard+'<section class="fdi-root"><header><h3>Fitdays · Werte verstehen</h3></header>'
+  +(tape?`<div class="fdi-report-summary"><h4>Weitere Kennzahlen · Smart Tape</h4><div class="fdi-report-indicators"><div><span>Waist-to-hip ratio · WHR · Fitdays+ Smart Tape</span><strong>${whrNum(tape.ratio)}</strong></div></div>${whrReferenceMarkup({whr:tape.ratio,whrOrigin:'smart-tape',whrDay:tape.day,whrWaistCm:tape.waistCm,whrHipCm:tape.hipCm},{whrReferenceSex,whrHistory:whrEvidence.history})}</div>`:'')
+  +'<p class="fdi-subtle">Im gewählten Zeitraum sind keine Fitdays-Waagenmessungen vorhanden.</p></section>';}
+
  const primary=['bmi','bodyFatPct','visceralFat','subcutaneousFatPct','whr'].map(k=>measures.find(m=>m.key===k));
  const secondary=measures.filter(m=>!primary.includes(m));
  const measured=measures.filter(m=>get(latest,m.key)!==null).length;
@@ -205,10 +260,10 @@ export function fitdaysInterpretationView(fitdays=[],{today='',range='28',bodyTa
  return bodyTapeDashboard+`<section class="fdi-root" id="fitdays-interpretation" aria-label="Fitdays Referenz- und Werteinterpretation">
   <header class="fdi-head"><div><span class="fdi-eyebrow">KÖRPERANALYSE · REFERENZEN</span><h3>Deine Körperwerte – auf einen Blick</h3><p>Fitdays-artige Statusbalken und die elf beschrifteten Körperregionen; bestehende Dot-Plots und Segmentanalysen folgen darunter.</p></div><small>${esc(latest.day)} · ${selected.length} Messungen</small></header>
   <div class="fdi-personal"><strong>${esc(heightNote)}</strong><span>${measured} von ${measures.length} Werten verfügbar · Fitdays-Werte sind BIA-Schätzungen</span></div>
-  <div class="fdi-layout fdi-report-layout">${reportSummary(latest,{targetWeightKg})}<aside class="fdi-matrix-card"><h4>Body type assessment <small>· Körpertyp</small></h4>${bodyMatrix(latest)}<details><summary>Zur Einordnung</summary><p>Die elf bezeichneten Bereiche orientieren sich an der Fitdays-Vorlage. Die genaue Hersteller-Referenztabelle ist nicht verfügbar. Farben und Felder sind eine Annäherung zur Visualisierung, keine medizinische Einstufung.</p></details></aside></div>
+  <div class="fdi-layout fdi-report-layout">${reportSummary(latest,{targetWeightKg,whrReferenceSex,whrHistory:whrEvidence.history})}<aside class="fdi-matrix-card"><h4>Body type assessment <small>· Körpertyp</small></h4>${bodyMatrix(latest)}<details><summary>Zur Einordnung</summary><p>Die elf bezeichneten Bereiche orientieren sich an der Fitdays-Vorlage. Die genaue Hersteller-Referenztabelle ist nicht verfügbar. Farben und Felder sind eine Annäherung zur Visualisierung, keine medizinische Einstufung.</p></details></aside></div>
   ${fatMassVisualView(selected)}
   ${fitdaysDynamicBodyView(selected,{heightCm})}
-  <details class="fdi-more"><summary>Detailansichten der Messwerte · ${measured} von ${measures.length} verfügbar</summary><div class="fdi-gauges fdi-secondary">${measures.map(m=>gauge(latest,selected,m)).join('')}</div></details>
+  <details class="fdi-more"><summary>Detailansichten der Messwerte · ${measured} von ${measures.length} verfügbar</summary><div class="fdi-gauges fdi-secondary">${measures.map(m=>gauge(latest,m.key==='whr'?whrEvidence.history.map(x=>({day:x.day,at:x.at,whr:x.ratio})):selected,m)).join('')}</div></details>
   <p class="fdi-footnote">BMI: allgemeine Erwachsenenkategorien. Die übrigen Skalen zeigen die Position des tatsächlichen Messwerts, keine erfundenen Fitdays-Risikogrenzen. Fehlende Exportfelder bleiben fehlend. Keine automatische Gesundheitsdiagnose.</p>
  </section>`;
 }

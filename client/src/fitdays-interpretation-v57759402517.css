@@ -73,3 +73,8 @@
 
 .fdi-matrix-scroll-hint{display:none;font-size:.67rem;color:#637a70;margin:4px 0 7px}
 @media(max-width:500px){.fdi-report-matrix{overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain}.fdi-report-matrix .fdi-matrix-svg{min-width:470px}.fdi-matrix-scroll-hint{display:block}}
+
+/* 0.5.91.19 · Provenance-aware WHR context, without a fabricated diagnosis. */
+.fdi-whr-explain{display:grid;gap:5px;margin-top:12px;padding:11px 12px;border:1px solid #e2e9e4;border-radius:10px;background:#f4f8f6;line-height:1.45}
+.fdi-whr-explain strong{font-size:.84rem;color:#265a50;font-weight:740}
+.fdi-whr-explain small{font-size:.72rem;color:#667d74}

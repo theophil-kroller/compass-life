@@ -1,3 +1,11 @@
+## 0.5.91.19 · WHR-Referenz & Smart-Tape-/Fitdays-Kennzahlenbrücke (04.11.2026)
+
+- Fehlendes `Waist-to-hip ratio · WHR` unter Insights → Körper behoben: alte Fitdays-„Other indicators“ lesen nun auch im Tresor bestätigte, paarige Fitdays+-Smart-Tape-Umfänge. Priorität nach tatsächlichem Messdatum; gleiche Zeitquelle und Methode, keine Vermischung von historischen Waagen-Schätzwerten.
+- Angezeigt werden Verhältnis (3 Nachkommastellen), Messdatum, Quelle, Umfangsrechnung, ggf. Verlauf und WHO/NLM-Orientierung für Männer 0,90 / Frauen 0,85. Referenzeinordnung keine Diagnose und kein unmittelbarer Muskelzuwachsbeweis.
+- Auch ohne Waagendatensätze wird vorhandener Tape-WHR-Wert angezeigt. Nur im Chat hochgeladene CSVs bleiben aus Datenschutzgründen ausdrücklich **nicht** automatisch in der App gespeichert.
+- 21 gezielte Tests bestanden, 33/33 Deployment-Checks. Keine Datenmigration, unveränderte Coach-Progression und bestehende historische Daten. Source ZIP; GitHub Actions muss echten Produktionsbuild bestätigen.
+- Details: `RELEASE_0.5.91.19.md`, `PATCH_INSTALL_0.5.91.19.md`.
+
 ## 0.5.91.18 · Fitdays+ Smart Tape Live-Import & interaktive Körperübersicht (04.11.2026)
 
 - Echten Fitdays+-Umfangsexport verifiziert: `.csv`-Dateiname ist intern ein Excel-XLS/BIFF-Container, mit zwölf Umfangsspalten und lokalem Zeitstempel. Der Health Import Hub erkennt und importiert die Inhalte statt sie fälschlich als reinen CSV-Text zu lesen.

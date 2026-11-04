@@ -63,7 +63,7 @@ test('second real measurement shows change vs prior reading and a selectable dot
 test('app surface, import confirmation and privacy-preserving journal integration are wired',()=>{
  const app=readFileSync(new URL('../client/src/main-full-v57759402510.js',import.meta.url),'utf8');
  const parser=readFileSync(new URL('../client/src/health-import.js',import.meta.url),'utf8');
- assert.match(app,/bodyTapeDashboard:bodyMeasurementDashboardHtml\(bodyMeasurementDashboardModel/);
+ assert.match(app,/bodyTapeDashboard:bodyMeasurementDashboardHtml\((?:bodyMeasurementDashboardModel|bodyTapeModel)/);
  assert.match(app,/smart-tape-region/);assert.match(app,/smart-tape-import/);assert.match(app,/bodyTape\|\|\[\]/);
  assert.match(parser,/parseHealthTableFile/);assert.match(parser,/putBodyMeasurement\(s,row\)/);
  assert.match(parser,/parseFitdaysSmartTapeRows\(rows\)/);

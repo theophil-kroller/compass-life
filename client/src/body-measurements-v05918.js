@@ -132,7 +132,15 @@ export function bodyMeasurementDashboardModel(state,{today,range='90'}={}){
    trend:bodyMeasurementTrend(points)};});
  const ratios=bodyMeasurementRatioSeries(state,{today:reference}).filter(x=>!start||x.day>=start);
  const paired=new Map();for(const m of rows){if(m.regionId!=='waist'&&m.regionId!=='hip')continue;const v=paired.get(m.at)||{};v[m.regionId]=m;paired.set(m.at,v);}
- const waistHip=[...paired.values()].filter(x=>x.waist&&x.hip&&x.hip.valueCm>0).map(x=>({at:x.waist.at,day:x.waist.day,ratio:two(x.waist.valueCm/x.hip.valueCm)})).sort((a,b)=>a.at.localeCompare(b.at));
+ // Match strictly the same timestamp and measurement method; never combine a
+ // previous hip reading with a newer waist or with a device-estimated WHR.
+ const waistHip=[...paired.values()].filter(x=>x.waist&&x.hip&&x.hip.valueCm>0
+  &&x.waist.source===x.hip.source&&x.waist.method===x.hip.method
+  &&x.waist.qualityStatus!=='questionable'&&x.hip.qualityStatus!=='questionable')
+  .map(x=>({at:x.waist.at,day:x.waist.day,ratio:two(x.waist.valueCm/x.hip.valueCm),
+   waistCm:x.waist.valueCm,hipCm:x.hip.valueCm,source:x.waist.source,
+   qualityStatus:x.waist.qualityStatus==='confirmed'&&x.hip.qualityStatus==='confirmed'?'confirmed':'unreviewed',
+   sourceIds:[x.waist.id,x.hip.id]})).sort((a,b)=>a.at.localeCompare(b.at));
  return {today:reference,range,start,series,ratios,ratioLatest:ratios.at(-1)||null,waistHip,waistHipLatest:waistHip.at(-1)||null,features:SMART_TAPE_FLAGS,
   enabled:true,hasData:rows.length>0,measurements:rows.length};
 }
