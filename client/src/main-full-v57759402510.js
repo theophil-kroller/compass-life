@@ -1,3 +1,4 @@
+import './strength-set-corrections-v059122.css';
 import './worktime-manual-v059117.css';
 import {quickHabitSnapshot117,quickHabitDone117} from './habit-daily-guard-v059117.js';
 import {applyManualPunch117} from './worktime-manual-v059117.js';
@@ -234,6 +235,7 @@ import {mountPremiumAnatomy} from './strength-premium-v57738.js';
 import {nutritionFatView} from './nutrition-fat-quality-v57731.js';
 import './nutrition-fat-quality-v57731.css';
 import {strengthInsightsView} from './strength-insights-full-repair-v57759402511.js';
+import {correctGuidedSetWeight122} from './strength-set-corrections-v059122.js';
 import './strength-insights-v57728.css';
 import {nutritionIntelligenceView} from './nutrition-intelligence-v57712.js';
 import {recognizeMeal,saveMeal,gptMealPrompt,importMealJSON,mealPreviewMarkup,mealMacroMarkup,mealComposerMarkup} from './meal-compose-v57723.js';
@@ -279,7 +281,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.21';
+const COMPASS_CLIENT_VERSION='0.5.91.22';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -3050,6 +3052,13 @@ function bindLifeWeeks82(){
  const search=app.querySelector('#lw82-calendar-filter');if(search)search.onsubmit=ev=>{ev.preventDefault();lifeWeeksCalendarQuery=String(new FormData(search).get('query')||'').slice(0,120);render();};
 }
 function bindStrengthEditor732(){
+ app.querySelectorAll('.str122-weight-form').forEach(form=>{form.onsubmit=async ev=>{
+  ev.preventDefault();if(!state)return;
+  const input=form.querySelector('[name="actualWeightKg"]');
+  try{let result;await mutate(st=>{result=correctGuidedSetWeight122(st,{sessionId:form.dataset.sessionId,exerciseId:form.dataset.exerciseId,setNumber:Number(form.dataset.setNumber),weightKg:input?.value});},null,true);
+   refreshStrength728();toast(result?.changed?'Tatsächliches Satzgewicht gespeichert · Coach und Muskelkarte aktualisiert.':'Satzgewicht bereits aktuell.');
+  }catch(ex){toast(ex.message,true);}
+ };});
  const strengthForm=app.querySelector('#str732-form');
  if(strengthForm)wireStrengthRecentDefaults(strengthForm,state);
  if(strengthForm)strengthForm.onsubmit=async ev=>{

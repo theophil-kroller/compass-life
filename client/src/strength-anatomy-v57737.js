@@ -88,12 +88,93 @@ export const EXERCISE_ANATOMY=Object.freeze({
  'farmers-walk':r(['forearm_flex','trapezius_upper'],['obliques','rectus_abdominis','erector_spinae','forearm_ext']),
  'dumbbell-bench-press':r(['pectoral_lower','pectoral_upper'],['deltoid_front','triceps'])
 });
+
+/** 0.5.91.22 · Third role: stabilizing/co-contracting during an exercise.
+ * These are conservative, qualitative anatomical hypotheses (not EMG results).
+ * Stabilizers NEVER count as primary/secondary hypertrophy sets, weekly volume,
+ * mechanical load, or evidence of recovery needs. Empty means deliberately not
+ * asserted, rather than that a muscle is inactive.
+ * This table is exhaustive for the 66 editorial Compass exercises.
+ */
+export const EXERCISE_STABILIZERS=Object.freeze({
+ bench:['rhomboids'],
+ 'incline-bench':['rhomboids'],
+ pushup:['obliques','glute_max'],
+ 'chest-press':[],
+ 'chest-fly':['rhomboids'],
+ pullup:['rectus_abdominis','obliques'],
+ 'lat-pulldown':['rectus_abdominis'],
+ 'cable-row':['erector_spinae','rectus_abdominis'],
+ 'dumbbell-row':['erector_spinae','obliques','forearm_flex'],
+ 'barbell-row':['rectus_abdominis','obliques','forearm_flex'],
+ deadlift:['rectus_abdominis','obliques','calves_soleus','calves_gastro'],
+ 'romanian-deadlift':['rectus_abdominis','obliques','forearm_flex','calves_soleus'],
+ squat:['calves_soleus','calves_gastro','tibialis','obliques'],
+ 'leg-press':['calves_soleus'],
+ lunge:['calves_soleus','calves_gastro','glute_med','obliques'],
+ 'leg-extension':[],
+ 'leg-curl':[],
+ 'hip-thrust':['rectus_abdominis'],
+ 'glute-bridge':['rectus_abdominis'],
+ 'calf-raise':[],
+ 'shoulder-press':['rectus_abdominis','obliques','glute_max'],
+ 'lateral-raise':['rectus_abdominis'],
+ 'face-pull':['rectus_abdominis'],
+ 'reverse-fly':['erector_spinae'],
+ 'biceps-curl':['rectus_abdominis'],
+ 'hammer-curl':['rectus_abdominis'],
+ 'triceps-pushdown':['rectus_abdominis'],
+ 'triceps-extension':['rectus_abdominis'],
+ 'wrist-curl':[],
+ plank:['quadriceps','calves_soleus'],
+ 'dead-bug':[],
+ crunch:[],
+ 'pallof-press':['glute_med','erector_spinae'],
+ 'military-press':['glute_max','erector_spinae','obliques'],
+ 'curl-to-press':['rectus_abdominis'],
+ 'hammer-to-press':['rectus_abdominis'],
+ 'triceps-curl':['rectus_abdominis'],
+ skullcrusher:['rhomboids'],
+ 'close-grip-bench':['rhomboids'],
+ 'reverse-curl':['rectus_abdominis'],
+ 'concentration-curl':[],
+ 'seated-dumbbell-press':['rhomboids'],
+ 'ab-wheel-kneeling':['glute_max','quadriceps'],
+ 'dumbbell-floor-press':['rhomboids'],
+ 'dumbbell-pullover':['rectus_abdominis','obliques'],
+ 'dumbbell-lateral-raise':['rectus_abdominis'],
+ 'goblet-squat':['calves_gastro','calves_soleus','tibialis','erector_spinae','glute_med'],
+ 'dumbbell-romanian-deadlift':['calves_soleus','forearm_flex','rectus_abdominis'],
+ 'dumbbell-shoulder-press':['rectus_abdominis','obliques'],
+ 'barbell-overhead-press':['glute_max','erector_spinae','obliques'],
+ 'cable-straight-arm-pulldown':['rectus_abdominis'],
+ 'cable-single-arm-row':['obliques','erector_spinae'],
+ 'cable-lateral-raise':['obliques','rectus_abdominis'],
+ 'cable-rear-delt-fly':['rectus_abdominis'],
+ 'cable-crunch':[],
+ 'cable-woodchop':['glute_med','glute_max'],
+ 'decline-pushup':['glute_max','obliques'],
+ 'incline-pushup':['glute_max'],
+ 'pike-pushup':['rectus_abdominis'],
+ 'prone-y-raise':['erector_spinae'],
+ 'one-arm-dumbbell-snatch':['calves_gastro','calves_soleus','forearm_flex','glute_med'],
+ 'dumbbell-front-squat':['calves_gastro','calves_soleus','tibialis','obliques'],
+ 'dumbbell-walking-lunge':['calves_soleus','calves_gastro','obliques'],
+ 'sled-push':['calves_soleus','obliques'],
+ 'farmers-walk':['calves_soleus','calves_gastro','glute_med'],
+ 'dumbbell-bench-press':['rhomboids']
+});
+export const exerciseMuscleRoles122=id=>{
+ const a=EXERCISE_ANATOMY[id];if(!a)return null;
+ const primary=[...a.primary],secondary=a.secondary.filter(x=>!primary.includes(x));
+ return {primary,secondary,stabilizers:(EXERCISE_STABILIZERS[id]||[]).filter(x=>!primary.includes(x)&&!secondary.includes(x))};
+};
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n.toLocaleString('de-AT',{maximumFractionDigits:1});
 // Duration-based Garmin carry/sled sets can be identified even with no repetitions.
 const validSet=s=>s&&s.exerciseId&&(Number(s.reps)>0||Number(s.durationSeconds)>0);
 export function detailedMuscleData(model){
- const data=Object.fromEntries(ANATOMY_REGIONS.map(region=>[region.id,{...region,primary:0,secondary:0,index:0}]));
+ const data=Object.fromEntries(ANATOMY_REGIONS.map(region=>[region.id,{...region,primary:0,secondary:0,stabilizing:0,index:0}]));
  let mapped=0,unmapped=0;
  for(const session of model?.sessions||[])for(const set of session.sets||[]){
   // No automatic anatomical detail from broad FIT category or incomplete CSV summary.
@@ -102,6 +183,7 @@ export function detailedMuscleData(model){
   mapped++;
   for(const id of anatomy.primary)if(data[id])data[id].primary++;
   for(const id of anatomy.secondary)if(data[id]&&!anatomy.primary.includes(id))data[id].secondary++;
+  for(const id of exerciseMuscleRoles122(set.exerciseId).stabilizers)if(data[id])data[id].stabilizing++;
  }
  for(const x of Object.values(data))x.index=x.primary+x.secondary*.5;
  const max=Math.max(1,...Object.values(data).map(x=>x.index));
@@ -142,8 +224,9 @@ const SHAPES={
  }
 };
 const neutral='#E1E4E3';
-export function muscleTone(value,primary,secondary,mode='roles'){
- if(!primary&&!secondary)return neutral;
+export const STABILIZER_COLOR_122='#45b7a7';
+export function muscleTone(value,primary,secondary,mode='roles',stabilizing=0){
+ if(!primary&&!secondary)return stabilizing?STABILIZER_COLOR_122:neutral;
  if(mode==='roles')return primary>0?'#E64B38':'#F8C94A';
  return value<1.5?'#F6D763':value<3?'#FEB343':value<5?'#F1872E':value<9?'#E35B32':'#C83C3C';
 }
@@ -152,10 +235,10 @@ export function detailedMuscleSvg(model,side='front',mode='roles',cycling=null,a
  const rides=cycling?.rides>0&&activity!=='strength';const regions=rides?cycling.regions:{primary:[],secondary:[]};
  const zones=Object.entries(shapes).map(([id,paths])=>{const r=data.regions[id],bikePrimary=regions.primary.includes(id),bikeSecondary=regions.secondary.includes(id);
   const strengthVisible=activity!=='cycling';
-  const color=strengthVisible&&((r?.primary||0)+(r?.secondary||0)>0)?muscleTone(r?.index||0,r?.primary||0,r?.secondary||0,mode):bikePrimary?'#F28C25':bikeSecondary?'#F6C95A':neutral;
+  const color=strengthVisible&&((r?.primary||0)+(r?.secondary||0)+(r?.stabilizing||0)>0)?muscleTone(r?.index||0,r?.primary||0,r?.secondary||0,mode,r?.stabilizing||0):bikePrimary?'#F28C25':bikeSecondary?'#F6C95A':neutral;
   const overlap=rides&&activity==='combined'&&(bikePrimary||bikeSecondary)&&((r?.primary||0)+(r?.secondary||0)>0);
   const stroke=overlap?'#E59D29':'#fff',strokeWidth=overlap?3.4:2;
-  const label=`${r?.label||id}: ${r?.primary||0} Hauptsätze; ${r?.secondary||0} unterstützende Satzbeteiligungen${bikePrimary||bikeSecondary?'; bei dokumentiertem Radfahren anatomisch mitbeansprucht (kein Satz)': ''}`;
+  const label=`${r?.label||id}: ${r?.primary||0} Hauptsätze; ${r?.secondary||0} unterstützende Satzbeteiligungen; ${r?.stabilizing||0} stabilisierende Beteiligungen (keine Wachstumssätze)${bikePrimary||bikeSecondary?'; bei dokumentiertem Radfahren anatomisch mitbeansprucht (kein Satz)': ''}`;
   return paths.map(path=>`<path d="${path}" fill="${color}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round" tabindex="0" aria-label="${esc(label)}"><title>${esc(label)}</title></path>`).join('');}).join('');
  return `<svg viewBox="0 0 200 440" class="str728-body str737-detail-svg" role="img" aria-label="Feinere anatomische Muskelkarte ${side==='front'?'vorn':'hinten'}, ${mode==='load'?'Satzbelastung':'Haupt- und Nebenbeteiligung'}">
  <ellipse cx="100" cy="42" rx="27" ry="32" fill="#F3F5F3" stroke="#D4DAD7" stroke-width="1.8"/><path d="M92 69 L108 69 L110 89 L90 89 Z" fill="#F0F1F0" stroke="#D4DAD7"/>

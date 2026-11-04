@@ -3,7 +3,7 @@
  * slimmer line-art style closer to the user's preferred fitness-app references.
  * This remains a model of documented involvement, not measured EMG/fatigue/growth.
  */
-import { detailedMuscleData,EXERCISE_ANATOMY } from './strength-anatomy-v57737.js';
+import { detailedMuscleData,EXERCISE_ANATOMY,exerciseMuscleRoles122,STABILIZER_COLOR_122 } from './strength-anatomy-v57737.js';
 
 const e=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fmt=(v,d=0)=>Number.isFinite(v)?v.toLocaleString('de-AT',{maximumFractionDigits:d}):'–';
@@ -103,6 +103,7 @@ function colorForRegion(region,mode,cycPrimary,cycSecondary,activity){
   const weight=(region?.index||0);
   return weight>=8?'#e6532e':weight>=5?'#ed7926':weight>=2.5?'#efa536':'#efcc5b';
  }
+ if(activity!=='cycling'&&(region?.stabilizing||0)>0)return STABILIZER_COLOR_122;
  if(activity!=='strength'&&cycPrimary)return '#ef9d34';
  if(activity!=='strength'&&cycSecondary)return '#e7c35e';
  return OFF_FILL;
@@ -133,10 +134,10 @@ export async function mountPremiumAnatomy(root,loader=loadAnatomyPaths){
    const id=compassRegionForAnatomyId(part.id,view);
    const row=id?groupInfo[id]:null;
    const cyclingPrimary=id&&bikePrimary.includes(id),cyclingSecondary=id&&bikeSecondary.includes(id);
-   const active=id&&((info.activity!=='cycling'&&((row?.primary||0)+(row?.secondary||0)>0))||(info.activity!=='strength'&&(cyclingPrimary||cyclingSecondary)));
-   const fill=id&&info.todayRegions?.includes(id)?'#ed4b42':id&&info.recentRegions?.includes(id)?'#ee963a':id&&info.supportingRegions?.includes(id)?'#f0c955':id?colorForRegion(row,info.mode||'roles',cyclingPrimary,cyclingSecondary,info.activity||'combined'):'#232d3c';
+   const active=id&&((info.activity!=='cycling'&&((row?.primary||0)+(row?.secondary||0)+(row?.stabilizing||0)>0))||(info.activity!=='strength'&&(cyclingPrimary||cyclingSecondary)));
+   const fill=id&&info.todayRegions?.includes(id)?'#ed4b42':id&&info.recentRegions?.includes(id)?'#ee963a':id&&info.supportingRegions?.includes(id)?'#f0c955':id&&info.todayStabilizers?.includes(id)?STABILIZER_COLOR_122:id&&info.recentStabilizers?.includes(id)?STABILIZER_COLOR_122:id?colorForRegion(row,info.mode||'roles',cyclingPrimary,cyclingSecondary,info.activity||'combined'):'#232d3c';
    const name=LABELS[id]||Object.entries(ANATOMY_OVERRIDES).find(([k])=>part.id.startsWith(k))?.[1]||part.name||part.id;
-   const note=id?`${info.todayRegions?.includes(id)?'Heute trainiert · ':info.recentRegions?.includes(id)?'In den letzten 7 Tagen trainiert · ':''}${row?.primary||0} Hauptsätze · ${row?.secondary||0} unterstützend${cyclingPrimary||cyclingSecondary?' · Radfahren beteiligt':''}`:'Anatomische Orientierung';
+   const note=id?`${info.todayRegions?.includes(id)?'Heute trainiert · ':info.recentRegions?.includes(id)?'In den letzten 7 Tagen trainiert · ':''}${row?.primary||0} Hauptsätze · ${row?.secondary||0} unterstützend · ${row?.stabilizing||0} stabilisierende Beteiligungen (keine Wachstumssätze)${cyclingPrimary||cyclingSecondary?' · Radfahren beteiligt':''}`:'Anatomische Orientierung';
    const title=`${name} – ${note}`;
    return `<path d="${e(part.path)}" class="str740-muscle${active?' is-active':''}" fill="${fill}" stroke="${active?'#f4ded0':'#9daabd'}" stroke-width="${active?'0.18':'0.14'}" stroke-linejoin="round" role="img" tabindex="0" data-muscle-name="${e(name)}" data-muscle-note="${e(note)}" aria-label="${e(title)}"><title>${e(title)}</title></path>`;
   }).join('');
@@ -166,16 +167,17 @@ export async function mountPremiumAnatomy(root,loader=loadAnatomyPaths){
 /** A placeholder only; a local bundle supplies professionally traced shapes. */
 export function premiumStrengthSvg(model,view,mode,cycling,activity){
  const data=detailedMuscleData(model);
- const records=Object.fromEntries(Object.entries(data.regions).map(([id,r])=>[id,{primary:r.primary,secondary:r.secondary,index:r.index}]));
+ const records=Object.fromEntries(Object.entries(data.regions).map(([id,r])=>[id,{primary:r.primary,secondary:r.secondary,stabilizing:r.stabilizing,index:r.index}]));
  const current=typeof model?.today==='string'?model.today:new Date().toLocaleDateString('sv-SE');
- const recentStart=shift(current,-7),todayRegions=new Set(),recentRegions=new Set(),supportingRegions=new Set();
+ const recentStart=shift(current,-7),todayRegions=new Set(),recentRegions=new Set(),supportingRegions=new Set(),todayStabilizers=new Set(),recentStabilizers=new Set();
  for(const session of model?.sessions||[]){const day=session.day;if(!isDay(day)||day>current)continue;
   for(const set of session.sets||[]){if(!(Number(set?.reps)>0))continue;const anatomy=EXERCISE_ANATOMY[set.exerciseId];if(!anatomy)continue;
    for(const id of anatomy.primary){if(day===current)todayRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
    for(const id of anatomy.secondary){if(day===current)supportingRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
+   for(const id of exerciseMuscleRoles122(set.exerciseId).stabilizers){if(day===current)todayStabilizers.add(id);else if(day>=recentStart)recentStabilizers.add(id);}
   }
  }
- const info={regions:records,activity,mode,todayRegions:[...todayRegions],recentRegions:[...recentRegions].filter(id=>!todayRegions.has(id)),supportingRegions:[...supportingRegions].filter(id=>!todayRegions.has(id)),cyclingPrimary:cycling?.rides?cycling.regions.primary:[],cyclingSecondary:cycling?.rides?cycling.regions.secondary:[]};
+ const info={regions:records,activity,mode,todayRegions:[...todayRegions],recentRegions:[...recentRegions].filter(id=>!todayRegions.has(id)),supportingRegions:[...supportingRegions].filter(id=>!todayRegions.has(id)),todayStabilizers:[...todayStabilizers],recentStabilizers:[...recentStabilizers],cyclingPrimary:cycling?.rides?cycling.regions.primary:[],cyclingSecondary:cycling?.rides?cycling.regions.secondary:[]};
  const back=view==='back';
  return `<svg class="str738-body str740-svg" data-anatomy-view="${back?'back':'front'}" data-anatomy-info="${e(JSON.stringify(info))}" viewBox="${back?'37 0 35 93':'0 0 35 93'}" role="img" aria-label="Anatomische Muskelkarte ${back?'hinten':'vorne'}, über 70 detaillierte Muskelbereiche"><text x="${back?'44':'8'}" y="48" class="str740-loading">Anatomie wird geladen …</text></svg>`;
 }
@@ -196,12 +198,12 @@ export function strengthPremiumRanking(model,cycling,activity='combined'){
 
 export function strengthPremiumMap(model,cycling,activity='combined',side='front'){
  const mode=side==='back'?'load':'roles';
- const legend=[['#ed4b42','Heute trainiert (primär)'],['#ee963a','Letzte 7 Tage'],['#f0c955','Heute unterstützend']];
+ const legend=[['#ed4b42','Heute trainiert (primär)'],['#ee963a','Letzte 7 Tage'],['#f0c955','Heute unterstützend'],[STABILIZER_COLOR_122,'Stabilisierend · kein Wachstumssatz']];
  if(activity!=='strength'&&cycling?.rides)legend.push(['#f2a531','Radfahren (primär)']);
- legend.push([OFF_FILL,'Nicht zugeordnet']);
+ legend.push([OFF_FILL,'Keine gezielte Belastung dokumentiert']);
  // Wait until Compass has inserted this HTML into the document. No old cartoon fallback.
  if(typeof document!=='undefined'&&typeof queueMicrotask==='function')queueMicrotask(()=>mountPremiumAnatomy(document).catch(ex=>{console.error('Anatomie nicht geladen:',ex);document.querySelectorAll('.str740-loading').forEach(n=>{n.textContent='Anatomie konnte nicht geladen werden.';});}));
  const front=premiumStrengthSvg(model,'front',mode,cycling,activity),back=premiumStrengthSvg(model,'back',mode,cycling,activity);
- const disclaimer=activity==='cycling'?'Qualitative Beanspruchung beim Treten; keine gemessene Kraft oder Muskelermüdung.':activity==='combined'?'Krafttraining und Radfahren sind getrennte Datentypen; Farben zeigen Beteiligung. Radfahrminuten werden nicht in Sätze umgerechnet.':'Satzbasierte Zuordnung, keine direkte physiologische Messung.';
+ const disclaimer=activity==='cycling'?'Qualitative Beanspruchung beim Treten; keine gemessene Kraft oder Muskelermüdung.':activity==='combined'?'Krafttraining und Radfahren sind getrennte Datentypen; Farben zeigen Beteiligung. Radfahrminuten werden nicht in Sätze umgerechnet.':'Haupt-, Neben- und Stabilisierungsrollen sind anatomische Modelle, keine EMG-Messung. Stabilisierungsrollen zählen nicht zum Muskelaufbau-Trainingsvolumen.';
  return `<section class="str738-visual str739-visual" aria-label="Große Muskelkarte vorne und hinten"><header class="str738-visual-head"><div><span class="str738-eyebrow">ANATOMISCHE ÜBERSICHT</span><h3>Deine beanspruchten Muskeln</h3></div><span class="str738-mode-label">${activity==='cycling'?'RAD':activity==='strength'?'KRAFT':'KRAFT + RAD'}</span></header><div class="str738-figures str739-figures str740-figures"><figure><div class="str738-figure str739-figure str740-figure">${front}</div><figcaption>VORNE</figcaption><output class="str740-muscle-tip" hidden aria-live="polite"></output></figure><figure><div class="str738-figure str739-figure str740-figure">${back}</div><figcaption>HINTEN</figcaption><output class="str740-muscle-tip" hidden aria-live="polite"></output></figure></div><div class="str738-visual-legend">${legend.map(([color,label])=>`<span><i style="background:${color}"></i>${e(label)}</span>`).join('')}</div><p class="str738-map-note">${e(disclaimer)}</p></section>${strengthPremiumRanking(model,cycling,activity)}`;
 }

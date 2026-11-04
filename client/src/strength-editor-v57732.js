@@ -129,7 +129,7 @@ export const strengthExerciseLabel=(id)=>{
 export const V_TAPER_HOME_EXERCISES=Object.freeze([
  'dumbbell-row','dumbbell-lateral-raise','dumbbell-pullover','goblet-squat',
  'ab-wheel-kneeling','dumbbell-romanian-deadlift','dumbbell-shoulder-press',
- 'decline-pushup','pike-pushup','prone-y-raise','barbell-row'
+ 'decline-pushup','pike-pushup','prone-y-raise','barbell-row','calf-raise'
 ]);
 export const V_TAPER_GYM_EXERCISES=Object.freeze([
  'lat-pulldown','cable-lateral-raise','cable-rear-delt-fly','cable-single-arm-row',

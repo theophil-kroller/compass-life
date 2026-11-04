@@ -21,7 +21,7 @@ import './strength-equipment-v059115.css';
 import './strength-cycle-v5775935.css';
 
 const safe=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const GROUPS={back:'Rücken/Lat',shoulders:'Schultern',core:'Bauch/Rumpf',chest:'Brust',forearms:'Griff/Unterarme',quads:'Oberschenkel',posterior:'Beinrückseite',glutes:'Gesäß',biceps:'Bizeps',triceps:'Trizeps'};
+const GROUPS={back:'Rücken/Lat',shoulders:'Schultern',core:'Bauch/Rumpf',chest:'Brust',forearms:'Griff/Unterarme',calves:'Waden',quads:'Oberschenkel',posterior:'Beinrückseite',glutes:'Gesäß',biceps:'Bizeps',triceps:'Trizeps'};
 const GOALS={
  balance:{label:'Ausgeglichen trainieren',targets:['back','shoulders','core','chest','quads','posterior','glutes'],note:'Unterrepräsentierte Muskelgruppen nach belegten Sätzen berücksichtigen.'},
  vtaper:{label:'V-Taper',targets:['back','shoulders','back','shoulders','core'],note:'Latissimus, seitliche/hintere Schultern und Rumpf betonen; Beine bleiben im Plan.'},
@@ -36,7 +36,8 @@ const IDEAS=[
  ['dumbbell-row','back','home','pull','Einarmig ziehen, Schulterblatt Richtung Wirbelsäule führen.','vtaper,balance,strength'],
  ['dumbbell-pullover','back','home','pull','Leicht starten, Schultern beweglich halten, nicht ins Hohlkreuz gehen.','vtaper'],
  ['dumbbell-lateral-raise','shoulders','home','raise','Leichtes Gewicht, Arme seitlich kontrolliert anheben.','vtaper,balance'],
- ['goblet-squat','quads','home','squat','Brust aufrecht, Knie in Zehenrichtung.','strength,balance'],
+ ['calf-raise','calves','home','calf','Im Stand langsam auf die Zehenspitzen steigen, kurz halten und kontrolliert senken. Erst bei ausreichend Erholung.','vtaper,balance'],
+  ['goblet-squat','quads','home','squat','Brust aufrecht, Knie in Zehenrichtung.','strength,balance'],
  ['dumbbell-romanian-deadlift','posterior','home','hinge','Hüfte zurückführen, Wirbelsäule neutral.','strength,balance'],
  ['dumbbell-shoulder-press','shoulders','home','press','Ohne Schwung über Kopf drücken.','strength,vtaper'],
  ['barbell-overhead-press','shoulders','home','press','Nur mit sicher fixierter Verbindungsstange und geeigneter Last; kontrolliert drücken.','strength'],
@@ -101,13 +102,13 @@ export function proposeStrengthTraining(state,{goal='balance',equipment='home',t
 export const HOME_PLATE_INVENTORY=Object.freeze([{kg:2.5,count:4},{kg:2,count:4},{kg:1.5,count:4},{kg:1,count:4}]);
 const WORKOUT_PREF_KEY='compass:strength-coach:preferences-v5919';
 export const HOME_EQUIPMENT={dumbbells:2,connectorWeightKg:0,availablePlateKg:28,abWheel:true};
-const WORKOUT_GROUP_ORDER=['back','shoulders','chest','core','quads','posterior','glutes','biceps','triceps','forearms'];
+const WORKOUT_GROUP_ORDER=['back','shoulders','chest','core','quads','posterior','glutes','biceps','triceps','forearms','calves'];
 const DAY_MS=86400000;
 const WORKOUT_SETS={
  'ab-wheel-kneeling':[3,'6–10',90], 'dead-bug':[2,'8–12 / Seite',45],plank:[3,'30–45 Sek.',45],
  'dumbbell-row':[3,'8–12 / Seite',90],'dumbbell-pullover':[2,'10–12',75],
  'dumbbell-lateral-raise':[3,'12–15',60],'dumbbell-shoulder-press':[3,'6–10',90],
- 'dumbbell-floor-press':[3,'8–12',90],'goblet-squat':[3,'8–12',90],
+ 'dumbbell-floor-press':[3,'8–12',90],'goblet-squat':[3,'8–12',90],'calf-raise':[2,'10–15',60],
  'dumbbell-romanian-deadlift':[3,'8–12',90],
  'lat-pulldown':[3,'8–12',90],'cable-lateral-raise':[3,'12–15',60],
  'cable-rear-delt-fly':[3,'12–15',60],'cable-single-arm-row':[3,'8–12 / Seite',75],
@@ -224,8 +225,12 @@ export function strengthProgressionForExercise(history,exerciseId,{reps='8–12'
  // as if they were one session's prescribed sets.
  const groups=new Map();
  for(const e of sameDay){const key=String(e.sessionId||e.day);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(e);}
- const candidate=[...groups.values()].sort((a,b)=>b.length-a.length)[0]||[];
- const weighted=candidate.filter(e=>Number.isFinite(e.weightKg)&&e.weightKg>0);
+ const latestAt=group=>Math.max(...group.map(e=>Number.isFinite(Date.parse(e.completedAt||''))?Date.parse(e.completedAt):0));
+ // Among multiple same-day sessions choose the *most recently performed*
+ // session, NOT the one with the most recorded sets.
+ const candidate=[...groups.values()].sort((a,b)=>latestAt(b)-latestAt(a)||b.length-a.length)[0]||[];
+ const weighted=candidate.filter(e=>Number.isFinite(e.weightKg)&&e.weightKg>0)
+  .sort((a,b)=>(Date.parse(a.completedAt||'')||0)-(Date.parse(b.completedAt||'')||0));
  if(!weighted.length)return {lastKg:null,sessionReps:candidate.map(e=>e.reps).filter(Number.isFinite),suggestedKg:null,action:'unknown',message:'Zuletzt keine verlässliche Gewichtsangabe dokumentiert.'};
  const latestWeight=weighted.at(-1).weightKg;
  const consistent=weighted.filter(e=>Math.abs(e.weightKg-latestWeight)<.05&&Number.isInteger(e.reps)&&e.reps>0);
@@ -274,7 +279,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  const cycle=typeof coachCycle35==='function'?coachCycle35(state,{today:todayValue,goal:selectedGoal,history,health,cycle:readCycle35()}):null;
  const strongLifts=selectedGoal==='strength'&&location==='gym'&&mode==='stronglifts'; // never prescribe StrongLifts at home
  const variant=strongLifts?(typeof strongliftsNextVariant88==='function'?strongliftsNextVariant88(state):nextStrongLiftsVariant(history)):null;
- let ids=strongLifts?STRONG_LIFTS[variant].map(x=>x[0]):[...WORKOUT_POOLS[selectedGoal][location]];
+ let ids=strongLifts?STRONG_LIFTS[variant].map(x=>x[0]):[...WORKOUT_POOLS[selectedGoal][location],...(selectedGoal==='vtaper'&&location==='home'?['calf-raise']:[])];
  ids=ids.filter(id=>catalog.has(id));
  // A gym session is NOT automatically StrongLifts. Smart planning ranks every
  // goal's available exercise pool by recent recorded load, keeping goal order

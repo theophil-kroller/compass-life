@@ -6,6 +6,7 @@
 import {strengthInsightsView as strengthLegacyView,strengthPeriod} from './strength-insights-v57728.js';
 import {strengthPremiumMap} from './strength-premium-v57738.js';
 import {strengthEditorView} from './strength-editor-v57732.js';
+import {guidedWeightCorrectionView122} from './strength-set-corrections-v059122.js';
 
 export function strengthInsightsView(state,opts={}){
  const {range='28',today,side='front'}=opts;
@@ -39,7 +40,7 @@ export function strengthInsightsView(state,opts={}){
  if(journalAction.split(kpiAnchor).length!==2)
   throw Error('Krafttraining-Editor: KPI-Integrationsstelle nicht eindeutig.');
  const editor=period.sessions.length?strengthEditorView(state,period.sessions,opts.editingId||''):'';
- const withEditor=journalAction.replace(kpiAnchor,editor+'\n '+kpiAnchor);
+ const withEditor=journalAction.replace(kpiAnchor,editor+'\n '+guidedWeightCorrectionView122(state)+'\n '+kpiAnchor);
  // Two maps are visible together: the old one-side-only toggle is misleading.
  return withEditor.replace(/<div class="str728-ranges" role="group" aria-label="Körperansicht">[\s\S]*?<\/div>/,
   '<span class="c4011-both-sides">Vorder- und Rückseite gleichzeitig</span>');

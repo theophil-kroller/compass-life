@@ -1,3 +1,11 @@
+## 0.5.91.22 (2026-11-04)
+
+- Complete audit of all 66 exercise-to-muscle assignments; separate anatomically plausible stabilization role with teal map status. Stabilizers are NOT counted toward hypertrophy sets or recovery load.
+- Goblet Squat: calf complex and tibialis stabilizing; optional low-volume calf raises included for V-Taper home, without assuming stableizers provide dedicated growth.
+- Actual training weights are authoritative per confirmed set, and editable during a guided workout or afterwards in Insights → Krafttraining. Corrections preserve completion day/time, update the canonical E2EE journal, include a bounded edit audit trail, and refresh progression/volume.
+- Same-day progression chooses the latest performed exercise session instead of the session with the greatest number of sets.
+- Includes the existing GitHub Pages delivery hotfix 0.5.91.20.1 and 0.5.91.21 cross-day training support unchanged.
+
 ## 0.5.91.21 (2026-11-04)
 - Fitdays+ Smart-Tape-Ansicht auf eine Silhouette und einen ausgewählten Trend reduziert; Kennzahlen optional.
 - Confirmed-Set-Tageszuordnung in Coach-Historie, Muskelkarte und Regenerationsauswertung korrigiert (Workout kann mehrere Kalendertage umfassen).
