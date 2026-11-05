@@ -1,4 +1,5 @@
 import {mergeStrengthCycles35} from './strength-cycle-v5775935.js';
+import {MCT_C8_FOOD_ID,parseMctC8Serving,mctC8Kcal} from './mct-c8-serving-v059123.js';
 import {activityToJournalArea} from './worktime-category-v0587.js';
 import {mergePeopleDirectory} from './people-sync-v57719.js';
 import {mergeMorningData} from './miracle-morning-v570.js';
@@ -72,6 +73,7 @@ export const FOOD_PRESETS=[
  ['chocolate','🍫','Schokoriegel','Snacks','1 Riegel (50 g)',220,300],
  ['snickers','🍫','Snickers','Snacks','1 Riegel (50 g)',225,275],
  ['kitkat-chunky-peanut-butter','🍫','KitKat Chunky Peanut Butter','Snacks','1 Riegel (42 g)',222,222],
+ ['braineffect-mct-c8-oil','🥥','BRAINEFFECT MCT C8 Öl · >97 % C8','Zutaten','1 EL (15 ml ≈ 14 g)',126,126],
  ['zotter-labooko-himbeer-kokos','🍫','Zotter Labooko Himbeer-Kokos · vegan','Snacks','1 Stück (10 g; Annahme)',59,59],
  ['organic-hemp-fruit-protein-bar-35g','🌱','Schalk Mühle Bio Hanfprotein-Fruchtriegel · Dattel/Rosine/Feige/Maca','Snacks','1 Riegel (35 g)',144,144],
  ['pistachio-butter-cups','🍬','Better Pistachio Butter Cups','Snacks','3 Stück (39 g)',238,242],
@@ -93,6 +95,7 @@ export const FOOD_PRESETS=[
  ...(id==='hofer-germknoedel'?{recipeNote:'HOFER Germknödel · 187 g nach Drittanbieter-Nährwertdaten, etwa 500 kcal pro Portion. Variante, Vanillesauce/Mohn-Zucker und Packungsangabe bitte gegen Verpackung prüfen; nicht als offizieller HOFER-Etikettwert bestätigt.'}:{}),
  ...(id==='banana'?{recipeNote:'Eine mittelgroße Banane = geschätzt 120 g essbarer Anteil ohne Schale; Fruchtgröße und Reifegrad variieren. Makro-/Mikronährstoffe aus generischer USDA-Referenz. Zählt zum Daily Dozen (andere Früchte).'}:{}),
  ...(id==='profuel-alphaminos-bcaa'?{recipeNote:'PROFUEL Alphaminos BCAA: 13 g Portion, BCAA insgesamt 10 g (Leucin 5 g, Isoleucin 2,5 g, Valin 2,5 g), frühere Nutzerangaben. Keine Angaben zu sonstigen Makros/Mikros; BCAA sind kein vollständiges Protein und keine Daily-Dozen-Portion.'}:{}),
+ ...(id===MCT_C8_FOOD_ID?{recipeNote:'MCT C8 Öl aus Kokosnüssen; Hersteller: 900 kcal und 100 g gesättigtes Fett je 100 g; >97 % C8 innerhalb des Fettsäureprofils. 1 EL = 15 ml, hier ≈14 g (geschätzte Masse) und 126 kcal. Menge editierbar: 0,5 EL, 2 EL, ml, g. Enthält keine quantifizierten Mikronährstoffe. Keine Daily-Dozen-Portion oder Anti-Aging-Eight-Gutschrift. Kalorienhaltig: unterbricht ein kalorienfreies Fasten. Neu bei MCT: mit ½ EL beginnen; Herstellerhinweis auf mögliche Magen-Darm-Beschwerden. Quelle: https://brain-effect.com/de-eu/products/rocket-c8-mct-oel'}:{}),
  ...(id==='water-glass'?{recipeNote:'1 Glas = 250 ml Trinkwasser ohne Zusätze und ohne Energiegehalt. Auch mit Kohlensäure, sofern ungesüßt. Glasgröße im Tagebuch anpassbar.'}:{}),
  ...(id==='spar-bio-flaxseed'?{recipeNote:'1 TL ≈ 3 g, vor dem Schlucken zerkaut. ACHTUNG: Die verwendete SPAR-Packung ist mit „Nur zum Kochen und Backen – nicht roh verzehren“ gekennzeichnet. Zerkauen ersetzt Erhitzen nicht.'}:{}),
  ...(id==='pizza-margherita'||id==='krautsalat'||id==='stangenbohnensalat'||id==='champagne'||id==='chocolate-cookie'||id==='whipped-cream'||id==='chocolate-cookie-cream'?{recipeNote:'Grobe Nährwert- und Portionsschätzung, kein Herstelleretikett. Menge und Zutaten können stark abweichen.'}:{}),
@@ -225,6 +228,11 @@ export function nutritionKcalEstimate(food,amount,recipe=null){
   if(!Number.isFinite(grams)||grams<0||grams>2000)return null;
   const kcal=Math.round(grams*(food.id==='zotter-labooko-himbeer-kokos'?5.86:4.10));
   return {low:kcal,high:kcal,kind:'Originaletikett · proportional berechnet'};
+ }
+ if(food?.id===MCT_C8_FOOD_ID){
+  const serving=parseMctC8Serving(amount,food.defaultAmount);if(!serving)return null;
+  const kcal=mctC8Kcal(serving);
+  return {low:kcal,high:kcal,kind:serving.estimatedMass?'Herstellerwerte · Volumen-zu-Gramm-Schätzung':'Herstellerwerte je 100 g'};
  }
  if(food?.id==='smoothie-personal')return smoothieKcalEstimate(recipe,amount);
  if(PERSONAL_RECIPE_IDS.includes(food?.id))return personalRecipeKcal(food.id,recipe,amount);

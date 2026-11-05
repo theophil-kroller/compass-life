@@ -37,6 +37,7 @@ export const FAT_REFERENCES=Object.freeze({
  'fried-egg':{basis:100,unit:'g',fat:14.84,saturated:4.32,mono:6.18,poly:3.25,ala:.14,epa:0,dha:63,omega6:2.78,cholesterol:401,trans:.041,source:'USDA FDC 173423 · generisches Spiegelei; Bratfett/Zubereitung kann stark abweichen',url:'https://getfoodfacts.com/food/egg-whole-cooked-fried-173423'}
 });
 const DIRECT=Object.freeze({
+ 'braineffect-mct-c8-oil':{plant:true,note:'>97 % C8 (Caprylsäure) im MCT-Fettsäurespektrum. Laut Hersteller 100 g Fett, davon 100 g gesättigt, je 100 g. Keine Omega-3-Quelle; verbleibende Fettsäure-Untergruppen nicht separat quantifiziert. Öl ist kalorienhaltig und bricht kalorienfreies Fasten.'},
  'milk-my-vay':{plant:true,note:'Haferdrink enthält Pflanzenfette; konkrete MUFA/PUFA-Verteilung nicht deklariert'},
  'bio-kornbrot':{plant:true,note:'Nuss-/Saatenanteile für Omega-Profil nicht ausreichend quantifiziert'},
  'mixed-nuts':{plant:true,note:'Mischverhältnis der Nüsse/Saaten unbekannt'},

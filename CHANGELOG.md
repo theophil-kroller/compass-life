@@ -1,3 +1,6 @@
+## 0.5.91.23 · BRAINEFFECT MCT C8 Öl (1 EL)
+- MCT C8 label-based macros, flexible EL/TL/ml/g doses, accurate food menu and nutrition insights, no invented micronutrients or Daily Dozen credit.
+
 ## 0.5.91.22 (2026-11-04)
 
 - Complete audit of all 66 exercise-to-muscle assignments; separate anatomically plausible stabilization role with teal map status. Stabilizers are NOT counted toward hypertrophy sets or recovery load.
