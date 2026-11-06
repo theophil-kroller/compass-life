@@ -122,3 +122,9 @@
 .str126-steps small{font-size:10px;font-weight:750;color:#287a55;letter-spacing:.1em}
 .str126-steps p{font-size:13px;line-height:1.45;margin:7px 0 0;color:#3d634e}
 @media(max-width:650px){.str126-calf-figure figcaption{font-size:10px}.str126-text-motion{padding:6px;gap:6px}.str126-photo-pending{font-size:11px}.str126-steps{gap:6px}.str126-steps section{padding:8px}.str126-steps p{font-size:11px;line-height:1.35;margin-top:3px}}
+
+/* Compass 0.5.91.27: photo-based START/END pairs for seven chest exercises. */
+.str127-chest-figure{display:flex;align-items:center;flex-direction:column;justify-content:center;max-width:100%;min-width:0;box-sizing:border-box;margin:0 auto}
+.str127-chest-figure img{width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:1448/1086;object-fit:contain;object-position:center;border-radius:9px;background:#f7f6f5}
+.str127-chest-figure figcaption{font-size:11px;line-height:1.4;text-align:center;color:#607b6a;padding:3px 6px}
+@media(max-width:650px){.str127-chest-figure img{max-height:26dvh}.str127-chest-figure figcaption{font-size:10px;line-height:1.25;padding:2px 4px}}

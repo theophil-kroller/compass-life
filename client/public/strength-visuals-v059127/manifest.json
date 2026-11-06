@@ -1,0 +1,105 @@
+{
+  "release": "0.5.91.27",
+  "series": "Brustübungen – Start / Ende",
+  "count": 7,
+  "images": {
+    "incline-bench": {
+      "file": "incline-bench.webp",
+      "title": "Schrägbankdrücken",
+      "size": [
+        1448,
+        1086
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "source": "AI-generated photorealistic pair created from reference photo in owner conversation",
+      "sha256": "95a0d76517611b612db8b2b76e30c98516d512fab1a0551809887aaab6343822"
+    },
+    "pushup": {
+      "file": "pushup.webp",
+      "title": "Liegestütze",
+      "size": [
+        1448,
+        1086
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "source": "AI-generated photorealistic pair created from reference photo in owner conversation",
+      "sha256": "57e26b0013ada96ad6442a6f04e7445b2a65fd82b86c21dfb9a62c3e075863aa"
+    },
+    "chest-press": {
+      "file": "chest-press.webp",
+      "title": "Brustpresse",
+      "size": [
+        1448,
+        1086
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "source": "AI-generated photorealistic pair created from reference photo in owner conversation",
+      "sha256": "93d623be3ccf43c7e94882b4c0a0fd721891738903dfe24a94243a30238873d9"
+    },
+    "chest-fly": {
+      "file": "chest-fly.webp",
+      "title": "Butterfly / Fliegende",
+      "size": [
+        1448,
+        1086
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "source": "AI-generated photorealistic pair created from reference photo in owner conversation",
+      "sha256": "98b791450dbd6e26ec7c078cececb53aae24ad53bf042edc44ee0ab729f6bf9f"
+    },
+    "close-grip-bench": {
+      "file": "close-grip-bench.webp",
+      "title": "Enges Bankdrücken",
+      "size": [
+        1448,
+        1086
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "source": "AI-generated photorealistic pair created from reference photo in owner conversation",
+      "sha256": "2aafe31f603052737cfdb1187162ef730f9b03236a35be8ea5c1977be820e4b6"
+    },
+    "decline-pushup": {
+      "file": "decline-pushup.webp",
+      "title": "Liegestütze mit erhöhten Füßen",
+      "size": [
+        1448,
+        1086
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "source": "AI-generated photorealistic pair created from reference photo in owner conversation",
+      "sha256": "0cf82964bea6706d388b1da84526a682b5f01f390425ceda2f7e1330148caa4d"
+    },
+    "incline-pushup": {
+      "file": "incline-pushup.webp",
+      "title": "Liegestütze mit erhöhten Händen",
+      "size": [
+        1448,
+        1086
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "source": "AI-generated photorealistic pair created from reference photo in owner conversation",
+      "sha256": "110de4e36c6f86075769e5644b7fcbffd917cbd1d8c85e85efa353c9fcb4ae8e"
+    }
+  }
+}
