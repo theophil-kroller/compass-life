@@ -1,0 +1,1 @@
+Compass 0.5.91.30 – Schulterfoto-Serie. Patch nur auf 0.5.91.29 anwenden, alle enthaltenen Repository-Pfade unverändert auf GitHub main hochladen. Full Source enthält sämtliche alten Dateien. Keine Änderungen an der Trainingslogik.

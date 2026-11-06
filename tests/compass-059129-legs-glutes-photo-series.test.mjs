@@ -61,8 +61,8 @@ test('Previous visual collections retained without overwriting and training data
 test('Release numbers and PWA base paths are internally aligned',()=>{
  const rootp=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
  const cp=JSON.parse(readFileSync(new URL('package.json',root),'utf8'));
- assert.equal(rootp.version,'0.5.91.29');assert.equal(cp.version,'0.5.91.29');
- assert.match(readFileSync(new URL('src/compass-release-v57759402519.js',root),'utf8'),/0\.5\.91\.29/);
- assert.match(readFileSync(new URL('src/main-full-v57759402510.js',root),'utf8'),/COMPASS_CLIENT_VERSION='0\.5\.91\.29'/);
+ assert.equal(rootp.version,'0.5.91.30');assert.equal(cp.version,'0.5.91.30');
+ assert.match(readFileSync(new URL('src/compass-release-v57759402519.js',root),'utf8'),/0\.5\.91\.30/);
+ assert.match(readFileSync(new URL('src/main-full-v57759402510.js',root),'utf8'),/COMPASS_CLIENT_VERSION='0\.5\.91\.30'/);
  assert.ok(js.includes("VISUAL_ROOT.replace('strength-visuals-v5775920/','strength-visuals-v059129/')"));
 });

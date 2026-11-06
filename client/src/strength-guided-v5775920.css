@@ -140,3 +140,9 @@
 .str129-leg-glute-figure img{display:block;width:auto;height:auto;max-width:100%;max-height:min(50dvh,345px);aspect-ratio:auto;object-fit:contain;object-position:center;border-radius:9px;background:#c6c2bd}
 .str129-leg-glute-figure figcaption{text-align:center;color:#607b6a;font-size:11px;line-height:1.3;padding:4px 6px}
 @media(max-width:650px){.str129-leg-glute-figure img{max-height:min(27dvh,225px)}.str129-leg-glute-figure figcaption{font-size:10px;padding:2px 4px}}
+
+/* Compass 0.5.91.30 – six separate shoulder START/ENDE images, responsive and non-blocking to workout controls. */
+.str130-shoulder-figure{display:flex;align-items:center;flex-direction:column;justify-content:center;max-width:100%;min-width:0;margin:0 auto;box-sizing:border-box}
+.str130-shoulder-figure img{display:block;width:auto;height:auto;max-width:100%;max-height:min(50dvh,345px);object-fit:contain;object-position:center;border-radius:9px;background:#d2d0cf}
+.str130-shoulder-figure figcaption{text-align:center;color:#607b6a;font-size:11px;line-height:1.3;padding:4px 6px}
+@media(max-width:650px){.str130-shoulder-figure img{max-height:min(27dvh,225px)!important}.str130-shoulder-figure figcaption{font-size:10px;padding:2px 4px}}

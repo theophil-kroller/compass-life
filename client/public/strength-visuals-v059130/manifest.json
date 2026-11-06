@@ -1,0 +1,117 @@
+{
+  "release": "0.5.91.30",
+  "series": "Schultern",
+  "count": 6,
+  "source": "Six separate AI-generated exercise images based on the user-provided reference photograph; not a collective collage.",
+  "note": "Individual AI illustrations, not photographs of the actual user; exercise technique should be checked. Reference photo is not bundled.",
+  "images": {
+    "shoulder-press": {
+      "title": "Schulterdrücken",
+      "group": "Schultern",
+      "sourceImage": "imagegen.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        960
+      ],
+      "cropTopPx": 0,
+      "bytes": 44122,
+      "sha256": "56e60118f923117df3c34a21fb2d7335007e3912cc529cd7255c67446d457fb7",
+      "startCue": "Kurzhanteln an der Schulter und Rumpf stabil halten.",
+      "endCue": "Beide Arme kontrolliert über Kopf strecken, ohne ins Hohlkreuz zu fallen."
+    },
+    "lateral-raise": {
+      "title": "Seitheben",
+      "group": "Schultern",
+      "sourceImage": "imagegen_2.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        860
+      ],
+      "cropTopPx": 100,
+      "bytes": 42896,
+      "sha256": "9afb3743930bb3c5782eb099414abcf3c4b10e84179004377b7cd6bdb757b628",
+      "startCue": "Kurzhanteln seitlich am Körper; Ellbogen leicht gebeugt.",
+      "endCue": "Arme ohne Schwung bis etwa Schulterhöhe anheben; langsam senken."
+    },
+    "reverse-fly": {
+      "title": "Reverse Fly",
+      "group": "Schultern",
+      "sourceImage": "imagegen_3.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        870
+      ],
+      "cropTopPx": 150,
+      "bytes": 46444,
+      "sha256": "e132e73ea4e8c1567322c7be2fca14ea5641dc870260a5c0814fcc96b04d361d",
+      "startCue": "Oberkörper aus der Hüfte vorgebeugt, Rumpf stabil, Arme nach unten.",
+      "endCue": "Arme kontrolliert seitlich öffnen; Schultern nicht hochziehen."
+    },
+    "seated-dumbbell-press": {
+      "title": "Kurzhantel-Schulterdrücken sitzend",
+      "group": "Schultern",
+      "sourceImage": "imagegen_4.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        960
+      ],
+      "cropTopPx": 0,
+      "bytes": 55038,
+      "sha256": "549515e7bc09d47afffb882c311fa85e048e6f2393055f3a1ff82b54f0faf0ff",
+      "startCue": "Sitz aufrecht, Hanteln seitlich auf Schulterhöhe, Füße fest am Boden.",
+      "endCue": "Arme über Kopf drücken und kontrolliert wieder senken."
+    },
+    "pike-pushup": {
+      "title": "Pike-Liegestütze",
+      "group": "Schultern",
+      "sourceImage": "imagegen_5.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        655
+      ],
+      "cropTopPx": 245,
+      "bytes": 44780,
+      "sha256": "413e0186960cf08b81fc2a0b9eecbccb1ec84fc98dd708159efcf51278481d79",
+      "startCue": "Hände sicher am Boden, Hüfte hoch, Schultern aktiv.",
+      "endCue": "Ellbogen kontrolliert beugen und Kopf zwischen den Händen absenken; wieder hochdrücken."
+    },
+    "prone-y-raise": {
+      "title": "Y-Heben in Bauchlage",
+      "group": "Schultern",
+      "sourceImage": "imagegen_6.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        670
+      ],
+      "cropTopPx": 255,
+      "bytes": 52162,
+      "sha256": "6df263b3e1143babb955595c2cc7a8f58a840cf3349dc1774aef9c1e07e3c80f",
+      "startCue": "Brust gestützt, Arme Richtung Boden; leichte Gewichte oder ohne.",
+      "endCue": "Arme kontrolliert im Y-Winkel anheben, Daumen nach oben, kein Schwung."
+    }
+  }
+}
