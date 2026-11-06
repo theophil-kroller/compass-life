@@ -63,9 +63,54 @@ export function addOpenFood88(state,{title,amount='1 Portion',at=null,nutrients=
 }
 export const OPEN_FOOD_PROMPT88=`Antworte AUSSCHLIESSLICH als valides JSON. Schema compass_open_food_v1. Ich beschreibe eine vegetarische Mahlzeit. Schätze die Nährstoffe der tatsächlich beschriebenen Portion (nicht pro 100 g). Gib title, amount, nutrients:{kcal,protein,carbs,fat,fiber,sugar,salt}, source, assumptions, estimated:true zurück. Nicht bestimmbares als null, keine erfundenen Präzisionswerte. Bitte Anzahl und Zutaten sowie Unsicherheit begründen. Meine Mahlzeit: `;
 export function openFoodView88(){return `<details class="ci88-open-food"><summary>＋ Spontane Mahlzeit erfassen · kein neuer Produktdatensatz nötig</summary><form id="ci88-open-food-form"><label>Was hast du gegessen?<input name="title" maxlength="90" placeholder="z. B. 2 Stück vegetarische Lasagne" required></label><label>Portion<input name="amount" maxlength="60" value="1 Portion"></label><label>Zeitpunkt<input name="at" type="datetime-local"></label><div class="ci88-open-nutrients"><label>Protein (g)<input name="protein" inputmode="decimal" type="number" min="0" step="0.1" placeholder="Unbekannt"></label><label>kcal<input name="kcal" inputmode="decimal" type="number" min="0" step="1" placeholder="Unbekannt"></label><label>Kohlenhydrate (g)<input name="carbs" type="number" min="0" step="0.1" placeholder="Unbekannt"></label><label>Fett (g)<input name="fat" type="number" min="0" step="0.1" placeholder="Unbekannt"></label></div><label>Quelle / Annahmen<textarea name="assumptions" rows="2" placeholder="Etikett, Zutaten, Portionsgröße – oder noch unbekannt"></textarea></label><label><input type="checkbox" name="saveAsFood"> Für künftige Eingaben als eigenes Lebensmittel speichern</label><button type="submit" class="primary-btn">Zum Tagebuch hinzufügen</button></form><details><summary>GPT-Vorschlag als JSON übernehmen</summary><button type="button" data-action="ci88-copy-food-prompt" class="secondary-btn">GPT-Schätzprompt kopieren</button><form id="ci88-food-json-form"><textarea name="json" rows="5" placeholder='{"schema":"compass_open_food_v1","title":"Vegetarische Lasagne","amount":"2 Stück","nutrients":{"protein":null},"estimated":true}'></textarea><label><input type="checkbox" name="saveAsFood"> Als wiederverwendbares Lebensmittel speichern</label><button type="submit" class="secondary-btn">Schätzung prüfen und übernehmen</button></form><small>Schätzung wird erst nach deiner Bestätigung übernommen. Du kannst alle Werte später korrigieren.</small></details></details>`;}
-export function proteinTodayMarkup88(state,today,{compact=false}={}){const p=proteinDay88(state,today),pct=p.grams===null?0:Math.min(100,p.grams/p.target*100),label=p.grams===null?'Noch keine Proteinwerte':`${fmt(p.grams)} / ${p.target} g Protein`;
- if(compact)return `<div class="ci90-protein-peek" aria-label="Protein Tagesorientierung – erfasste Teilbilanz"><div class="ci90-protein-head"><span>💪 ${esc(label)}</span><button type="button" data-action="ci88-food-open" aria-label="Ernährung erfassen">＋ Essen</button></div><span class="ci88-protein-progress" role="progressbar" aria-label="Erfasster Proteinfortschritt" aria-valuemin="0" aria-valuemax="${p.target}" aria-valuenow="${p.grams===null?0:p.grams}"><i style="width:${pct}%"></i></span><small>Erfasste Teilbilanz · ${p.unknown?'fehlende Nährwerte möglich':'weitere Mahlzeiten möglich'}</small></div>`;
- return `<div class="ci88-protein-today" aria-label="Protein Tagesorientierung"><span>💪 ${esc(label)}</span><span class="ci88-protein-progress"><i style="width:${pct}%"></i></span><small>${p.partial?'Teilbilanz · unbekannte Lebensmittel möglich':'Erfasste Werte · vollständige Tagesernährung nicht bestätigt'}</small><button type="button" data-action="ci88-food-open">＋ Essen</button></div>`;}
+/** 0.5.91.25 · Three practical protein bands rather than a binary target.
+ * The stage boundaries are guides for strength-focused adults, not a medical
+ * minimum or a guaranteed hypertrophy threshold. Only measured Fitdays weight
+ * from the selected day or earlier is used; missing weight is clearly flagged.
+ * Earlier manually configured protein targets remain untouched. */
+export function proteinScaleBands125(state,day){
+ let latest=null;
+ for(const row of state?.healthImports?.fitdays||[]){
+  if(dOK(row?.day)&&row.day<=day&&Number.isFinite(row.weightKg)&&row.weightKg>=35&&row.weightKg<=250&&(!latest||row.day>latest.day))latest=row;
+ }
+ const weight=latest?.weightKg??null;
+ const r5=x=>Math.round(x/5)*5;
+ const basisFrom=weight===null?100:Math.round(weight*1.2/10)*10;
+ const optimalFrom=weight===null?120:r5(weight*1.4);
+ const optimalTo=weight===null?140:r5(weight*1.6);
+ const optionalTo=weight===null?150:r5(weight*1.75);
+ const bounds=[basisFrom,Math.max(basisFrom+5,optimalFrom),Math.max(optimalFrom+5,optimalTo),Math.max(optimalTo+5,optionalTo)];
+ const [basis,optimumStart,optimumEnd,optionalEnd]=bounds;
+ const max=Math.max(optionalEnd+15,weight===null?165:r5(weight*1.9));
+ return {weight,weightDay:latest?.day||null,basis,optimumStart,optimumEnd,optionalEnd,max,weightKnown:weight!==null};
+}
+function proteinScaleMarkup125(p,state,day){
+ const b=proteinScaleBands125(state,day),pct=n=>Math.max(0,Math.min(100,n/b.max*100)),
+  widths=[b.basis,b.optimumStart-b.basis,b.optimumEnd-b.optimumStart,b.optionalEnd-b.optimumEnd,b.max-b.optionalEnd],
+  classNames=['below','basis','optimal','optional','above'];
+ const zones=widths.map((width,i)=>`<span class="ci125-protein-zone ci125-zone-${classNames[i]}" style="width:${pct(width).toFixed(3)}%" aria-hidden="true"></span>`).join('');
+ const amount=p.grams===null?'Noch kein Proteinwert erfasst':`${fmt(p.grams)} g erfasst`;
+ const description=`${amount}. Grundlage ${b.basis} bis ${b.optimumStart} g, optimaler Bereich ${b.optimumStart} bis ${b.optimumEnd} g, optional ${b.optimumEnd} bis ${b.optionalEnd} g. Diese Bereiche sind Orientierungen, keine harten Mindestwerte.`;
+ const marker=p.grams===null?'':`<span class="ci125-protein-marker" style="left:${Math.max(1,Math.min(99,pct(p.grams))).toFixed(2)}%" aria-hidden="true"></span>`;
+ return `<div class="ci125-protein-scale" data-protein-scale="1" data-protein-weight="${b.weightKnown?b.weight:''}" aria-label="Protein-Orientierungsbereiche">
+  <div class="ci125-protein-meter" role="meter" aria-label="${esc(description)}" aria-valuemin="0" aria-valuemax="${b.max}"${p.grams===null?'':` aria-valuenow="${Math.min(p.grams,b.max)}"`}>
+   ${zones}${marker}
+  </div>
+  <div class="ci125-protein-labels" aria-label="Proteinstufen in Gramm">
+   <span><i class="ci125-key ci125-key-basis"></i>Grundlage ${b.basis}–${b.optimumStart} g</span>
+   <span><i class="ci125-key ci125-key-optimal"></i>Optimal ${b.optimumStart}–${b.optimumEnd} g</span>
+   <span><i class="ci125-key ci125-key-optional"></i>Optional ${b.optimumEnd}–${b.optionalEnd} g</span>
+  </div>
+  ${b.weightKnown?'':`<small class="ci125-protein-weight-note">Vorläufige Skala: noch kein Körpergewicht bis zu diesem Tag importiert.</small>`}
+ </div>`;
+}
+export function proteinTodayMarkup88(state,today,{compact=false}={}){
+ const p=proteinDay88(state,today),label=p.grams===null?'Noch keine Proteinwerte':`${fmt(p.grams)} g Protein erfasst`;
+ const scale=proteinScaleMarkup125(p,state,today);
+ const foot=`Erfasste Teilbilanz · ${p.unknown?'fehlende Nährwerte möglich':'weitere Mahlzeiten möglich'}${p.estimated?' · teils geschätzt':''}`;
+ if(compact)return `<div class="ci90-protein-peek" aria-label="Protein Tagesorientierung – erfasste Teilbilanz"><div class="ci90-protein-head"><span>💪 ${esc(label)}</span><button type="button" data-action="ci88-food-open" aria-label="Ernährung erfassen">＋ Essen</button></div>${scale}<small>${foot}</small></div>`;
+ return `<div class="ci88-protein-today" aria-label="Protein Tagesorientierung"><span>💪 ${esc(label)}</span>${scale}<small>${p.partial?'Teilbilanz · unbekannte Lebensmittel möglich':'Erfasste Werte · vollständige Tagesernährung nicht bestätigt'}</small><button type="button" data-action="ci88-food-open">＋ Essen</button></div>`;
+}
 export function proteinInsightsMarkup88(state,today){const p=proteinDay88(state,today),history=proteinHistory88(state,{today,days:30}),target=p.target;const valid=history.filter(x=>x.grams!==null),avg=n=>{const r=valid.slice(-n);return r.length?round(r.reduce((s,x)=>s+x.grams,0)/r.length):null;};
  const bars=history.slice(-14).map(x=>`<span title="${esc(x.day)} · ${x.grams===null?'unbekannt':fmt(x.grams)+' g'}${x.unknown?' · '+x.unknown+' unbekannt':''}" style="height:${x.grams===null?'3px':Math.max(4,Math.min(90,x.grams/target*90))+'px'};opacity:${x.unknown||x.estimated?'.5':'1'}"></span>`).join('');
  return `<section class="work-card ci88-protein-insights"><div class="work-heading"><span>💪 Protein Intelligence</span><span class="quiet-tag">Ziel ${target} g/Tag · anpassbar</span></div><div class="ci88-protein-main"><strong>${p.grams===null?'–':fmt(p.grams)} / ${target} g</strong><small>Heute · ${p.unknown} Eintrag/Einträge ohne Proteinwert${p.estimated?' · '+p.estimated+' geschätzt':''}</small></div><div class="ci88-trend" aria-label="Letzte 14 Tage mit erfassten Proteinmengen">${bars}</div><p>Beobachteter Mittelwert der <b>${valid.length}</b> Tage mit bekannten Proteinmengen: letzte 7 Datenpunkte <b>${fmt(avg(7))} g</b> · bis zu 30 Datenpunkte <b>${fmt(avg(30))} g</b>. Keine Aussage über nicht erfasste Mahlzeiten.</p><form id="ci88-protein-settings"><label>Protein-Ziel (g)<input name="targetG" type="number" min="60" max="250" step="5" value="${target}"></label><label>Fastenfenster<select name="fasting">${['flex','16:8','18:6','20:4'].map(x=>`<option value="${x}" ${state?.nutritionJournal?.proteinCoach88?.fasting===x?'selected':''}>${x==='flex'?'Flexibel':x}</option>`).join('')}</select></label><label>Taille (cm, optional)<input name="waistCm" type="number" min="40" max="200" step=".1" placeholder="Nur Messwerte"></label><label>Schulterumfang (cm, optional)<input name="shoulderCm" type="number" min="50" max="220" step=".1" placeholder="Nur Messwerte"></label><button type="submit" class="secondary-btn">Ziel / Maße speichern</button></form><details><summary>Vegetarische Proteinoptionen ohne feste Essenszeiten</summary><p>Skyr oder Magerquark/Topfen, Hüttenkäse, Seitan, Edamame, Tofu oder ein Proteinshake liefern viel Protein je Kalorie. Orientierung: ca. 250 g Skyr (~25 g Protein), 200 g Magerquark (~24 g), 150 g Seitan (~30 g); je nach Produktetikett. Fehlende Tageslogs bedeuten keinen nachgewiesenen Bedarf. Fastenfenster ist eine Planungshilfe, kein Anlass, einzelne Mahlzeiten zu erzwingen.</p></details>${openFoodView88()}</section>`;}

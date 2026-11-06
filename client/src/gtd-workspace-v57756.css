@@ -63,3 +63,9 @@
 .shell .ci90-protein-peek .ci88-protein-progress{width:100%;max-width:none;flex:none;height:5px}
 .shell .ci90-protein-peek small{font-size:10px;color:#74867f;line-height:1.25}
 @media(max-width:760px){.shell .ci90-protein-peek{padding-top:7px;margin-top:0}}
+
+/* 0.5.91.25: Keep all three protein bands readable within the Today rail. */
+.shell .ci90-protein-peek .ci125-protein-scale{width:100%;min-width:0}
+.shell .ci90-protein-peek .ci125-protein-meter{height:9px;margin:3px 0}
+.shell .ci90-protein-peek .ci125-protein-labels{font-size:10px;line-height:1.35;color:#52665f}
+.shell .ci90-protein-peek .ci125-protein-labels span{white-space:normal}
