@@ -14,6 +14,10 @@ export function gtdDelta(before,after){
  const delta={kind:'gtd',tasks:objectChanges(before.tasks,after.tasks),projects:objectChanges(before.projects,after.projects),
  taskPending:objectChanges(before.taskPending,after.taskPending),projectPending:objectChanges(before.projectPending,after.projectPending)};
  if(JSON.stringify(before.recentTags)!==JSON.stringify(after.recentTags))delta.recentTags=structuredClone(after.recentTags??[]);
+ if(Object.prototype.hasOwnProperty.call(before,'records')){
+  delta.records=objectChanges(before.records,after.records);
+  if(JSON.stringify(before.pending)!==JSON.stringify(after.pending))delta.pending=structuredClone(after.pending||[]);
+ }
  // Optional review fields: included only for audited review checkpoints.
  if(Object.prototype.hasOwnProperty.call(before,'weeklyReview')){
   if(JSON.stringify(before.weeklyReview)!==JSON.stringify(after.weeklyReview))delta.weeklyReview=structuredClone(after.weeklyReview);
@@ -31,6 +35,8 @@ export function applyGtdDelta(state,delta){
   }
  }
  if(Object.prototype.hasOwnProperty.call(delta,'recentTags'))state.recentTags=delta.recentTags;
+ if(delta.records){const records=state.records||={};for(const [id,value] of Object.entries(delta.records)){if(value===null)delete records[id];else records[id]=value;}}
+ if(Object.prototype.hasOwnProperty.call(delta,'pending'))state.pending=delta.pending;
  for(const field of ['weeklyReview','reviewPending','reviewVersion','reviewConflict'])
   if(Object.prototype.hasOwnProperty.call(delta,field))state[field]=delta[field];
  return state;

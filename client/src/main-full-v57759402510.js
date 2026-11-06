@@ -281,7 +281,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.23';
+const COMPASS_CLIENT_VERSION='0.5.91.24';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -458,7 +458,7 @@ let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let touchPeriod=30,touchEditingId='',touchQuickOpen=false,touchDefaultPersonId='';
 let mealComposeText='',mealComposeModel=null;
-let mensaApi=null,mensaLoadPending=null,mensaImportDraft=null,mensaMessage='';
+let mensaApi=null,mensaLoadPending=null,mensaImportDraft=null,mensaMessage='',mensaEmailDraftRaw='';
 let coachHorizon88=6;
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',nutritionView712='journal',nutritionTimingMode725='week',nutritionTimingAnchor725=localDateString(new Date()),nutritionTimingSelected725='',nutritionTrendsMode726='week',nutritionTrendsAnchor726=localDateString(new Date()),nutritionTrendsMetric726='protein',nutritionDay712=localDateString(new Date()),nutritionProduct712='matcha-powder',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
 let nutritionConnInput727='lastMeal',nutritionConnOutcome727='sleep',nutritionConnRange727='90';
@@ -602,6 +602,8 @@ function restoreCaptureDraft(focus){
 }
 let captureAfterUnlock=false;
 let inboxQuery='';
+let nextActionsVisibleLimit=80;
+const NEXT_ACTIONS_BATCH=80;
 // The Outlook token stays only in this tab's memory and is forgotten on vault lock.
 // No Outlook endpoint is contacted unless the user explicitly connects.
 let outlook724Token='',outlook724Port=8765,outlook724Preview=[],outlook724Status='',outlook724Busy=false,outlook724Connected=false,outlook724Open=false,outlook724LastFetch=0;
@@ -985,7 +987,7 @@ async function mutate(fn,committedEditForm=null,skipFinalRender=false,options=nu
   const actionStart=fastGtd?performanceTrace.start():null;
   const gtdTicket=fastGtd?++fastGtdMutationRevision:0;
   let gtdDurableWrite=null;
-  const previous=fastReview?reviewCheckpoint(state,{singleProjectId:options?.singleProjectId||null}):fastGtd?gtdCheckpoint(state,{singleTaskId:options?.singleTaskId||null}):fastPlanning?planningCheckpoint(state):structuredClone(state);
+  const previous=fastReview?reviewCheckpoint(state,{singleProjectId:options?.singleProjectId||null}):fastGtd?gtdCheckpoint(state,{singleTaskId:options?.singleTaskId||null,singleRecordId:options?.singleRecordId||null}):fastPlanning?planningCheckpoint(state):structuredClone(state);
   // Journal fingerprinting serializes years of personal data. Without journal mirror
   // credentials there is no remote journal change to detect during task editing.
   const trackJournal=!!(state.privateDeviceMirror?.key&&authToken)&&!fastPlanning;
@@ -1842,7 +1844,7 @@ function workflowScreen(which){
  ${which==='next'?`<p class="next38-hint">${ico('list',14)} Reihenfolge mit ⠿ oder ↑ ↓ ändern · <strong>Heute</strong> plant eine Aufgabe für heute, ohne eine Fälligkeit zu setzen. Die Sortierung bleibt auf diesem Gerät.</p>`:''}
  ${which==='next'?`<div class="context-filter"><label>Aktueller Kontext <select id="context-filter"><option value="">Alle verfügbaren Next Actions</option>${availableContexts.map(c=>`<option value="${h(c.value)}" ${contextFilter===c.value?'selected':''}>${c.group?'▸ ':''}${h(c.label)}</option>`).join('')}</select></label></div>`:''}
  ${which==='flagged'?'<p class="muted-line">Markierte Aufgaben und ungeklärte Inbox-Einträge. Flaggen dienen zum Hervorheben, nicht als Deadline.</p>':''}
- ${which==='hold'?`<div class="held-sections"><div class="gtd-waiting-hint">${ico('clock',16)} <span>${waitingReview(state).attention} Waiting-For-Einträge seit mindestens 7 Tagen nicht bearbeitet. Das ist ein Review-Hinweis, keine Deadline.</span></div><h3>Waiting For · ${waiting.length}</h3>${taskList(waiting,'waiting')}<h3>On Hold · ${paused.length}</h3>${taskList(paused,'paused')}<h3>Durch pausierte Projekte zurückgestellt · ${blocked.length}</h3>${taskList(blocked,'project-hold')}<h3>Pausierte Projekte · ${pausedProjects.length}</h3>${pausedProjects.length?pausedProjects.map(p=>`<button type="button" class="held-project-link" data-action="hold-open-project" data-id="${h(p.id)}">${ico('folder',15)} ${h(p.title)} ${ico('arrow',13)}</button>`).join(''):'<p class="muted-line">Keine Projekte pausiert.</p>'}</div>`:`${taskList(shown,which,which==='next'||which==='flagged'&&flaggedInbox.length>0)}${noActions}${which==='flagged'&&flaggedInbox.length?`<div class="flagged-inbox-section"><h3>Markierte Inbox-Einträge · ${flaggedInbox.length}</h3>${flaggedInbox.map(r=>`<div class="flagged-inbox-row"><button type="button" data-action="inbox-flag" data-id="${h(r.id)}" class="inbox-row-flag is-flagged" aria-label="Flagge entfernen" aria-pressed="true">${ico('flag',16)}</button><button type="button" class="flagged-inbox-open" data-action="select-inbox" data-id="${h(r.id)}">${h(r.title)}<small>Inbox · noch ungeklärt</small></button></div>`).join('')}</div>`:''}${which==='flagged'?`<details class="calm-create calm-flag-picker"><summary>${ico('flag',15)} Bestehende Aufgabe markieren</summary>${Object.values(state?.tasks||{}).filter(t=>!t.archived&&!state.projects?.[t.projectId]?.isTemplate&&!t.completed&&!t.flagged).slice(0,80).map(t=>`<button type="button" class="calm-flag-option" data-action="flag-existing" data-id="${h(t.id)}">${ico('flag',14)} ${h(t.title)}</button>`).join('')||'<p class="muted-line">Keine weiteren offenen Aufgaben.</p>'}</details>`:`<details class="calm-create"><summary>${ico('plus',15)} Neue Aufgabe hinzufügen</summary>${taskCreateForm('')}</details>`}`}
+ ${which==='hold'?`<div class="held-sections"><div class="gtd-waiting-hint">${ico('clock',16)} <span>${waitingReview(state).attention} Waiting-For-Einträge seit mindestens 7 Tagen nicht bearbeitet. Das ist ein Review-Hinweis, keine Deadline.</span></div><h3>Waiting For · ${waiting.length}</h3>${taskList(waiting,'waiting')}<h3>On Hold · ${paused.length}</h3>${taskList(paused,'paused')}<h3>Durch pausierte Projekte zurückgestellt · ${blocked.length}</h3>${taskList(blocked,'project-hold')}<h3>Pausierte Projekte · ${pausedProjects.length}</h3>${pausedProjects.length?pausedProjects.map(p=>`<button type="button" class="held-project-link" data-action="hold-open-project" data-id="${h(p.id)}">${ico('folder',15)} ${h(p.title)} ${ico('arrow',13)}</button>`).join(''):'<p class="muted-line">Keine Projekte pausiert.</p>'}</div>`:`${taskList(which==='next'?shown.slice(0,nextActionsVisibleLimit):shown,which,which==='next'||which==='flagged'&&flaggedInbox.length>0)}${which==='next'&&shown.length>nextActionsVisibleLimit?`<button type="button" class="secondary-btn" data-action="next-load-more">Weitere ${Math.min(NEXT_ACTIONS_BATCH,shown.length-nextActionsVisibleLimit)} Next Actions anzeigen (${shown.length} insgesamt)</button>`:''}${noActions}${which==='flagged'&&flaggedInbox.length?`<div class="flagged-inbox-section"><h3>Markierte Inbox-Einträge · ${flaggedInbox.length}</h3>${flaggedInbox.map(r=>`<div class="flagged-inbox-row"><button type="button" data-action="inbox-flag" data-id="${h(r.id)}" class="inbox-row-flag is-flagged" aria-label="Flagge entfernen" aria-pressed="true">${ico('flag',16)}</button><button type="button" class="flagged-inbox-open" data-action="select-inbox" data-id="${h(r.id)}">${h(r.title)}<small>Inbox · noch ungeklärt</small></button></div>`).join('')}</div>`:''}${which==='flagged'?`<details class="calm-create calm-flag-picker"><summary>${ico('flag',15)} Bestehende Aufgabe markieren</summary>${Object.values(state?.tasks||{}).filter(t=>!t.archived&&!state.projects?.[t.projectId]?.isTemplate&&!t.completed&&!t.flagged).slice(0,80).map(t=>`<button type="button" class="calm-flag-option" data-action="flag-existing" data-id="${h(t.id)}">${ico('flag',14)} ${h(t.title)}</button>`).join('')||'<p class="muted-line">Keine weiteren offenen Aufgaben.</p>'}</details>`:`<details class="calm-create"><summary>${ico('plus',15)} Neue Aufgabe hinzufügen</summary>${taskCreateForm('')}</details>`}`}
  </section><aside class="work-card"><div class="work-heading"><span>${ico('pencil',18)} Aufgabendetails</span></div>${taskEditor()}</aside></div>`);
 }
 function treeTaskRows(projectId,parentTaskId=null,depth=0,visited=new Set(),index=buildPlanTreeIndex(state)){
@@ -2683,7 +2685,7 @@ function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensa
    renderHistory:()=>nutritionHistoryView(state,{period:nutritionPeriod}),
    renderManualDozen:()=>dailyDozenView(state,{day:dailyDozenDay733,today:localDate()}),
    renderSync:()=>journalSyncPanel(),
-   renderMensa:()=>mensaApi?mensaApi.mensaCatalogPanel(state,{draft:mensaImportDraft,day:today,status:mensaMessage}):'<p>Mensa-Datenbank wird geladen …</p>',
+   renderMensa:()=>mensaApi?mensaApi.mensaCatalogPanel(state,{draft:mensaImportDraft,day:today,status:mensaMessage,emailText:mensaEmailDraftRaw}):'<p>Mensa-Datenbank wird geladen …</p>',
    renderSection:kind=>kind==='daily-dozen'?dailyDozen5930View(dailyDozen5930(state,{day:today}))
     :kind==='nutrients'?nutritionIntelligenceView(state,{day:nutritionDay712,detail:nutritionProduct712})
     :kind==='timing'?nutritionTimingView(state,{mode:nutritionTimingMode725,anchor:nutritionTimingAnchor725,selectedId:nutritionTimingSelected725})
@@ -3457,6 +3459,11 @@ function bind() {
     if(!validCalendarRule(rule)){toast('Bitte die Regel-Felder prüfen.',true);return;}
     await mutate(s=>{s.calendarRules=effectiveCalendarRules(s).map(r=>r.id===id?rule:r);});toast('Kalenderregel gespeichert.');
   });
+   const mensaEmailForm=app.querySelector('#mensa-email-form');if(mensaEmailForm){mensaEmailForm.querySelector('textarea')?.addEventListener('input',e=>{mensaEmailDraftRaw=e.target.value;});mensaEmailForm.onsubmit=ev=>{
+     ev.preventDefault();if(!mensaApi)return;
+     try{mensaEmailDraftRaw=String(new FormData(mensaEmailForm).get('emailText')||'');mensaImportDraft=mensaApi.parseMensaEmail(mensaEmailDraftRaw);mensaMessage=`${mensaImportDraft.length} E-Mail-Gerichte erkannt. Nährwerte noch nicht geschätzt – vor dem Import prüfen.`;render();}
+     catch(ex){toast('Mensa-E-Mail: '+ex.message,true);}
+   };}
    const mensaForm=app.querySelector('#mensa-import-form');if(mensaForm)mensaForm.onsubmit=ev=>{
      ev.preventDefault();if(!mensaApi)return;
      try{mensaImportDraft=mensaApi.parseMensaJSON(String(new FormData(mensaForm).get('json')||''));mensaMessage=`${mensaImportDraft.length} Menüs geprüft – noch nicht gespeichert.`;render();}
@@ -3790,7 +3797,7 @@ function bind() {
           s.tasks[task.id]=task;s.taskPending[task.id]=true;
           s.records[id].deleted=true;s.records[id].updatedAt=stamp();s.pending.push(makeMutation(s.records[id]));
           for(const tag of task.tags)rememberTag(s,tag);
-        },editForm);
+        },editForm,true,{fastGtd:true,fastPlanning:true,singleRecordId:id});
         selectedInboxId=null;selectedTaskId=task.id;toast('Eintrag als Aufgabe übernommen und aus der Inbox entfernt.');
       }catch(ex){toast(ex.message,true);}
       return;
@@ -4320,6 +4327,7 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
+ if(action==='next-load-more'){nextActionsVisibleLimit+=NEXT_ACTIONS_BATCH;render();return;}
  if(action==='smart-tape-region'){if(BODY_MEASUREMENT_REGIONS.some(x=>x.id===id)){smartTapeRegion=id;render();requestAnimationFrame(()=>app.querySelector('#bm918-detail')?.scrollIntoView?.({behavior:'smooth',block:'nearest'}));}return;}
  if(action==='smart-tape-import'){tab='system';calmNavGroup='';render();requestAnimationFrame(()=>app.querySelector('#smart-import-hub')?.scrollIntoView?.({behavior:'smooth',block:'start'}));return;}
 
@@ -4643,6 +4651,10 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
   try{let outcome;
    await mutate(st=>{outcome=logMensaMeal(st,day);});toast(outcome.added?'Study-Teller für heute erfasst.':'Heute bereits erfasst.');}
   catch(ex){toast('Mensa: '+ex.message,true);}return;
+ }
+ if(action==='mensa-email-copy-prompt'){
+  if(!mensaApi)return;try{const raw=app.querySelector('#mensa-email-form textarea[name="emailText"]')?.value||mensaEmailDraftRaw;const prompt=mensaApi.mensaEmailToPrompt(raw);await navigator.clipboard.writeText(prompt);toast('GPT-Prompt mit eingefügter Mensa-E-Mail kopiert.');}
+  catch(ex){toast('E-Mail-Prompt: '+ex.message,true);}return;
  }
  if(action==='mensa-copy-prompt'){
   if(!mensaApi)return;try{await navigator.clipboard.writeText(mensaApi.MENSA_GPT_PROMPT);toast('GPT-Rechercheprompt kopiert.');}
@@ -5107,7 +5119,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
           s.tasks[task.id]=task;s.taskPending[task.id]=true;
           original.deleted=true;original.updatedAt=stamp();s.pending.push(makeMutation(original));
           for(const tag of task.tags)rememberTag(s,tag);
-        });
+        },null,true,{fastGtd:true,fastPlanning:true,singleRecordId:id});
         selectedInboxId=null;
         toast('Für heute als Next Action vorgemerkt und aus der Inbox entfernt. Keine Deadline gesetzt.');
       }catch(ex){toast(ex.message,true);}

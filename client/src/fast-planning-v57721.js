@@ -15,6 +15,8 @@ export function restorePlanningCheckpoint(state,checkpoint){
   state.projects=checkpoint.projects;
   state.taskPending=checkpoint.taskPending;
   state.projectPending=checkpoint.projectPending;
+  if(Object.prototype.hasOwnProperty.call(checkpoint,'records'))state.records=checkpoint.records;
+  if(Object.prototype.hasOwnProperty.call(checkpoint,'pending'))state.pending=checkpoint.pending;
   if(checkpoint.recentTags===undefined)delete state.recentTags;
   else state.recentTags=checkpoint.recentTags;
   return state;

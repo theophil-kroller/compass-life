@@ -2,12 +2,13 @@
  * Copies tasks/projects for rollback, never the years of health, nutrition, finance,
  * calendar and other private Vault records. Does not persist or sync itself.
  */
-export function gtdCheckpoint(state,{singleTaskId=null}={}){
+export function gtdCheckpoint(state,{singleTaskId=null,singleRecordId=null}={}){
  const taskItems=state.tasks||{}, projectItems=state.projects||{};
  const tasks=singleTaskId?{...taskItems,[singleTaskId]:taskItems[singleTaskId]?{...taskItems[singleTaskId]}:undefined}:
    Object.fromEntries(Object.entries(taskItems).map(([id,t])=>[id,{...t}]));
  return {tasks,projects:Object.fromEntries(Object.entries(projectItems).map(([id,p])=>[id,{...p}])),taskPending:{...(state.taskPending||{})},
-  projectPending:{...(state.projectPending||{})},recentTags:Array.isArray(state.recentTags)?[...state.recentTags]:state.recentTags};
+  projectPending:{...(state.projectPending||{})},recentTags:Array.isArray(state.recentTags)?[...state.recentTags]:state.recentTags,
+  ...(singleRecordId?{records:{...(state.records||{}),[singleRecordId]:state.records?.[singleRecordId]?{...state.records[singleRecordId]}:undefined},pending:[...(state.pending||[])]}:{})};
 }
 export function paintGtdProgress(root,id,task){
  if(!root?.querySelectorAll||!task)return;

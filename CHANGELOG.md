@@ -1,3 +1,12 @@
+## 0.5.91.24 · Wim-Hof-Kontinuität, GTD-Schnellpfad & Mensa per E-Mail (2026-11-06)
+- Wim-Hof-Wiedergabe verhindert den internen 15-Minuten-Inaktivitätslock solange Audio tatsächlich spielt; Screen Wake Lock bleibt Best-Effort des OS. Unterbrechungen und Navigationswechsel erhalten einen lokalen Wiedergabe-Zwischenstand; keine automatische Vollendungsbehauptung bei Abbruch.
+- Dauer verwendet echte Audio-Abspielposition statt Wanduhrdifferenz bei OS-Unterbrechungen. Nach tatsächlichem abgeschlossenen Abspielen wird über den bestehenden verschlüsselten Vault gebucht.
+- Inbox → Next Actions und Inbox → Heute nutzen den schmalen verschlüsselten GTD-Journalpfad inklusive atomarer Record-/Pending-Änderung und Rollback.
+- Next Actions rendert zunächst 80 Einträge und weitere jeweils auf Klick; Aufgaben bleiben vollständig im Vault, Filter und Reihenfolge unverändert.
+- Mensa: Wochen-E-Mails (Stremayrgasse) lokal einfügen, vegetarische Tagesgerichte als Vorschau erkennen, oder GPT-Prompt mit E-Mail-Inhalt statt neuer Webrecherche kopieren. Quellen bleiben klar als E-Mail-Abonnement markiert; nicht unabhängig verifizierte Preise und Nährstoffe werden nicht erfunden.
+- Speiseplan-Text ist bis zum Import nur im Browser-Arbeitsspeicher vorhanden, wird nicht automatisch in E-Mails gelesen und nicht als Essen protokolliert.
+- Tests: 6 neue Kern-Regressionstests; 33/33 Release-Checks; keine Änderungen an Fitbit/Garmin- oder Finanzmodellen.
+
 ## 0.5.91.23 · BRAINEFFECT MCT C8 Öl (1 EL)
 - MCT C8 label-based macros, flexible EL/TL/ml/g doses, accurate food menu and nutrition insights, no invented micronutrients or Daily Dozen credit.
 
