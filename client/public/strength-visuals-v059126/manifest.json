@@ -1,0 +1,20 @@
+{
+  "release": "0.5.91.26",
+  "type": "Owner-approved AI-generated Start/End exercise image",
+  "images": {
+    "calf-raise": {
+      "file": "calf-raise.webp",
+      "source": "user-approved Calf Raise visual from conversation",
+      "width": 1448,
+      "height": 1086,
+      "stages": [
+        "START",
+        "END"
+      ],
+      "equipment": [
+        "two adjustable dumbbells",
+        "raised weight plate"
+      ]
+    }
+  }
+}

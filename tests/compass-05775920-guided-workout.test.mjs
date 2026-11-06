@@ -53,12 +53,12 @@ test('state changes are durable and deduplicated, without overwriting Garmin FIT
  assert.match(bridge,/await mutate\(st=>/);
  assert.doesNotMatch(bridge,/st\.healthImports\.garmin/);
 });
-test('schematic movement drawings have accessible descriptions and two phases',()=>{
- const markup=API.exerciseMovementSvg('ab-wheel-kneeling');
- assert.match(markup,/Start/);assert.match(markup,/Ziel/);
- assert.match(markup,/Schematische Start- und Zielhaltung/);
- assert.match(markup,/Ab Wheel/);
- assert.match(guide,/role="img"/);
+test('missing photos show accessible start and end instructions, never stick figures',()=>{
+ const markup=API.exerciseMovementSvg('incline-bench');
+ assert.match(markup,/START/);assert.match(markup,/ENDE/);
+ assert.match(markup,/Start- und Endposition als Text/);
+ assert.doesNotMatch(markup,/<svg/);
+ assert.match(guide,/role="group"/);
 });
 test('no activity is counted unless user clicks set confirmed',()=>{
  assert.match(guide,/sets\.push\(\{confirmed:true/);

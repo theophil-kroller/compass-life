@@ -111,3 +111,14 @@
 .str616-progression-details summary{cursor:pointer;font-weight:650;min-height:28px;display:flex;align-items:center}
 .str616-progression-details p{margin:3px 0 6px;font-size:12px}
 @media(max-width:650px){.str620-metadata{order:0}.str620-art{order:1}.str616-progression-details{margin:2px 0 5px}}
+
+/* 0.5.91.26: approved personalized calf-raise image and accessible photo-pending stages. */
+.str126-calf-figure img{aspect-ratio:1448/1086;max-width:100%;object-fit:contain;background:#f8f7f4}
+.str126-calf-figure figcaption{text-align:center;line-height:1.4}
+.str126-text-motion{width:100%;display:flex;flex-direction:column;gap:12px;align-self:center;padding:clamp(7px,2vw,16px);box-sizing:border-box;color:#315740}
+.str126-photo-pending{font-size:12px;line-height:1.5;text-align:center;color:#607b6a}
+.str126-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.str126-steps section{background:#fff;border:1px solid #d7e5d9;padding:12px;border-radius:12px;min-width:0}
+.str126-steps small{font-size:10px;font-weight:750;color:#287a55;letter-spacing:.1em}
+.str126-steps p{font-size:13px;line-height:1.45;margin:7px 0 0;color:#3d634e}
+@media(max-width:650px){.str126-calf-figure figcaption{font-size:10px}.str126-text-motion{padding:6px;gap:6px}.str126-photo-pending{font-size:11px}.str126-steps{gap:6px}.str126-steps section{padding:8px}.str126-steps p{font-size:11px;line-height:1.35;margin-top:3px}}
