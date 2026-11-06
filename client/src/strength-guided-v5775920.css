@@ -128,3 +128,9 @@
 .str127-chest-figure img{width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:1448/1086;object-fit:contain;object-position:center;border-radius:9px;background:#f7f6f5}
 .str127-chest-figure figcaption{font-size:11px;line-height:1.4;text-align:center;color:#607b6a;padding:3px 6px}
 @media(max-width:650px){.str127-chest-figure img{max-height:26dvh}.str127-chest-figure figcaption{font-size:10px;line-height:1.25;padding:2px 4px}}
+
+/* Compass 0.5.91.28 – 6 new individual start/end photo-style illustrations. */
+.str128-back-core-figure{display:flex;align-items:center;flex-direction:column;justify-content:center;max-width:100%;min-width:0;box-sizing:border-box;margin:0 auto}
+.str128-back-core-figure img{width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:1448/850;object-fit:contain;object-position:center;border-radius:9px;background:#fbfaf8}
+.str128-back-core-figure figcaption{font-size:11px;line-height:1.4;text-align:center;color:#607b6a;padding:3px 6px}
+@media(max-width:650px){.str128-back-core-figure img{max-height:26dvh}.str128-back-core-figure figcaption{font-size:10px;line-height:1.25;padding:2px 4px}}

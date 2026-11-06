@@ -1,0 +1,173 @@
+{
+  "release": "0.5.91.28",
+  "series": "Rücken, Rumpf, Kombinationsübungen – personalisierte Start/Ende-Illustrationen",
+  "count": 6,
+  "photo_composites_generated_from_reference": true,
+  "note": "AI-generated depictions, not actual photographs and not clinical exercise-technique guarantees. Individual composites were cropped/standardized from the new owner-referenced illustration; original reference photo is not bundled.",
+  "images": {
+    "pullup": {
+      "title": "Klimmzüge",
+      "group": "RÜCKEN",
+      "start": [
+        109,
+        155,
+        314,
+        400
+      ],
+      "end": [
+        326,
+        155,
+        541,
+        400
+      ],
+      "cue": "Vom aktiven Hang kontrolliert nach oben ziehen",
+      "bytes": 83250,
+      "sha256": "8625e8da2206a88e5a676d44b5ca938b9c1d3bf2522dad17db89addb590960e9",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        850
+      ]
+    },
+    "cable-row": {
+      "title": "Rudern am Kabel",
+      "group": "RÜCKEN",
+      "start": [
+        569,
+        155,
+        798,
+        400
+      ],
+      "end": [
+        811,
+        155,
+        1036,
+        400
+      ],
+      "cue": "Griff kontrolliert zum Rumpf führen",
+      "bytes": 100518,
+      "sha256": "ebf10816b4f1ee721c5ed9704c60f58a9236af374f5d80908c79acf961be178d",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        850
+      ]
+    },
+    "crunch": {
+      "title": "Crunches",
+      "group": "RUMPF",
+      "start": [
+        108,
+        498,
+        424,
+        691
+      ],
+      "end": [
+        435,
+        498,
+        746,
+        691
+      ],
+      "cue": "Brustkorb in Richtung Becken einrollen",
+      "bytes": 86564,
+      "sha256": "1157352e1e9b4d01c4bf814a908d935f841c3f3a6250142819d9b3bc7d7ba23f",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        850
+      ]
+    },
+    "pallof-press": {
+      "title": "Pallof Press",
+      "group": "RUMPF",
+      "start": [
+        791,
+        498,
+        1150,
+        691
+      ],
+      "end": [
+        1160,
+        498,
+        1518,
+        691
+      ],
+      "cue": "Kabelgriff nach vorn drücken, Rumpf stabil",
+      "bytes": 107112,
+      "sha256": "d823f29d7f3ff8c326620a6f9ba2435c817be1adc42505d6f81ddd98ba4cb61f",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        850
+      ]
+    },
+    "curl-to-press": {
+      "title": "Curl to Press",
+      "group": "KOMBINATION",
+      "source": "outdoor",
+      "start": [
+        245,
+        741,
+        545,
+        995
+      ],
+      "end": [
+        554,
+        741,
+        837,
+        995
+      ],
+      "cue": "Curl ausführen und dann über Kopf drücken",
+      "bytes": 111494,
+      "sha256": "b3f3f8108349e3cf73f8efaf9008db14e73f5cab2e699e00fff9fbdbbd2e2e1a",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        850
+      ]
+    },
+    "hammer-to-press": {
+      "title": "Hammer Curl to Press",
+      "group": "KOMBINATION",
+      "source": "outdoor",
+      "start": [
+        851,
+        741,
+        1151,
+        995
+      ],
+      "end": [
+        1161,
+        741,
+        1516,
+        995
+      ],
+      "cue": "Neutraler Curl, anschließend Überkopfdrücken",
+      "bytes": 108184,
+      "sha256": "f760b0c846a6e81219ad85b33ab979769d35ca3e6f486d997557920ac9eb1173",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        850
+      ]
+    }
+  }
+}
