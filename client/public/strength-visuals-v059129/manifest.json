@@ -1,0 +1,153 @@
+{
+  "release": "0.5.91.29",
+  "series": "Beine & Gesäß",
+  "count": 8,
+  "source": "Previously user-approved individual image_gen renders based on user-supplied reference photo.",
+  "note": "AI-created exercise demonstrations; not real user photos or medical/biomechanical guarantees. Original reference image is never bundled.",
+  "images": {
+    "calf-raise": {
+      "title": "Wadenheben / Calf Raise",
+      "group": "Beine",
+      "sourceImage": "imagegen.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        1015
+      ],
+      "bytes": 57248,
+      "sha256": "bc99e959cb049ca3984941441da0a9572f08e9077e61bf4b0dacb3574250417d",
+      "startCue": "Fußballen auf der stabilen Platte, Fersen tief",
+      "endCue": "Kontrolliert auf die Fußballen drücken, Fersen heben",
+      "crop_top_px": 0
+    },
+    "romanian-deadlift": {
+      "title": "Rumänisches Kreuzheben (Langhantel)",
+      "group": "Beine",
+      "sourceImage": "imagegen_2.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        995
+      ],
+      "bytes": 75006,
+      "sha256": "a343e45046a3bebcad05afdf3f2b2c10c4ec4fafb2b074ca8616442d51f776c7",
+      "startCue": "Aufrecht stehen, Hantel dicht am Körper",
+      "endCue": "Hüfte nach hinten schieben, Rücken neutral, Hantel an den Beinen",
+      "crop_top_px": 20
+    },
+    "leg-press": {
+      "title": "Beinpresse",
+      "group": "Beine",
+      "sourceImage": "imagegen_3.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        770
+      ],
+      "bytes": 108806,
+      "sha256": "85b556aac7e49bc3524b0705ee257a8c82a7cb17a9e6fdcd0100f7a0b0509d37",
+      "startCue": "Knie kontrolliert gebeugt, Rücken an der Lehne",
+      "endCue": "Beine kontrolliert strecken, Knie nicht durchdrücken",
+      "crop_top_px": 245
+    },
+    "lunge": {
+      "title": "Ausfallschritte (Kurzhanteln)",
+      "group": "Beine",
+      "sourceImage": "imagegen_4.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        990
+      ],
+      "bytes": 59398,
+      "sha256": "309887c7950d8b42962316b88220c10efdc5be1e712d4d1dea8211e486d951db",
+      "startCue": "Aufrechter Stand, Kurzhanteln seitlich",
+      "endCue": "Ausfallschritt mit stabilem Knie und aufrechtem Rumpf",
+      "crop_top_px": 25
+    },
+    "leg-extension": {
+      "title": "Beinstrecker",
+      "group": "Beine",
+      "sourceImage": "imagegen_5.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        885
+      ],
+      "bytes": 83802,
+      "sha256": "096408a3e495c5df05a40d8af5c3101e4ca73023e16e4fc0491353b07353b339",
+      "startCue": "Knie gebeugt, Polster vor den Unterschenkeln",
+      "endCue": "Knie kontrolliert strecken, Bewegung nicht ruckartig",
+      "crop_top_px": 130
+    },
+    "leg-curl": {
+      "title": "Beinbeuger (liegend)",
+      "group": "Beine",
+      "sourceImage": "imagegen_6.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        795
+      ],
+      "bytes": 85190,
+      "sha256": "024bd6468114015f2d85cb0a0346206176d83e49be8024548dbabc75e8d44736",
+      "startCue": "Beine kontrolliert gestreckt, Hüfte auf der Bank",
+      "endCue": "Knie beugen und Unterschenkel Richtung Gesäß führen",
+      "crop_top_px": 220
+    },
+    "hip-thrust": {
+      "title": "Hip Thrust",
+      "group": "Beine",
+      "sourceImage": "imagegen_7.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        665
+      ],
+      "bytes": 81090,
+      "sha256": "c15fa4e385cbfb6f3921db72fb5855cc76e4e3868595f45546b87a2ec657f722",
+      "startCue": "Schulterblätter an der Bank, Hüfte unten, Langhantel gepolstert",
+      "endCue": "Hüfte nach oben drücken, Rumpf stabil, kein Hohlkreuz",
+      "crop_top_px": 350
+    },
+    "glute-bridge": {
+      "title": "Glute Bridge",
+      "group": "Beine",
+      "sourceImage": "imagegen_8.png",
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "dimensions": [
+        1448,
+        495
+      ],
+      "bytes": 52214,
+      "sha256": "b9e899fe340c80d6b472a38dae08c83ace728c163c2180361f72941243115d65",
+      "startCue": "Rücken am Boden, Knie gebeugt, Füße stabil",
+      "endCue": "Gesäß anspannen und Becken kontrolliert anheben",
+      "crop_top_px": 520
+    }
+  }
+}

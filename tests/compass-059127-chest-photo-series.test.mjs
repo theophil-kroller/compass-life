@@ -43,9 +43,9 @@ test('Calf Raise and all other existing photograph collections remain selected',
 test('visual release updates without altering actual training data logic',()=>{
  const root=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
  const client=JSON.parse(readFileSync(new URL('package.json',base),'utf8'));
- assert.equal(root.version,client.version);assert.equal(root.version,'0.5.91.28');
+ assert.equal(root.version,client.version);assert.equal(root.version,'0.5.91.29');
  const visible=readFileSync(new URL('src/compass-release-v57759402519.js',base),'utf8');
- assert.match(visible,/0\.5\.91\.28/);
+ assert.match(visible,/0\.5\.91\.29/);
  assert.ok(source.includes('sets.push({confirmed:true'), 'set confirmation code unchanged');
  assert.ok(source.includes('saveRir=('), 'RIR editing code unchanged');
 });

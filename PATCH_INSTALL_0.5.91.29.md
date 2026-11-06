@@ -1,0 +1,1 @@
+Compass 0.5.91.29: Nur auf dem Quellstand 0.5.91.28 anwenden. Dateien entpacken und mit unveränderter Ordnerstruktur in GitHub auf main hochladen. Full Source enthält alle bisherigen Dateien. Acht neue individuelle WebP-Grafiken unter client/public/strength-visuals-v059129/.
