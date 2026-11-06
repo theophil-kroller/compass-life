@@ -1,0 +1,170 @@
+{
+  "release": "0.5.91.31",
+  "series": "Arme",
+  "count": 9,
+  "source": "Nine distinct START/END panels cropped from user-approved generated collection; AI generated, not nine independent photo shoots",
+  "images": {
+    "biceps-curl": {
+      "label": "Bizepscurls",
+      "image": "biceps-curl.webp",
+      "width": 1022,
+      "height": 680,
+      "dimensions": [
+        1022,
+        680
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "startCue": "Zwei Kurzhanteln seitlich am Körper, Ellbogen ruhig.",
+      "endCue": "Unterarme kontrolliert Richtung Schultern beugen.",
+      "sha256": "d6b2e5acb86961769b0ae26c67e118db8bff3e9fbc5973bba6f621e30547359a",
+      "bytes": 57028
+    },
+    "hammer-curl": {
+      "label": "Hammercurls",
+      "image": "hammer-curl.webp",
+      "width": 1022,
+      "height": 680,
+      "dimensions": [
+        1022,
+        680
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "startCue": "Kurzhanteln im Neutralgriff seitlich halten.",
+      "endCue": "Neutralgriff beibehalten, langsam Richtung Schultern beugen.",
+      "sha256": "fa3d380a542ac417807bd2639438cf0c2b2f52bb4f767d7a10deb566d2af8171",
+      "bytes": 58760
+    },
+    "triceps-pushdown": {
+      "label": "Trizepsdrücken am Kabel",
+      "image": "triceps-pushdown.webp",
+      "width": 1024,
+      "height": 680,
+      "dimensions": [
+        1024,
+        680
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "startCue": "Ellbogen nah am Oberkörper, Seil auf Höhe Oberbauch.",
+      "endCue": "Ellbogen kontrolliert strecken, Oberarme stabil halten.",
+      "sha256": "d49ad6b0b00a13b34ce86e0161fce7218c602ab93cba8ae129396747a9dc8a7c",
+      "bytes": 68706
+    },
+    "triceps-extension": {
+      "label": "Überkopf-Trizepsstrecken",
+      "image": "triceps-extension.webp",
+      "width": 1022,
+      "height": 676,
+      "dimensions": [
+        1022,
+        676
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "startCue": "Kurzhantel hinter Kopf, Oberarme aufrecht.",
+      "endCue": "Ellbogen über Kopf kontrolliert strecken.",
+      "sha256": "6839582b4737ba08b356e30fea112c2d41feb05035ba3410a1f526a1a391735b",
+      "bytes": 62652
+    },
+    "wrist-curl": {
+      "label": "Unterarmcurls",
+      "image": "wrist-curl.webp",
+      "width": 1022,
+      "height": 676,
+      "dimensions": [
+        1022,
+        676
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "startCue": "Unterarme abgestützt, Handgelenke frei.",
+      "endCue": "Handgelenke ohne Schwung beugen, langsam zurück.",
+      "sha256": "785fffc5d0b3eb62226f6d921cc8aaa8cebc47b3c98a581da565f8fbfb54ba09",
+      "bytes": 58996
+    },
+    "triceps-curl": {
+      "label": "French Press",
+      "image": "triceps-curl.webp",
+      "width": 1024,
+      "height": 676,
+      "dimensions": [
+        1024,
+        676
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "startCue": "Mit SZ-Stange in Rückenlage, Arme oberhalb der Brust.",
+      "endCue": "Ellbogen beugen und die Stange kontrolliert Richtung Stirn führen; dann strecken.",
+      "sha256": "21133fd16bb7ce9c549db5e01fe51b8e944e4c2779ae298cb2b79d44697c84ae",
+      "bytes": 58668
+    },
+    "skullcrusher": {
+      "label": "Skull Crushers",
+      "image": "skullcrusher.webp",
+      "width": 1022,
+      "height": 682,
+      "dimensions": [
+        1022,
+        682
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "startCue": "Auf Bank mit zwei Kurzhanteln, Oberarme aufrecht.",
+      "endCue": "Unterarme Richtung Kopf absenken, Ellbogen stabil halten, wieder strecken.",
+      "sha256": "ee1673176656d1dfb838815a6514501bcc3b7a3eb31e2214bf44813b07c9bc02",
+      "bytes": 57458
+    },
+    "reverse-curl": {
+      "label": "Reverse Curls",
+      "image": "reverse-curl.webp",
+      "width": 1022,
+      "height": 682,
+      "dimensions": [
+        1022,
+        682
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "startCue": "Untergriff vermeiden, Stange im Obergriff halten.",
+      "endCue": "Unterarme im Obergriff kontrolliert beugen und senken.",
+      "sha256": "119f5259e9db3f6fe21f68540507e368d63458da60c31be4ead8d00f4350331e",
+      "bytes": 55574
+    },
+    "concentration-curl": {
+      "label": "Konzentrationscurls",
+      "image": "concentration-curl.webp",
+      "width": 1024,
+      "height": 682,
+      "dimensions": [
+        1024,
+        682
+      ],
+      "phases": [
+        "START",
+        "ENDE"
+      ],
+      "startCue": "Sitzend, Ellbogen innen am Oberschenkel abstützen.",
+      "endCue": "Kurzhantel zur Schulter beugen; Oberarm bleibt ruhig.",
+      "sha256": "1003f4b3a6d7314028dd52697691fdf3efddf0e17369bb34195556635ff52761",
+      "bytes": 68840
+    }
+  }
+}

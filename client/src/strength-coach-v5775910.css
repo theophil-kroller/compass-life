@@ -82,3 +82,7 @@
 .str590-extra-actions button{border:1px solid #b9d4c8;border-radius:9px;padding:7px 11px;background:white;color:#235648;font-weight:600;cursor:pointer}
 .str590-extra-actions .str590-accept{background:#277a5d;color:white;border-color:#277a5d}
 @media(max-width:540px){.str590-daily-extra{padding:10px}.str590-extra-actions button{flex:1}}
+
+/* 0.5.91.31: voluntary standalone exercise entry */
+.str131-library-launch{border:1px solid #97b5a6;border-radius:9px;background:#f4f8f4;color:#2d6650;font-weight:700;padding:10px;cursor:pointer}
+.str131-library-launch:focus-visible{outline:3px solid #779985}
