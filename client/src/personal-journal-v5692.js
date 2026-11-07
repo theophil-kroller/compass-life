@@ -1,6 +1,7 @@
 import {mergeStrengthCycles35} from './strength-cycle-v5775935.js';
 import {MCT_C8_FOOD_ID,parseMctC8Serving,mctC8Kcal} from './mct-c8-serving-v059123.js';
 import {SKYR_PACKAGES,parseSkyrPortion,skyrKcal} from './skyr-serving-v059133.js';
+import {DR_GOERG_COCONUT_MILK_ID,COPAYA_RAW_COCOA_ID,parseCoconutMilkPortion,parseRawCocoaPortion,labelledProductKcal} from './coconut-cocoa-serving-v059134.js';
 import {activityToJournalArea} from './worktime-category-v0587.js';
 import {mergePeopleDirectory} from './people-sync-v57719.js';
 import {mergeMorningData} from './miracle-morning-v570.js';
@@ -77,6 +78,8 @@ export const FOOD_PRESETS=[
  ['braineffect-mct-c8-oil','🥥','BRAINEFFECT MCT C8 Öl · >97 % C8','Zutaten','1 EL (15 ml ≈ 14 g)',126,126],
  ['milsani-skyr-maracuja-150g','🥣','Milsani Skyr Maracuja · 150 g','Snacks','1 Becher (150 g)',71,71],
  ['ehrmann-high-protein-skyr-natural-450g','🥣','Ehrmann High Protein Skyr Natural · 450 g','Snacks','1 Becher (450 g)',230,230],
+ ['dr-goerg-organic-coconut-milk-200ml','🥥','Dr. Goerg Bio-Kokosmilch · 100 % Kokos · 200-ml-Packung','Zutaten','100 ml',186,186],
+ ['copaya-organic-raw-cocoa-powder','🍫','Copaya Bio-Rohkakaopulver · Criollo','Zutaten','1 EL (≈ 6 g)',20,20],
  ['zotter-labooko-himbeer-kokos','🍫','Zotter Labooko Himbeer-Kokos · vegan','Snacks','1 Stück (10 g; Annahme)',59,59],
  ['organic-hemp-fruit-protein-bar-35g','🌱','Schalk Mühle Bio Hanfprotein-Fruchtriegel · Dattel/Rosine/Feige/Maca','Snacks','1 Riegel (35 g)',144,144],
  ['pistachio-butter-cups','🍬','Better Pistachio Butter Cups','Snacks','3 Stück (39 g)',238,242],
@@ -100,6 +103,8 @@ export const FOOD_PRESETS=[
  ...(id==='profuel-alphaminos-bcaa'?{recipeNote:'PROFUEL Alphaminos BCAA: 13 g Portion, BCAA insgesamt 10 g (Leucin 5 g, Isoleucin 2,5 g, Valin 2,5 g), frühere Nutzerangaben. Keine Angaben zu sonstigen Makros/Mikros; BCAA sind kein vollständiges Protein und keine Daily-Dozen-Portion.'}:{}),
  ...(id==='milsani-skyr-maracuja-150g'?{recipeNote:'150-g-Becher; Etikett 07.11.2026 je 100 g: 47 kcal, 8 g Eiweiß, 5,5 g KH, davon 3,0 g Zucker, Fett <0,5 g, gesättigt 0,1 g, Salz 0,10 g. 0,2 g Fett/100 g nur als Rechenannahme. Calcium, Phosphor, Kalium, Magnesium, B2 und B12 ausschließlich generische Milchprodukt-Schätzungen (nicht deklariert). Der Fruchtzubereitungs-Anteil begründet KEINE Daily-Dozen-Obstportion. Anti-Aging Eight: erfasste Eiweißmenge, keine automatische Anti-Aging-Gutschrift.'}:{}),
  ...(id==='ehrmann-high-protein-skyr-natural-450g'?{recipeNote:'450-g-Becher; Etikett 07.11.2026 und Ehrmann-Hersteller: je 100 g 51 kcal, 9 g Eiweiß, 3,6 g KH/Zucker, 0,1 g Fett, 0,07 g gesättigt, 0,10 g Salz. 450 g ergeben rechnerisch 230 kcal und 40,5 g Protein (Hersteller rundet 40 g/Becher). Calcium, Phosphor, Kalium, Magnesium, B2 und B12 sind nur generische Milchprodukt-Schätzungen. Keine Daily-Dozen-Pflanzenportion; Anti-Aging Eight erfasst Eiweiß, keine Anti-Aging-Wirkung belegt. https://www.ehrmann.de/produkte/high-protein/sorten/natural-skyr-high-protein-450-g/'}:{}),
+ ...(id===DR_GOERG_COCONUT_MILK_ID?{recipeNote:'Originaletikett vom 07.11.2026: 186 kcal/100 ml, 17 g Fett, 14 g gesättigte Fettsäuren, 5,8 g KH, 3,0 g Zucker, 2,1 g Protein, 0,05 g Salz. 1 Portion = 100 ml; ganzer Karton = 200 ml. 100 % Kokosmilch ohne Wasserzusatz laut Verpackung. Mineralstoffe nur aus generischen Kokosmilchprofilen geschätzt (keine Marke analysiert); Vitamine nicht deklariert und daher unbekannt. Reine Kokosmilch zählt nicht automatisch als Greger-Nuss-, Beeren- oder Getränkportion. Anti-Aging Eight: keine automatisch belegte Wirkung; hoher Anteil gesättigter Fettsäuren wird in der Fettqualität berücksichtigt.'}:{}),
+ ...(id===COPAYA_RAW_COCOA_ID?{recipeNote:'Copaya Bio-Kakaopulver Rohkostqualität, Originaletikett 07.11.2026: je 100 g 330 kcal, 11 g Fett (6,9 g gesättigt), 14 g KH (0,3 g Zucker), 28,1 g Protein, 0,1 g Salz. Standard: 1 gestrichener EL ≈ 6 g (Volumen-/Massenannahme, individuell abweichend); 1 EL ≈ 20 kcal und 1,69 g Protein. Ballaststoffe/Mineralien generische ungesüßte Kakaopulver-Schätzungen. Flavanole (Catechin, Epicatechin), Theobromin und Koffein vorhanden sein können, jedoch nicht quantitativ bestimmt. Daily Dozen: keine automatische Bohnen-/Nuss-/Gewürzportion. Anti-Aging Eight: keine messbare MicroRNA-, NAD+- oder Lebensverlängerungswirkung. Packung zeigt ein MHD 01.04.2025 – vor Verzehr Zustand/Lagerung prüfen.'}:{}),
  ...(id===MCT_C8_FOOD_ID?{recipeNote:'MCT C8 Öl aus Kokosnüssen; Hersteller: 900 kcal und 100 g gesättigtes Fett je 100 g; >97 % C8 innerhalb des Fettsäureprofils. 1 EL = 15 ml, hier ≈14 g (geschätzte Masse) und 126 kcal. Menge editierbar: 0,5 EL, 2 EL, ml, g. Enthält keine quantifizierten Mikronährstoffe. Keine Daily-Dozen-Portion oder Anti-Aging-Eight-Gutschrift. Kalorienhaltig: unterbricht ein kalorienfreies Fasten. Neu bei MCT: mit ½ EL beginnen; Herstellerhinweis auf mögliche Magen-Darm-Beschwerden. Quelle: https://brain-effect.com/de-eu/products/rocket-c8-mct-oel'}:{}),
  ...(id==='water-glass'?{recipeNote:'1 Glas = 250 ml Trinkwasser ohne Zusätze und ohne Energiegehalt. Auch mit Kohlensäure, sofern ungesüßt. Glasgröße im Tagebuch anpassbar.'}:{}),
  ...(id==='spar-bio-flaxseed'?{recipeNote:'1 TL ≈ 3 g, vor dem Schlucken zerkaut. ACHTUNG: Die verwendete SPAR-Packung ist mit „Nur zum Kochen und Backen – nicht roh verzehren“ gekennzeichnet. Zerkauen ersetzt Erhitzen nicht.'}:{}),
@@ -233,6 +238,12 @@ export function nutritionKcalEstimate(food,amount,recipe=null){
   if(!Number.isFinite(grams)||grams<0||grams>2000)return null;
   const kcal=Math.round(grams*(food.id==='zotter-labooko-himbeer-kokos'?5.86:4.10));
   return {low:kcal,high:kcal,kind:'Originaletikett · proportional berechnet'};
+ }
+ if(food?.id===DR_GOERG_COCONUT_MILK_ID||food?.id===COPAYA_RAW_COCOA_ID){
+  const portion=food.id===DR_GOERG_COCONUT_MILK_ID?parseCoconutMilkPortion(amount,food.defaultAmount):parseRawCocoaPortion(amount,food.defaultAmount);
+  if(!portion)return null;
+  const kcal=labelledProductKcal(food.id,portion);
+  return {low:kcal,high:kcal,kind:portion.estimatedMass?'Originaletikett · EL-Masse geschätzt':'Originaletikett · proportional berechnet'};
  }
  if(SKYR_PACKAGES[food?.id]){
   const portion=parseSkyrPortion(food.id,amount,food.defaultAmount);

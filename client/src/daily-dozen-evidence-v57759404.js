@@ -36,6 +36,14 @@ export function dailyDozenIngredientEvidence404(state,day){
    if(candidates.includes('vegetables')&&/ratatouille|gemüse|gemuese|vegetable/.test(title)){add('vegetables',0.5,'Mensa · Gemüseanteil im Gericht (vorläufig, Menge unbekannt)',sourceId);notes.vegetables.push('Mensa-Portion unbekannt: 0,5 vorläufiger Vergleichswert, bitte Gemüsemenge bestätigen.');}
    continue;
   }
+  if(id==='dr-goerg-organic-coconut-milk-200ml'){
+   notes.nuts.push('Dr. Goerg Kokosmilch: keine belegte vollwertige Nuss-/Samenportion; 100 ml Getränk/Zutat werden nicht automatisch als Wasser oder Daily-Dozen-Getränk gezählt.');
+   continue;
+  }
+  if(id==='copaya-organic-raw-cocoa-powder'){
+   notes.spices.push('Copaya Rohkakaopulver: keine bestätigte Daily-Dozen-Gewürzportion; Flavanolgehalt nicht quantifiziert.');
+   continue;
+  }
   if(id==='organic-hemp-fruit-protein-bar-35g'){
    const barMass=/^\s*\d+(?:[.,]\d+)?\s*riegel\b/i.test(a)?35*factor:g!==null?g:35*factor;
    // 53% total dried fruit is confirmed; proportions of dates/raisins/figs unknown.
