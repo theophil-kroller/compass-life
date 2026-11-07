@@ -24,6 +24,7 @@ import './outlook-bridge-v57724.css';
 import {buildLifeBalanceRadar,buildLifeBalanceHistory,lifeBalanceRadarView,validateBalanceGoals} from './life-balance-radar-v563.js';
 import {inspectorDateShift,inspectorTitle} from './inspector-v559.js';
 import {createEditDraftGuard,EDIT_DRAFT_VAULT_KEY} from './edit-draft-guard-v57716.js';
+import {resolveNewTaskProject} from './project-task-context-v059132.js';
 import './edit-draft-guard-v57716.css';
 import {inboxFlagged,visibleInboxTags,setInboxFlag} from './inbox-flags-v27.js';
 import {inboxOrdered,inboxMove,inboxNudge} from './inbox-order-v34.js';
@@ -1336,13 +1337,13 @@ function workflowOptions(selected='next'){
  return [['next','Next Action'],['waiting','Waiting For'],['hold','On Hold']].map(([value,label])=>`<option value="${value}" ${selected===value?'selected':''}>${label}</option>`).join('');
 }
 function taskCreateForm(defaultDay='',defaultProject='',defaultParent=''){
- return `<form class="task-create-form" id="task-create-form"><div class="task-form-title"><strong>Neue Aufgabe</strong><span>Ohne künstliche Deadline</span></div><input name="title" aria-label="Aufgabentitel" maxlength="180" required placeholder="Was ist der nächste konkrete Schritt?"/><details class="tree-advanced"><summary>Weitere Einstellungen</summary><div class="task-field-grid">
+ return `<form class="task-create-form" id="task-create-form" ${defaultProject?`data-context-project-id="${h(defaultProject)}"`:``}><div class="task-form-title"><strong>Neue Aufgabe</strong><span>Ohne künstliche Deadline</span></div><input name="title" aria-label="Aufgabentitel" maxlength="180" required placeholder="Was ist der nächste konkrete Schritt?"/><details class="tree-advanced"><summary>Weitere Einstellungen</summary><div class="task-field-grid">
  ${dateControl('plannedDate','Planned · Wunschtermin',defaultDay,'Für Heute / Forecast; keine Frist')}
  ${dateControl('dueDate','Due · harte Deadline')}
  ${dateControl('deferUntil','Defer · frühestens ab','','Bis dahin keine Next Action')}
  <label>Duration · Minuten<input name="estimateMinutes" type="number" min="5" max="1440" step="5" placeholder="optional"/></label><label>Stückzahl · Ziel (optional)<input name="progressTarget" type="number" min="1" max="100000" step="1" placeholder="z. B. 36 Prüfungen"/></label>
  <label>Bereich<select name="category">${categoryOptions()}</select></label><label>GTD-Status<select name="workflow">${workflowOptions()}</select></label>
- ${defaultProject&&state?.projects?.[defaultProject]?.isTemplate?`<label class="shopping-template-context">Vorlage: <strong>${h(state.projects[defaultProject].title)}</strong></label><input type="hidden" name="projectId" value="${h(defaultProject)}"/>`:`<label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label>`}${defaultProject?`<label>Unteraufgabe von<select name="parentTaskId">${taskParentOptions(defaultProject,defaultParent)}</select></label>`:''}
+ ${defaultProject&&state?.projects?.[defaultProject]?.kind==='project'?`<label class="shopping-template-context">${state.projects[defaultProject].isTemplate?'Vorlage':'Projekt'}: <strong>${h(state.projects[defaultProject].title)}</strong> · fest zugeordnet</label><input type="hidden" name="projectId" value="${h(defaultProject)}"/>`:`<label>Projekt<select name="projectId">${projectOptions(defaultProject)}</select></label>`}${defaultProject?`<label>Unteraufgabe von<select name="parentTaskId">${taskParentOptions(defaultProject,defaultParent)}</select></label>`:''}
  <label>Agenda-Tags<input name="tags" data-smart-tags placeholder="UKO, Martin" maxlength="300"/></label>
  <label>Kontext-Tags<input name="contextTags" data-smart-tags placeholder="büro, laptop" maxlength="300"/></label>
  <label class="flag-check"><input type="checkbox" name="flagged"/> Flagged</label></div></details><button class="primary-btn" type="submit">${ico('plus',16)} Hinzufügen</button></form>`;
@@ -2732,8 +2733,9 @@ function bind() {
   };
   const taskForm=app.querySelector('#task-create-form');if(taskForm)taskForm.onsubmit=async ev=>{
     ev.preventDefault();const fd=new FormData(taskForm);
-    const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:fd.get('projectId')||null,parentTaskId:fd.get('parentTaskId')||null,sortOrder:0,tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,progressTarget:fd.get('progressTarget')?Number(fd.get('progressTarget')):null,progressCurrent:0,updatedAt:stamp()};
-    if(treeCreateKind==='task'&&treeCreateParent&&state.projects?.[treeCreateParent]?.isTemplate)t.projectId=treeCreateParent;
+    const context=resolveNewTaskProject({contextProjectId:taskForm.dataset.contextProjectId||'',liveProjectId:treeCreateKind==='task'?treeCreateParent||'':'',formProjectId:fd.get('projectId'),projects:state.projects});
+    if(context.error){toast('Projektzuordnung hat sich geändert. Bitte im gewünschten Projekt erneut auf + klicken.',true);return;}
+    const t={id:crypto.randomUUID(),title:String(fd.get('title')||'').trim(),note:'',plannedDate:fd.get('plannedDate')||null,dueDate:fd.get('dueDate')||null,category:fd.get('category')||'Allgemein',completed:false,archived:false,workflow:fd.get('workflow')||'next',flagged:fd.has('flagged'),projectId:context.projectId,parentTaskId:treeTaskParent&&context.contextual?treeTaskParent:fd.get('parentTaskId')||null,sortOrder:0,tags:parseTags(fd.get('tags')),deferUntil:fd.get('deferUntil')||null,contextTags:parseTags(fd.get('contextTags')),estimateMinutes:fd.get('estimateMinutes')?Number(fd.get('estimateMinutes')):null,progressTarget:fd.get('progressTarget')?Number(fd.get('progressTarget')):null,progressCurrent:0,updatedAt:stamp()};
     if(!validLocalTask(t)||!validTaskParent(state,t.id,t.projectId,t.parentTaskId)||t.projectId&&!state.projects?.[t.projectId]){toast('Aufgabenfelder bzw. Hierarchie prüfen. Bitte Projektzuordnung kontrollieren.',true);return;}
     t.sortOrder=Math.min(1000000,100+Math.max(0,...taskChildren(state,t.projectId,t.parentTaskId).map(x=>x.sortOrder||0)));
     const beforeUi={selectedTaskId,selectedProjectId,treeCreateKind,treeCreateParent,treeTaskParent};
@@ -4111,6 +4113,8 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     if(action==='tree-inspector-close'){selectedTaskId=null;selectedProjectId=null;render();return;}
     if(action==='tree-create-close'){treeCreateKind='';treeCreateParent=null;treeTaskParent=null;render();return;}
     if(action==='tree-add-folder'||action==='tree-add-project'||action==='tree-add-task'||action==='tree-add-subtask'){
+      if(action==='tree-add-task'&&state.projects?.[id]?.kind!=='project'){toast('Bitte zuerst ein gültiges Projekt auswählen.',true);return;}
+      if(action==='tree-add-subtask'&&(!state.tasks?.[id]||state.projects?.[state.tasks[id].projectId]?.kind!=='project')){toast('Die übergeordnete Aufgabe ist keinem gültigen Projekt zugeordnet.',true);return;}
       treeCreateKind=action==='tree-add-folder'?'folder':action==='tree-add-project'?'project':'task';
       treeTaskParent=action==='tree-add-subtask'?id:null;
       treeCreateParent=treeTaskParent?state.tasks?.[treeTaskParent]?.projectId:((action==='tree-add-project'||action==='tree-add-task')?id:null);
