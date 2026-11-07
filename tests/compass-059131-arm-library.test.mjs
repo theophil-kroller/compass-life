@@ -40,8 +40,8 @@ test('original chest/back/leg/shoulder/calf images are untouched and preferred w
  assert.equal(exercisePhoto131('incline-bench').series,'v059127');
 });
 test('library exposes all 66 canonical exercises, photo links, filter metadata and gym requirements',()=>{
- assert.equal(EXERCISE_LIBRARY_ENTRIES_131.length,66);
- assert.deepEqual([...new Set(EXERCISE_LIBRARY_ENTRIES_131.map(x=>x.id))].length,66);
+ assert.equal(EXERCISE_LIBRARY_ENTRIES_131.length,68);
+ assert.deepEqual([...new Set(EXERCISE_LIBRARY_ENTRIES_131.map(x=>x.id))].length,68);
  assert.deepEqual(EXERCISE_LIBRARY_ENTRIES_131.find(x=>x.id==='triceps-pushdown').places,['gym']);
  assert.ok(EXERCISE_LIBRARY_ENTRIES_131.find(x=>x.id==='biceps-curl').places.includes('home'));
  assert.equal(exercisePhoto131('biceps-curl').kind,'pair');
@@ -101,9 +101,9 @@ test('library launch is present in Strength Coach and habits; both reuse same en
  assert.match(ui,/data-pick/);
  assert.match(ui,/data-sets/);
 });
-test('release version consistent',()=>{
- assert.equal(JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version,'0.5.91.31');
- assert.equal(JSON.parse(readFileSync(new URL('package.json',client),'utf8')).version,'0.5.91.31');
- assert.match(source('compass-release-v57759402519.js'),/0\.5\.91\.31/);
- assert.match(source('main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.31'/);
+test('current release version consistent; original arm-photo series retains v0.5.91.31 metadata',()=>{
+ assert.equal(JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version,'0.5.91.35');
+ assert.equal(JSON.parse(readFileSync(new URL('package.json',client),'utf8')).version,'0.5.91.35');
+ assert.match(source('compass-release-v57759402519.js'),/0\.5\.91\.35/);
+ assert.match(source('main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.35'/);
 });

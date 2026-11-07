@@ -26,9 +26,9 @@ export function saveCycleAction35(action,today){
  localStorage.setItem(STORE,JSON.stringify(next));return next;}catch{return null;}
 }
 export const SHOULDER_REGIONS_35=Object.freeze({
- lateral:['dumbbell-lateral-raise','cable-lateral-raise'],
- posterior:['cable-rear-delt-fly','face-pull','prone-y-raise'],
- anterior:['dumbbell-shoulder-press','dumbbell-overhead-press','military-press','barbell-overhead-press','pike-pushup']
+ lateral:['dumbbell-lateral-raise','cable-lateral-raise','lateral-raise'],
+ posterior:['reverse-fly','cable-rear-delt-fly','face-pull'],
+ anterior:['dumbbell-front-raise','shoulder-press','seated-dumbbell-press','dumbbell-shoulder-press','dumbbell-overhead-press','military-press','barbell-overhead-press','pike-pushup']
 });
 export function shoulderRegions35(history,today){
  const rows=asArray(history?.valid),counts={lateral:0,posterior:0,anterior:0};let recognised=0;

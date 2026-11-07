@@ -19,6 +19,8 @@ import {readCycle35,coachCycle35} from './strength-cycle-v5775935.js';
 import {DEFAULT_EQUIPMENT_115,readEquipment115,saveEquipment115,dumbbellCount115,exactLoad115,nextLoad115,equipmentDecision115,equipmentMarkup115} from './strength-equipment-v059115.js';
 import './strength-equipment-v059115.css';
 import './strength-cycle-v5775935.css';
+import {readHomeAttachments135,saveHomeAttachments135,HOME_ATTACHMENT_NOTICE_135} from './strength-home-attachments-v059135.js';
+import {selectVtaperExercises135,capShoulderSets135} from './strength-vtaper-balance-v059135.js';
 
 const safe=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const GROUPS={back:'Rücken/Lat',shoulders:'Schultern',core:'Bauch/Rumpf',chest:'Brust',forearms:'Griff/Unterarme',calves:'Waden',quads:'Oberschenkel',posterior:'Beinrückseite',glutes:'Gesäß',biceps:'Bizeps',triceps:'Trizeps'};
@@ -36,6 +38,8 @@ const IDEAS=[
  ['dumbbell-row','back','home','pull','Einarmig ziehen, Schulterblatt Richtung Wirbelsäule führen.','vtaper,balance,strength'],
  ['dumbbell-pullover','back','home','pull','Leicht starten, Schultern beweglich halten, nicht ins Hohlkreuz gehen.','vtaper'],
  ['dumbbell-lateral-raise','shoulders','home','raise','Leichtes Gewicht, Arme seitlich kontrolliert anheben.','vtaper,balance'],
+ ['dumbbell-front-raise','shoulders','home','raise','Vordere Schulter nur zusätzlich belasten, wenn Druckübungen nicht ausreichen. Kontrolliert anheben.','balance'],
+ ['reverse-fly','shoulders','home','raise','Hintere Schulter: am besten sitzend mit abgestütztem Oberkörper, leichte Kurzhanteln, keine HWS-Spannung.','vtaper,balance'],
  ['calf-raise','calves','home','calf','Im Stand langsam auf die Zehenspitzen steigen, kurz halten und kontrolliert senken. Erst bei ausreichend Erholung.','vtaper,balance'],
   ['goblet-squat','quads','home','squat','Brust aufrecht, Knie in Zehenrichtung.','strength,balance'],
  ['dumbbell-romanian-deadlift','posterior','home','hinge','Hüfte zurückführen, Wirbelsäule neutral.','strength,balance'],
@@ -107,7 +111,9 @@ const DAY_MS=86400000;
 const WORKOUT_SETS={
  'ab-wheel-kneeling':[3,'6–10',90], 'dead-bug':[2,'8–12 / Seite',45],plank:[3,'30–45 Sek.',45],
  'dumbbell-row':[3,'8–12 / Seite',90],'dumbbell-pullover':[2,'10–12',75],
- 'dumbbell-lateral-raise':[3,'12–15',60],'dumbbell-shoulder-press':[3,'6–10',90],
+ 'dumbbell-lateral-raise':[3,'12–15',60],'reverse-fly':[3,'12–20',60],
+ 'dumbbell-front-raise':[2,'12–15',60],'assisted-pullup':[2,'6–10',90],
+ 'dumbbell-shoulder-press':[3,'8–12',90],
  'dumbbell-floor-press':[3,'8–12',90],'goblet-squat':[3,'8–12',90],'calf-raise':[2,'10–15',60],
  'dumbbell-romanian-deadlift':[3,'8–12',90],
  'lat-pulldown':[3,'8–12',90],'cable-lateral-raise':[3,'12–15',60],
@@ -263,9 +269,9 @@ function nextStrongLiftsVariant(history){
 /** Proposed plan: deterministic, equipment-filtered, with honest uncertainty.
  * It never prescribes load increases or treats missing data as a zero load.
  */
-export function planNextWorkout(state,{goal='balance',equipment='home',minutes=45,today,mode='smart',optionalExercise='',optionalAppend=false,techniqueApproved=false}={}){
+export function planNextWorkout(state,{goal='vtaper',equipment='home',minutes=45,today,mode='smart',optionalExercise='',optionalAppend=false,techniqueApproved=false}={}){
  const todayValue=/^\d{4}-\d{2}-\d{2}$/.test(String(today||''))?today:new Date().toISOString().slice(0,10);
- const selectedGoal=GOALS[goal]?goal:'balance';
+ const selectedGoal=GOALS[goal]?goal:'vtaper';
  const location=equipment==='gym'?'gym':'home';
  const budget=[25,45,65].includes(Number(minutes))?Number(minutes):45;
  const profile=GOALS[selectedGoal];
@@ -279,12 +285,14 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  const cycle=typeof coachCycle35==='function'?coachCycle35(state,{today:todayValue,goal:selectedGoal,history,health,cycle:readCycle35()}):null;
  const strongLifts=selectedGoal==='strength'&&location==='gym'&&mode==='stronglifts'; // never prescribe StrongLifts at home
  const variant=strongLifts?(typeof strongliftsNextVariant88==='function'?strongliftsNextVariant88(state):nextStrongLiftsVariant(history)):null;
- let ids=strongLifts?STRONG_LIFTS[variant].map(x=>x[0]):[...WORKOUT_POOLS[selectedGoal][location],...(selectedGoal==='vtaper'&&location==='home'?['calf-raise']:[])];
+ const attachments=location==='home'?readHomeAttachments135():{cableReady:false,pullupReady:false};
+ const vtaper135=!strongLifts&&selectedGoal==='vtaper'?selectVtaperExercises135({history,today:todayValue,place:location,minutes:budget,attachments,pain,healthAttention:health.attention===true,catalog}):null;
+ let ids=strongLifts?STRONG_LIFTS[variant].map(x=>x[0]):vtaper135?vtaper135.ids:[...WORKOUT_POOLS[selectedGoal][location]];
  ids=ids.filter(id=>catalog.has(id));
  // A gym session is NOT automatically StrongLifts. Smart planning ranks every
  // goal's available exercise pool by recent recorded load, keeping goal order
  // as the tie breaker. Unknown Garmin sets never count as zero.
- if(!strongLifts&&history.valid.length){
+ if(!strongLifts&&!vtaper135&&history.valid.length){
    const original=new Map(ids.map((id,i)=>[id,i]));
    const pressure=id=>{
     const item=catalog.get(id);const primary=item?.primary;
@@ -297,7 +305,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
    ids.sort((a,b)=>pressure(a)-pressure(b)||(original.get(a)-original.get(b)));
  }
  // Limit a short session by exercise count, not by pretending 5x5 fits 25 min.
- if(!strongLifts&&history.valid.length){const rested=ids.filter(id=>{const g=catalog.get(id)?.primary;return !(ageDays(history.last[g],todayValue)<=1&&(history.counts7[g]||0)>=3);});if(rested.length>=2)ids=rested;}
+ if(!strongLifts&&!vtaper135&&history.valid.length){const rested=ids.filter(id=>{const g=catalog.get(id)?.primary;return !(ageDays(history.last[g],todayValue)<=1&&(history.counts7[g]||0)>=3);});if(rested.length>=2)ids=rested;}
  const limit=strongLifts?3:budget===25?3:budget===45?5:6;
  ids=ids.slice(0,limit);
  // The optional 0.5.89 movement only replaces a planned exercise on explicit user choice.
@@ -312,8 +320,10 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  let exercises=ids.map((id,index)=>{
   const item=catalog.get(id);
   const spec=strongLifts?STRONG_LIFTS[variant].find(row=>row[0]===id):null;
-  const [sets,reps,restSeconds]=spec?[spec[1],String(spec[2]),id==='deadlift'?180:150]:(WORKOUT_SETS[id]||[3,'8–12',90]);
+  const [baseSets,reps,restSeconds]=spec?[spec[1],String(spec[2]),id==='deadlift'?180:150]:(WORKOUT_SETS[id]||[3,'8–12',90]);
   const primary=item.primary||IDEAS.find(x=>x[0]===id)?.[1]||'core';
+  let sets=strongLifts?baseSets:coach34RecommendedSets({state,goal:selectedGoal,exerciseId:id,primary,baseSets,history,health,today:todayValue});
+  if(vtaper135)sets=capShoulderSets135({id,baseSets:sets,shoulder:vtaper135.shoulder});
   const age=ageDays(history.last[primary],todayValue);
   const seven=history.counts7[primary]||0;
   const progression=strengthProgressionForExercise(history,id,{reps,sets,equipment:location,strongLifts});
@@ -335,6 +345,8 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   if(pain||health.attention){corrected.suggestedKg=null;corrected.message='Belastungswarnung: keine Erhöhung vorgeschlagen. '+corrected.message;}
   if(rirModel)reason+=' RIR-Progression auf bestätigten Arbeitssätzen; Vorschlag jederzeit anpassbar.';
   const optionalMetadata=typeof NEW_EXERCISES_BY_ID_89!=='undefined'?NEW_EXERCISES_BY_ID_89.get(id):null;
+  if(id==='reverse-fly')reason+=' Hintere Schulter: bei Nackenempfindlichkeit sitzend mit abgestütztem Oberkörper und leichtem Gewicht ausführen; bei Beschwerden abbrechen.';
+  if(id==='dumbbell-shoulder-press')reason+=' Schulterdrücken nur schmerzfrei und ohne HWS-Ausweichbewegung; alternativ Floor Press oder Seitheben.';
   if(optionalMetadata)reason+=' Freiwillige Zusatzübung: '+optionalMetadata.cue+' '+optionalMetadata.recovery;
   return {id,title:typeof strengthExerciseLabel==='function'?strengthExerciseLabel(id):(item.name||id),primary,kind:IDEAS.find(x=>x[0]===id)?.[3]||'squat',sets,reps,restSeconds,ageDays:age,sevenSets:seven,
    lastKg:corrected.lastKg,suggestedKg:corrected.suggestedKg,equipmentDecision,equipmentDumbbells:dumbbellCount,progressionAction:corrected.action,progressionHint:corrected.message,targetReps:rirModel?.targetReps||null,rirConfidence:rirModel?.confidence||null,
@@ -359,7 +371,7 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
   {name:'Vorder- / Rückseite Beine',one:history.counts7.quads||0,two:history.counts7.posterior||0}
  ]:[];
  const planned={goal:selectedGoal,equipment:location,budget,mode:strongLifts?'stronglifts':'smart',trainingFocus:strongLifts?'Kraft · schweres 5×5':selectedGoal==='vtaper'?'Hypertrophie · kontrollierte 8–15+ Wiederholungen':'Zielorientiertes Training',homeEquipment:location==='home'?{...HOME_EQUIPMENT}:null,equipmentProfile,profile,variant,exercises,estimatedMinutes,timeFit,
-  cautious,recentlyTrained,latestAge,suggestRecovery,evidence,known,missing,history,sourceStats:history.sourceStats,balances,health,adaptive,cycle,
+  cautious,recentlyTrained,latestAge,suggestRecovery,evidence,known,missing,history,sourceStats:history.sourceStats,balances,health,adaptive,cycle,shoulderBalance:vtaper135?.shoulder||null,homeAttachments:attachments,
   optionalExercise:optional89.selected||null,optionalReason:optional89.reason||'',suggestedOptional,optionalMode:optional89.mode||null,
   title:strongLifts?`StrongLifts 5×5 · Workout ${variant}`:selectedGoal==='vtaper'?'V-Taper · Rücken & Schultern':selectedGoal==='abs'?'Core & Ganzkörper':selectedGoal==='strength'?`Kraft · ${location==='gym'?'Gym':'Zuhause'}`:'Muskelbalance · Ganzkörper',
   recoveryNote:suggestRecovery?'Rücken/Schultern oder andere geplante Muskeln wurden erst kürzlich mehrfach beansprucht. Heute ggf. Pause, Mobilität oder andere Muskelgruppen wählen; keine exakt berechnete biologische Regeneration.':cautious?'Letztes bestätigtes Coach- oder zugeordnetes Garmin-Training heute/gestern. Diesen Vorschlag erst am nächsten geeigneten Trainingstag umsetzen; vorher Erholung und Leistungsfähigkeit prüfen.':
@@ -368,8 +380,8 @@ export function planNextWorkout(state,{goal='balance',equipment='home',minutes=4
  return strongLifts&&typeof strengthenStrongliftsPlan88==='function'?strengthenStrongliftsPlan88(state,planned,{healthAttention:health.attention===true,pain}):planned;
 }
 function coachPrefs(){
- try{const o=JSON.parse(localStorage.getItem(WORKOUT_PREF_KEY)||'{}');return {goal:GOALS[o.goal]?o.goal:'balance',equipment:o.equipment==='gym'?'gym':'home',minutes:[25,45,65].includes(Number(o.minutes))?Number(o.minutes):25,mode:o.mode==='stronglifts'?'stronglifts':'smart',optionalExercise:'',optionalAppend:false,techniqueApproved:false};}
- catch{return {goal:'balance',equipment:'home',minutes:25,mode:'smart',optionalExercise:'',optionalAppend:false,techniqueApproved:false};}
+ try{const o=JSON.parse(localStorage.getItem(WORKOUT_PREF_KEY)||'{}');return {goal:GOALS[o.goal]?o.goal:'vtaper',equipment:o.equipment==='gym'?'gym':'home',minutes:[25,45,65].includes(Number(o.minutes))?Number(o.minutes):25,mode:o.mode==='stronglifts'?'stronglifts':'smart',optionalExercise:'',optionalAppend:false,techniqueApproved:false};}
+ catch{return {goal:'vtaper',equipment:'home',minutes:25,mode:'smart',optionalExercise:'',optionalAppend:false,techniqueApproved:false};}
 }
 function saveCoachPrefs(p){try{const {goal,equipment,minutes,mode}=p;localStorage.setItem(WORKOUT_PREF_KEY,JSON.stringify({goal,equipment,minutes,mode}));}catch{}} // Optional movements and technique clearance are per-dialog, never persisted.
 function coachCopyText(plan){
@@ -415,6 +427,7 @@ export function openStrengthCoach({state,today,onSession=async()=>{},onSettings=
   <details class="str623-more str589-extras" ${prefs.optionalExercise?'open':''}><summary>＋ Weitere Übungen (freiwillig)</summary><label>Eine Übung für diesen Trainingsplan gezielt auswählen<select class="str589-exercise"><option value="">Keine zusätzliche Übung</option>${NEW_EXERCISES_89.filter(e=>e.places.includes(prefs.equipment)).map(e=>`<option value="${safe(e.id)}" ${prefs.optionalExercise===e.id?'selected':''}>${safe(e.english)} · ${safe(e.german)}</option>`).join('')}</select></label><p style="font-size:12px;line-height:1.5;margin:8px 0">Bei ausreichendem Zeitbudget wird die akzeptierte Übung als Bonus hinzugefügt. Andernfalls ersetzt sie nur eine passende bestehende Übung; der Trainingsplan verlängert sich nicht ungefragt. Keine Änderung an StrongLifts A/B.</p>${prefs.optionalExercise==='one-arm-dumbbell-snatch'?`<label><input type="checkbox" class="str589-technique" ${prefs.techniqueApproved?'checked':''}> Technikfreigabe nach eigenständiger Prüfung bestätigt · nur ohne HWS-/Rückenschmerzen</label>`:''}<small>${safe(plan.optionalReason)}${plan.optionalMode==='bonus'?' · Als Bonus hinzugefügt.':plan.optionalMode==='swap'?' · Als Tausch übernommen.':''}</small></details>
   ${prefs.equipment==='gym'?strongliftsSettingsMarkup88(state):''}
   <details class="str623-more str115-settings"><summary>Equipmentdetails · Scheibenbestand</summary>${prefs.equipment==='home'?`<div class="str621-equipment-note">Vier Scheiben je 2,5 / 2 / 1,5 / 1 kg = 28 kg Scheiben insgesamt. Zwei identisch bestückte Hanteln · links/rechts symmetrisch. Für eine Hantel sind alle verfügbaren Scheiben nutzbar. Griffgewicht ist separat und noch nicht bestätigt.</div><div class="str115-equipment-grid">${readEquipment115().sets[0].plates.map(p=>`<label>${safe(p.kg)}-kg-Scheiben gesamt<input type="number" min="0" max="60" step="1" value="${p.count}" data-eq-plate="${p.kg}"></label>`).join('')}<label>Griffgewicht pro Hantel (kg, optional)<input type="number" min="0" max="15" step="0.1" placeholder="unbekannt" value="${readEquipment115().sets[0].handleWeightKg??''}" data-eq-handle></label><label>Max. Scheiben je Seite (optional)<input type="number" min="1" max="12" step="1" placeholder="unbekannt" value="${readEquipment115().sets[0].maxPlatesPerSide??''}" data-eq-cap></label></div><button type="button" class="secondary-btn str115-save" data-equipment-save>Equipment speichern</button><small>Zweites Set & Barbell-Verbindung vorbereitet, noch nicht zum Bestand addiert.</small>`:'Gym: StrongLifts und Studio-Lasten bleiben unverändert.'}</details>
+  ${prefs.equipment==='home'?`<details class="str135-equipment-future"><summary><strong>Homegym · Kabelzug und Klimmzugstange</strong> · ${plan.homeAttachments?.cableReady||plan.homeAttachments?.pullupReady?'teilweise freigegeben':'noch nicht einsatzbereit'}</summary><p>${safe(HOME_ATTACHMENT_NOTICE_135)}</p><label><input type="checkbox" data-attachment-cable ${plan.homeAttachments?.cableReady?'checked':''}> Kabelzug (Umlenkrolle/Loading Pin/Seil) sicher montiert und Belastungsgrenze geprüft</label><label><input type="checkbox" data-attachment-pullup ${plan.homeAttachments?.pullupReady?'checked':''}> Wand-Klimmzugstange sicher montiert, Assistenzbänder geprüft</label><p><small>Erst nach manueller Bestätigung werden Lat Pulldown, Straight-Arm Pulldown, Face Pull, Kabel-Seitheben und bandunterstützte Klimmzüge für Zuhause freigeschaltet. Die Scheiben bleiben derselbe Bestand und werden nicht doppelt gezählt.</small></p><button type="button" class="secondary-btn" data-save-attachments>Montagestatus speichern</button></details>`:''}
   <section class="str626-context" aria-label="Persönlicher Schlaf-HRV-Körpertrend" style="margin:10px 0;padding:14px;border:1px solid #c8dcd3;border-radius:14px;background:rgba(238,247,242,.65)">
    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>🌙 Schlaf · ♥ HRV · Fitdays</strong><small>${plan.health.status==='attention'?'Zwei Trends unter Vergleich':'Persönliche Vergleichswerte · kein Recovery-Score'}</small></div>
    <small class="str405-window-hint">Garmin-Vergleich: letzte 3 Kalendertage gegen 3–45 Tage davor. Nicht ab Trainingsbeginn.</small><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px">
@@ -427,6 +440,7 @@ export function openStrengthCoach({state,today,onSession=async()=>{},onSettings=
   <section class="str619-plan-head" aria-label="Vorgeschlagener Trainingsplan"><div><small>${plan.cautious?'FÜR DEN NÄCHSTEN TRAININGSTAG':'DEIN VORSCHLAG'}</small><h3>${safe(plan.title)}</h3><p>${plan.exercises.length} Übungen · ${plan.equipment==='home'?'Zuhause':'Gym'} · ${safe(plan.trainingFocus)}</p>${plan.sourceStats.coachConfirmed?`<small class="str624-hist-badge">✓ ${plan.sourceStats.coachConfirmed} Coach-Sätze aus dem Vault berücksichtigt</small>`:''}</div><div class="str620-cta-stack"><button type="button" class="str620-launch" aria-label="Geführtes Workout starten">▶ Workout starten</button><button type="button" class="str131-library-launch" aria-label="Übungsbibliothek öffnen und spontan eine Einzelübung starten">＋ Einzelübung</button><button type="button" class="str619-copy">Plan kopieren</button></div></section>
   ${plan.suggestRecovery?`<aside class="str625-rest-advice" style="background:#f0f4ed;border-left:3px solid #688b76;padding:9px 12px;border-radius:9px;margin:9px 0;font-size:12px">Heute eher Erholung oder andere Muskelgruppen einplanen. <details><summary>Begründung</summary><p>${safe(plan.recoveryNote)}</p></details></aside>`:``}
   ${plan.timeFit==='longer'?`<p class="str619-alert">Dieser Plan benötigt voraussichtlich mehr als die gewählten ${plan.budget} Minuten. Die Sätze werden nicht künstlich verkürzt.</p>`:''}
+  ${plan.goal==='vtaper'&&plan.shoulderBalance?`<details class="str135-shoulder-balance"><summary><strong>Schulterbalance · direkt + indirekt / 7 Tage</strong></summary><div class="str135-heads">${[['lateral','Seitliche Schulter'],['posterior','Hintere Schulter'],['anterior','Vordere Schulter']].map(([key,label])=>`<div><strong>${label}</strong><span>${plan.shoulderBalance.counts[key].toLocaleString('de-AT',{maximumFractionDigits:1})} effektive Satzbeteiligungen · direkt ${plan.shoulderBalance.direct[key]} / indirekt ${plan.shoulderBalance.indirect[key].toLocaleString('de-AT',{maximumFractionDigits:1})}</span></div>`).join('')}</div><small>${safe(plan.shoulderBalance.method)} · Keine zusätzlichen Front Raises bei ausreichendem Druckvolumen. Fehlende Trainingseinheiten bleiben unbekannt.</small></details>`:''}
   ${plan.goal==='vtaper'&&plan.cycle?`<section class="str35-cycle" aria-label="V-Taper Trainingszyklus"><div class="str35-title"><strong>${plan.cycle.block?'V-Taper · Trainingsblock '+plan.cycle.blockNumber:'V-Taper · Noch keine bestätigte Einheit'}</strong>${plan.cycle.week?`<span>Woche ${plan.cycle.displayWeek} von 6${plan.cycle.dueReview?' · Review':''}</span>`:''}</div><p>${safe(plan.cycle.reason)}</p>${plan.cycle.block?`<small>${plan.cycle.trainingDays} Trainingstag(e) · ${plan.cycle.activeSets??'Sätze unbekannt'} dokumentierte Sätze${plan.cycle.evaluation?.unknownSets?' · weitere Satzdetails unbekannt':''}${plan.cycle.proposal?.reason?' · Beginn: '+safe(plan.cycle.startDay):''}${!plan.cycle.dueReview?' · nächster Review in '+plan.cycle.daysUntilReview+' Tagen':''}</small>${plan.cycle.dueReview?`<p><strong>Blockauswertung:</strong> ${plan.cycle.evaluation.trainingDays} Trainingstage · ${plan.cycle.evaluation.confirmedSets??'Sätze unbekannt'} erfasste Sätze · ${plan.cycle.evaluation.repetitions??'Wdh. unbekannt'} Wdh. · ${plan.cycle.evaluation.volumeKg??'Volumen unbekannt'} kg Satzvolumen · ${plan.cycle.evaluation.recordedRir} RIR-Werte${plan.cycle.evaluation.plateaus?.length?' · '+plan.cycle.evaluation.plateaus.length+' mögliches Plateau':''}</p><p><strong>Vorschlag ${safe(plan.cycle.recommendation.code)}:</strong> ${safe(plan.cycle.recommendation.label)} · ${safe(plan.cycle.recommendation.reason)}</p>`:''}<details class="str35-more"><summary>Blockdetails & Entscheidungen</summary><p>${safe(plan.cycle.proposal?.reason||'Startdatum auf Basis der gespeicherten Historie.')}</p><div class="str35-region"><span>Seitliche Schulter: ${plan.cycle.shoulder.counts.lateral} bekannte Sätze / 7 Tage</span><span>Hintere Schulter: ${plan.cycle.shoulder.counts.posterior} bekannte Sätze / 7 Tage</span></div><label>Startdatum <input class="str35-start" type="date" value="${safe(plan.cycle.startDay)}" max="${safe(today)}"></label><div class="str35-actions"><button class="secondary-btn" type="button" data-cycle35="set-start">Datum speichern</button><button class="secondary-btn" type="button" data-cycle35="${plan.cycle.phase==='paused'?'resume':'pause'}">${plan.cycle.phase==='paused'?'Block fortsetzen':'Block pausieren'}</button><button class="secondary-btn" type="button" data-cycle35="${plan.cycle.deloadActive?'deload-end':'deload'}">${plan.cycle.deloadActive?'Entlastung beenden':'Entlastungswoche wählen'}</button><button class="secondary-btn" type="button" data-cycle35="extend">Block verlängern</button><button class="secondary-btn" type="button" data-cycle35="new">Neuen Block beginnen</button></div><details><summary>Muskelgruppen, Progression & Regeneration</summary><p>${Object.entries(plan.cycle.evaluation.muscleSets).map(([group,count])=>`${safe(({back:'Rücken/Lat',shoulders:'Schultern',core:'Rumpf',chest:'Brust',quads:'Beine',posterior:'Beinrückseite'})[group]||group)}: ${count} dokumentierte Sätze`).join(' · ')||'Noch keine eindeutig zugeordneten Muskelgruppen.'}</p><p>Steigerungen: ${plan.cycle.evaluation.progression.length?plan.cycle.evaluation.progression.map(safe).join(', '):'keine ausreichend vergleichbaren Messpunkte'}. RIR-Mittel ${plan.cycle.evaluation.meanRir??'unbekannt'} · ${plan.cycle.evaluation.recoveryAttention?'Schlaf/HRV-Vergleich beachten':'kein kombinierter Regenerationsalarm'}. ${plan.cycle.evaluation.bodyComposition?.latest?'Fitdays: '+safe(plan.cycle.evaluation.bodyComposition.latest.weightKg??'Gewicht unbekannt')+' kg (BIA-Schätzung; kein Muskelnachweis).':'Fitdays-Körpertrend nicht ausreichend dokumentiert.'}</p></details><details><summary>Blockhistorie (${plan.cycle.historyBlocks.length})</summary>${plan.cycle.historyBlocks.map(b=>`<p>Block ${b.number} · ${safe(b.startDay)} · ${b.status==='finished'?'abgeschlossen':b.status==='paused'?'pausiert':'läuft'}</p>`).join('')}</details><small>Neue Trainingsdaten werden nicht verändert. StrongLifts und V-Taper nutzen dieselbe bestätigte Historie; keine automatische Last- oder Deload-Änderung.</small></details>`:''}</section>`:''}
   ${plan.goal==='vtaper'?`<details class="str34-volume"><summary><strong>Wochenvolumen & RIR · adaptiver Coach</strong></summary>${plan.adaptive.weekly.map(x=>`<div class="str34-volume-row"><span>${safe(({back:'Rücken',shoulders:'Schultern',chest:'Brust',quads:'Beine',posterior:'Beinrückseite',core:'Rumpf'})[x.group])}</span><span>${x.observed===null?'Noch keine verlässlichen Daten':safe(x.observed)+' / '+x.minimum+'–'+x.maximum+' Satzbeteiligungen'}</span></div>`).join('')}<p>${safe(plan.adaptive.recordedRir)} RIR-Angaben dokumentiert · ${safe(plan.adaptive.caveat)}</p></details>`:''}
   <details class="str623-more"><summary>Trainingsdaten & Regeneration</summary><p class="str619-recovery">${safe(plan.recoveryNote)}</p>
@@ -447,6 +461,12 @@ export function openStrengthCoach({state,today,onSession=async()=>{},onSettings=
    catch(error){window.alert(error.message||'Zyklus konnte nicht gesichert werden.');}
   });
   dialog.querySelector('.str610-goal').onchange=e=>update('goal',e.target.value);
+  dialog.querySelector('[data-save-attachments]')?.addEventListener('click',()=>{
+   const before=readHomeAttachments135();
+   const next={cableReady:!!dialog.querySelector('[data-attachment-cable]')?.checked,pullupReady:!!dialog.querySelector('[data-attachment-pullup]')?.checked};
+   if((next.cableReady&&!before.cableReady||next.pullupReady&&!before.pullupReady)&&!window.confirm('Nur nach sicherer Montage und Kontrolle der Verankerung, Lastgrenzen und Umlenkung freigeben. Ist die Installation nachweislich geprüft?'))return;
+   try{saveHomeAttachments135(next);draw();}catch(error){console.warn('Montagestatus nicht gespeichert',error);}
+  });
   dialog.querySelector('[data-equipment-save]')?.addEventListener('click',()=>{
    const set=structuredClone(readEquipment115());
    for(const item of set.sets[0].plates){const box=dialog.querySelector(`[data-eq-plate="${item.kg}"]`);const n=Number(box?.value);if(!Number.isInteger(n)||n<0||n>60){box?.reportValidity?.();return;}item.count=n;}

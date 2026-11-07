@@ -142,6 +142,8 @@ const PHASE_TEXT_126=Object.freeze({
  'hip-thrust':['Oberer Rücken abgestützt, Füße stabil am Boden, Hüfte unten.','Hüfte anheben, Gesäß anspannen, kontrolliert absenken.'],
  'glute-bridge':['In Rückenlage die Knie beugen und die Füße aufstellen.','Becken anheben, Gesäß anspannen, kontrolliert absenken.'],
  'calf-raise':['Mit Fußballen auf der Hantelscheibe stehen, Fersen tiefer absenken.','Fersen aktiv hochdrücken und langsam wieder absenken.'],
+ 'dumbbell-front-raise':['Kurzhanteln im Obergriff vor den Oberschenkeln, Knie locker, Nacken entspannt.','Arme kontrolliert vor dem Körper bis etwa Schulterhöhe führen; ohne Schwung langsam senken.'],
+ 'assisted-pullup':['Sichere montierte Klimmzugstange und passendes Assistenzband prüfen; im aktiven Hang beginnen.','Mit Bandunterstützung kontrolliert hochziehen, Kinn zur Stange, anschließend langsam absenken.'],
  'shoulder-press':['Gewichte auf Schulterhöhe, Füße und Rumpf stabil.','Gewichte kontrolliert über Kopf drücken und wieder senken.'],
  'lateral-raise':['Arme neben dem Körper, leichte Ellbogenbeugung.','Arme ohne Schwung seitlich heben und kontrolliert senken.'],
  'reverse-fly':['Oberkörper leicht vorgebeugt, Arme nach unten geführt.','Arme seitlich nach außen öffnen, Schulterblätter stabil.'],

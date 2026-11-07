@@ -27,7 +27,7 @@ export function normalizeEquipment115(raw){
 export function readEquipment115(){try{return normalizeEquipment115(JSON.parse(globalThis.localStorage?.getItem(EQUIPMENT_STORAGE_115)||'null'));}catch{return normalizeEquipment115(null);}}
 export function saveEquipment115(value){const clean=normalizeEquipment115(value);globalThis.localStorage?.setItem(EQUIPMENT_STORAGE_115,JSON.stringify(clean));return clean;}
 const SINGLE=new Set(['dumbbell-row','goblet-squat','dumbbell-pullover','one-arm-dumbbell-snatch']);
-const DOUBLE=new Set(['dumbbell-lateral-raise','dumbbell-floor-press','dumbbell-shoulder-press','dumbbell-romanian-deadlift','dumbbell-walking-lunge','dumbbell-front-squat','dumbbell-bench-press','farmers-walk']);
+const DOUBLE=new Set(['dumbbell-lateral-raise','dumbbell-floor-press','dumbbell-shoulder-press','dumbbell-romanian-deadlift','dumbbell-walking-lunge','dumbbell-front-squat','dumbbell-bench-press','farmers-walk','dumbbell-front-raise','reverse-fly']);
 export function dumbbellCount115(id){return SINGLE.has(id)?1:DOUBLE.has(id)?2:null;}
 function set115(profile){return normalizeEquipment115(profile).sets[0];}
 /** Available layouts for ONE or TWO IDENTICALLY LOADED dumbbells, each symmetric.
@@ -69,7 +69,7 @@ export function plateSvg115(load){
  const plate=(kg,x,i)=>`<rect x="${x}" y="${(height-(34+kg*10))/2}" width="${widths-2}" height="${34+kg*10}" rx="3" fill="${colors[kg]||'#6d8792'}" stroke="#263f4c" stroke-width="1"/><text x="${x+7}" y="53" font-size="8.3" font-weight="700" text-anchor="middle" fill="white" transform="rotate(-90 ${x+7} 53)">${fmt(kg)}</text>`;
  return `<svg class="str115-plates-svg" viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${plateText115(load).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"><rect x="146" y="44" width="108" height="12" rx="6" fill="#78898c"/><rect x="163" y="38" width="74" height="24" rx="7" fill="#c8d1cb" stroke="#637f79" stroke-width="2"/>${[...expanded].reverse().map((kg,i)=>plate(kg,leftX+i*widths,i)).join('')}${expanded.map((kg,i)=>plate(kg,rightX+i*widths,i)).join('')}<path d="M${Math.max(4,leftX-6)} 38v24 M${Math.min(396,rightX+expanded.length*widths+4)} 38v24" stroke="#7c8d89" stroke-width="5"/><text x="200" y="16" fill="#335c50" font-size="11" font-weight="700" text-anchor="middle">${fmt(load.plateKg)} kg Scheiben / Hantel</text></svg>`;
 }
-const SMALL=new Set(['dumbbell-lateral-raise']);
+const SMALL=new Set(['dumbbell-lateral-raise','dumbbell-front-raise','reverse-fly']);
 const MID=new Set(['dumbbell-shoulder-press','dumbbell-floor-press','dumbbell-bench-press','dumbbell-walking-lunge','dumbbell-front-squat']);
 /** Gate a *candidate* against real jumps and already-established RIR/recovery decisions.
  * The 12/18% jump limits are coaching heuristics, not physiological constants.

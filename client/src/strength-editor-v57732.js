@@ -72,7 +72,9 @@ export const EXERCISES=Object.freeze([
  ['dumbbell-walking-lunge','Gehender Kurzhantel-Ausfallschritt','Beine','quads',['glutes','posterior','core']],
  ['sled-push','Gewichtsschlitten schieben','Funktionell','quads',['glutes','posterior','core']],
  ['farmers-walk','Farmergang mit Kurzhanteln','Funktionell','forearms',['core','back','shoulders']],
- ['dumbbell-bench-press','Kurzhantel-Bankdrücken','Brust','chest',['triceps','shoulders']]
+ ['dumbbell-bench-press','Kurzhantel-Bankdrücken','Brust','chest',['triceps','shoulders']],
+ ['dumbbell-front-raise','Kurzhantel-Frontheben','Schultern','shoulders',[]],
+ ['assisted-pullup','Klimmzüge mit Assistenzband','Rücken','back',['biceps','forearms']]
 ].map(([id,name,group,primary,secondary])=>Object.freeze({id,name,group,primary,secondary})));
 export const STRONGLIFTS_5X5=Object.freeze({
  A:Object.freeze([{exerciseId:'squat',sets:5,reps:5},{exerciseId:'bench',sets:5,reps:5},{exerciseId:'barbell-row',sets:5,reps:5}]),
@@ -113,7 +115,8 @@ export const STRENGTH_ENGLISH_NAMES=Object.freeze({
  'incline-pushup':'Incline Push-Up','pike-pushup':'Pike Push-Up','prone-y-raise':'Prone Y Raise',
  'one-arm-dumbbell-snatch':'One-Arm Dumbbell Snatch','dumbbell-front-squat':'Dumbbell Front Squat',
  'dumbbell-walking-lunge':'Dumbbell Walking Lunge','sled-push':'Sled Push',
- 'farmers-walk':"Farmer's Walk / Farmer's Carry",'dumbbell-bench-press':'Dumbbell Bench Press'
+ 'farmers-walk':"Farmer's Walk / Farmer's Carry",'dumbbell-bench-press':'Dumbbell Bench Press',
+ 'dumbbell-front-raise':'Dumbbell Front Raise','assisted-pullup':'Assisted Pull-Up'
 });
 const GERMAN_CLARIFICATIONS=Object.freeze({
  'hip-thrust':'Hüftheben','glute-bridge':'Gesäßbrücke',
@@ -127,8 +130,8 @@ export const strengthExerciseLabel=(id)=>{
  return de.startsWith(`${en} (`)?de:`${en} (${de})`;
 };
 export const V_TAPER_HOME_EXERCISES=Object.freeze([
- 'dumbbell-row','dumbbell-lateral-raise','dumbbell-pullover','goblet-squat',
- 'ab-wheel-kneeling','dumbbell-romanian-deadlift','dumbbell-shoulder-press',
+ 'dumbbell-row','dumbbell-lateral-raise','reverse-fly','dumbbell-pullover','goblet-squat',
+ 'ab-wheel-kneeling','dumbbell-romanian-deadlift','dumbbell-floor-press','dumbbell-shoulder-press',
  'decline-pushup','pike-pushup','prone-y-raise','barbell-row','calf-raise'
 ]);
 export const V_TAPER_GYM_EXERCISES=Object.freeze([

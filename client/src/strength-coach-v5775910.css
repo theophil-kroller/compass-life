@@ -86,3 +86,12 @@
 /* 0.5.91.31: voluntary standalone exercise entry */
 .str131-library-launch{border:1px solid #97b5a6;border-radius:9px;background:#f4f8f4;color:#2d6650;font-weight:700;padding:10px;cursor:pointer}
 .str131-library-launch:focus-visible{outline:3px solid #779985}
+
+/* Compass .91.35: shoulder balance and optional future equipment; no player overlays. */
+.str135-shoulder-balance,.str135-equipment-future{margin:10px 0;padding:11px 13px;border:1px solid #c6d2d4;border-radius:13px;background:rgba(236,245,249,.45);font-size:12px}
+.str135-shoulder-balance summary,.str135-equipment-future summary{cursor:pointer;font-weight:650}
+.str135-heads{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px;margin:12px 0 7px}
+.str135-heads>div{display:flex;flex-direction:column;gap:3px;border-radius:8px;padding:9px;background:rgba(255,255,255,.7)}
+.str135-heads span,.str135-shoulder-balance small,.str135-equipment-future small{font-size:11px;color:#536775;line-height:1.5}
+.str135-equipment-future label{display:flex;align-items:flex-start;gap:8px;padding:7px 0;line-height:1.4}
+.str135-equipment-future input[type=checkbox]{flex:none;margin-top:2px}

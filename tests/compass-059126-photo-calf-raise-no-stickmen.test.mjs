@@ -29,7 +29,7 @@ test('calf-raise branch wins over legacy stickman fallback',()=>{
  assert.match(css,/str126-calf-figure/);
 });
 test('all previously schematic workouts now have explicit START / ENDE descriptions rather than SVG figures',()=>{
- assert.equal(EXERCISES.length,66);
+ assert.equal(EXERCISES.length,68);
  assert.equal(missing.length,36);
  for(const id of missing){
   assert.ok(EXERCISES.some(x=>x.id===id),id);

@@ -86,7 +86,9 @@ export const EXERCISE_ANATOMY=Object.freeze({
  'dumbbell-walking-lunge':r(['quadriceps','glute_max'],['hamstrings','glute_med','rectus_abdominis']),
  'sled-push':r(['quadriceps','glute_max'],['calves_gastro','hamstrings','rectus_abdominis']),
  'farmers-walk':r(['forearm_flex','trapezius_upper'],['obliques','rectus_abdominis','erector_spinae','forearm_ext']),
- 'dumbbell-bench-press':r(['pectoral_lower','pectoral_upper'],['deltoid_front','triceps'])
+ 'dumbbell-bench-press':r(['pectoral_lower','pectoral_upper'],['deltoid_front','triceps']),
+ 'dumbbell-front-raise':r(['deltoid_front'],['trapezius_upper']),
+ 'assisted-pullup':r(['latissimus'],['biceps','brachialis','rhomboids'])
 });
 
 /** 0.5.91.22 · Third role: stabilizing/co-contracting during an exercise.
@@ -162,6 +164,8 @@ export const EXERCISE_STABILIZERS=Object.freeze({
  'dumbbell-walking-lunge':['calves_soleus','calves_gastro','obliques'],
  'sled-push':['calves_soleus','obliques'],
  'farmers-walk':['calves_soleus','calves_gastro','glute_med'],
+ 'dumbbell-front-raise':['rectus_abdominis','obliques'],
+ 'assisted-pullup':['rectus_abdominis','obliques'],
  'dumbbell-bench-press':['rhomboids']
 });
 export const exerciseMuscleRoles122=id=>{

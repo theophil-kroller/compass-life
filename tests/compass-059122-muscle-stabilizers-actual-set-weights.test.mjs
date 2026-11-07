@@ -10,7 +10,7 @@ import {strengthPeriod} from '../client/src/strength-insights-v57728.js';
 const sample=()=>({strengthGuidedSessions:[{id:'s1',source:'compass-guided-v5920',startedAt:'2026-11-03T18:00:00Z',finishedAt:'2026-11-04T08:00:00Z',completed:true,planTitle:'V-Taper',updatedAt:'2026-11-04T08:00:00Z',exercises:[{exerciseId:'goblet-squat',title:'Goblet Squat',confirmedSets:[{setNumber:1,confirmed:true,reps:10,weightKg:9,rir:2,completedAt:'2026-11-03T18:20:00Z',completedDay:'2026-11-03'},{setNumber:2,confirmed:true,reps:11,weightKg:9,rir:2,completedAt:'2026-11-04T07:51:00Z',completedDay:'2026-11-04'}]}]}]});
 test('every editorial exercise (66) has a full role definition and explicit stabilization audit',()=>{
  const ids=EXERCISES.map(x=>x.id),regions=new Set(ANATOMY_REGIONS.map(x=>x.id));
- assert.equal(ids.length,66);assert.deepEqual(new Set(ids),new Set(Object.keys(EXERCISE_ANATOMY)));assert.deepEqual(new Set(ids),new Set(Object.keys(EXERCISE_STABILIZERS)));
+ assert.equal(ids.length,68);assert.deepEqual(new Set(ids),new Set(Object.keys(EXERCISE_ANATOMY)));assert.deepEqual(new Set(ids),new Set(Object.keys(EXERCISE_STABILIZERS)));
  for(const id of ids){const roles=exerciseMuscleRoles122(id),all=[...roles.primary,...roles.secondary,...roles.stabilizers];assert.equal(new Set(all).size,all.length,`no overlapping roles ${id}`);for(const r of all)assert.ok(regions.has(r),`${id}: unknown ${r}`);}
 });
 test('Goblet squat stabilizes both calf heads and shin, but not as hypertrophy sets',()=>{
@@ -77,9 +77,11 @@ test('coach ranks latest same-day workout chronologically instead of choosing mo
  const result=context.progression({valid:[...old,newest]},'goblet-squat',{reps:'8–12',sets:3,equipment:'home'});
  assert.equal(result.lastKg,11);assert.equal(result.previousSets,1);assert.notEqual(result.action,'increase-load');
 });
-test('calf raise is available as a low-volume V-taper accessory without counting stabilization',()=>{
+test('calf raise remains a V-taper candidate with documented primary calf activation',async()=>{
  const s=readFileSync(new URL('../client/src/strength-coach-v5775910.js',import.meta.url),'utf8');
- assert.match(s,/'calf-raise':\[2,'10–15',60\]/);assert.match(s,/selectedGoal==='vtaper'&&location==='home'\?\['calf-raise'\]/);
+ assert.match(s,/'calf-raise':\[2,'10–15',60\]/);
+ const {vtaperCandidates135}=await import('../client/src/strength-vtaper-balance-v059135.js');
+ assert.ok(vtaperCandidates135('home',{cableReady:false,pullupReady:false}).includes('calf-raise'));
  const data=detailedMuscleData({sessions:[{sets:[{exerciseId:'calf-raise',reps:12}]}]});
  assert.equal(data.regions.calves_soleus.primary,1);assert.equal(data.regions.calves_gastro.primary,1);
 });

@@ -5,9 +5,10 @@
 import {EXERCISES} from './strength-editor-v57732.js';
 import {NEW_EXERCISES_BY_ID_89} from './strength-exercise-library-v0589.js';
 import {readEquipment115,dumbbellCount115,exactLoad115} from './strength-equipment-v059115.js';
+import {readHomeAttachments135,homeAttachmentAllows135} from './strength-home-attachments-v059135.js';
 const base=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/,'/');
 const groups=Object.freeze({'Brust':'Brust','Rücken':'Rücken','Rücken / Beine':'Rücken / Beine','Beine':'Beine & Gesäß','Schultern':'Schultern','Arme':'Arme','Rumpf':'Rumpf','Kombinationsübungen':'Kombination','StrongLifts 5×5':'Kraft','Kraft & Koordination':'Kraft','Funktionell':'Funktionell'});
-const GYM_ONLY_131=new Set(['bench','incline-bench','chest-press','chest-fly','lat-pulldown','cable-row','leg-press','leg-extension','leg-curl','triceps-pushdown','pallof-press','cable-straight-arm-pulldown','cable-single-arm-row','cable-lateral-raise','cable-rear-delt-fly','cable-crunch','cable-woodchop','sled-push','face-pull']);
+const GYM_ONLY_131=new Set(['bench','incline-bench','chest-press','chest-fly','lat-pulldown','cable-row','leg-press','leg-extension','leg-curl','triceps-pushdown','pallof-press','cable-straight-arm-pulldown','cable-single-arm-row','cable-lateral-raise','cable-rear-delt-fly','cable-crunch','cable-woodchop','sled-push','face-pull','assisted-pullup']);
 export const BENCH_REQUIRED_131=new Set(['incline-bench','bench','close-grip-bench','hip-thrust','skullcrusher','triceps-curl','dumbbell-bench-press','seated-dumbbell-press','prone-y-raise']);
 const series131=Object.freeze({
  'v059131':['biceps-curl','hammer-curl','triceps-pushdown','triceps-extension','wrist-curl','triceps-curl','skullcrusher','reverse-curl','concentration-curl'],
@@ -22,6 +23,12 @@ const series131=Object.freeze({
 const newRoots=Object.freeze({'one-arm-dumbbell-snatch':'one_arm_dumbbell_snatch','dumbbell-front-squat':'dumbbell_front_squat','dumbbell-walking-lunge':'dumbbell_walking_lunge','sled-push':'sled_push','farmers-walk':'farmers_walk','dumbbell-bench-press':'dumbbell_bench_press'});
 
 export const EXERCISE_LIBRARY_ENTRIES_131=Object.freeze(EXERCISES.map(ex=>Object.freeze({...ex,section:groups[ex.group]||ex.group,places:GYM_ONLY_131.has(ex.id)?['gym']:['home','gym']})));
+/** Home cable/pull-up availability is dynamic and defaults to NOT INSTALLED. */
+export function exerciseAllowedAtPlace135(ex,place,{attachments=readHomeAttachments135()}={}){
+ if(place!=='home')return ex.places.includes(place);
+ if(ex.id==='pullup'||ex.id==='assisted-pullup')return homeAttachmentAllows135(ex.id,attachments);
+ return ex.places.includes('home')||homeAttachmentAllows135(ex.id,attachments);
+}
 /** Return only local reviewed asset paths; no query-based image substitution. */
 export function exercisePhoto131(exerciseId){
  for(const [version,ids] of Object.entries(series131))if(ids.includes(exerciseId))return {kind:'pair',url:`${base}strength-visuals-${version}/${exerciseId}.webp`,series:version};
@@ -46,7 +53,7 @@ export function lastConfirmedLoad131(state,exerciseId){
 export function singleExercisePlan131(state,id,{place='home',sets=3,reps='8–12'}={}){
  const e=EXERCISE_LIBRARY_ENTRIES_131.find(x=>x.id===id);
  if(!e)throw Error('Unbekannte Übung – der Datensatz wurde nicht angelegt.');
- if(!e.places.includes(place))throw Error('Die gewählte Übung benötigt Geräte im Gym. Bitte Trainingsort ändern.');
+ if(!exerciseAllowedAtPlace135(e,place))throw Error('Kabelzug bzw. Klimmzugstange noch nicht als sicher montiert bestätigt. Im Coach unter Equipmentdetails erst nach Installation freigeben.');
  const count=Number(sets);if(!Number.isInteger(count)||count<1||count>6)throw Error('Bitte 1 bis 6 Sätze wählen.');
  const safeReps=String(reps).trim();if(!/^\d{1,3}(?:[–-]\d{1,3})?(?:\s*(?:Sek\.|sec|s))?(?:\s*\/\s*(?:Seite|Bein))?$/.test(safeReps))throw Error('Wiederholungen oder Sekunden bitte prüfen.');
  const last=lastConfirmedLoad131(state,id);

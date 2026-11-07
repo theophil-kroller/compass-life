@@ -9,10 +9,22 @@ const apply=(s,n)=>bridge.transform(s,`/repo/client/src/${n}`).code;
 const coach=readFileSync(new URL('../client/src/strength-coach-v5775910.js',import.meta.url),'utf8');
 const guided=readFileSync(new URL('../client/src/strength-guided-v5775920.js',import.meta.url),'utf8');
 test('V-Taper becomes first-time preference; Strength/StrongLifts remains opt-in',()=>{
- const s=apply(coach,'strength-coach-v5775910.js');
- assert.match(s,/goal='vtaper'/);assert.match(s,/o.goal:'vtaper'/);assert.match(s,/mode==='stronglifts'/);
- assert.match(s,/pike-pushup/);assert.match(s,/prone-y-raise/);
- assert.match(s,/Trainingstage/);
+ // Old v.59.28 migration rewrote the unmodified 2026 workout planner.
+ // The contemporary planner has replaced those text anchors with a dedicated
+ // goal-aware module. Test its active integration rather than replay a legacy
+ // transform over a different internal data structure.
+ if(coach.includes('selectVtaperExercises135')){
+  assert.match(coach,/selectedGoal==='vtaper'/);
+  assert.match(coach,/mode==='stronglifts'/);
+  assert.match(coach,/coach34RecommendedSets/);
+  assert.match(coach,/shoulderBalance/);
+  assert.match(coach,/readHomeAttachments135/);
+ }else{
+  const s=apply(coach,'strength-coach-v5775910.js');
+  assert.match(s,/goal='vtaper'/);assert.match(s,/o.goal:'vtaper'/);assert.match(s,/mode==='stronglifts'/);
+  assert.match(s,/pike-pushup/);assert.match(s,/prone-y-raise/);
+  assert.match(s,/Trainingstage/);
+ }
 });
 test('new bodyweight photos wired into guided workout without replacing 7 originals',()=>{
  const s=apply(guided,'strength-guided-v5775920.js');

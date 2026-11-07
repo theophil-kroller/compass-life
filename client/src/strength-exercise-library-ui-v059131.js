@@ -1,5 +1,5 @@
 /** Compass 0.5.91.31 · Fast opt-in UI. */
-import {EXERCISE_LIBRARY_ENTRIES_131,BENCH_REQUIRED_131,exercisePhoto131,lastConfirmedLoad131,singleExercisePlan131} from './strength-exercise-library-model-v059131.js';
+import {EXERCISE_LIBRARY_ENTRIES_131,BENCH_REQUIRED_131,exercisePhoto131,lastConfirmedLoad131,singleExercisePlan131,exerciseAllowedAtPlace135} from './strength-exercise-library-model-v059131.js';
 import {NEW_EXERCISES_BY_ID_89} from './strength-exercise-library-v0589.js';
 import {resumableGuidedSession} from './strength-workout-resume-v57759405.js';
 import './strength-exercise-library-ui-v059131.css';
@@ -13,7 +13,9 @@ const armCues=Object.freeze({
  'triceps-curl':'French Press mit SZ-Stange: Arme oben → Ellenbogen beugen.',
  'skullcrusher':'Liegendes Trizepsstrecken mit Kurzhanteln: Gewicht zum Kopf absenken.',
  'reverse-curl':'Im Obergriff von unten nach oben curlen.',
- 'concentration-curl':'Ellbogen am Oberschenkel abstützen → Hantel beugen.'
+ 'concentration-curl':'Ellbogen am Oberschenkel abstützen → Hantel beugen.',
+ 'dumbbell-front-raise':'START: Kurzhanteln vor den Oberschenkeln, Schultern entspannt. ENDE: ohne Schwung bis Schulterhöhe nach vorn heben, Nacken ruhig. Zusätzliche Front-Raises sind bei ausreichendem Druckvolumen optional.',
+ 'assisted-pullup':'START: Assistenzband an sicher montierter Stange, aktiver Hang. ENDE: mit Bandunterstützung zum Griff hochziehen, kontrolliert absenken.'
 });
 /** On-demand dialog; only loads the heavy guided workout after explicit START. */
 export function openExerciseLibrary131({state,onSession=async()=>{}}={}){
@@ -23,7 +25,7 @@ export function openExerciseLibrary131({state,onSession=async()=>{}}={}){
  const root=document.createElement('div');root.className='str131-overlay';
  root.innerHTML='<section class="str131-dialog" role="dialog" aria-modal="true" aria-label="Übungsbibliothek"></section>';
  document.body.append(root);const panel=root.firstElementChild;
- const candidates=()=>EXERCISE_LIBRARY_ENTRIES_131.filter(x=>x.places.includes(place)&&(!section||x.section===section)&&(`${x.name} ${x.group} ${x.id}`).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(query.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()));
+ const candidates=()=>EXERCISE_LIBRARY_ENTRIES_131.filter(x=>exerciseAllowedAtPlace135(x,place)&&(!section||x.section===section)&&(`${x.name} ${x.group} ${x.id}`).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(query.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()));
  const current=()=>EXERCISE_LIBRARY_ENTRIES_131.find(x=>x.id===selected);
  const close=()=>{if(closed)return;closed=true;document.removeEventListener('keydown',onKey);root.remove();prev?.focus?.({preventScroll:true});};
  const onKey=e=>{if(e.key==='Escape')close();};document.addEventListener('keydown',onKey);
