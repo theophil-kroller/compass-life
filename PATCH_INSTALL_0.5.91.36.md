@@ -1,0 +1,1 @@
+Compass Life 0.5.91.36: Patch auf dem unveränderten GitHub-Quellstand 0.5.91.35 installieren. Enthält zwei WebP-Bildpaare und die Zuordnung zu Guided Workout und Übungsbibliothek; historische Medien und Sessions bleiben unangetastet.

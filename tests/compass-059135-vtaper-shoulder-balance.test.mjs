@@ -116,16 +116,17 @@ test('wiring: adaptive sets applied in actual planner; all old photographic asse
  assert.match(guide,/data-act="set-reps"/);
  assert.match(source('strength-equipment-v059115.js'),/<details class="str115-load str115-collapsible"/);
 });
-test('new front raise and assisted pullup expose START/ENDE text when no approved photographs exist',()=>{
+test('new front raise and assisted pullup retain accurate START/ENDE technique cues alongside approved photographs',()=>{
  const guide=source('strength-guided-v5775920.js');
  assert.match(guide,/'dumbbell-front-raise':\['Kurzhanteln/);
  assert.match(guide,/'assisted-pullup':\['Sichere montierte/);
  assert.match(guide,/keine Strichmännchen-Grafik/);
+ assert.ok(guide.includes('NEW_PHOTO_EXERCISES_136.has(curr.id)?')); 
 });
-test('version bumped consistently for new patch on v0.5.91.34',()=>{
+test('version bumped consistently for photo integration on v0.5.91.35',()=>{
  const r=readFileSync(new URL('../package.json',import.meta.url),'utf8');
- assert.equal(JSON.parse(r).version,'0.5.91.35');
- assert.equal(JSON.parse(readFileSync(new URL('../client/package.json',import.meta.url),'utf8')).version,'0.5.91.35');
- assert.match(source('compass-release-v57759402519.js'),/0\.5\.91\.35/);
- assert.match(source('main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.35'/);
+ assert.equal(JSON.parse(r).version,'0.5.91.36');
+ assert.equal(JSON.parse(readFileSync(new URL('../client/package.json',import.meta.url),'utf8')).version,'0.5.91.36');
+ assert.match(source('compass-release-v57759402519.js'),/0\.5\.91\.36/);
+ assert.match(source('main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.36'/);
 });

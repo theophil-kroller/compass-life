@@ -1,0 +1,27 @@
+{
+  "release": "0.5.91.36",
+  "usage": "Guided Coach + Exercise Library",
+  "images": [
+    {
+      "id": "dumbbell-front-raise",
+      "path": "dumbbell-front-raise.webp",
+      "width": 1096,
+      "height": 726,
+      "type": "image/webp",
+      "source": "user-approved AI illustration cropped to keep start and end stages prominent",
+      "caption": "START → ENDE",
+      "sha256": "e53b3d95eff2f96e50de75a76980ce9e8b9c6bf3c7508d2245899fe8136373d7"
+    },
+    {
+      "id": "assisted-pullup",
+      "path": "assisted-pullup.webp",
+      "width": 996,
+      "height": 727,
+      "type": "image/webp",
+      "source": "user-approved AI illustration cropped to keep start and end stages prominent",
+      "caption": "START → ENDE",
+      "sha256": "b8b3811463df637810a6cf62ab09f8503b47cf4061ba235c9cfb497370a77089"
+    }
+  ],
+  "original_photo_included": false
+}

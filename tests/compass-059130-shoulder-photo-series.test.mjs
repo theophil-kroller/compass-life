@@ -59,9 +59,9 @@ test('Prior historical figure sets, their hashes and all training confirmation c
 test('Release identifiers and asset paths updated for shoulder version without regressions',()=>{
  const root=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
  const pkg=JSON.parse(readFileSync(new URL('package.json',client),'utf8'));
- assert.equal(root.version,'0.5.91.31');assert.equal(pkg.version,'0.5.91.31');
- assert.match(readFileSync(new URL('src/compass-release-v57759402519.js',client),'utf8'),/0\.5\.91\.31/);
- assert.match(readFileSync(new URL('src/main-full-v57759402510.js',client),'utf8'),/COMPASS_CLIENT_VERSION='0\.5\.91\.31'/);
+ assert.equal(root.version,'0.5.91.36');assert.equal(pkg.version,'0.5.91.36');
+ assert.match(readFileSync(new URL('src/compass-release-v57759402519.js',client),'utf8'),/0\.5\.91\.36/);
+ assert.match(readFileSync(new URL('src/main-full-v57759402510.js',client),'utf8'),/COMPASS_CLIENT_VERSION='0\.5\.91\.36'/);
  assert.ok(js.includes("VISUAL_ROOT.replace('strength-visuals-v5775920/','strength-visuals-v059130/')"));
  assert.equal((js.match(/import\.meta\.env\?\.BASE_URL/g)||[]).length,1);
 });

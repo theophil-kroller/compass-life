@@ -11,6 +11,7 @@ const groups=Object.freeze({'Brust':'Brust','Rücken':'Rücken','Rücken / Beine
 const GYM_ONLY_131=new Set(['bench','incline-bench','chest-press','chest-fly','lat-pulldown','cable-row','leg-press','leg-extension','leg-curl','triceps-pushdown','pallof-press','cable-straight-arm-pulldown','cable-single-arm-row','cable-lateral-raise','cable-rear-delt-fly','cable-crunch','cable-woodchop','sled-push','face-pull','assisted-pullup']);
 export const BENCH_REQUIRED_131=new Set(['incline-bench','bench','close-grip-bench','hip-thrust','skullcrusher','triceps-curl','dumbbell-bench-press','seated-dumbbell-press','prone-y-raise']);
 const series131=Object.freeze({
+ 'v059136':['dumbbell-front-raise','assisted-pullup'],
  'v059131':['biceps-curl','hammer-curl','triceps-pushdown','triceps-extension','wrist-curl','triceps-curl','skullcrusher','reverse-curl','concentration-curl'],
  'v059130':['shoulder-press','lateral-raise','reverse-fly','seated-dumbbell-press','pike-pushup','prone-y-raise'],
  'v059129':['calf-raise','romanian-deadlift','leg-press','lunge','leg-extension','leg-curl','hip-thrust','glute-bridge'],

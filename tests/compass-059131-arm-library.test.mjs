@@ -102,8 +102,8 @@ test('library launch is present in Strength Coach and habits; both reuse same en
  assert.match(ui,/data-sets/);
 });
 test('current release version consistent; original arm-photo series retains v0.5.91.31 metadata',()=>{
- assert.equal(JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version,'0.5.91.35');
- assert.equal(JSON.parse(readFileSync(new URL('package.json',client),'utf8')).version,'0.5.91.35');
- assert.match(source('compass-release-v57759402519.js'),/0\.5\.91\.35/);
- assert.match(source('main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.35'/);
+ assert.equal(JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version,'0.5.91.36');
+ assert.equal(JSON.parse(readFileSync(new URL('package.json',client),'utf8')).version,'0.5.91.36');
+ assert.match(source('compass-release-v57759402519.js'),/0\.5\.91\.36/);
+ assert.match(source('main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.36'/);
 });

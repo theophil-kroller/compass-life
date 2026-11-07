@@ -150,3 +150,9 @@
 /* 0.5.91.31: Arm photos stay contained on phone and desktop. */
 .str131-arm-figure img{max-width:100%;width:auto;height:auto;max-height:min(46dvh,330px);object-fit:contain}
 @media(max-width:650px){.str131-arm-figure img{max-height:min(30dvh,245px)}}
+
+/* Compass 0.5.91.36: new owner-referenced exercise pairs; never overlap set/RIR controls. */
+.str136-new-figure{display:flex;align-items:center;flex-direction:column;justify-content:center;max-width:100%;min-width:0;margin:0 auto;box-sizing:border-box}
+.str136-new-figure img{display:block;width:auto;height:auto;max-width:100%;max-height:min(46dvh,330px);object-fit:contain;object-position:center;border-radius:9px;background:#e6e5e1}
+.str136-new-figure figcaption{color:#607b6a;font-size:11px;text-align:center;line-height:1.3;padding:3px 6px}
+@media(max-width:650px){.str136-new-figure img{max-height:min(26dvh,220px)!important}.str136-new-figure figcaption{font-size:10px;padding:2px 4px}}
