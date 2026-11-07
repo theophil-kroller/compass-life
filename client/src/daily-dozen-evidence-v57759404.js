@@ -4,7 +4,7 @@
  * Small portion estimates are explicitly approximate, not clinical targets.
  */
 import {smoothieRecipe} from './nutrition-smart-smoothie-v57736.js';
-import {PERSONAL_RECIPE_IDS,recipeSnapshot} from './personal-recipes-v57737.js';
+import {PERSONAL_RECIPE_IDS,recipeSnapshot,pumpkinSoupBatchFraction} from './personal-recipes-v57737.js';
 const dayOf=at=>{const d=new Date(at);return Number.isFinite(+d)?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'';};
 const NAMES={beans:'Hülsenfrüchte',berries:'Beeren',fruit:'Obst',cruciferous:'Kreuzblütler',greens:'Blattgemüse',vegetables:'Gemüse',flax:'Leinsamen',nuts:'Nüsse & Samen',spices:'Kräuter & Gewürze',wholegrains:'Vollkorn',beverages:'Getränke'};
 const grams=s=>{const m=String(s||'').match(/(?:^|[^\d])(\d+(?:[.,]\d+)?)\s*g\b/i);return m?Number(m[1].replace(',','.')):null;};
@@ -73,8 +73,15 @@ export function dailyDozenIngredientEvidence404(state,day){
    continue;
   }
   if(PERSONAL_RECIPE_IDS.includes(id)){
-   const by=Object.fromEntries(recipeSnapshot(id,e.recipe).map(x=>[x.id,validAmount(x.grams)?x.grams*factor:0]));
-   if(id==='salad-personal'){
+   const recipeFactor=id==='muscat-pumpkin-soup-personal'?pumpkinSoupBatchFraction(e.amount):factor;
+   if(!Number.isFinite(recipeFactor))continue;
+   const by=Object.fromEntries(recipeSnapshot(id,e.recipe).map(x=>[x.id,validAmount(x.grams)?x.grams*recipeFactor:0]));
+   if(id==='muscat-pumpkin-soup-personal'){
+    add('vegetables',((by.pumpkin||0)+(by.carrots||0)+(by.celery||0))/80,'Muskatkürbissuppe · Kürbis/Karotten/Sellerie (Gramm geschätzt)',sourceId);
+    const spice=(by.garlic||0)/10+(by.ginger||0)/10+(by.nutmeg||0)+(by['chili-flakes']||0);
+    if(spice>0){spiceGrams+=spice;notes.spices.push(`Muskatkürbissuppe · Gewürze: ~${round(spice)} g Trockenäquivalent (grob)`);sources.push({id:sourceId,category:'spices',grams:round(spice),source:'Muskatkürbissuppe · Ingwer, Knoblauch, Muskat, Chili'});}
+    notes.wholegrains.push('Kartoffeln mit Schale sind kein Vollkorn. Butter und Brühe zählen nicht als pflanzliche Daily-Dozen-Portion.');
+   } else if(id==='salad-personal'){
     add('greens',(by.lettuce||0)/85,'Grüner Salat · Blattsalat',sourceId);
     add('vegetables',((by.carrot||0)+(by.pepper||0))/80,'Grüner Salat · Gemüse',sourceId);
     const nut=(by.sesame||0)+(by.peanuts||0);if(nut>0){nutGrams+=nut;notes.nuts.push(`Salat · Sesam/Erdnüsse: ~${round(nut)} g`);sources.push({id:sourceId,category:'nuts',grams:round(nut),source:'Salat · Sesam/Erdnüsse'});}

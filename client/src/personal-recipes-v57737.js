@@ -5,6 +5,20 @@
  */
 const ing=(id,label,grams,values,source='USDA FoodData Central · generisches Lebensmittel',optional=false,labelVerified=false,estimatedKeys=[])=>Object.freeze({id,label,grams,values,source,optional,labelVerified,estimatedKeys});
 const RAW=Object.freeze({
+ 'muscat-pumpkin-soup-personal':{name:'Meine Muskatkürbis-Suppe · Kartoffeln, Karotten & Ingwer',icon:'🥣',ingredients:[
+  // ONE POT divided into THREE provisional bowls. Every weight is editable.
+  // The user reported half a slice of muscat pumpkin; grams cannot be inferred exactly.
+  ing('pumpkin','Muskatkürbis · ½ Scheibe, essbares Rohgewicht geschätzt',350,{kcal:26,protein:1,carbs:6.5,sugar:2.8,fat:.1,fiber:1.2,potassium:340,magnesium:12,calcium:21,vitaminA:400,vitaminC:9,folate:16},'Generisches Kürbis-/Muskatkürbis-Näherungsprofil; Carotinoide und Vitamin C nach Garen unsicher'),
+  ing('potatoes','Zwei kleine Bio-Kartoffeln mit Schale · Rohgewicht',150,{kcal:77,protein:2.05,carbs:17.5,sugar:.82,fat:.09,fiber:2.2,potassium:425,magnesium:23,phosphorus:57,vitaminB6:.3,vitaminC:11,iron:.81},'USDA · generische Kartoffel samt Schale; 2 kleine ≈ 150 g, Vitamin C nach Garen unsicher'),
+  ing('carrots','Drei kleine Karotten · Rohgewicht',150,{kcal:41,protein:.93,carbs:9.58,sugar:4.74,fat:.24,fiber:2.8,potassium:320,calcium:33,vitaminA:835,vitaminK:13.2,folate:19},'USDA · generische Karotten; 3 kleine ≈ 150 g'),
+  ing('celery','Eine Stange Stangensellerie',50,{kcal:14,protein:.69,carbs:2.97,sugar:1.34,fat:.17,fiber:1.6,potassium:260,calcium:40,folate:36,vitaminK:29.3},'USDA · generischer Stangensellerie; eine Stange geschätzt 50 g'),
+  ing('garlic','Eine Knoblauchzehe',4,{kcal:149,protein:6.36,carbs:33.06,fat:.5,fiber:2.1,potassium:401,manganese:1.67},'USDA · frischer Knoblauch; 1 Zehe ≈ 4 g'),
+  ing('ginger','Ein Stück frischer Ingwer',10,{kcal:80,protein:1.82,carbs:17.77,sugar:1.7,fat:.75,fiber:2,potassium:415,magnesium:43},'USDA · frischer Ingwer; 10 g vorläufig'),
+  ing('nutmeg','Muskatnuss · kleine Prise',.2,{kcal:525,protein:5.84,carbs:49.3,fat:36.3,fiber:20.8},'USDA/generische Muskatnuss; Menge als 0,2 g geschätzt'),
+  ing('chili-flakes','Chiliflocken · kleine Prise',.3,{kcal:282,protein:12,carbs:50,fat:14,fiber:28},'Generische getrocknete Chiliflocken; Menge vorläufig 0,3 g'),
+  ing('butter','Ein Stück Butter',10,{kcal:717,protein:.85,carbs:.06,fat:81.1,saturated:51.4,vitaminA:684},'USDA · Butter; 10 g vorläufig; Menge beeinflusst Kalorien deutlich'),
+  ing('vegetable-broth','Gemüse-Suppenbrühe · zubereitet',600,{kcal:5,protein:.3,carbs:.7,fat:.08,salt:.5,sodium:200},'Sehr grobe Schätzung zubereiteter Gemüsebrühe je 100 g: Salz 0,5 g/100 g angenommen; Marke/Wasser/Brühwürfel unbekannt')
+ ]},
  'salad-personal':{name:'Mein großer grüner Salat',icon:'🥗',ingredients:[
   ing('lettuce','Grüner Blattsalat',150,{kcal:15,protein:1.36,carbs:2.87,fiber:1.3,fat:.15,potassium:194,folate:38,vitaminC:9.2,vitaminK:126}),
   ing('pumpkin-oil','Steirisches Kürbiskernöl',10,{kcal:884,fat:100,saturated:18,mono:34,poly:48},'Generisches Kürbiskernöl · grobe Fettsäureprofil-Schätzung, Sorte variiert'),
@@ -130,9 +144,11 @@ export const PERSONAL_RECIPE_IDS=Object.freeze(Object.keys(RAW));
 export const PERSONAL_RECIPE_PRESETS=Object.freeze(PERSONAL_RECIPE_IDS.map(id=>Object.freeze({
  id,title:RAW[id].name,emoji:RAW[id].icon,
  group:id==='ironmaxx-vegan-protein-shake-mixed-berries'?'Getränke':['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'Frühstück':id==='fried-egg-personal'?'Frühstück':id==='crackers-feta-evening-personal'?'Abendsnack':['homemade-poppy-cake-chocolate-personal','homemade-topfentorte-slice'].includes(id)?'Snacks':'Mahlzeiten',
- defaultAmount:id==='black-rice-cooked-personal'?'1 Portion (180 g gekocht)':id==='steamed-potatoes-sichuan-veg-personal'?'1 Portion (Kartoffel-Gemüse-Pfanne gedämpft)': ['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'1 Becher (250 g)':id==='homemade-topfentorte-slice'?'1 Stück (ca. 160 g)':id==='korean-spicy-tofu-vegetable-strudel'?'1 Krautroulade (ca. 288 g)':id==='ironmaxx-vegan-protein-shake-mixed-berries'?'1 Glas (30 g Pulver + 300 ml Wasser)':id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
+ defaultAmount:id==='muscat-pumpkin-soup-personal'?'1 Portion (1/3 Topf)':id==='black-rice-cooked-personal'?'1 Portion (180 g gekocht)':id==='steamed-potatoes-sichuan-veg-personal'?'1 Portion (Kartoffel-Gemüse-Pfanne gedämpft)': ['spar-freefrom-bio-skyr-250g','bio-magertopfen-250g'].includes(id)?'1 Becher (250 g)':id==='homemade-topfentorte-slice'?'1 Stück (ca. 160 g)':id==='korean-spicy-tofu-vegetable-strudel'?'1 Krautroulade (ca. 288 g)':id==='ironmaxx-vegan-protein-shake-mixed-berries'?'1 Glas (30 g Pulver + 300 ml Wasser)':id==='oven-potatoes-sesame-personal'?'1 Portion (breite Suppenschüssel)':id==='homemade-poppy-cake-chocolate-personal'?'1 Stück (7 × 6 × 4 cm)':id==='basmati-lentil-dal-broccoli-personal'?'1 Portion (flacher Suppenteller)':'1 Portion',
  kcalLow:null,kcalHigh:null,
- recipeNote:id==='steamed-potatoes-sichuan-veg-personal'
+ recipeNote:id==='muscat-pumpkin-soup-personal'
+ ?'Selbstgekochte Muskatkürbissuppe vom 07.11.2026: ½ Muskatkürbisscheibe, 2 kleine Bio-Kartoffeln mit Schale, 3 kleine Karotten, 1 Stange Sellerie, 1 Knoblauchzehe, frischer Ingwer, Muskatnuss, Chiliflocken, Butter und Gemüse-Suppenbrühe. Alle Rohgewichte sind vorläufig: Kürbis 350 g, Kartoffeln 150 g, Karotten 150 g, Sellerie 50 g, Knoblauch 4 g, Ingwer 10 g, Butter 10 g, Brühe 600 g. 1 Topf = 3 angenommene Schüsseln; bei abweichender Portionszahl anpassen. 1 Portion = 1/3 Topf; 1 Topf und 1/2 Topf möglich. Sämtliche Zutatengramm im Inspektor editierbar. Natrium/Salz der Brühe stark abhängig von Produkt und Dosierung: hier 0,5 g Salz je 100 g zubereitete Brühe angenommen. Keine Herstellerwerte, alle Makro- und Mikrowerte generische Schätzungen. Daily Dozen: Kürbis, Karotten, Sellerie als anderes Gemüse; Kartoffeln nicht als Vollkorn; Knoblauch/Ingwer/Muskat/Chili als Gewürze. Anti-Aging Eight: pflanzliche Vielfalt und Ballaststoffe als Ernährungsindikatoren, keine belegte Anti-Aging-Wirkung; keine automatischen grünen Blatt-/Beeren-/Nussportionen.'
+ :id==='steamed-potatoes-sichuan-veg-personal'
  ?'Selbst zubereitetes Gericht nach deiner Beschreibung: gedämpfte kleine Kartoffelstücke, Knoblauch, frischer Ingwer, frische Chili, 1 TL Ahornsirup, Sojasauce, Chiliflocken, Sichuanpfeffer, 1 Stange Sellerie und 3 kleine Karotten. Vorläufige Grammannahmen: Kartoffeln 300 g (Rohgewicht), Knoblauch 8 g, Ingwer 10 g, frische Chili 5 g, Ahornsirup 7 g, Sojasauce 15 g, Chiliflocken 0,5 g, Sichuanpfeffer 1 g, Sellerie 40 g, Karotten 150 g. Kein Öl genannt – deshalb kein Öl angesetzt. Alle Grammangaben editierbar; Makro- und Mikros auf generischen Lebensmitteldaten beruhende, GARZEITABHÄNGIGE Schätzwerte. Hoher möglicher Salzanteil aus Sojasauce; Zucker aus Ahornsirup (nicht raffiniert, trotzdem freier Zucker). Daily Dozen: Karotten und Sellerie als andere Gemüse; Gewürze entsprechend dokumentierter Mengen. Kartoffeln als stärkehaltige Beilage hier bewusst nicht als Daily-Dozen-Gemüseportion oder Vollkorn gezählt; keine Nüsse, Hülsenfrüchte oder Beeren ohne Beleg. Anti-Aging Eight: pflanzliche Vielfalt und Ballaststoffe als Ernährungsindikatoren; weder Postbiotika noch Langlebigkeitseffekt gemessen.'
  :id==='black-rice-cooked-personal'
  ?'Eine Portion 180 g GEKOCHTER schwarzer Reis ohne zusätzliche Sauce oder Öl (Rohgewicht/Packung nicht bekannt). Nur als echter schwarzer Vollkornreis behandelt, nicht als gewöhnlicher weißer Basmatireis. Schwarzer Reis und Basmati sind nicht identisch; bitte bei Bedarf die Packung bestätigen. Makro- und Mikronährstoffe sind generische Schätzwerte; Anthocyane/Polyphenole können vorhanden sein, aber keine quantifizierte Menge oder Anti-Aging-Wirkung. Daily Dozen: nur bei echtem unpolierten schwarzen Reis ca. 1 Vollkornportion je ~100 g gegart (Orientierung); weißer Basmati zählt nicht. Anti-Aging Eight: geschätzte Ballaststoffzufuhr, kein Beleg für NAD+, Microbiomänderung oder Langlebigkeit.'
@@ -167,6 +183,22 @@ export function recipeSnapshot(id,input){
  return def.ingredients.map(x=>{const prior=rows.get(x.id),edited=legacyPastry&&(prior?.assumed!==false||(x.id==='mixed-vegetables'&&Number(prior?.grams)===100))?null:prior,n=Number(String(edited?.grams??'').replace(',','.'));
   return {id:x.id,grams:edited&&Number.isFinite(n)&&n>=0&&n<=2000?round(n):x.grams,assumed:edited?.assumed===false?false:true};});
 }
+
+/** One recorded soup recipe is one whole *batch*, not a single bowl. One bowl
+ * equals 1/3 batch until the cook updates the assumption. Distinct from all
+ * legacy recipes, which preserve their previous per-portion semantics.
+ */
+export function pumpkinSoupBatchFraction(amount='1 Portion',defaultAmount='1 Portion (1/3 Topf)'){
+ const text=String(amount==null||String(amount).trim()===''?defaultAmount:amount).trim().toLowerCase().replace(/,/g,'.');
+ if(!text||/[−–-]\s*\d/.test(text))return null;
+ const mixed=text.match(/^\s*(\d+(?:\.\d+)?)\s*(?:topf|töpfe|toepfe|topfes)\b/);
+ const pot=mixed||text.match(/^\s*(?:½|1\/2)\s*(?:topf|töpfe|toepfe)\b/);
+ const count=text.match(/^\s*(\d+(?:\.\d+)?)\s*(?:portion(?:en)?|schüssel(?:n)?|schuessel(?:n)?|teller)\b/);
+ const grams=text.match(/^\s*(\d+(?:\.\d+)?)\s*(?:g|gramm)\b/);
+ let fraction=pot?(mixed?Number(mixed[1]):.5):count?Number(count[1])/3:grams?Number(grams[1])/1325:null;
+ return Number.isFinite(fraction)&&fraction>0&&fraction<=10?fraction:null;
+}
+
 export function personalRecipeParts(id,recipe,amount='1 Portion'){
  const def=RAW[id];if(!def)return [];
  // Existing recipes retain their prior per-entry logic. The oven-potato bowl
@@ -174,7 +206,7 @@ export function personalRecipeParts(id,recipe,amount='1 Portion'){
  const count= ['oven-potatoes-sesame-personal','basmati-lentil-dal-broccoli-personal','homemade-poppy-cake-chocolate-personal','ironmaxx-vegan-protein-shake-mixed-berries','spar-freefrom-bio-skyr-250g','bio-magertopfen-250g','homemade-topfentorte-slice','korean-spicy-tofu-vegetable-strudel','steamed-potatoes-sichuan-veg-personal','black-rice-cooked-personal'].includes(id)
   ? String(amount||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:portion(?:en)?|becher|glas|gläser|glaeser|glaser|schüssel(?:n)?|schuessel(?:n)?|teller|stück(?:e)?|stueck(?:e)?|krautroulade(?:n)?)\b/i)
   : null;
- const factor=count?Number(count[1].replace(',','.')):1;
+ const factor=id==='muscat-pumpkin-soup-personal'?pumpkinSoupBatchFraction(amount):count?Number(count[1].replace(',','.')):1;
  if(!Number.isFinite(factor)||factor<=0||factor>20)return [];
  const saved=recipeSnapshot(id,recipe);
  return saved.map(row=>{
@@ -202,6 +234,6 @@ export function personalRecipeKcal(id,recipe,amount){
 export function personalRecipeEditor(entry){
  if(!PERSONAL_RECIPE_IDS.includes(entry?.foodId))return '';
  const def=RAW[entry.foodId],rows=recipeSnapshot(entry.foodId,entry.recipe);
- return `<fieldset class="r737-edit"><legend>${esc(def.icon)} ${esc(def.name)} · Zutaten</legend><p>Alle Grammzahlen sind editierbar. Optionale Zutaten mit 0 g wurden für diesen Eintrag nicht verwendet. Etikettwerte werden als solche gekennzeichnet; nicht deklarierte Mikronährstoffe bleiben unbekannt. Sonstige Rezepte beruhen auf generischen Referenzen.</p><div class="r737-fields">${rows.map(row=>{const x=def.ingredients.find(i=>i.id===row.id);return `<label>${esc(x.label)}${x.optional?' <small>(optional)</small>':''}<span><input name="recipe737-${esc(row.id)}" type="number" min="0" max="2000" step="0.1" inputmode="decimal" value="${row.grams}" required> g</span></label>`;}).join('')}</div></fieldset>`;
+ return `<fieldset class="r737-edit"><legend>${esc(def.icon)} ${esc(def.name)} · Zutaten</legend><p>${entry.foodId==='muscat-pumpkin-soup-personal'?'Zutatenmengen gelten für den gesamten Topf, geschätzt für 3 Schüsseln. Eine Portion entspricht vorläufig 1/3 Topf. ':''}Alle Grammzahlen sind editierbar. Optionale Zutaten mit 0 g wurden für diesen Eintrag nicht verwendet. Etikettwerte werden als solche gekennzeichnet; nicht deklarierte Mikronährstoffe bleiben unbekannt. Sonstige Rezepte beruhen auf generischen Referenzen.</p><div class="r737-fields">${rows.map(row=>{const x=def.ingredients.find(i=>i.id===row.id);return `<label>${esc(x.label)}${x.optional?' <small>(optional)</small>':''}<span><input name="recipe737-${esc(row.id)}" type="number" min="0" max="2000" step="0.1" inputmode="decimal" value="${row.grams}" required> g</span></label>`;}).join('')}</div></fieldset>`;
 }
 export function readPersonalRecipe(id,fd){return recipeSnapshot(id,RAW[id]?.ingredients.map(x=>({id:x.id,grams:fd.get('recipe737-'+x.id),assumed:false}))||[]);}
