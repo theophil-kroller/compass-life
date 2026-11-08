@@ -59,6 +59,7 @@ import {buildLifeBalanceRadar,buildLifeBalanceHistory,lifeBalanceRadarView,valid
 import {inspectorDateShift,inspectorTitle} from './inspector-v559.js';
 import {createEditDraftGuard,EDIT_DRAFT_VAULT_KEY} from './edit-draft-guard-v57716.js';
 import {resolveNewTaskProject} from './project-task-context-v059132.js';
+import {reportUnlockStage137} from './unlock-feedback-v059137.js';
 import './edit-draft-guard-v57716.css';
 import {inboxFlagged,visibleInboxTags,setInboxFlag} from './inbox-flags-v27.js';
 import {inboxOrdered,inboxMove,inboxNudge} from './inbox-order-v34.js';
@@ -282,7 +283,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.36';
+const COMPASS_CLIENT_VERSION='0.5.91.37';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -3371,11 +3372,12 @@ function bind() {
   }
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const unlockMeasurement=performanceTrace.start();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
-    try {const compass55UnlockStep=performanceTrace.start();if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}performanceTrace.end('Tresor: Entschlüsseln',tab,compass55UnlockStep);
+    try {reportUnlockStage137('decrypt');const compass55UnlockStep=performanceTrace.start();if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}performanceTrace.end('Tresor: Entschlüsseln',tab,compass55UnlockStep);
       // Draft bytes are separate from the full Vault payload, but use the same key.
-      const compass55DraftStep=performanceTrace.start();state[EDIT_DRAFT_VAULT_KEY]={...(state[EDIT_DRAFT_VAULT_KEY]||{}),...(await vault.loadEditDrafts().catch(()=>({})))};performanceTrace.end('Tresor: Entwürfe laden',tab,compass55DraftStep);
-      const compass55Keys=['tasks','taskPending','taskVersions','taskConflicts','projects','projectPending','projectVersions','projectConflicts','discoveredEvents','eventPreferences','eventVersions','eventPending','eventDeleted','eventConflicts'];const compass55Missing=compass55Keys.some(key=>state[key]==null);prepareTasks(state);eventState(state);const compass55Pruned=prunePastEvents(state,localDate(),0,0);const compass55SaveStep=performanceTrace.start();if(compass55Missing||compass55Pruned>0){await persist();performanceTrace.end('Tresor: Startzustand speichern',tab,compass55SaveStep);}else{performanceTrace.end('Tresor: Startzustand unverändert',tab,compass55SaveStep);}
+      reportUnlockStage137('drafts');const compass55DraftStep=performanceTrace.start();state[EDIT_DRAFT_VAULT_KEY]={...(state[EDIT_DRAFT_VAULT_KEY]||{}),...(await vault.loadEditDrafts().catch(()=>({})))};performanceTrace.end('Tresor: Entwürfe laden',tab,compass55DraftStep);
+      reportUnlockStage137('merge');const compass55Keys=['tasks','taskPending','taskVersions','taskConflicts','projects','projectPending','projectVersions','projectConflicts','discoveredEvents','eventPreferences','eventVersions','eventPending','eventDeleted','eventConflicts'];const compass55Missing=compass55Keys.some(key=>state[key]==null);prepareTasks(state);eventState(state);const compass55Pruned=prunePastEvents(state,localDate(),0,0);const compass55SaveStep=performanceTrace.start();if(compass55Missing||compass55Pruned>0){await persist();performanceTrace.end('Tresor: Startzustand speichern',tab,compass55SaveStep);}else{performanceTrace.end('Tresor: Startzustand unverändert',tab,compass55SaveStep);}
       let recoveryMessage='';
+      reportUnlockStage137('capture');
       try {
         await vault.setupSealedCapture();sealedCaptureAvailable=true;
         const pending=await vault.readSealedCaptures();
@@ -3405,8 +3407,8 @@ function bind() {
       compass55Mode='focus';
       try{localStorage.setItem(COMPASS55_MODE_KEY,'focus');}catch{}
       if(!captureAfterUnlock&&!bootView){tab='today';selectedDay=localDateString(new Date());calendarMonth=new Date(selectedDay+'T12:00:00');lastObservedLocalDay=selectedDay;manuallyChosenDay=false;todayInspectorOpen=false;calmNavGroup='';}
-      if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}toast('Lokaler Tresor bereit'+recoveryMessage+'.');
-      resumeSession().catch(()=>{});}catch(ex){toast(ex.message,true);}finally{performanceTrace.end('Tresor entsperren',tab,unlockMeasurement);}
+      if(captureAfterUnlock){captureOverlayOpen=true;captureAfterUnlock=false;}reportUnlockStage137('render');toast('Lokaler Tresor bereit'+recoveryMessage+'.');
+      resumeSession().catch(()=>{});}catch(ex){reportUnlockStage137('error');toast(ex.message,true);}finally{performanceTrace.end('Tresor entsperren',tab,unlockMeasurement);}
   };
 
 

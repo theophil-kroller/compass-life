@@ -3,7 +3,7 @@
  * slimmer line-art style closer to the user's preferred fitness-app references.
  * This remains a model of documented involvement, not measured EMG/fatigue/growth.
  */
-import { detailedMuscleData,EXERCISE_ANATOMY,exerciseMuscleRoles122,STABILIZER_COLOR_122 } from './strength-anatomy-v57737.js';
+import { detailedMuscleData,EXERCISE_ANATOMY,exerciseMuscleRoles122,isAnatomyClassifiedSet137,STABILIZER_COLOR_122 } from './strength-anatomy-v57737.js';
 
 const e=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fmt=(v,d=0)=>Number.isFinite(v)?v.toLocaleString('de-AT',{maximumFractionDigits:d}):'–';
@@ -191,7 +191,7 @@ export function premiumStrengthSvg(model,view,mode,cycling,activity){
  const current=typeof model?.today==='string'?model.today:new Date().toLocaleDateString('sv-SE');
  const recentStart=shift(current,-7),todayRegions=new Set(),recentRegions=new Set(),supportingRegions=new Set(),todayStabilizers=new Set(),recentStabilizers=new Set();
  for(const session of model?.sessions||[]){const day=session.day;if(!isDay(day)||day>current)continue;
-  for(const set of session.sets||[]){if(!(Number(set?.reps)>0))continue;const anatomy=EXERCISE_ANATOMY[set.exerciseId];if(!anatomy)continue;
+  for(const set of session.sets||[]){if(!isAnatomyClassifiedSet137(set))continue;const anatomy=EXERCISE_ANATOMY[set.exerciseId];if(!anatomy)continue;
    for(const id of anatomy.primary){if(day===current)todayRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
    for(const id of anatomy.secondary){if(day===current)supportingRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
    for(const id of exerciseMuscleRoles122(set.exerciseId).stabilizers){if(day===current)todayStabilizers.add(id);else if(day>=recentStart)recentStabilizers.add(id);}

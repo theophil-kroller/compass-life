@@ -125,8 +125,8 @@ test('new front raise and assisted pullup retain accurate START/ENDE technique c
 });
 test('version bumped consistently for photo integration on v0.5.91.35',()=>{
  const r=readFileSync(new URL('../package.json',import.meta.url),'utf8');
- assert.equal(JSON.parse(r).version,'0.5.91.36');
- assert.equal(JSON.parse(readFileSync(new URL('../client/package.json',import.meta.url),'utf8')).version,'0.5.91.36');
- assert.match(source('compass-release-v57759402519.js'),/0\.5\.91\.36/);
- assert.match(source('main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.36'/);
+ assert.equal(JSON.parse(r).version,'0.5.91.37');
+ assert.equal(JSON.parse(readFileSync(new URL('../client/package.json',import.meta.url),'utf8')).version,'0.5.91.37');
+ assert.match(source('compass-release-v57759402519.js'),/0\.5\.91\.37/);
+ assert.match(source('main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.37'/);
 });

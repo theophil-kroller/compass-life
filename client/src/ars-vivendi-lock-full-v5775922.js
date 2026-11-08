@@ -5,6 +5,8 @@
  */
 import './ars-vivendi-lock-v5775922.css';
 import './compass-5928-lux.css';
+import './unlock-feedback-v059137.css';
+import {attachUnlockProgress137} from './unlock-feedback-v059137.js';
 import {COMPASS_VISIBLE_RELEASE} from './compass-release-v57759402519.js';
 import {sealedCaptureReady,appendSealedCapture} from './vault.js';
 import './compass-25-23-lock-capture.css';
@@ -17,13 +19,14 @@ const ROOT_ID='ars22-lockscreen';
 function init(){
   const app=document.getElementById('app');
   if(!app)return;
-  let shell=null,activeForm=null,observer=null,panel=null,trigger=null;
+  let shell=null,activeForm=null,observer=null,panel=null,trigger=null,detachProgress=null;
   let wasOpen=false;
   const appPreviousInert=app.inert;
 
   function remove(){
     // Form may have been moved into the overlay. Discard ONLY when Compass
     // itself renders an unlocked view or a replacement vault form.
+    detachProgress?.();detachProgress=null;
     if(shell)shell.remove();
     shell=null;panel=null;trigger=null;activeForm=null;wasOpen=false;
     document.documentElement.classList.remove('ars22-locked');
@@ -81,6 +84,7 @@ function init(){
     adaptUnlockViewport();window.visualViewport?.addEventListener('resize',adaptUnlockViewport);window.visualViewport?.addEventListener('scroll',adaptUnlockViewport);
     shell.style.setProperty('--ars22-desktop-bg',`url("${DESKTOP_MOONLIT}")`);
     document.body.append(shell);
+    detachProgress=attachUnlockProgress137(shell);
     app.inert=true;
     trigger=shell.querySelector('[data-ars22-open]');
     panel=shell.querySelector('.ars22-panel');

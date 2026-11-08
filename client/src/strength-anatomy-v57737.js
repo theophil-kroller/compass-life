@@ -176,7 +176,10 @@ export const exerciseMuscleRoles122=id=>{
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n.toLocaleString('de-AT',{maximumFractionDigits:1});
 // Duration-based Garmin carry/sled sets can be identified even with no repetitions.
-const validSet=s=>s&&s.exerciseId&&(Number(s.reps)>0||Number(s.durationSeconds)>0);
+/** A confirmed guided set is real even when reps were not captured. Garmin
+ * summary-only/unknown sets are never promoted to a concrete muscle region. */
+export const isAnatomyClassifiedSet137=s=>Boolean(s?.exerciseId&&(Number(s.reps)>0||Number(s.durationSeconds)>0||(s.source==='compass-guided-confirmed'&&s.confirmed===true)));
+const validSet=isAnatomyClassifiedSet137;
 export function detailedMuscleData(model){
  const data=Object.fromEntries(ANATOMY_REGIONS.map(region=>[region.id,{...region,primary:0,secondary:0,stabilizing:0,index:0}]));
  let mapped=0,unmapped=0;

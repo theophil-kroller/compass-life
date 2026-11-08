@@ -1,0 +1,14 @@
+/* 0.5.91.37 · Responsive, low-cost loading indication during real vault unlock. */
+#ars22-lockscreen .ars137-progress[hidden]{display:none!important}
+#ars22-lockscreen .ars137-progress{display:flex;align-items:center;flex-direction:column;gap:9px;margin:14px 0 0;padding:11px 10px 3px;color:#f0dcae;font:500 12px/1.4 system-ui,sans-serif;text-align:center}
+#ars22-lockscreen .ars137-spin{position:relative;width:34px;height:34px;display:grid;place-items:center}
+#ars22-lockscreen .ars137-spin i{position:absolute;width:26px;height:26px;border:1.5px solid rgba(228,195,121,.65);border-radius:50%;animation:ars137-gold-breath 1.9s ease-in-out infinite}
+#ars22-lockscreen .ars137-spin i:nth-child(2){width:15px;height:15px;animation-delay:.28s;animation-duration:1.55s;transform:rotate(45deg);border-radius:4px}
+#ars22-lockscreen .ars137-spin i:nth-child(3){width:5px;height:5px;animation:none;background:#edcf8d;box-shadow:0 0 12px #edcf8d99;border:0}
+@keyframes ars137-gold-breath{0%{opacity:.3;transform:scale(.77) rotate(0)}50%{opacity:1;transform:scale(1.08) rotate(38deg)}100%{opacity:.3;transform:scale(.77) rotate(76deg)}}
+#ars22-lockscreen .ars137-track{width:min(190px,80%);height:2px;overflow:hidden;border-radius:2px;background:#dfc78b2b;position:relative}
+#ars22-lockscreen .ars137-track i{position:absolute;inset:0 auto 0 0;width:38%;border-radius:2px;background:linear-gradient(90deg,transparent,#f2d494,#fff1bc);animation:ars137-progress 1.45s ease-in-out infinite}
+@keyframes ars137-progress{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
+#ars22-lockscreen.ars137-busy .ars22-form-slot button[type=submit]{cursor:progress;opacity:.76}
+#ars22-lockscreen.ars137-busy .ars22-close{opacity:.45;cursor:progress}
+@media(prefers-reduced-motion:reduce){#ars22-lockscreen .ars137-spin i,#ars22-lockscreen .ars137-track i{animation:none!important}#ars22-lockscreen .ars137-spin i{opacity:1!important}}

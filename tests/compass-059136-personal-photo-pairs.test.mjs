@@ -67,9 +67,9 @@ test('not-yet-mounted home pullup bar remains locked; new images cannot activate
 });
 test('versions agree, reference portrait excluded and all original image roots preserved',()=>{
  const root=JSON.parse(read('package.json')),client=JSON.parse(read('client/package.json'));
- assert.equal(root.version,'0.5.91.36');assert.equal(client.version,'0.5.91.36');
- assert.match(read('client/src/compass-release-v57759402519.js'),/0\.5\.91\.36/);
- assert.match(read('client/src/main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.36'/);
+ assert.equal(root.version,'0.5.91.37');assert.equal(client.version,'0.5.91.37');
+ assert.match(read('client/src/compass-release-v57759402519.js'),/0\.5\.91\.37/);
+ assert.match(read('client/src/main-full-v57759402510.js'),/COMPASS_CLIENT_VERSION='0\.5\.91\.37'/);
  assert.ok(!manifest.images.some(x=>/image\.png|portrait|foto_original/i.test(x.path)));
  assert.ok(guided.includes('strength-visuals-v059130/'));
  assert.ok(guided.includes('strength-visuals-v059129/'));

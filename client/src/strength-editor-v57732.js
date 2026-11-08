@@ -168,7 +168,17 @@ for(const [id,aliases] of Object.entries({
  'dumbbell-walking-lunge':['Dumbbell Walking Lunge','Walking Lunge with Dumbbells'],
  'sled-push':['Sled Push','Prowler Push'],
  'farmers-walk':['Farmers Walk','Farmer Carry','Farmers Carry','Farmer\'s Walk'],
- 'dumbbell-bench-press':['Dumbbell Bench Press','DB Bench Press']
+ 'dumbbell-bench-press':['Dumbbell Bench Press','DB Bench Press'],
+ // Exact names for rear-delt movements: common FIT/manual variants should
+ // resolve to the same stable muscle-map ID, not be silently left unassigned.
+ 'reverse-fly':['Dumbbell Reverse Fly','Reverse Dumbbell Fly','Dumbbell Rear Delt Fly',
+  'Seated Bent-Over Rear Delt Raise','Seated Bent Over Rear Delt Raise',
+  'Bent Over Rear Delt Raise','Seated Reverse Fly','Bent-Over Reverse Fly',
+  'Reverse Dumbbell Delt Fly','Dumbbell Reverse Delt Fly'],
+ 'dumbbell-lateral-raise':['DB Lateral Raise','Dumbbell Side Lateral Raise'],
+ 'dumbbell-front-raise':['DB Front Raise','Dumbbell Front Raise'],
+ 'assisted-pullup':['Band Assisted Pull Up','Band Assisted Pull-Up', 'Assisted Pullup'],
+ 'face-pull':['Cable Face Pull','Rope Face Pull']
 }))for(const label of aliases){const key=normGarminTitle92(label),prev=GARMIN_ALIASES_92.get(key);GARMIN_ALIASES_92.set(key,prev&&prev!==id?null:id);}
 /** Annotate an identified FIT title without changing Garmin raw data or guessing
  * the identity of a broad set category. A user's saved edit always takes priority.

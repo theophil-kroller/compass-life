@@ -54,7 +54,7 @@ test('approved chest and calf images and all training confirmations remain uncha
 test('release version and original photos stay fully compatible',()=>{
  const root=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
  const client=JSON.parse(readFileSync(new URL('package.json',c),'utf8'));
- assert.equal(root.version,'0.5.91.36');
- assert.equal(client.version,'0.5.91.36');
- assert.match(readFileSync(new URL('src/compass-release-v57759402519.js',c),'utf8'),/0\.5\.91\.36/);
+ assert.equal(root.version,'0.5.91.37');
+ assert.equal(client.version,'0.5.91.37');
+ assert.match(readFileSync(new URL('src/compass-release-v57759402519.js',c),'utf8'),/0\.5\.91\.37/);
 });
