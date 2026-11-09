@@ -1,3 +1,4 @@
+import {wholegrainBreadEvidence} from './wholegrain-serving-v059138.js';
 /** Compass .59.40.4: One read-only, ingredient-level evidence ledger for both
  * Daily Dozen presentations and Anti-Aging Eight. No inferred meals, GPS,
  * nutrition edits, network calls, or persistent duplicate counters.
@@ -34,6 +35,10 @@ export function dailyDozenIngredientEvidence404(state,day){
    // Provisional partial serving from a *consumed* dish with clearly named vegetables.
    // No weight supplied => DO NOT assert a full serving.
    if(candidates.includes('vegetables')&&/ratatouille|gemüse|gemuese|vegetable/.test(title)){add('vegetables',0.5,'Mensa · Gemüseanteil im Gericht (vorläufig, Menge unbekannt)',sourceId);notes.vegetables.push('Mensa-Portion unbekannt: 0,5 vorläufiger Vergleichswert, bitte Gemüsemenge bestätigen.');}
+   continue;
+  }
+  if(id==='alpro-plant-protein-vanilla-pudding-200g'||id==='alpro-plant-protein-chocolate-pudding-200g'){
+   notes.beans.push('Alpro Plant Protein Pudding: Sojabohnen und Sojaprotein, aber keine nachgewiesene volle Hülsenfruchtportion.');
    continue;
   }
   if(id==='dr-goerg-organic-coconut-milk-200ml'){
@@ -157,10 +162,9 @@ export function dailyDozenIngredientEvidence404(state,day){
     const specific=id.includes('lyttos')?Number(a.match(/(\d+(?:[.,]\d+)?)\s*g\s*(?:pistazienmus|tahini)/i)?.[1]?.replace(',','.')||15):null;
     const nut=specific??g??(id==='peanuts'?20:id==='mixed-nuts'?30:15);
     if(nut>0&&nut<=300){nutGrams+=nut;notes.nuts.push(`${custom.get(id)?.title||id}: ~${round(nut)} g`);sources.push({id:sourceId,category:'nuts',grams:round(nut),source:id});}
-  } else if(['bio-kornbrot','dark-bread-butter','bread-cheese'].includes(id)){
-    const pieces=Number(a.match(/(\d+(?:[.,]\d+)?)\s*(?:scheiben?|stück)/i)?.[1]?.replace(',','.')||1);
-    // Only explicit verified wholegrain products; bread-cheese/dark-bread cannot prove wholegrain.
-    if(id==='bio-kornbrot'&&custom.get(id)?.wholegrain===true)add('wholegrains',pieces,'Vollkornbrot (bestätigt)',sourceId);
+  } else if(wholegrainBreadEvidence(id,a,custom.get(id))){
+    const serving=wholegrainBreadEvidence(id,a,custom.get(id));
+    add('wholegrains',serving.servings,serving.source,sourceId);
   } else if(['water-glass','green-tea-chinese','tea-unsweetened','coffee','matcha','matcha-oat-plain','oat-latte'].includes(id)){
     // Matches the old 0.5.77.59.30 volume-based progression, but no implicit smoothies.
     add('beverages',(ml(a)??(id.startsWith('matcha')?500:id==='coffee'?200:250))/350,'Dokumentiertes Getränk',sourceId);

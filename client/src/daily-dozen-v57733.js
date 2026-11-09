@@ -1,3 +1,4 @@
+import {wholegrainBreadEvidence} from './wholegrain-serving-v059138.js';
 import {dailyDozenIngredientEvidence404} from './daily-dozen-evidence-v57759404.js';
 import {dailyDozenEvidence} from './daily-dozen-auto-v57734.js';
 export {dailyDozenEvidence} from './daily-dozen-auto-v57734.js';
@@ -25,6 +26,11 @@ const isDay=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'')&&Number.isFinite(Date.parse(s+'
 const clamp=(x,max)=>Math.max(0,Math.min(max,Math.round(Number(x)||0)));
 const dateLocal=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 export const shiftDailyDozenDate=(day,n)=>{const dt=new Date(day+'T12:00:00');dt.setDate(dt.getDate()+n);return dateLocal(dt);};
+function breadEvidenceForDay(state,day){
+ const custom=new Map((state?.nutritionJournal?.customFoods||[]).map(f=>[f.id,f]));
+ const entries=(state?.nutritionJournal?.entries||[]).filter(e=>e&&!e.deleted&&wholegrainBreadEvidence(e.foodId,e.amount,custom.get(e.foodId)));
+ return dailyDozenIngredientEvidence404({nutritionJournal:{entries,customFoods:state?.nutritionJournal?.customFoods||[]}},day);
+}
 export function dailyDozenSummary(state,day){
  const record=state?.nutritionJournal?.dailyDozen?.[day]||{};
  const evidence=dailyDozenEvidence(state,day);
@@ -32,7 +38,8 @@ export function dailyDozenSummary(state,day){
  // evidence here without touching the existing other-food credit rules.
  const recipeEntries=(state?.nutritionJournal?.entries||[]).filter(e=>['basmati-lentil-dal-broccoli-personal','ironmaxx-vegan-protein-shake-mixed-berries','korean-spicy-tofu-vegetable-strudel','steamed-potatoes-sichuan-veg-personal','black-rice-cooked-personal'].includes(e?.foodId));
  const recipeEvidence=dailyDozenIngredientEvidence404({nutritionJournal:{entries:recipeEntries}},day);
- const rows=DAILY_DOZEN.map(c=>{const partial=Math.max(0,(Number(evidence.totals[c.id])||0)+(Number(recipeEvidence.totals[c.id])||0)),auto=clamp(partial,c.target),manual=record[c.id];
+ const breadEvidence=breadEvidenceForDay(state,day);
+ const rows=DAILY_DOZEN.map(c=>{const partial=Math.max(0,(Number(evidence.totals[c.id])||0)+(Number(recipeEvidence.totals[c.id])||0)+(c.id==='wholegrains'?(Number(breadEvidence.totals.wholegrains)||0):0)),auto=clamp(partial,c.target),manual=record[c.id];
   const explicit=manual!==undefined;return {...c,count:explicit?clamp(manual?.count??manual,c.target):auto,source:explicit?'manual':partial>0?'auto':'unknown',auto,partial,provenance:[...(evidence.notes[c.id]||[]),...(recipeEvidence.notes?.[c.id]||[])],updatedAt:manual?.updatedAt||''};});
  const completed=rows.reduce((n,x)=>n+x.count,0),total=rows.reduce((n,x)=>n+x.target,0);
  return {day,rows,completed,total,percentage:Math.round(completed/total*100),completedGroups:rows.filter(x=>x.count===x.target).length,groups:rows.length,evidence};
@@ -44,7 +51,7 @@ export function setDailyDozen(state,day,id,delta){
  state.nutritionJournal??={entries:[],customFoods:[]};
  state.nutritionJournal.dailyDozen??={};
  const record=state.nutritionJournal.dailyDozen[day]??={};
- const prior=record[id]; const suggested=dailyDozenEvidence(state,day).totals[id]||0;
+ const prior=record[id]; const suggested=id==='wholegrains'?dailyDozenSummary(state,day).rows.find(x=>x.id===id)?.auto||0:dailyDozenEvidence(state,day).totals[id]||0;
  const value=prior!==undefined?clamp(prior?.count??prior,cat.target):clamp(suggested,cat.target);const next=clamp(value+delta,cat.target);
  if(next===value)return next;
  record[id]={count:next,updatedAt:new Date().toISOString()};return next;

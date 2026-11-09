@@ -1,3 +1,4 @@
+import {ALPRO_PUDDING_PACKAGES,parseAlproPuddingPortion,alproPuddingKcal} from './alpro-pudding-serving-v059138.js';
 import {mergeStrengthCycles35} from './strength-cycle-v5775935.js';
 import {MCT_C8_FOOD_ID,parseMctC8Serving,mctC8Kcal} from './mct-c8-serving-v059123.js';
 import {SKYR_PACKAGES,parseSkyrPortion,skyrKcal} from './skyr-serving-v059133.js';
@@ -78,6 +79,9 @@ export const FOOD_PRESETS=[
  ['braineffect-mct-c8-oil','🥥','BRAINEFFECT MCT C8 Öl · >97 % C8','Zutaten','1 EL (15 ml ≈ 14 g)',126,126],
  ['milsani-skyr-maracuja-150g','🥣','Milsani Skyr Maracuja · 150 g','Snacks','1 Becher (150 g)',71,71],
  ['ehrmann-high-protein-skyr-natural-450g','🥣','Ehrmann High Protein Skyr Natural · 450 g','Snacks','1 Becher (450 g)',230,230],
+ ['alpro-plant-protein-vanilla-pudding-200g','🍮','Alpro Plant Protein Pudding · Vanille','Snacks','1 Becher (200 g)',184,184],
+ ['alpro-plant-protein-chocolate-pudding-200g','🍫','Alpro Plant Protein Pudding · Schokolade','Snacks','1 Becher (200 g)',190,190],
+ ['wholegrain-bread-slice','🍞','Vollkornbrot (echtes Vollkorn) · 1 Scheibe','Zutaten','1 Scheibe (50 g)',120,130],
  ['dr-goerg-organic-coconut-milk-200ml','🥥','Dr. Goerg Bio-Kokosmilch · 100 % Kokos · 200-ml-Packung','Zutaten','100 ml',186,186],
  ['copaya-organic-raw-cocoa-powder','🍫','Copaya Bio-Rohkakaopulver · Criollo','Zutaten','1 EL (≈ 6 g)',20,20],
  ['zotter-labooko-himbeer-kokos','🍫','Zotter Labooko Himbeer-Kokos · vegan','Snacks','1 Stück (10 g; Annahme)',59,59],
@@ -102,6 +106,8 @@ export const FOOD_PRESETS=[
  ...(id==='banana'?{recipeNote:'Eine mittelgroße Banane = geschätzt 120 g essbarer Anteil ohne Schale; Fruchtgröße und Reifegrad variieren. Makro-/Mikronährstoffe aus generischer USDA-Referenz. Zählt zum Daily Dozen (andere Früchte).'}:{}),
  ...(id==='profuel-alphaminos-bcaa'?{recipeNote:'PROFUEL Alphaminos BCAA: 13 g Portion, BCAA insgesamt 10 g (Leucin 5 g, Isoleucin 2,5 g, Valin 2,5 g), frühere Nutzerangaben. Keine Angaben zu sonstigen Makros/Mikros; BCAA sind kein vollständiges Protein und keine Daily-Dozen-Portion.'}:{}),
  ...(id==='milsani-skyr-maracuja-150g'?{recipeNote:'150-g-Becher; Etikett 07.11.2026 je 100 g: 47 kcal, 8 g Eiweiß, 5,5 g KH, davon 3,0 g Zucker, Fett <0,5 g, gesättigt 0,1 g, Salz 0,10 g. 0,2 g Fett/100 g nur als Rechenannahme. Calcium, Phosphor, Kalium, Magnesium, B2 und B12 ausschließlich generische Milchprodukt-Schätzungen (nicht deklariert). Der Fruchtzubereitungs-Anteil begründet KEINE Daily-Dozen-Obstportion. Anti-Aging Eight: erfasste Eiweißmenge, keine automatische Anti-Aging-Gutschrift.'}:{}),
+ ...(ALPRO_PUDDING_PACKAGES[id]?{recipeNote:id.includes('vanilla')?'Alpro Plant Protein Vanille · 1 Becher 200 g. Originaletikett Nutzerfotos 09.11.2026: je 100 g 92 kcal, 10 g Protein, 7 g KH (4,9 g Zucker), 2,4 g Fett (0,5 g gesättigt), 1 g Ballaststoffe, 0,34 g Salz; Vitamin D2 0,75 µg, B2 0,21 mg, B12 0,38 µg, Calcium 120 mg. Sojapudding mit 10 % Sojabohnen und zugesetztem Sojaprotein; keine vollwertige belegte Daily-Dozen-Bohnenportion. Protein erscheint im Protein-Score/Anti-Aging-Eight als erfasst, keine automatische Langlebigkeitsgutschrift. Nicht deklarierte Mikros bleiben unbekannt.':'Alpro Plant Protein Schokolade · 1 Becher 200 g. Originaletikett Nutzerfotos 09.11.2026: je 100 g 95 kcal, 10,2 g Protein, 6,7 g KH (4,9 g Zucker), 2,8 g Fett (0,8 g gesättigt), 1,7 g Ballaststoffe, 0,34 g Salz; Vitamin D2 0,75 µg, B2 0,21 mg, Calcium 120 mg. Vitamin B12 auf diesem Etikett nicht deklariert: unbekannt, keinesfalls 0. Sojapudding, keine automatisch belegte volle Daily-Dozen-Bohnenportion.'}:{}),
+ ...(id==='wholegrain-bread-slice'?{recipeNote:'Nur tatsächlich als Vollkorn deklariertes Brot. 1 Scheibe ≈ 50 g entspricht einer Greger-Vollkornportion. Makroangaben 120–130 kcal pro Scheibe sind generische Schätzwerte und müssen bei bekanntem Etikett ersetzt werden.'}:{}),
  ...(id==='ehrmann-high-protein-skyr-natural-450g'?{recipeNote:'450-g-Becher; Etikett 07.11.2026 und Ehrmann-Hersteller: je 100 g 51 kcal, 9 g Eiweiß, 3,6 g KH/Zucker, 0,1 g Fett, 0,07 g gesättigt, 0,10 g Salz. 450 g ergeben rechnerisch 230 kcal und 40,5 g Protein (Hersteller rundet 40 g/Becher). Calcium, Phosphor, Kalium, Magnesium, B2 und B12 sind nur generische Milchprodukt-Schätzungen. Keine Daily-Dozen-Pflanzenportion; Anti-Aging Eight erfasst Eiweiß, keine Anti-Aging-Wirkung belegt. https://www.ehrmann.de/produkte/high-protein/sorten/natural-skyr-high-protein-450-g/'}:{}),
  ...(id===DR_GOERG_COCONUT_MILK_ID?{recipeNote:'Originaletikett vom 07.11.2026: 186 kcal/100 ml, 17 g Fett, 14 g gesättigte Fettsäuren, 5,8 g KH, 3,0 g Zucker, 2,1 g Protein, 0,05 g Salz. 1 Portion = 100 ml; ganzer Karton = 200 ml. 100 % Kokosmilch ohne Wasserzusatz laut Verpackung. Mineralstoffe nur aus generischen Kokosmilchprofilen geschätzt (keine Marke analysiert); Vitamine nicht deklariert und daher unbekannt. Reine Kokosmilch zählt nicht automatisch als Greger-Nuss-, Beeren- oder Getränkportion. Anti-Aging Eight: keine automatisch belegte Wirkung; hoher Anteil gesättigter Fettsäuren wird in der Fettqualität berücksichtigt.'}:{}),
  ...(id===COPAYA_RAW_COCOA_ID?{recipeNote:'Copaya Bio-Kakaopulver Rohkostqualität, Originaletikett 07.11.2026: je 100 g 330 kcal, 11 g Fett (6,9 g gesättigt), 14 g KH (0,3 g Zucker), 28,1 g Protein, 0,1 g Salz. Standard: 1 gestrichener EL ≈ 6 g (Volumen-/Massenannahme, individuell abweichend); 1 EL ≈ 20 kcal und 1,69 g Protein. Ballaststoffe/Mineralien generische ungesüßte Kakaopulver-Schätzungen. Flavanole (Catechin, Epicatechin), Theobromin und Koffein vorhanden sein können, jedoch nicht quantitativ bestimmt. Daily Dozen: keine automatische Bohnen-/Nuss-/Gewürzportion. Anti-Aging Eight: keine messbare MicroRNA-, NAD+- oder Lebensverlängerungswirkung. Packung zeigt ein MHD 01.04.2025 – vor Verzehr Zustand/Lagerung prüfen.'}:{}),
@@ -244,6 +250,10 @@ export function nutritionKcalEstimate(food,amount,recipe=null){
   if(!portion)return null;
   const kcal=labelledProductKcal(food.id,portion);
   return {low:kcal,high:kcal,kind:portion.estimatedMass?'Originaletikett · EL-Masse geschätzt':'Originaletikett · proportional berechnet'};
+ }
+ if(ALPRO_PUDDING_PACKAGES[food?.id]){
+  const portion=parseAlproPuddingPortion(food.id,amount,food.defaultAmount);if(!portion)return null;const kcal=alproPuddingKcal(food.id,portion);
+  return {low:kcal,high:kcal,kind:'Originaletikett · 200-g-Becher proportional berechnet'};
  }
  if(SKYR_PACKAGES[food?.id]){
   const portion=parseSkyrPortion(food.id,amount,food.defaultAmount);
