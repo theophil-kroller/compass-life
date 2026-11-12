@@ -19,7 +19,8 @@ export function strengthInsightsView(state,opts={}){
  const period=strengthPeriod(state,{range,today});
  // Reuse the anatomical atlas already shipped for Compass; the atlas itself
  // renders both sides and offers individual muscle details on hover/focus.
- const atlas=strengthPremiumMap(period,null,'strength',side);
+ const loadPeriod=strengthPeriod(state,{range:'all',today});
+ const atlas=strengthPremiumMap(period,null,'strength',side,loadPeriod);
  const withoutSilhouette=html.slice(0,from)+atlas+'\n '+html.slice(to);
  // Historic CSV, Garmin/FIT and coach sessions use the SAME saved session ID.
  // A pencil is attached to every rendered row, not only the newest CSV import.

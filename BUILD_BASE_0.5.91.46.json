@@ -1,0 +1,27 @@
+{
+  "version": "0.5.91.46",
+  "baselineVersion": "0.5.91.45",
+  "features": [
+    "anatomy-attributed-primary-secondary-exercise-tonnage",
+    "7-30-42-90-day-comparisons",
+    "missing-kg-coverage-explicit",
+    "no-fictitious-load-or-muscle-force",
+    "read-only-vault-safe"
+  ],
+  "caveats": [
+    "tonnage is attributed to exercise roles and cannot be added across muscles",
+    "the reported exercise weight is not doubled for paired dumbbells",
+    "unweighted exercises are sets with unknown external tonnage",
+    "the user's actual values remain inside the encrypted vault",
+    "GitHub Actions must confirm production bundling"
+  ],
+  "checks": {
+    "focusedTestsPassed": 5,
+    "releaseTestsPassed": 33,
+    "fullTestsPassed": 2251,
+    "knownBaselineFailures": 66,
+    "newFailures": 0,
+    "importGraphModules": 295,
+    "viteBuildRun": false
+  }
+}

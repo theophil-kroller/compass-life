@@ -5,6 +5,7 @@
  */
 import { detailedMuscleData,EXERCISE_ANATOMY,exerciseMuscleRoles122,isAnatomyClassifiedSet137,STABILIZER_COLOR_122 } from './strength-anatomy-v57737.js';
 import {exerciseProgressionModel141,regionLoadSummary141} from './strength-exercise-progression-v059141.js';
+import {muscleTonnageView146} from './strength-muscle-volume-v059146.js';
 
 const e=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fmt=(v,d=0)=>Number.isFinite(v)?v.toLocaleString('de-AT',{maximumFractionDigits:d}):'–';
@@ -204,7 +205,7 @@ export function premiumStrengthSvg(model,view,mode,cycling,activity){
  const back=view==='back';
  return `<svg class="str738-body str740-svg" data-anatomy-view="${back?'back':'front'}" data-anatomy-info="${e(JSON.stringify(info))}" viewBox="${back?'37 0 35 93':'0 0 35 93'}" role="img" aria-label="Anatomische Muskelkarte ${back?'hinten':'vorne'}, über 70 detaillierte Muskelbereiche"><text x="${back?'44':'8'}" y="48" class="str740-loading">Anatomie wird geladen …</text></svg>`;
 }
-export function strengthPremiumRanking(model,cycling,activity='combined'){
+export function strengthPremiumRanking(model,cycling,activity='combined',loadModel=model){
  const data=detailedMuscleData(model),showStrength=activity!=='cycling',showCycling=activity!=='strength'&&(cycling?.rides||0)>0;
  const regions=Object.values(data.regions).filter(r=>(showStrength&&r.index>0)||(showCycling&&(cycling.regions.primary.includes(r.id)||cycling.regions.secondary.includes(r.id))));
  const sorted=regions.sort((a,b)=>(showStrength?b.index-a.index:0)||(cycling?.regions.primary.includes(b.id)?1:0)-(cycling?.regions.primary.includes(a.id)?1:0)).slice(0,9);
@@ -216,10 +217,10 @@ export function strengthPremiumRanking(model,cycling,activity='combined'){
   const label=showStrength&&index?`${fmt(r.primary)} Haupt · ${fmt(r.secondary)} Neben`:bike?'Radfahren · anatomische Beteiligung':'keine Zuordnung';
   return `<div class="str738-muscle-row"><span class="str738-muscle-rank">${i+1}</span><span class="str738-muscle-name">${e(r.label)}</span><span class="str738-muscle-track"><i style="width:${width}%" class="${bike&&!index?'is-biking':''}"></i></span><span class="str738-muscle-detail">${e(label)}</span></div>`;
  }).join('');
- return `<section class="str738-ranked" aria-label="Muskelregionen nach Satzbeteiligung"><div class="str738-rank-head"><h3>MUSKELBETEILIGUNG</h3><span>${fmt(data.mapped)} zugeordnete Sätze · ${fmt(data.unmapped)} noch offen</span></div>${bars||'<p>Ordne im Satzeditor Übungen zu, um die Muskelbeteiligung zu sehen. Radfahrten werden separat berücksichtigt.</p>'}<p>Eine Satzbeteiligung ist keine Messung von Muskelaktivierung, Ermüdung oder Wachstum. Mit Fitdays-Körperdaten sollte nur der Trend über Wochen und Monate interpretiert werden, nicht ein einzelner Tageswert.</p></section>`;
+ return `<section class="str738-ranked" aria-label="Muskelregionen nach Satzbeteiligung"><div class="str738-rank-head"><h3>MUSKELBETEILIGUNG</h3><span>${fmt(data.mapped)} zugeordnete Sätze · ${fmt(data.unmapped)} noch offen</span></div>${bars||'<p>Ordne im Satzeditor Übungen zu, um die Muskelbeteiligung zu sehen. Radfahrten werden separat berücksichtigt.</p>'}<p>Eine Satzbeteiligung ist keine Messung von Muskelaktivierung, Ermüdung oder Wachstum. Mit Fitdays-Körperdaten sollte nur der Trend über Wochen und Monate interpretiert werden, nicht ein einzelner Tageswert.</p>${showStrength?muscleTonnageView146(loadModel):''}</section>`;
 }
 
-export function strengthPremiumMap(model,cycling,activity='combined',side='front'){
+export function strengthPremiumMap(model,cycling,activity='combined',side='front',loadModel=model){
  const mode=side==='back'?'load':'roles';
  const legend=[['#ed4b42','Heute trainiert (primär)'],['#f0c955','Heute unterstützend'],['#a63e53','Gestern trainiert'],[STABILIZER_COLOR_122,'Stabilisierend · kein Wachstumssatz'],['#ee963a','Vor 2–7 Tagen trainiert']];
  if(activity!=='strength'&&cycling?.rides)legend.push(['#f2a531','Radfahren (primär)']);
@@ -228,5 +229,5 @@ export function strengthPremiumMap(model,cycling,activity='combined',side='front
  if(typeof document!=='undefined'&&typeof queueMicrotask==='function')queueMicrotask(()=>mountPremiumAnatomy(document).catch(ex=>{console.error('Anatomie nicht geladen:',ex);document.querySelectorAll('.str740-loading').forEach(n=>{n.textContent='Anatomie konnte nicht geladen werden.';});}));
  const front=premiumStrengthSvg(model,'front',mode,cycling,activity),back=premiumStrengthSvg(model,'back',mode,cycling,activity);
  const disclaimer=activity==='cycling'?'Qualitative Beanspruchung beim Treten; keine gemessene Kraft oder Muskelermüdung.':activity==='combined'?'Krafttraining und Radfahren sind getrennte Datentypen; Farben zeigen Beteiligung. Radfahrminuten werden nicht in Sätze umgerechnet.':'Haupt-, Neben- und Stabilisierungsrollen sind anatomische Modelle, keine EMG-Messung. Stabilisierungsrollen zählen nicht zum Muskelaufbau-Trainingsvolumen.';
- return `<section class="str738-visual str739-visual" aria-label="Große Muskelkarte vorne und hinten"><header class="str738-visual-head"><div><span class="str738-eyebrow">ANATOMISCHE ÜBERSICHT</span><h3>Deine beanspruchten Muskeln</h3></div><span class="str738-mode-label">${activity==='cycling'?'RAD':activity==='strength'?'KRAFT':'KRAFT + RAD'}</span></header><div class="str738-figures str739-figures str740-figures"><figure><div class="str738-figure str739-figure str740-figure">${front}</div><figcaption>VORNE</figcaption><output class="str740-muscle-tip" hidden aria-live="polite"></output></figure><figure><div class="str738-figure str739-figure str740-figure">${back}</div><figcaption>HINTEN</figcaption><output class="str740-muscle-tip" hidden aria-live="polite"></output></figure></div><div class="str738-visual-legend">${legend.map(([color,label])=>`<span><i style="background:${color}"></i>${e(label)}</span>`).join('')}</div><p class="str738-map-note">${e(disclaimer)}</p></section>${strengthPremiumRanking(model,cycling,activity)}`;
+ return `<section class="str738-visual str739-visual" aria-label="Große Muskelkarte vorne und hinten"><header class="str738-visual-head"><div><span class="str738-eyebrow">ANATOMISCHE ÜBERSICHT</span><h3>Deine beanspruchten Muskeln</h3></div><span class="str738-mode-label">${activity==='cycling'?'RAD':activity==='strength'?'KRAFT':'KRAFT + RAD'}</span></header><div class="str738-figures str739-figures str740-figures"><figure><div class="str738-figure str739-figure str740-figure">${front}</div><figcaption>VORNE</figcaption><output class="str740-muscle-tip" hidden aria-live="polite"></output></figure><figure><div class="str738-figure str739-figure str740-figure">${back}</div><figcaption>HINTEN</figcaption><output class="str740-muscle-tip" hidden aria-live="polite"></output></figure></div><div class="str738-visual-legend">${legend.map(([color,label])=>`<span><i style="background:${color}"></i>${e(label)}</span>`).join('')}</div><p class="str738-map-note">${e(disclaimer)}</p></section>${strengthPremiumRanking(model,cycling,activity,loadModel)}`;
 }

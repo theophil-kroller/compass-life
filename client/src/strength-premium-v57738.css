@@ -66,3 +66,35 @@
 .str740-muscle-tip[hidden]{display:none!important}
 .str740-figures figcaption{margin-top:1px}
 @media(max-width:650px){.str740-figures.str739-figures{gap:0;grid-template-columns:repeat(2,minmax(0,1fr))}.str740-figure .str740-svg{width:100%!important;height:auto!important;max-height:none!important;aspect-ratio:35/93}.str740-muscle-tip{font-size:.63rem;padding:6px;bottom:24px;max-width:96%;white-space:normal}}
+
+/* 0.5.91.46 — anatomical exercise tonnage, not measured load on an individual muscle */
+.str146-root{margin-top:18px;padding:16px 0 4px;border-top:1px solid #3b4b5d;color:#e7eef6}
+.str146-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.str146-eyebrow{color:#ecc47d;letter-spacing:.085em;font-size:.65rem;font-weight:850}
+.str146-header h3{font-size:clamp(.91rem,1.6vw,1.08rem);margin:4px 0 2px;color:#f5f7fa}
+.str146-header p{font-size:.72rem;color:#aebecd;line-height:1.5;margin:3px 0 10px}
+.str146-input{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.str146-switch{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:8px 0 14px}
+.str146-switch label{display:inline-flex;align-items:center;justify-content:center;padding:8px 13px;border:1px solid #536678;border-radius:10px;font-size:.73rem;font-weight:700;color:#d8e1ea;cursor:pointer;transition:background .15s}
+.str146-switch label:hover{background:#354a64}
+.str146-input:focus-visible ~ .str146-switch label{outline:1px solid #bfc6d3}
+#str146-period-week:checked ~ .str146-switch label[for="str146-period-week"],#str146-period-month:checked ~ .str146-switch label[for="str146-period-month"],#str146-period-block:checked ~ .str146-switch label[for="str146-period-block"],#str146-period-quarter:checked ~ .str146-switch label[for="str146-period-quarter"]{background:#2e5164;color:#f8dc9d;border-color:#c5a66d}
+.str146-panel{display:none}
+#str146-period-week:checked ~ .str146-panels .str146-week,#str146-period-month:checked ~ .str146-panels .str146-month,#str146-period-block:checked ~ .str146-panels .str146-block,#str146-period-quarter:checked ~ .str146-panels .str146-quarter{display:block}
+.str146-summary{display:flex;gap:12px;flex-wrap:wrap;color:#93dac5;font-size:.7rem;margin:2px 0 9px}
+.str146-summary span{padding:5px 9px;background:#233a48;border-radius:7px}
+.str146-row{display:grid;grid-template-columns:minmax(120px,1.05fr) minmax(85px,1.5fr) minmax(105px,.75fr);align-items:center;gap:14px;padding:11px 1px;border-bottom:1px solid #334456;min-width:0}
+.str146-region strong,.str146-load strong{display:block;color:#f5f7fa;font-size:.8rem}
+.str146-region small,.str146-load small,.str146-chart small{display:block;color:#a9bbcb;font-size:.66rem;line-height:1.5;margin-top:3px}
+.str146-bar{display:block;background:#334557;border-radius:20px;height:10px;overflow:hidden}
+.str146-bar i{display:block;background:linear-gradient(90deg,#5aa2a8,#eac174);height:100%;border-radius:20px}
+.str146-load{text-align:right;font-variant-numeric:tabular-nums}
+.str146-load strong{color:#f2cb85;font-size:.96rem}
+.str146-note,.str146-empty,.str146-more{color:#aabccc;font-size:.68rem;line-height:1.6;margin:12px 0 2px}
+.str146-note strong{color:#e4e8ef}
+@media(max-width:600px){.str146-root{margin-top:12px}.str146-row{grid-template-columns:minmax(90px,1fr) minmax(65px,.8fr);gap:9px}.str146-chart{grid-column:1 / 3;grid-row:2}.str146-load{grid-column:2;grid-row:1}.str146-region{grid-column:1;grid-row:1}.str146-switch label{padding:8px 11px}}
+
+/* Four chronological, rolling weekly volume bars; no invented history. */
+.str146-week-trend{display:flex;align-items:flex-end;height:24px;gap:5px;max-width:70px;margin-top:7px;padding-bottom:2px;border-bottom:1px solid #6f8797}
+.str146-week-trend span{display:block;width:10px;min-height:0;background:#79bea8;border-radius:2px 2px 0 0}
+.str146-week-trend span:last-child{background:#f4ca88}
