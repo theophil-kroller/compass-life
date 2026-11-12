@@ -1,0 +1,23 @@
+{
+  "version": "0.5.91.47",
+  "baselineVersion": "0.5.91.46",
+  "features": [
+    "ehrmann-high-protein-vegan-chocolate-200g",
+    "spar-naturpur-bio-skyr-mango-maracuja-400g",
+    "whole-cup-default-portions",
+    "label-based-macronutrients",
+    "vtaper-protein-coach-product-candidates"
+  ],
+  "notes": [
+    "1 cup = 200g for Ehrmann Vegan, 400g for SPAR Bio-Skyr",
+    "skyr fat/saturates/fiber only labelled as upper bounds, not exact zeros",
+    "no automatic food journal writes or vault migration"
+  ],
+  "checks": {
+    "focusedTestsPassed": 18,
+    "releaseTestsPassed": 33,
+    "importGraphModules": 296,
+    "fullRegressionCompleted": false,
+    "viteBuildRun": false
+  }
+}

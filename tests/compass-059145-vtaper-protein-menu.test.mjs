@@ -76,6 +76,6 @@ test('version, styling, and no-transaction rules are bundled for the new release
  const main=readFileSync(new URL('../client/src/main-full-v57759402510.js',import.meta.url),'utf8');
  assert.match(css,/data-vt145-for-period="14"/);
  assert.match(css,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
- assert.match(main,/COMPASS_CLIENT_VERSION='0.5.91.46'/);
+ assert.match(main,/COMPASS_CLIENT_VERSION='0.5.91.47'/);
  assert.ok(!readFileSync(new URL('../client/src/vtaper-nutrition-coach-v059144.js',import.meta.url),'utf8').includes('addNutrition('));
 });
