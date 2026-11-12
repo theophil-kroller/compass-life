@@ -115,7 +115,7 @@ function occupancy(rows,metricName,color,start,today){
  return plot(points,{start,today,label:metricName==='protein'?'Protokolliertes Protein':'Krafttraining · Coach und Garmin',unit:metricName==='protein'?'g':'Sätze',decimals:0,color,empty:metricName==='protein'?'Keine quantifizierbaren Proteinprotokolle.':'Satzdaten fehlen: Trainingstage sind dokumentiert, aber keine bestätigten Satzzahlen verfügbar.'});
 }
 export function bodyTransformationView(state,options={}){
- const m=bodyTransformationModel(state,options),c=m.sourceCounts;
+ const m=options?.precomputedModel||bodyTransformationModel(state,options),c=m.sourceCounts;
  return `<section class="bt749-shell" aria-label="Body Transformation Intelligence">
  <header class="bt749-head"><div><span class="bt749-kicker">RELAXED CONTROL · BODY TRANSFORMATION</span><h2>Körper, Training &amp; Ernährung</h2><p>Individuelle Messpunkte mit optionaler datumsbasierter Trendlinie und 96-%-Konfidenzband für den Mittelwert (ab 5 Messtagen / 7 Tagen Beobachtung). Keine Interpolation fehlender Tage und ohne aus einzelnen Werten einen Trainingserfolg zu behaupten.</p></div><span class="bt749-period">${esc(m.start?`${fmtDate(m.start)} – ${fmtDate(m.today)}`:'Gesamte Datenhistorie')}</span></header>
  <div class="bt749-cards">${m.metrics.map(metric=>metricCard(metric,m)).join('')}</div>

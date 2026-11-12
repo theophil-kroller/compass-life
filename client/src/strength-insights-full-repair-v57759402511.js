@@ -5,6 +5,7 @@
  */
 import {strengthInsightsView as strengthLegacyView,strengthPeriod} from './strength-insights-v57728.js';
 import {strengthPremiumMap} from './strength-premium-v57738.js';
+import {exerciseProgressionView141} from './strength-exercise-progression-v059141.js';
 import {strengthEditorView} from './strength-editor-v57732.js';
 import {guidedWeightCorrectionView122} from './strength-set-corrections-v059122.js';
 
@@ -34,14 +35,20 @@ export function strengthInsightsView(state,opts={}){
  if(rowIndex!==journalSessions.length)throw Error('Trainingsjournal: Anzahl der bearbeitbaren Sessions stimmt nicht überein.');
  // The frozen full-source entry bypassed the historical bridge that mounted
  // the existing per-set editor. Restore it *without* modifying Garmin imports.
- // Keep it above the large atlas so newly imported CSV-only sessions remain
- // actionable and visible instead of forcing users to scroll through charts.
+ // Keep original edit controls and CSV recovery available below the priority charts.
  const kpiAnchor='<div class="str728-stats">';
  if(journalAction.split(kpiAnchor).length!==2)
   throw Error('Krafttraining-Editor: KPI-Integrationsstelle nicht eindeutig.');
  const editor=period.sessions.length?strengthEditorView(state,period.sessions,opts.editingId||''):'';
  const withEditor=journalAction.replace(kpiAnchor,editor+'\n '+guidedWeightCorrectionView122(state)+'\n '+kpiAnchor);
+ // Put the large interactive muscle atlas directly after the V-Taper tab, before all stats,
+ // tables and editing controls. The exercise-based load progression follows the atlas.
+ const opening='<div class="str728-root" aria-label="Compass Krafttraining und Muskelkarte">';
+ if(withEditor.split(opening).length!==2||withEditor.split(atlas).length!==2)
+  throw Error('Muskelkarte: Prioritäts-Insertion kann nicht eindeutig bestimmt werden.');
+ const remainder=withEditor.replace(atlas,'');
+ const ordered=remainder.replace(opening,opening+'\n'+atlas+'\n'+exerciseProgressionView141(period)+'\n');
  // Two maps are visible together: the old one-side-only toggle is misleading.
- return withEditor.replace(/<div class="str728-ranges" role="group" aria-label="Körperansicht">[\s\S]*?<\/div>/,
+ return ordered.replace(/<div class="str728-ranges" role="group" aria-label="Körperansicht">[\s\S]*?<\/div>/,
   '<span class="c4011-both-sides">Vorder- und Rückseite gleichzeitig</span>');
 }

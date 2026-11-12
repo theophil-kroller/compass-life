@@ -28,7 +28,8 @@ test('Compass Body Transformation reuses existing Coach+Garmin session model wit
  assert.equal(body.sourceCounts.sets,2);
  assert.match(bodyTransformationView(state,{today:date,strengthSessions:period.sessions}),/Compass-Coach &amp; Garmin/);
  const app=readFileSync(new URL('../client/src/main-full-v57759402510.js',import.meta.url),'utf8');
- assert.match(app,/strengthSessions:strengthPeriod\(state,\{range:'all',today:localDate\(\)\}\)\.sessions/);
+ assert.match(app,/const bodyStrengthSessions=insightTab==='body'\?strengthPeriod\(state,\{range:'all',today\}\)\.sessions/);
+ assert.match(app,/strengthSessions:bodyStrengthSessions/);
  assert.doesNotMatch(app,/strengthSessions:strengthSummariesWithFit\(state\)/);
 });
 test('Coach-only confirmed sessions count; unconfirmed preview does not',()=>{

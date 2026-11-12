@@ -19,6 +19,6 @@ test('preexisting Fitdays BMI wins; never derive absent BMI without documented h
 });
 test('body references use configured height and appear BEFORE the previous plots and health figure',()=>{
  const m=readFileSync(new URL('../client/src/main-full-v57759402510.js',import.meta.url),'utf8');
- assert.match(m,/insightTab==='body'\?fitdaysInterpretationView\([\s\S]*?heightCm:bodyHeightCm,targetWeightKg:[\s\S]*?\}\)\+bodyTransformationView\([\s\S]*?\+healthBodyView\(/);
+ assert.match(m,/insightTab==='body'\?vtaperOverviewHtml141\([\s\S]*?\+fitdaysInterpretationView\([\s\S]*?heightCm:bodyHeightCm,targetWeightKg:[\s\S]*?\}\)\+bodyTransformationView\([\s\S]*?\+healthBodyView\(/);
  assert.doesNotMatch(m,/heightCm:184,targetWeightKg/);
 });

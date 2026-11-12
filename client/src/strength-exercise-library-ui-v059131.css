@@ -11,3 +11,6 @@
 .str137-muscle-roles div{display:grid;grid-template-columns:110px 1fr;gap:5px;align-items:start;font-size:11px;line-height:1.4}
 .str137-muscle-roles strong{color:#315c46}.str137-muscle-roles span{color:#566f62}
 @media(max-width:670px){.str137-muscle-roles div{grid-template-columns:1fr;gap:1px}.str137-muscle-roles{padding:7px}}
+
+/* .91.41: concise goal explanation in single-exercise preview. */
+.str131-detail .str141-purpose{margin:9px 0;padding:8px 10px;border-left:3px solid #2b946f;border-radius:8px;background:#eaf4ee;color:#285f49;font-size:12px;line-height:1.42;font-weight:600}

@@ -4,6 +4,7 @@
  * This remains a model of documented involvement, not measured EMG/fatigue/growth.
  */
 import { detailedMuscleData,EXERCISE_ANATOMY,exerciseMuscleRoles122,isAnatomyClassifiedSet137,STABILIZER_COLOR_122 } from './strength-anatomy-v57737.js';
+import {exerciseProgressionModel141,regionLoadSummary141} from './strength-exercise-progression-v059141.js';
 
 const e=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fmt=(v,d=0)=>Number.isFinite(v)?v.toLocaleString('de-AT',{maximumFractionDigits:d}):'–';
@@ -142,6 +143,7 @@ export async function mountPremiumAnatomy(root,loader=loadAnatomyPaths){
   const view=svg.dataset.anatomyView==='back'?'back':'front';
   let info;try{info=JSON.parse(svg.dataset.anatomyInfo||'{}');}catch{info={};}
   const groupInfo=info.regions||{},bikePrimary=info.cyclingPrimary||[],bikeSecondary=info.cyclingSecondary||[];
+   const muscleLoads=info.exerciseByRegion||{};
   const parts=view==='front'?pkg.FRONT_MUSCLES:pkg.BACK_MUSCLES;
   if(!Array.isArray(parts)||!parts.length)throw Error('Anatomiedaten fehlen.');
   // Svg paths from a maintained anatomical data set, not fabricated polygons.
@@ -157,7 +159,7 @@ export async function mountPremiumAnatomy(root,loader=loadAnatomyPaths){
    const fill=highlight?.fill||fallback;
    const active=Boolean(id&&(windowed?(highlight||(info.activity!=='strength'&&(cyclingPrimary||cyclingSecondary))):((info.activity!=='cycling'&&((row?.primary||0)+(row?.secondary||0)+(row?.stabilizing||0)>0))||(info.activity!=='strength'&&(cyclingPrimary||cyclingSecondary)))));
    const name=LABELS[id]||Object.entries(ANATOMY_OVERRIDES).find(([k])=>part.id.startsWith(k))?.[1]||part.name||part.id;
-   const note=id?`${highlight?highlight.label+' · ':''}Im ausgewählten Zeitraum: ${row?.primary||0} Hauptsätze · ${row?.secondary||0} unterstützend · ${row?.stabilizing||0} stabilisierende Beteiligungen (keine Wachstumssätze)${cyclingPrimary||cyclingSecondary?' · Radfahren beteiligt':''}`:'Anatomische Orientierung';
+   const note=id?`${highlight?highlight.label+' · ':''}Im ausgewählten Zeitraum: ${row?.primary||0} Hauptsätze · ${row?.secondary||0} unterstützend · ${row?.stabilizing||0} stabilisierende Beteiligungen (keine Wachstumssätze)${cyclingPrimary||cyclingSecondary?' · Radfahren beteiligt':''}${muscleLoads[id]?.length?' · '+regionLoadSummary141({byRegion:muscleLoads},id):''}`:'Anatomische Orientierung';
    const title=`${name} – ${note}`;
    return `<path d="${e(part.path)}" class="str740-muscle${active?' is-active':''}" fill="${fill}" stroke="${active?'#f4ded0':'#9daabd'}" stroke-width="${active?'0.18':'0.14'}" stroke-linejoin="round" role="img" tabindex="0" data-muscle-name="${e(name)}" data-muscle-note="${e(note)}" aria-label="${e(title)}"><title>${e(title)}</title></path>`;
   }).join('');
@@ -198,7 +200,7 @@ export function premiumStrengthSvg(model,view,mode,cycling,activity){
    for(const id of exerciseMuscleRoles122(set.exerciseId).stabilizers){if(day===current)todayStabilizers.add(id);else if(day>=recentStart)recentStabilizers.add(id);}
   }
  }
- const info={regions:records,activity,mode,temporalPalette125:true,temporalPalette139:true,todayRegions:[...todayRegions],yesterdayRegions:[...yesterdayRegions],recentRegions:[...recentRegions].filter(id=>!todayRegions.has(id)),supportingRegions:[...supportingRegions].filter(id=>!todayRegions.has(id)),todayStabilizers:[...todayStabilizers],recentStabilizers:[...recentStabilizers],cyclingPrimary:cycling?.rides?cycling.regions.primary:[],cyclingSecondary:cycling?.rides?cycling.regions.secondary:[]};
+ const info={regions:records,activity,mode,temporalPalette125:true,exerciseByRegion:exerciseProgressionModel141(model).byRegion,temporalPalette139:true,todayRegions:[...todayRegions],yesterdayRegions:[...yesterdayRegions],recentRegions:[...recentRegions].filter(id=>!todayRegions.has(id)),supportingRegions:[...supportingRegions].filter(id=>!todayRegions.has(id)),todayStabilizers:[...todayStabilizers],recentStabilizers:[...recentStabilizers],cyclingPrimary:cycling?.rides?cycling.regions.primary:[],cyclingSecondary:cycling?.rides?cycling.regions.secondary:[]};
  const back=view==='back';
  return `<svg class="str738-body str740-svg" data-anatomy-view="${back?'back':'front'}" data-anatomy-info="${e(JSON.stringify(info))}" viewBox="${back?'37 0 35 93':'0 0 35 93'}" role="img" aria-label="Anatomische Muskelkarte ${back?'hinten':'vorne'}, über 70 detaillierte Muskelbereiche"><text x="${back?'44':'8'}" y="48" class="str740-loading">Anatomie wird geladen …</text></svg>`;
 }

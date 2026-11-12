@@ -1,0 +1,20 @@
+{
+  "version": "0.5.91.41",
+  "baselineVersion": "0.5.91.40",
+  "source": "Compass_Life_0.5.91.40_SMART_TAPE_PUMP_CONTEXT_FULL_SOURCE.zip",
+  "features": [
+    "vtaper-first-readonly-dashboard",
+    "strength-muscle-map-priority",
+    "anatomical-region-linked-exercise-loads",
+    "exercise-specific-weight-progression-graphs",
+    "goal-linked-vtaper-benefit-in-workout-preview-and-exercise-library",
+    "goal-linked-vtaper-benefit-in-activity-and-progression"
+  ],
+  "tests": {
+    "passed": 2220,
+    "inherited_failures": 66,
+    "new_failures": 0,
+    "deploy_tests_passed": 33
+  },
+  "gitRepoWritten": false
+}

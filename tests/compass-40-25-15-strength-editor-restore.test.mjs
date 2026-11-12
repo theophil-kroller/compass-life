@@ -17,7 +17,7 @@ test('CSV-only training visibly offers restore editor and one-click direct actio
  assert.match(html,/Übungen &amp; Gewichte nachtragen/);
  assert.match(html,/data-action="str732-edit" data-id="strength-csv\|2026-10-28T23:47:00"/);
  assert.match(html,/str732-pending/);
- assert.ok(html.indexOf('str732-editor')<html.indexOf('str740-svg'),'editor should precede atlas');
+ assert.ok(html.indexOf('str740-svg')<html.indexOf('str732-editor'),'requested atlas-first layout should precede the editor');
  assert.doesNotMatch(html,/Original-FIT-Datei dieser Aktivität exportieren/);
  assert.deepEqual(state,before,'display must be read-only');
 });
