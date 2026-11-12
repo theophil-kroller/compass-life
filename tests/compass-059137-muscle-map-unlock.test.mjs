@@ -54,11 +54,11 @@ test('Reverse fly paints posterior delts red on the day of real confirmed sets',
  assert.equal(premiumMuscleHighlight125(info,'rhomboids').fill,'#f0c955');
 });
 
-test('A set from yesterday is orange today, without silently rewriting its date',()=>{
+test('A set from yesterday is muted red today, without silently rewriting its date',()=>{
  const model={today:'2026-11-08',sessions:[{day:'2026-11-07',sets:[{exerciseId:'reverse-fly',reps:10}]}]};
  const svg=premiumStrengthSvg(model,'back','roles',{rides:0},'strength');
  const info=JSON.parse(svg.match(/data-anatomy-info="([^"]+)"/)[1].replaceAll('&quot;','"'));
- assert.equal(premiumMuscleHighlight125(info,'deltoid_rear').fill,'#ee963a');
+ assert.equal(premiumMuscleHighlight125(info,'deltoid_rear').fill,'#bc7474');
  assert.ok(!info.todayRegions.includes('deltoid_rear'));
 });
 

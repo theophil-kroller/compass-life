@@ -108,17 +108,17 @@ function colorForRegion(region,mode,cycPrimary,cycSecondary,activity){
  if(activity!=='strength'&&cycSecondary)return '#e7c35e';
  return OFF_FILL;
 }
-/** 0.5.91.25 · One visible role per region, prioritizing what happened today.
- * A region can appear in several roles across workouts. The priority is:
- * today primary > today supporting > today stabilizing > prior 7d primary/
- * supporting > prior 7d stabilizing. Previous training may never conceal a
- * current-day role. This is a display classification, not a training metric. */
+/** 0.5.91.39 · Day-aware muscle map: today intense, yesterday muted red.
+ * Today primary/supporting/stabilizing always win; then yesterday's active
+ * training, then earlier 7-day training, then stabilizing-only history.
+ * Colors represent documented set involvement, NOT soreness or recovery. */
 export function premiumMuscleHighlight125(info,id){
  if(!id||!info)return null;
  const has=key=>Array.isArray(info[key])&&info[key].includes(id);
  if(has('todayRegions'))return {role:'today-primary',fill:'#ed4b42',label:'Heute primär'};
  if(has('supportingRegions'))return {role:'today-supporting',fill:'#f0c955',label:'Heute unterstützend'};
  if(has('todayStabilizers'))return {role:'today-stabilizing',fill:STABILIZER_COLOR_122,label:'Heute stabilisierend'};
+ if(has('yesterdayRegions'))return {role:'yesterday-training',fill:'#bc7474',label:'Gestern trainiert'};
  if(has('recentRegions'))return {role:'recent-training',fill:'#ee963a',label:'In den letzten 7 Tagen trainiert'};
  if(has('recentStabilizers'))return {role:'recent-stabilizing',fill:STABILIZER_COLOR_122,label:'In den letzten 7 Tagen stabilisierend'};
  return null;
@@ -189,15 +189,16 @@ export function premiumStrengthSvg(model,view,mode,cycling,activity){
  const data=detailedMuscleData(model);
  const records=Object.fromEntries(Object.entries(data.regions).map(([id,r])=>[id,{primary:r.primary,secondary:r.secondary,stabilizing:r.stabilizing,index:r.index}]));
  const current=typeof model?.today==='string'?model.today:new Date().toLocaleDateString('sv-SE');
- const recentStart=shift(current,-7),todayRegions=new Set(),recentRegions=new Set(),supportingRegions=new Set(),todayStabilizers=new Set(),recentStabilizers=new Set();
+ const yesterday=shift(current,-1),recentStart=shift(current,-7);
+ const todayRegions=new Set(),yesterdayRegions=new Set(),recentRegions=new Set(),supportingRegions=new Set(),todayStabilizers=new Set(),recentStabilizers=new Set();
  for(const session of model?.sessions||[]){const day=session.day;if(!isDay(day)||day>current)continue;
   for(const set of session.sets||[]){if(!isAnatomyClassifiedSet137(set))continue;const anatomy=EXERCISE_ANATOMY[set.exerciseId];if(!anatomy)continue;
-   for(const id of anatomy.primary){if(day===current)todayRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
-   for(const id of anatomy.secondary){if(day===current)supportingRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
+   for(const id of anatomy.primary){if(day===current)todayRegions.add(id);else if(day===yesterday)yesterdayRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
+   for(const id of anatomy.secondary){if(day===current)supportingRegions.add(id);else if(day===yesterday)yesterdayRegions.add(id);else if(day>=recentStart)recentRegions.add(id);}
    for(const id of exerciseMuscleRoles122(set.exerciseId).stabilizers){if(day===current)todayStabilizers.add(id);else if(day>=recentStart)recentStabilizers.add(id);}
   }
  }
- const info={regions:records,activity,mode,temporalPalette125:true,todayRegions:[...todayRegions],recentRegions:[...recentRegions].filter(id=>!todayRegions.has(id)),supportingRegions:[...supportingRegions].filter(id=>!todayRegions.has(id)),todayStabilizers:[...todayStabilizers],recentStabilizers:[...recentStabilizers],cyclingPrimary:cycling?.rides?cycling.regions.primary:[],cyclingSecondary:cycling?.rides?cycling.regions.secondary:[]};
+ const info={regions:records,activity,mode,temporalPalette125:true,temporalPalette139:true,todayRegions:[...todayRegions],yesterdayRegions:[...yesterdayRegions],recentRegions:[...recentRegions].filter(id=>!todayRegions.has(id)),supportingRegions:[...supportingRegions].filter(id=>!todayRegions.has(id)),todayStabilizers:[...todayStabilizers],recentStabilizers:[...recentStabilizers],cyclingPrimary:cycling?.rides?cycling.regions.primary:[],cyclingSecondary:cycling?.rides?cycling.regions.secondary:[]};
  const back=view==='back';
  return `<svg class="str738-body str740-svg" data-anatomy-view="${back?'back':'front'}" data-anatomy-info="${e(JSON.stringify(info))}" viewBox="${back?'37 0 35 93':'0 0 35 93'}" role="img" aria-label="Anatomische Muskelkarte ${back?'hinten':'vorne'}, über 70 detaillierte Muskelbereiche"><text x="${back?'44':'8'}" y="48" class="str740-loading">Anatomie wird geladen …</text></svg>`;
 }
@@ -218,7 +219,7 @@ export function strengthPremiumRanking(model,cycling,activity='combined'){
 
 export function strengthPremiumMap(model,cycling,activity='combined',side='front'){
  const mode=side==='back'?'load':'roles';
- const legend=[['#ed4b42','Heute trainiert (primär)'],['#f0c955','Heute unterstützend'],[STABILIZER_COLOR_122,'Stabilisierend · kein Wachstumssatz'],['#ee963a','Letzte 7 Tage']];
+ const legend=[['#ed4b42','Heute trainiert (primär)'],['#f0c955','Heute unterstützend'],['#bc7474','Gestern trainiert'],[STABILIZER_COLOR_122,'Stabilisierend · kein Wachstumssatz'],['#ee963a','Vor 2–7 Tagen trainiert']];
  if(activity!=='strength'&&cycling?.rides)legend.push(['#f2a531','Radfahren (primär)']);
  legend.push([OFF_FILL,'Keine gezielte Belastung dokumentiert']);
  // Wait until Compass has inserted this HTML into the document. No old cartoon fallback.

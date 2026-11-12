@@ -33,10 +33,10 @@ function findFill(svg,muscle){
  assert.ok(p,`muscle region ${muscle} appears`);
  return p.match(/fill="([^"]+)"/)?.[1];
 }
-test('a muscle trained yesterday as primary but supporting today is yellow, not orange',async()=>{
+test('a muscle trained yesterday as primary but supporting today is yellow, not muted red',async()=>{
  const v=svgFromModel(dataModel());
  assert.equal(v.info.temporalPalette125,true);
- assert.ok(v.info.recentRegions.includes('rectus_abdominis'));
+ assert.ok(v.info.yesterdayRegions.includes('rectus_abdominis'));
  assert.ok(v.info.supportingRegions.includes('rectus_abdominis'));
  assert.equal(premiumMuscleHighlight125(v.info,'rectus_abdominis').role,'today-supporting');
  assert.equal(await mountPremiumAnatomy(v.root,async()=>atlas),1);
@@ -47,20 +47,20 @@ test('today primary red beats today supporting and recent training',()=>{
  const info={todayRegions:['rectus_abdominis'],supportingRegions:['rectus_abdominis'],recentRegions:['rectus_abdominis'],todayStabilizers:['rectus_abdominis']};
  assert.equal(premiumMuscleHighlight125(info,'rectus_abdominis').fill,'#ed4b42');
 });
-test('today stabilizer turquoise beats orange older training, but does not count as a growth set',async()=>{
+test('today stabilizer turquoise beats yesterday muted red, but does not count as a growth set',async()=>{
  const v=svgFromModel(dataModel(),'back');
  assert.ok(v.info.todayStabilizers.includes('calves_gastro'));
- assert.ok(v.info.recentRegions.includes('calves_gastro'));
+ assert.ok(v.info.yesterdayRegions.includes('calves_gastro'));
  assert.equal(premiumMuscleHighlight125(v.info,'calves_gastro').role,'today-stabilizing');
  await mountPremiumAnatomy(v.root,async()=>atlas);
  assert.equal(findFill(v.svg,'Zwillingswadenmuskel (Gastrocnemius)'),STABILIZER_COLOR_122);
  assert.match(v.svg.innerHTML,/keine Wachstumssätze/);
 });
-test('recent-only muscles remain orange, current primary is red, current stabilizer is teal',async()=>{
+test('yesterday muscles are muted red, current primary is red, current stabilizer is teal',async()=>{
  const v=svgFromModel(dataModel());
  await mountPremiumAnatomy(v.root,async()=>atlas);
  assert.equal(findFill(v.svg,'Quadrizeps'),'#ed4b42');
- assert.equal(findFill(v.svg,'Bizeps'),'#ee963a');
+ assert.equal(findFill(v.svg,'Bizeps'),'#bc7474');
  assert.equal(findFill(v.svg,'Vorderer Schienbeinmuskel (Tibialis anterior)'),STABILIZER_COLOR_122);
 });
 test('older-than-seven-day muscles do not get misleading orange/color highlights',async()=>{
@@ -72,7 +72,7 @@ test('older-than-seven-day muscles do not get misleading orange/color highlights
 test('legend shows current-day roles before retrospective orange, and roles do not change training records',()=>{
  const model=dataModel(),saved=structuredClone(model);
  const html=strengthPremiumMap(model,cycling,'strength');
- assert.ok(html.indexOf('Heute unterstützend')<html.indexOf('Letzte 7 Tage'));
- assert.ok(html.indexOf('Stabilisierend · kein Wachstumssatz')<html.indexOf('Letzte 7 Tage'));
+ assert.ok(html.indexOf('Heute unterstützend')<html.indexOf('Vor 2–7 Tagen trainiert'));
+ assert.ok(html.indexOf('Stabilisierend · kein Wachstumssatz')<html.indexOf('Vor 2–7 Tagen trainiert'));
  assert.deepEqual(model,saved);
 });

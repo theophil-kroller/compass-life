@@ -37,6 +37,10 @@ export function dailyDozenIngredientEvidence404(state,day){
    if(candidates.includes('vegetables')&&/ratatouille|gemüse|gemuese|vegetable/.test(title)){add('vegetables',0.5,'Mensa · Gemüseanteil im Gericht (vorläufig, Menge unbekannt)',sourceId);notes.vegetables.push('Mensa-Portion unbekannt: 0,5 vorläufiger Vergleichswert, bitte Gemüsemenge bestätigen.');}
    continue;
   }
+  if(id==='hofer-laugenbreze-butter'){
+   notes.wholegrains.push('HOFER Laugenbreze: raffiniertes Laugengebäck, kein belegtes Vollkorn; Butter zählt nicht als Daily-Dozen-Portion.');
+   continue;
+  }
   if(id==='alpro-plant-protein-vanilla-pudding-200g'||id==='alpro-plant-protein-chocolate-pudding-200g'){
    notes.beans.push('Alpro Plant Protein Pudding: Sojabohnen und Sojaprotein, aber keine nachgewiesene volle Hülsenfruchtportion.');
    continue;

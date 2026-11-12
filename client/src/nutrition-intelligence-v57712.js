@@ -1,4 +1,5 @@
 import {ALPRO_PUDDING_PACKAGES,parseAlproPuddingPortion} from './alpro-pudding-serving-v059138.js';
+import {HOFER_PRETZEL_BUTTER_ID,parseHoferPretzelButterPortion} from './hofer-pretzel-butter-serving-v059139.js';
 /** Compass 0.5.77.12 — source-aware nutrition estimates. All sources are either
  * explicitly photographed product labels or marked estimates. No missing nutrient
  * value is interpreted as zero and no compound content is fabricated.
@@ -26,6 +27,7 @@ const BIOACTIVE_ICONS=Object.freeze({EGC:'🍵',EGCG:'🍃',caffeine:'☕',lThea
 export const NUTRIENT_LABELS=N;
 const profile=(name,amount,unit,values,source='Etikett',extra={},note='')=>({name,reference:{amount,unit},nutrients:values,source,extra,note,estimatedNutrients:[]});
 const LABELLED={
+ 'hofer-backbox-laugenbreze-estimate':profile('HOFER BACKBOX Laugenbreze (unbestätigte Referenz)',100,'g',{kcal:314,protein:8.5,carbs:56.7,fat:5.2,salt:1.75},'FDDB-Community-Datenbank · unbestätigter HOFER-Richtwert, nicht Herstelleretikett',{},'95 g pro Stück ist eine Annahme; unbekannt: Zucker, Ballaststoffe, gesättigte Fettsäuren, Vitamine und Mineralstoffe. Kein belegtes Vollkorngebäck.'),
  // Original macro declarations per stated reference unit; any other metrics are explicit generic estimates.
  'dr-goerg-organic-coconut-milk-200ml':profile('Dr. Goerg Bio-Kokosmilch · 100 % Kokos',100,'ml',{kcal:186,protein:2.1,carbs:5.8,sugar:3,fat:17,saturated:14,salt:.05,calcium:16,magnesium:30,phosphorus:90,potassium:220,iron:1.3,zinc:.6,copper:.2,manganese:.6},'Originaletikett · Nutzerfotos 07.11.2026; Mineralstoffwerte generisches Kokosmilchprofil',{},'Originalpackung 200 ml; 100 ml = 186 kcal, 17 g Fett und 14 g gesättigte Fettsäuren. Kokosmilch (100 %), kein Wasserzusatz. 100 ml = eine Portion; 1 Packung = 200 ml. Calcium/Magnesium/Phosphor/Kalium/Eisen/Zink/Kupfer/Mangan nur grobe Referenzschätzungen; alle Vitamine, Ballaststoffe und Fettsäure-Unterklassen mangels Markeanalytik unbekannt. Keine belegte Daily-Dozen-Nuss-/Samenportion. Anti-Aging Eight: kein automatisch belegtes Ziel. Hoher gesättigter Fettanteil für Fettqualitätsanalyse relevant.'),
  'copaya-organic-raw-cocoa-powder':profile('Copaya Bio-Rohkakao · Criollo, ungesüßt',100,'g',{kcal:330,protein:28.1,carbs:14,sugar:.3,fat:11,saturated:6.9,salt:.1,fiber:30,calcium:125,magnesium:500,phosphorus:730,potassium:1500,iron:14,zinc:6.8,copper:3.8,manganese:3.8},'Originaletikett · Nutzerfoto 07.11.2026; Ballaststoffe und Mineralstoffe generisches ungesüßtes Kakaopulver', {cocoaFlavanols:{label:'Kakao-Flavanole (Catechin, Epicatechin)',value:null,unit:'mg'},theobromine:{label:'Theobromin',value:null,unit:'mg'},caffeine:{label:'Koffein',value:null,unit:'mg'}},'Originaletikett: 330 kcal, 28,1 g Protein, 11 g Fett (6,9 g gesättigt), 14 g KH (0,3 g Zucker), 0,1 g Salz je 100 g. 1 gestrichener EL ≈ 6 g (geschätztes Pulvergewicht; individuelle Abweichungen). 1 EL ≈ 20 kcal. Ballaststoffe/Mineralstoffe sind generische Kakaopulver-Schätzungen, nicht markenspezifisch deklariert. Kakao-Flavanole, Koffein, Theobromin ohne belegte Mengen: unbekannt. Keine automatische Dr.-Greger-Gewürz-/Nuss-/Bohnenportion, keine Anti-Aging-Eight-Gutschrift. Auf fotografierter Packung ist ein MHD 01.04.2025 erkennbar.'),
@@ -230,6 +232,12 @@ export function nutritionParts(foodId,amount='',food=null,recipe=null){
   return [{name:food.title,part:'Mahlzeit-Rezept',source:food.source||'Generische Schätzung',amount:portions,unit:'Portion',values:Object.fromEntries(Object.entries(food.nutrients).filter(([,v])=>Number.isFinite(v)&&v>=0).map(([k,v])=>[k,round(v*portions)])),estimatedKeys:Object.keys(food.nutrients),extra:[],note:food.description||''}];
  }
  const source=food||{id:foodId,defaultAmount:''};
+ if(foodId===HOFER_PRETZEL_BUTTER_ID){
+  const portion=parseHoferPretzelButterPortion(amount,source.defaultAmount);
+  if(!portion)return [];
+  const piece=(id,qty,part)=>rescale(LABELLED[id],qty,'g',part);
+  return [piece('hofer-backbox-laugenbreze-estimate',portion.pretzelGrams,'Laugenbreze'),...(portion.butterGrams>0?[piece('butter-hofer',portion.butterGrams,'Butter')]:[])].filter(Boolean);
+ }
  const fake={foodId,amount};
  const value=quantityFor(fake,source);
  const piece=(id,qty,unit,part)=>rescale(LABELLED[id],qty,unit,part);

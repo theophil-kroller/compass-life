@@ -1,4 +1,5 @@
 import {ALPRO_PUDDING_PACKAGES,parseAlproPuddingPortion,alproPuddingKcal} from './alpro-pudding-serving-v059138.js';
+import {HOFER_PRETZEL_BUTTER_ID,HOFER_PRETZEL_DEFAULT,parseHoferPretzelButterPortion,hoferPretzelButterKcal} from './hofer-pretzel-butter-serving-v059139.js';
 import {mergeStrengthCycles35} from './strength-cycle-v5775935.js';
 import {MCT_C8_FOOD_ID,parseMctC8Serving,mctC8Kcal} from './mct-c8-serving-v059123.js';
 import {SKYR_PACKAGES,parseSkyrPortion,skyrKcal} from './skyr-serving-v059133.js';
@@ -40,6 +41,7 @@ export const FOOD_PRESETS=[
  ['matcha-powder','🍃','MatchaTherapy 30+ Matchapulver','Zutaten','1 TL (2 g)',5,9],
  ['bio-kornbrot','🍞','Zurück zum Ursprung Bio Nur-Kornbrot','Zutaten','1 Scheibe (50 g)',134,134],
  ['happy-harvest-steinofen-kornspitz','🥖','Happy Harvest Steinofen-Kornspitz · HOFER','Snacks','1 Stück',218,218],
+ [HOFER_PRETZEL_BUTTER_ID,'🥨','HOFER BACKBOX Laugenbreze mit Butter','Snacks',HOFER_PRETZEL_DEFAULT,372,372],
  ['butter-hofer','🧈','Hofer Bio-Butter','Zutaten','10 g',72,76],
  ['water-glass','💧','Wasser','Getränke','1 Glas (250 ml)',0,0],
  ['smoothie','🥤','Smoothie','Getränke','1 Glas (300 ml)',120,280],['green-tea-chinese','🍵','Chinesischer Grüntee · ungesüßt','Getränke','1 Tasse (250 ml)',0,3],['tea-unsweetened','🍵','Tee ungesüßt','Getränke','1 Tasse (250 ml)',0,5],['tea-honey','🫖','Tee mit Honig','Getränke','1 Tasse (250 ml)',20,75],
@@ -100,6 +102,7 @@ export const FOOD_PRESETS=[
  ...(id==='koro-pistachio-puree'?{recipeNote:'KoRo Bio Pistazienmus, Herstellerwert 658 kcal/100 g (Produkt MUS_060), 15 g Esslöffel geschätzt.'}:{}),
  ...(id==='koro-black-tahini'?{recipeNote:'KoRo Bio Schwarzes Tahin, Herstellerwert 616 kcal/100 g (Produkt MUS_037), 15 g Esslöffel geschätzt.'}:{}),
  ...(['lyttos-pistachio-breakfast','lyttos-tahini-breakfast'].includes(id)?{recipeNote:'Persönlicher Joghurt-Snack: Standard 150 g Joghurt, 15 g Honig und 15 g Mus; alle Grammangaben im Tagebuch editierbar. Joghurt generischer Drittanbieterwert, Mus KoRo Hersteller.'}:{}),
+ ...(id===HOFER_PRETZEL_BUTTER_ID?{recipeNote:'Rezept-Schätzung, KEIN offizielles HOFER-Etikett: HOFER BACKBOX Laugenbreze, standardmäßig 95 g, mit 10 g selbst aufgestrichener HOFER Bio-Butter. Laugenbrezen-Referenz: FDDB-Community (unbestätigt) 314 kcal, 8,5 g Protein, 56,7 g KH, 5,2 g Fett, 1,75 g Salz je 100 g; 95-g-Portion und Buttermenge editierbar. Butter auf Basis bestehender 740-kcal/100-g-Schätzung. Für Mikronährstoffe liegen keine produktbezogenen Daten vor; keine Daily-Dozen-Vollkornportion oder Anti-Aging-Eight-Gutschrift.'}:{}),
  ...(id==='happy-harvest-steinofen-kornspitz'?{recipeNote:'1 Stück = 75 g (HOFER-Packung 300 g / 4 Stück). Etikett 2026-11-01: je 100 g 290 kcal, Fett 3,7 g (gesättigt 0,5 g), Kohlenhydrate 49 g (Zucker 2,0 g), Eiweiß 11 g, Salz 1,2 g. Ballaststoffe nicht angegeben. Enthält Weizen, Roggen, Gerste, Soja und Sesam; kann Spuren von Lupinen, Milch und Schalenfrüchten enthalten. Energie und Makros pro Stück rechnerisch umgerechnet; bei Backverlust durch Wasser kann das Endgewicht variieren.'}:{}),
  ...(id==='kitkat-chunky-peanut-butter'?{recipeNote:'1 Riegel = 42 g = 222 kcal laut offizieller KitKat-Produktseite. Fett 12,7 g (gesättigt 6,4 g), Kohlenhydrate 21,9 g (Zucker 18,1 g), Ballaststoffe 1,2 g, Eiweiß 4,5 g, Salz 0,26 g. Quelle: https://www.kitkat.de/produkt/kitkat-chunky-peanut-butter ; das österreichische Packungsetikett hat bei Rezepturänderungen Vorrang.'}:{}),
  ...(id==='hofer-germknoedel'?{recipeNote:'HOFER Germknödel · 187 g nach Drittanbieter-Nährwertdaten, etwa 500 kcal pro Portion. Variante, Vanillesauce/Mohn-Zucker und Packungsangabe bitte gegen Verpackung prüfen; nicht als offizieller HOFER-Etikettwert bestätigt.'}:{}),
@@ -228,6 +231,11 @@ export function nutritionEntries(state){return (state?.nutritionJournal?.entries
 /** An indicative range only, not a nutritional measurement. Explicitly edited quantities
  * override presets when a compatible count or g/ml amount can be parsed. */
 export function nutritionKcalEstimate(food,amount,recipe=null){
+ if(food?.id===HOFER_PRETZEL_BUTTER_ID){
+  const portion=parseHoferPretzelButterPortion(amount,food.defaultAmount);
+  const kcal=hoferPretzelButterKcal(portion);
+  return kcal===null?null:{low:kcal,high:kcal,kind:'Zutatenbasierte Schätzung · Produktdaten unbestätigt'};
+ }
  if(food&&['lyttos-pistachio-breakfast','lyttos-tahini-breakfast'].includes(food.id)){
   const text=String(amount||food.defaultAmount||'');
   const grams=(kind,def)=>{const m=text.match(new RegExp('([0-9]+(?:[.,][0-9]+)?)\\s*g\\s*'+kind+'\\b','i'));return m?Number(m[1].replace(',','.')):def;};

@@ -1,0 +1,10 @@
+{
+  "version": "0.5.91.39",
+  "baselineVersion": "0.5.91.38",
+  "baselineCommit": "0ad17396307c23f28c8c47de28bef03f4d01b596",
+  "features": [
+    "muscle-map-today-yesterday-shades",
+    "hofer-pretzel-butter-snack"
+  ],
+  "note": "Full source, no personal vault, no repository writes. Run GitHub Actions build upon upload."
+}
