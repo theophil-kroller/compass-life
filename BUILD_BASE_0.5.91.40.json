@@ -1,0 +1,11 @@
+{
+  "version": "0.5.91.40",
+  "baselineVersion": "0.5.91.39",
+  "baselineArchive": "Compass_Life_0.5.91.39_MUSCLE_YESTERDAY_PRETZEL_FULL_SOURCE.zip",
+  "features": [
+    "smart-tape-postworkout-checkin",
+    "workout-linked-potential-pump-flag",
+    "source-preserving-context-sync"
+  ],
+  "note": "Full source; no user vault, no repository writes. Run GitHub Actions Vite build after upload."
+}

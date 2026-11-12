@@ -122,6 +122,7 @@ import {discoveryDisplayDay412,discoveryOverlaps412,discoveryOngoingLabel412} fr
 import {healthViewModel,healthBars,healthTime,healthObservation} from './health-visual.js';
 import {inspectHealthFiles,commitHealthImport,missingGarminDays} from './health-import.js';
 import {bodyMeasurementDashboardModel,bodyMeasurementDashboardHtml,BODY_MEASUREMENT_REGIONS} from './body-measurements-v05918.js';
+import {setTapeWorkoutContext140,getTapeWorkoutContext140} from './smart-tape-pump-context-v059140.js';
 import './body-measurements-v05918.css';
 import './body-proportions-v059120.css';
 import {healthImportCoverage} from './health-import-diagnostics-v492.js';
@@ -283,7 +284,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.39';
+const COMPASS_CLIENT_VERSION='0.5.91.40';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -4333,6 +4334,13 @@ async function placeInDailyPlan(taskId,start,moveId=null){
 async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='next-load-more'){nextActionsVisibleLimit+=NEXT_ACTIONS_BATCH;render();return;}
  if(action==='smart-tape-region'){if(BODY_MEASUREMENT_REGIONS.some(x=>x.id===id)){smartTapeRegion=id;render();requestAnimationFrame(()=>app.querySelector('#bm918-detail')?.scrollIntoView?.({behavior:'smooth',block:'nearest'}));}return;}
+ if(action==='smart-tape-postworkout'){
+  if(!state)return toast('Bitte zuerst den Tresor entsperren.',true);
+  try{const next=!(getTapeWorkoutContext140(state,id)?.postWorkout===true);
+   await mutate(s=>setTapeWorkoutContext140(s,id,next));
+   toast(next?'Messung als nach dem Workout markiert.':'Workout-Markierung entfernt.');
+  }catch(ex){toast('Messbedingung nicht gespeichert: '+ex.message,true);}return;
+ }
  if(action==='smart-tape-import'){tab='system';calmNavGroup='';render();requestAnimationFrame(()=>app.querySelector('#smart-import-hub')?.scrollIntoView?.({behavior:'smooth',block:'start'}));return;}
 
  if(action==='tr919-create'){
