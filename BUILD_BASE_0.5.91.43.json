@@ -1,0 +1,30 @@
+{
+  "version": "0.5.91.43",
+  "baselineVersion": "0.5.91.42",
+  "source": "Compass_Life_0.5.91.42_ACTIVE_VTAPER_COACH_FULL_SOURCE.zip",
+  "features": [
+    "same-model-overlaid-body-outline",
+    "visible-actual-difference-bands",
+    "explicit-fivefold-difference-mode",
+    "full-body-toggle-and-cm-callouts",
+    "yesterday-dark-red-muscle-map",
+    "vtaper-upper-body-movement-rotation",
+    "chest-biceps-triceps-available-in-home-coach",
+    "lower-body-maintenance-rather-than-daily-priority",
+    "stronglifts-mode-preserved"
+  ],
+  "tests": {
+    "passed": 2233,
+    "inherited_failures": 66,
+    "new_failures": 0,
+    "deploy_tests_passed": 33
+  },
+  "gitRepoWritten": false,
+  "caveats": [
+    "Circumference to frontal width requires anatomical assumptions; no precise 3D scan",
+    "Fivefold difference mode is visually amplified, NOT to scale",
+    "Training selection is an evidence-informed heuristic, not clinical recovery assessment",
+    "Vite production build requires installed npm dependencies in GitHub Actions",
+    "No personal vault data included"
+  ]
+}

@@ -31,7 +31,7 @@ test('A guided workout spanning midnight contributes confirmed sets to both loca
  const info=infoFor(model);
  assert.ok(info.yesterdayRegions.includes('deltoid_rear'));
  assert.ok(info.todayRegions.includes('biceps'));
- assert.equal(premiumMuscleHighlight125(info,'deltoid_rear').fill,'#bc7474');
+ assert.equal(premiumMuscleHighlight125(info,'deltoid_rear').fill,'#a63e53');
  assert.equal(premiumMuscleHighlight125(info,'biceps').fill,'#ed4b42');
  assert.deepEqual(session,saved,'Rendering must not mutate workout timestamps');
 });

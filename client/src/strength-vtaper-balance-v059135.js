@@ -48,21 +48,31 @@ export function effectiveShoulderLoad135(events,today){
 }
 const HOME_BASE=Object.freeze([
  'dumbbell-row','dumbbell-lateral-raise','reverse-fly','dumbbell-pullover',
- 'goblet-squat','dumbbell-romanian-deadlift','ab-wheel-kneeling',
- 'dumbbell-floor-press','dumbbell-shoulder-press','calf-raise'
+ 'ab-wheel-kneeling','dumbbell-floor-press','pushup','incline-pushup','decline-pushup',
+ 'biceps-curl','hammer-curl','triceps-extension','skullcrusher','dumbbell-shoulder-press',
+ 'goblet-squat','dumbbell-romanian-deadlift','calf-raise'
 ]);
 const HOME_CABLE=Object.freeze(['lat-pulldown','cable-straight-arm-pulldown','face-pull','cable-rear-delt-fly','cable-lateral-raise','cable-single-arm-row']);
 const GYM_BASE=Object.freeze(['lat-pulldown','cable-lateral-raise','cable-rear-delt-fly','cable-single-arm-row',
- 'face-pull','cable-straight-arm-pulldown','squat','cable-crunch','bench']);
+ 'face-pull','cable-straight-arm-pulldown','bench','biceps-curl','hammer-curl',
+ 'triceps-pushdown','chest-fly','cable-crunch','squat','dumbbell-romanian-deadlift']);
 const WEIGHT=Object.freeze({
  'dumbbell-row':12,'dumbbell-lateral-raise':12,'reverse-fly':12,'dumbbell-pullover':9,
- 'goblet-squat':10,'dumbbell-romanian-deadlift':9,'ab-wheel-kneeling':8,
- 'dumbbell-floor-press':8,'dumbbell-shoulder-press':4,'calf-raise':5,
+ 'goblet-squat':4,'dumbbell-romanian-deadlift':4,'ab-wheel-kneeling':9,
+ 'dumbbell-floor-press':11,'pushup':10,'incline-pushup':8,'decline-pushup':9,
+ 'biceps-curl':9,'hammer-curl':9,'triceps-extension':9,'skullcrusher':8,'triceps-pushdown':9,'chest-fly':9,
+ 'dumbbell-shoulder-press':5,'calf-raise':0,
  'lat-pulldown':12,'cable-straight-arm-pulldown':9,'face-pull':12,'cable-rear-delt-fly':12,
  'cable-lateral-raise':12,'cable-single-arm-row':11,'assisted-pullup':11,
- 'squat':9,'cable-crunch':8,'bench':7
+ 'squat':4,'cable-crunch':9,'bench':10
 });
-const VOLUME_MIN=Object.freeze({back:7,quads:4,posterior:4,chest:3,core:3,calves:2});
+/* Per seven days: programming priorities, not clinical muscle-growth requirements.
+ * Cycling is a valuable leg-endurance stimulus, but it is NOT inferred here as
+ * equivalent to strength sets. Legs get a small maintenance slot if overdue. */
+export const VTAPER_WEEKLY_FOCUS_143=Object.freeze({back:9,shoulders:8,chest:6,biceps:4,triceps:4,core:5,quads:3,posterior:3,calves:0});
+const VOLUME_MIN=VTAPER_WEEKLY_FOCUS_143;
+const UPPER_143=new Set(['back','shoulders','chest','biceps','triceps']);
+const LOWER_143=new Set(['quads','posterior','glutes','calves']);
 const REPS_COST=Object.freeze({'dumbbell-lateral-raise':3,'reverse-fly':3,'face-pull':3,'cable-rear-delt-fly':3,'cable-lateral-raise':3});
 const SHOULDER_ISOLATION=new Set(['dumbbell-lateral-raise','reverse-fly','face-pull','cable-rear-delt-fly','cable-lateral-raise']);
 const OVERHEAD=new Set(['dumbbell-shoulder-press']);
@@ -87,6 +97,18 @@ export function selectVtaperExercises135({history={},today,place='home',minutes=
  const last=history.last||{},candidates=vtaperCandidates135(place,attachments);
  const max=minutes===25?3:minutes===45?5:6;
  const selected=[];const groups={};let shoulderIsolation=0;
+ const direct7=Object.fromEntries(Object.keys(VOLUME_MIN).map(k=>[k,0]));
+ for(const e of history.valid||[]){const age=dayGap(e?.day,today);
+  const g=catalog?.get(e?.exerciseId)?.primary;
+  if(age!==null&&age<=6&&g&&g in direct7&&Number(e?.reps)>0)direct7[g]++;
+ }
+ const directNew={...direct7};
+ const lowerExposure=(direct7.quads||0)+(direct7.posterior||0)+(direct7.glutes||0);
+ const lowerDue=(history.valid||[]).length>=6&&lowerExposure<3 &&
+  (['quads','posterior','glutes'].every(g=>lastAge(last[g],today)===null||lastAge(last[g],today)>=5));
+ const minUpper=minutes===25?2:Math.ceil(max*.6);
+ const chosenUpper=()=>selected.filter(x=>UPPER_143.has(catalog?.get(x)?.primary)).length;
+ const focus={upper:'Latissimus, 3D-Schultern, Brust und Arme zuerst',lower:'Beine als Erhaltung statt täglicher Schwerpunkt; Radfahren bleibt separates Ausdauertraining',core:'Rumpf regelmäßig, keine lokale Bauchfettverbrennung'};
  // Rank repeatedly with virtual reservations so two candidate exercises do
  // not unknowingly consume the same remaining shoulder-head budget.
  while(selected.length<max){
@@ -97,12 +119,33 @@ export function selectVtaperExercises135({history={},today,place='home',minutes=
    if(pain&&OVERHEAD.has(id))continue;
    const item=catalog?.get(id);const primary=item?.primary||'back';
    if((groups[primary]||0)>=(minutes===25?1:2))continue;
+   // For 25 minutes reserve two out of three positions for the upper body.
+   // Retain a fallback to core/legs if safety or equipment rules leave no upper candidate.
+   const upper=UPPER_143.has(primary),lower=LOWER_143.has(primary);
+   if(lower&&(groups.quads||0)+(groups.posterior||0)+(groups.calves||0)+(groups.glutes||0)>=1)continue;
+   if(lower&&primary==='calves')continue; // direct calves are optional, not a V goal
+   if(lower&&!lowerDue&&minutes===25)continue;
+   if(!upper&&chosenUpper()+Math.max(0,max-selected.length-1)<minUpper)continue;
    if(SHOULDER_ISOLATION.has(id)&&shoulderIsolation>=(minutes===25?2:3))continue;
    const head=regionFor(id),contribution=shoulderContribution135(id),hasPrimaryHead=Boolean(head);
    if(hasPrimaryHead&&volume[head]>=SHOULDER_TARGETS_135[head].softMaximum)continue;
    // Avoid excessive front-delt pressing when indirect pressing already exists.
    if(head==='anterior'&&(volume.anterior>=4||healthAttention||pain))continue;
-   let score=WEIGHT[id]||6;
+   let score=WEIGHT[id]??6;
+   const focusDeficit=(VOLUME_MIN[primary]??3)-(directNew[primary]??0);
+   // Exposure deficit drives rotation. Do not repeatedly prescribe legs while
+   // chest, biceps, triceps or back have received far less direct work.
+   if(upper)score+=4+Math.max(-6,Math.min(8,focusDeficit*.8));
+   if(primary==='core')score+=Math.max(-4,Math.min(7,focusDeficit));
+   if(lower)score-=10;
+   if(lower&&lowerDue&&selected.length>=2&&chosenUpper()>=minUpper&&(directNew.core||0)>=3)score+=27;
+   const exerciseRecent=(history.valid||[]).filter(e=>e.exerciseId===id&&(dayGap(e.day,today)??99)<7).length;
+   score-=Math.min(6,exerciseRecent*.65);
+   // Encourage an alternating upper-body emphasis rather than repeating the
+   // same exact movement the next day without enough recovery information.
+   const sameExerciseLast=(history.valid||[]).filter(e=>e.exerciseId===id).reduce((d,e)=>!d||e.day>d?e.day:d,null);
+   const sameAge=dayGap(sameExerciseLast,today);
+   if(sameAge===0)score-=15;else if(sameAge===1)score-=8;
    if(hasPrimaryHead){
     const target=SHOULDER_TARGETS_135[head];
     score+=(target.minimum-volume[head])*1.7;
@@ -115,7 +158,10 @@ export function selectVtaperExercises135({history={},today,place='home',minutes=
     score+=Math.max(-5,Math.min(7,missing*1.1));
    }
    const age=lastAge(last[primary],today);
-   score-=(age===0?12:age===1?6:age===2?2:0);
+   // Front/lateral/rear delts need distinct recent-load histories.
+   const lastHeadAge=head?lastAge(shoulder.last[head],today):null;
+   const agePenalty=head&&lastHeadAge===null?0:(age===0?12:age===1?6:age===2?2:0);
+   score-=agePenalty;
    if(id==='dumbbell-shoulder-press'&&healthAttention)score-=8;
    if((groups[primary]||0)>0)score-=8;
    // Goal: three distinct movement patterns in 25 minutes, not three shoulder
@@ -132,8 +178,9 @@ export function selectVtaperExercises135({history={},today,place='home',minutes=
   if(SHOULDER_ISOLATION.has(best.id))shoulderIsolation++;
   for(const head of Object.keys(volume))volume[head]+=best.contribution[head]*3;
   groupCounts[best.primary]=(groupCounts[best.primary]||0)+3;
+  directNew[best.primary]=(directNew[best.primary]||0)+3;
  }
- return {ids:selected,shoulder,projected:volume,method:'Set-basierte Heuristik: drei Übungen in 25 Minuten; seitliche/hintere Schulter, Rücken und übrige Regionen nach dokumentierter Vorbelastung. Keine RIR- oder Laständerung.'};
+ return {ids:selected,shoulder,projected:volume,weeklyDirect:direct7,focus,lowerDue,upperChosen:chosenUpper(),method:'Oberkörper-Priorität: mindestens zwei von drei Übungen für Lat/Schultern/Brust/Arme; Bauch regelmäßig; Beine gelegentlich als Kraft-Erhaltungsreiz. Rotiert nach bestätigten Sätzen und zeitlicher Nähe. Radfahren zählt nicht als Kraftsatz. Keine RIR- oder Laständerung.'};
 }
 /** Do not exceed an already almost-full head target after the daily selection. */
 export function capShoulderSets135({id,baseSets,shoulder}={}){

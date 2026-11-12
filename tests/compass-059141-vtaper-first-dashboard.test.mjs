@@ -50,9 +50,9 @@ test('dashboard does not change source data or silently correct post-workout cm'
 test('app mounts the score-free overview FIRST, then original Fitdays/Smart Tape and body transformation',()=>{
  const main=readFileSync(new URL('../client/src/main-full-v57759402510.js',import.meta.url),'utf8');
  const body=main.slice(main.indexOf("insightTab==='body'?vtaperOverviewHtml141("));
- assert.ok(body.startsWith("insightTab==='body'?vtaperOverviewHtml141(vtaperOverviewModel141(bodyOverviewTapeModel,bodyTransformModel))+fitdaysInterpretationView"));
+ assert.ok(body.startsWith("insightTab==='body'?vtaperOverviewHtml141(vtaperOverviewModel141(bodyOverviewTapeModel,bodyTransformModel,{heightCm:bodyHeightCm}))+fitdaysInterpretationView"));
  assert.ok(body.indexOf('vtaperOverviewHtml141')<body.indexOf('fitdaysInterpretationView'));
  assert.ok(body.indexOf('fitdaysInterpretationView')<body.indexOf('bodyTransformationView'));
  assert.ok(body.indexOf('bodyTransformationView')<body.indexOf('healthBodyView'));
- const release=readFileSync(new URL('../client/src/compass-release-v57759402519.js',import.meta.url),'utf8');assert.match(release,/0\.5\.91\.42/);
+ const release=readFileSync(new URL('../client/src/compass-release-v57759402519.js',import.meta.url),'utf8');assert.match(release,/0\.5\.91\.43/);
 });

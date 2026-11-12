@@ -2,7 +2,7 @@
  * Read-only: real matched Smart Tape sessions + observed Fitdays/training/nutrition.
  * No synthetic percent target, growth claim or automatic exercise prescription.
  */
-import {modelledFrontWidthCm} from './body-proportions-v059120.js';
+import {vtaperOverlayPanel143} from './vtaper-overlay-v059143.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=v=>typeof v==='number'&&Number.isFinite(v);
@@ -34,7 +34,7 @@ const pct=(previous,latest)=>finite(previous)&&finite(latest)&&previous>0?rounde
 const get=(values,id)=>finite(values?.[id])?values[id]:null;
 const avg=(values,ids)=>ids.every(id=>finite(values?.[id]))?ids.reduce((x,id)=>x+values[id],0)/ids.length:null;
 
-export function vtaperOverviewModel141(tapeModel,transformation=null){
+export function vtaperOverviewModel141(tapeModel,transformation=null,{heightCm=null}={}){
  const sessions=vtaperTapeCheckins141(tapeModel);
  const latest=sessions.at(-1)||null;
  const first=sessions.length>1?[...sessions].reverse().find(x=>x.day!==latest.day)||null:null;
@@ -61,31 +61,11 @@ export function vtaperOverviewModel141(tapeModel,transformation=null){
   {id:'arms',label:'Oberarme Ø',goal:'up',change:comparable?delta(avg(v0,['leftUpperArm','rightUpperArm']),avg(v1,['leftUpperArm','rightUpperArm'])):null,first:avg(v0,['leftUpperArm','rightUpperArm']),last:avg(v1,['leftUpperArm','rightUpperArm']),pumpPossible:unknownPump||pump&&Boolean((lastFlag?.possiblePumpRegions||[]).some(id=>id.endsWith('UpperArm'))||(baseFlag?.possiblePumpRegions||[]).some(id=>id.endsWith('UpperArm')))}
  ];
  const weight=transformation?.weight||null,fat=transformation?.fat||null,c=transformation?.sourceCounts||{};
- return {sessions,first:comparable?first:null,latest,comparable,ratioFirst:ratio0,ratioLatest:ratio1,ratioDelta,ratioPct,
+ return {sessions,first:comparable?first:null,latest,heightCm,comparable,ratioFirst:ratio0,ratioLatest:ratio1,ratioDelta,ratioPct,
   direction,lowConfidence,pump,relatedPump,measures,weight:{last:weight?.last?.value??null,delta:weight?.delta??null,days:weight?.count??0},
   fat:{last:fat?.last?.value??null,delta:fat?.delta??null,days:fat?.count??0},
   trainingDays:c.strength??0,sets:c.sets??0,proteinDays:c.protein??0,kcalDays:c.kcal??0,
   proteinPartial:c.proteinPartial??0,period:transformation?.range??'90',source:'read-only-observed-measurements'};
-}
-function silhouette141(snapshot,{variant='current'}={}){
- if(!snapshot)return '<div class="vt141-no-body">Noch keine vollständige Smart-Tape-Messung</div>';
- const v=snapshot.values;
- // An elliptical-depth approximation, not a reconstructed photograph/3D scan.
- const half=(key,depth,fallback)=>Math.max(16,Math.min(79,(modelledFrontWidthCm(get(v,key),depth)||fallback)*1.35));
- const shoulder=half('shoulder',.55,43),chest=half('chest',.68,39),waist=half('waist',.70,34),hip=half('hip',.78,38);
- const center=102,x=n=>Number(n).toFixed(1);
- const torso=`M ${x(center-shoulder)} 66 Q ${x(center-chest)} 85 ${x(center-chest)} 106 Q ${x(center-waist)} 127 ${x(center-waist)} 149 Q ${x(center-hip)} 171 ${x(center-hip)} 188 L ${x(center+hip)} 188 Q ${x(center+hip)} 171 ${x(center+waist)} 149 Q ${x(center+waist)} 127 ${x(center+chest)} 106 Q ${x(center+chest)} 85 ${x(center+shoulder)} 66 Z`;
- const skin=variant==='previous'?'#9faeb4':'#dcc594';
- const shadow=variant==='previous'?'#67798a':'#a68244';
- return `<svg class="vt141-figure-svg" viewBox="0 0 204 232" role="img" aria-label="Modellierte Körpersilhouette aus Schultern ${display(v.shoulder)} cm, Taille ${display(v.waist)} cm am ${fmtDay(snapshot.day)}; angenommene Querschnittstiefen, keine tatsächliche Fotografie">
-  <ellipse cx="102" cy="31" rx="20" ry="25" fill="${skin}" opacity=".8"/>
-  <rect x="91" y="52" width="22" height="19" rx="5" fill="${shadow}" opacity=".9"/>
-  <path d="${torso}" fill="${skin}" stroke="${shadow}" stroke-width="2"/>
-  <path d="M ${x(center-shoulder)} 66 L ${x(center-shoulder-12)} 151 Q ${x(center-shoulder-6)} 157 ${x(center-shoulder+3)} 148 L ${x(center-shoulder+13)} 91 M ${x(center+shoulder)} 66 L ${x(center+shoulder+12)} 151 Q ${x(center+shoulder+6)} 157 ${x(center+shoulder-3)} 148 L ${x(center+shoulder-13)} 91" fill="none" stroke="${skin}" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>
-  <path d="M ${x(center-hip+15)} 189 L ${x(center-hip+21)} 220 M ${x(center+hip-15)} 189 L ${x(center+hip-21)} 220" fill="none" stroke="${skin}" stroke-width="18" stroke-linecap="round"/>
-  <line x1="${x(center-shoulder)}" y1="66" x2="${x(center+shoulder)}" y2="66" stroke="#f8e4a7" stroke-width="2.5" stroke-dasharray="5 3"/>
-  <line x1="${x(center-waist)}" y1="149" x2="${x(center+waist)}" y2="149" stroke="#65d0c0" stroke-width="2.5" stroke-dasharray="5 3"/>
-  </svg>`;
 }
 function evidenceTone141(row){
  if(!finite(row?.change))return {cls:'missing',label:'Noch kein Vergleich'};
@@ -130,13 +110,8 @@ export function vtaperOverviewHtml141(m){
    </div>
    <div class="vt141-compare" aria-label="Vorher-Nachher-Vergleich auf Basis echter Smart-Tape-Umfänge">
     <div class="vt141-compare-head"><strong>Deine Silhouette</strong><small>Modellierte Proportionen</small></div>
-    <div class="vt141-figures">
-     <figure><div class="vt141-silhouette previous">${silhouette141(first,{variant:'previous'})}</div><figcaption>${first?'Vorher':'Noch kein Vorher'}<small>${fmtDay(first?.day)}</small></figcaption></figure>
-     <span class="vt141-compare-arrow" aria-hidden="true">→</span>
-     <figure><div class="vt141-silhouette current">${silhouette141(last)}</div><figcaption>Aktuell<small>${fmtDay(last?.day)}</small></figcaption></figure>
-    </div>
-    <p class="vt141-compare-foot">Gleiche Silhouetten-Skala; aus Umfängen mit angenommenen Querschnittstiefen modelliert, kein Körperscan. Gold = Schulter, Türkis = Taille.</p>
-   </div>
+    ${vtaperOverlayPanel143(first,last,{heightCm:m.heightCm,pump:m.pump})}
+      </div>
   </div>
   <div class="vt141-lower"><div class="vt141-changes"><div class="vt141-section-title"><strong>Was hat sich verändert?</strong><small>Letzte zwei Check-ins</small></div><div class="vt141-changes-grid">${m.measures.map(metric141).join('')}</div></div>
    <div class="vt141-effort"><div class="vt141-section-title"><strong>Deine Beständigkeit</strong><small>Beobachtete Daten · kein Ziel-Score</small></div><div class="vt141-effort-grid">${cards.map(c=>`<div><small>${esc(c.label)}</small><strong>${esc(c.value)}</strong><span>${esc(c.detail)}</span></div>`).join('')}</div></div></div>

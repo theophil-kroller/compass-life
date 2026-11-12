@@ -95,3 +95,5 @@
 .str135-heads span,.str135-shoulder-balance small,.str135-equipment-future small{font-size:11px;color:#536775;line-height:1.5}
 .str135-equipment-future label{display:flex;align-items:flex-start;gap:8px;padding:7px 0;line-height:1.4}
 .str135-equipment-future input[type=checkbox]{flex:none;margin-top:2px}
+
+.str143-focus-note{font-size:12px;line-height:1.5;border-left:3px solid #4f9688;padding:8px 12px;margin:8px 0 12px;background:rgba(78,151,137,.09);border-radius:8px}.str143-focus-note strong{color:inherit}

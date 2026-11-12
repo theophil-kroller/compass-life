@@ -58,7 +58,7 @@ test('A set from yesterday is muted red today, without silently rewriting its da
  const model={today:'2026-11-08',sessions:[{day:'2026-11-07',sets:[{exerciseId:'reverse-fly',reps:10}]}]};
  const svg=premiumStrengthSvg(model,'back','roles',{rides:0},'strength');
  const info=JSON.parse(svg.match(/data-anatomy-info="([^"]+)"/)[1].replaceAll('&quot;','"'));
- assert.equal(premiumMuscleHighlight125(info,'deltoid_rear').fill,'#bc7474');
+ assert.equal(premiumMuscleHighlight125(info,'deltoid_rear').fill,'#a63e53');
  assert.ok(!info.todayRegions.includes('deltoid_rear'));
 });
 

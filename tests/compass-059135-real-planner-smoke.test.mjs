@@ -37,12 +37,14 @@ try{result=JSON.parse(proc.stdout.trim());}catch{}
 test('real Coach imports through unchanged module graph and executes planning',()=>{
  assert.equal(proc.status,0,error);assert.ok(result?.days?.length===8,error);
 });
-test('eight actual 25 minute sessions balance posterior and lateral shoulders with back, legs and calf',()=>{
+test('eight actual 25-minute sessions prioritize shoulders, back, chest, arms and retain some lower-body maintenance',()=>{
  assert.equal(proc.status,0,error);
  assert.equal(result.planningReadOnly,true);
  assert.ok(result.days.every(d=>d.ids.length<=3&&d.minutes<=25));
  const ids=result.days.flatMap(d=>d.ids);
- for(const id of ['dumbbell-lateral-raise','reverse-fly','dumbbell-row','goblet-squat','calf-raise'])assert.ok(ids.includes(id),id);
+ for(const id of ['dumbbell-lateral-raise','reverse-fly','dumbbell-row','goblet-squat','dumbbell-floor-press','biceps-curl','triceps-extension'])assert.ok(ids.includes(id),id);
+ const lower=ids.filter(id=>['goblet-squat','dumbbell-romanian-deadlift','calf-raise'].includes(id));
+ assert.ok(lower.length<=3,'Leg work should be maintenance, not the main focus');
  assert.ok(!ids.includes('dumbbell-front-raise'));
  assert.ok(!ids.some(id=>id.startsWith('cable-')));
 });

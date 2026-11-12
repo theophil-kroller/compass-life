@@ -60,7 +60,7 @@ test('yesterday muscles are muted red, current primary is red, current stabilize
  const v=svgFromModel(dataModel());
  await mountPremiumAnatomy(v.root,async()=>atlas);
  assert.equal(findFill(v.svg,'Quadrizeps'),'#ed4b42');
- assert.equal(findFill(v.svg,'Bizeps'),'#bc7474');
+ assert.equal(findFill(v.svg,'Bizeps'),'#a63e53');
  assert.equal(findFill(v.svg,'Vorderer Schienbeinmuskel (Tibialis anterior)'),STABILIZER_COLOR_122);
 });
 test('older-than-seven-day muscles do not get misleading orange/color highlights',async()=>{
