@@ -1,0 +1,27 @@
+{
+  "version": "0.5.91.42",
+  "baselineVersion": "0.5.91.41",
+  "source": "Compass_Life_0.5.91.41_VTAPER_DASHBOARD_MUSCLE_PROGRESSION_MOTIVATION_FULL_SOURCE.zip",
+  "features": [
+    "proactive-equipment-aware-weight-trial-on-high-reserve",
+    "repeat-top-rep-load-trial-without-inventing-rir",
+    "recovery-pain-deload-challenge-gates",
+    "confirmed-sets-only-no-auto-confirm",
+    "grouped-exercise-strength-progression",
+    "initial-to-latest-exercise-progress-context",
+    "workout-preview-challenge-persistence"
+  ],
+  "tests": {
+    "passed": 2226,
+    "inherited_failures": 66,
+    "new_failures": 0,
+    "deploy_tests_passed": 33
+  },
+  "gitRepoWritten": false,
+  "caveats": [
+    "No live user data included",
+    "Production Vite bundle build requires GitHub Actions dependencies",
+    "Load trial never auto-confirms a set",
+    "No guaranteed measurable physique change after 21 days"
+  ]
+}

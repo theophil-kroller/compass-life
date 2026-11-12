@@ -76,16 +76,42 @@ function sparkline(ex){
  const label=`Verlauf über ${points.length} Trainingstage; ${hasLoad?'dokumentierte Arbeitsgewichte':'Wiederholungen ohne dokumentiertes Zusatzgewicht'}`;
  return `<svg viewBox="0 0 240 70" class="str141-spark" role="img" aria-label="${esc(label)}"><line x1="10" y1="57" x2="230" y2="57" stroke="#7993ac" opacity=".35"/><polyline fill="none" stroke="#8de2ce" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" points="${coords}"/>${dots}</svg>`;
 }
+const PROGRESSION_GROUPS_142=[
+ {id:'shoulders',name:'Schultern',ids:['deltoid_front','deltoid_side','deltoid_rear','trapezius_upper']},
+ {id:'core',name:'Bauch & Rumpf',ids:['rectus_abdominis','obliques']},
+ {id:'back',name:'Rücken',ids:['latissimus','rhomboids','trapezius_mid','erector_spinae']},
+ {id:'lower',name:'Unterkörper',ids:['glute_max','glute_med','quadriceps','adductors','hamstrings','calves_gastro','calves_soleus','tibialis']},
+ {id:'other',name:'Brust & Arme',ids:[]}
+];
+export function progressionGroup142(exerciseId){
+ const primary=EXERCISE_ANATOMY[exerciseId]?.primary||[];
+ // Stable, non-duplicated grouping uses the PRIMARY muscle role only.
+ return PROGRESSION_GROUPS_142.find(group=>group.id!=='other'&&primary.some(id=>group.ids.includes(id)))?.id||'other';
+}
+function baselineLabel142(ex){
+ const first=ex.sessions[0],last=ex.latest;
+ if(ex.sessions.length<2)return 'Erste dokumentierte Einheit';
+ if(first.kg!==null&&last.kg!==null){
+  const d=Math.round((last.kg-first.kg)*100)/100;
+  if(d>0)return `Seit Beginn +${num(d)} kg Arbeitslast${last.reps!==null&&first.reps!==null&&last.reps<first.reps?' · Wdh. geringer':''}`;
+  if(d<0)return `Seit Beginn ${num(d)} kg Arbeitslast · Belastung prüfen`;
+  if(last.reps!==null&&first.reps!==null&&last.reps>first.reps)return `Seit Beginn +${last.reps-first.reps} Wdh. bei gleicher Last`;
+ }
+ return 'Seit Beginn keine vergleichbare Steigerung';
+}
 function tile(ex){
  const last=ex.latest,unit=last.kg!==null?'kg':'Wdh.',val=last.kg!==null?last.kg:last.reps;
  const best=ex.best!==null?`Bestlast ${num(ex.best)} kg`:`${ex.sessions.length} Trainingstag(e)`;
  const compare=ex.changed>0?`+${num(ex.changed)} kg zum letzten Training`:ex.repsChanged>0?`+${ex.repsChanged} Wiederholungen bei gleicher Last`:ex.label;
- return `<article class="str141-exercise"><div class="str141-exercise-info"><strong>${esc(say(ex))}</strong>${vtaperBenefit141(ex.id)?`<p class="str141-purpose">🎯 ${esc(vtaperBenefit141(ex.id))}</p>`:''}<small>${esc(last.day)} · ${esc(last.reps!==null?`${last.reps} Wdh.`:'Wdh. unbekannt')}</small><div class="str141-last"><b>${esc(num(val))} <span>${unit}</span></b><small>${esc(best)}</small></div><span class="str141-trend ${ex.changed>0||ex.repsChanged>0?'positive':''}">${esc(compare)}</span></div>${sparkline(ex)}</article>`;
+ return `<article class="str141-exercise"><div class="str141-exercise-info"><strong>${esc(say(ex))}</strong>${vtaperBenefit141(ex.id)?`<p class="str141-purpose">🎯 ${esc(vtaperBenefit141(ex.id))}</p>`:''}<small>${esc(last.day)} · ${esc(last.reps!==null?`${last.reps} Wdh.`:'Wdh. unbekannt')}</small><div class="str141-last"><b>${esc(num(val))} <span>${unit}</span></b><small>${esc(best)}</small></div><span class="str141-trend ${ex.changed>0||ex.repsChanged>0?'positive':''}">${esc(compare)}</span><span class="str142-from-start">${esc(baselineLabel142(ex))}</span></div>${sparkline(ex)}</article>`;
 }
 export function exerciseProgressionView141(model){
  const p=exerciseProgressionModel141(model);
  const ex=p.exercises;
  if(!ex.length)return `<section class="str141-progress" aria-label="Gewichtsprogression pro Übung"><div class="str141-progress-head"><h3>Deine Kraftprogression</h3></div><p>Für die Übungskurven brauchen wir bestätigte Übungen und dokumentierte Gewichte oder Wiederholungen. Unzugeordnete Garmin-Sätze bleiben unbekannt.</p></section>`;
- const top=ex.slice(0,4),rest=ex.slice(4,24);
- return `<section class="str141-progress" aria-label="Gewichtsprogression pro Übung"><div class="str141-progress-head"><div><span class="str141-progress-kicker">STÄRKER WERDEN · TRAINING FÜR TRAINING</span><h3>Deine Kraftprogression</h3></div><small>${ex.length} Übungen mit Daten</small></div><p class="str141-progress-note">Gewichte gehören zu Übungen, nicht zu einzelnen Muskeln. Die Kurven zeigen die höchste dokumentierte Arbeitslast pro Trainingstag – bei Körpergewichtsübungen die Wiederholungen. Höhere Last bei weniger Wiederholungen ist nicht automatisch ein Kraftzuwachs.</p><div class="str141-exercise-grid">${top.map(tile).join('')}</div>${rest.length?`<details class="str141-more"><summary>Weitere ${rest.length} Übungen und ihre Fortschritte</summary><div class="str141-exercise-grid">${rest.map(tile).join('')}</div></details>`:''}</section>`;
+ const rows=PROGRESSION_GROUPS_142.map(g=>({...g,exercises:ex.filter(x=>progressionGroup142(x.id)===g.id)})).filter(g=>g.exercises.length);
+ const firstToLast=ex.filter(x=>x.sessions.length>1&&x.latest.kg!==null&&x.sessions[0].kg!==null&&x.latest.kg>x.sessions[0].kg).length;
+ const repWins=ex.filter(x=>x.sessions.length>1&&x.latest.kg===x.sessions[0].kg&&x.latest.reps!==null&&x.sessions[0].reps!==null&&x.latest.reps>x.sessions[0].reps).length;
+ const groupHtml=rows.map((g,i)=>`<details class="str142-group" ${i<3?'open':''}><summary><span>${esc(g.name)}</span><small>${g.exercises.length} ${g.exercises.length===1?'Übung':'Übungen'}</small></summary><div class="str141-exercise-grid">${g.exercises.map(tile).join('')}</div></details>`).join('');
+ return `<section class="str141-progress" aria-label="Gewichtsprogression pro Übung"><div class="str141-progress-head"><div><span class="str141-progress-kicker">STÄRKER WERDEN · TRAINING FÜR TRAINING</span><h3>Deine Kraftprogression</h3></div><small>${ex.length} Übungen mit Daten</small></div><div class="str142-highlights"><strong>${firstToLast} ${firstToLast===1?'Übung':'Übungen'} mit höherer Arbeitslast seit erster Messung</strong><span>${repWins} mit mehr Wiederholungen bei gleicher Last</span></div><p class="str141-progress-note">Trainingslast gehört zur Übung, nicht zum Muskel. Die Kurven zeigen die höchste dokumentierte Arbeitslast je Tag. Vergleich: erste vs. letzte dokumentierte Einheit; höhere Last bei weniger Wiederholungen ist nicht automatisch ein Kraftzuwachs. Jede Gruppe zeigt den Verlauf bestätigter Sätze – nicht Muskelwachstum.</p>${groupHtml}</section>`;
 }

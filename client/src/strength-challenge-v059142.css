@@ -1,0 +1,7 @@
+/* Compass 0.5.91.42 - visible, optional challenges with no controls covering sets. */
+.str142-challenge{display:flex;flex-direction:column;gap:4px;border:1px solid #c8d3bb;border-left:4px solid #4b9877;padding:8px 10px;margin:8px 0;border-radius:9px;background:#eff7f0;color:#204b3b;line-height:1.4}
+.str142-challenge strong{font-size:12px;color:#174f3b}.str142-challenge small{font-size:11px;color:#476854}
+.str142-recovery{border-left-color:#b68a50;background:#faf3e7}.str142-recovery strong,.str142-recovery small{color:#725625}
+.str142-log-rir,.str142-hold{border-left-color:#71899b;background:#f0f4f6}
+.str142-challenge.str142-log-rir strong,.str142-challenge.str142-hold strong{color:#395d77}
+.str92-tile .str142-challenge{margin:8px 0 0;padding:7px 9px}.str92-tile .str142-challenge small{display:block}

@@ -5,3 +5,11 @@
 
 /* .91.41: same exercise goal cue below its title and above load trend. */
 .str141-exercise .str141-purpose{color:#bcecd5;font-size:11px;line-height:1.42;font-weight:550;margin:4px 0 7px;max-width:45ch}
+
+/* .91.42: grouped by V-Taper relevance; readable on phone. */
+.str142-group{margin:10px 0;border:1px solid #425774;border-radius:12px;padding:0 11px 10px}
+.str142-group summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:12px 4px;font-size:13px;font-weight:760;color:#f0d6a1}
+.str142-group summary small{color:#bdcadb;font-size:11px;font-weight:400}
+.str142-group:not([open]){padding-bottom:0}.str142-group .str141-exercise-grid{margin:2px 0 4px}
+.str142-from-start{color:#c5d9ee;font-size:10px}.str142-highlights{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.str142-highlights>*{display:block;padding:8px 12px;border-radius:9px;background:#2e4b58;color:#c9f8df;font-size:12px}.str142-highlights span{background:#31425c;color:#e1e9f5}
