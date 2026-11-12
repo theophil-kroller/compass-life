@@ -1,0 +1,29 @@
+{
+  "version": "0.5.91.44",
+  "baselineVersion": "0.5.91.43",
+  "baselineArchive": "Compass_Life_0.5.91.43_OVERLAY_UPPER_BODY_COACH_FULL_SOURCE.zip",
+  "features": [
+    "vtaper-body-dashboard-nutrition-window",
+    "7-14-42-day-nutrition-averages",
+    "actual-cycle-start-for-42-day-review",
+    "estimated-energy-balance-from-existing-model",
+    "robust-fitdays-weekly-weight-trend",
+    "source-aware-protein-and-kcal-coverage",
+    "no-single-day-calorie-warning",
+    "vegetarian-food-recommendation-from-existing-catalogue",
+    "read-only-no-vault-mutation"
+  ],
+  "tests": {
+    "passed": 2240,
+    "inheritedFailures": 66,
+    "newFailures": 0,
+    "deployChecksPassed": 33
+  },
+  "caveats": [
+    "Energy expenditure and nutrient values are estimates; no direct calorimetry",
+    "Daily quantified values do not establish complete intake tracking",
+    "No automatic energy-target or workout modifications",
+    "Vite local compilation unavailable; GitHub Actions must confirm deploy",
+    "No user vault data included"
+  ]
+}

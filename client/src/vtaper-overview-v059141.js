@@ -3,6 +3,7 @@
  * No synthetic percent target, growth claim or automatic exercise prescription.
  */
 import {vtaperOverlayPanel143} from './vtaper-overlay-v059143.js';
+import {vtaperNutritionHtml144} from './vtaper-nutrition-coach-v059144.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=v=>typeof v==='number'&&Number.isFinite(v);
@@ -86,7 +87,7 @@ function metric141(m){
  const directionIcon=finite(m.change)?m.change>0?'↗':m.change<0?'↘':'→':'–';
  return `<div class="vt141-change ${tone.cls}"><div><strong>${esc(m.label)}</strong><small>${esc(tone.label)}</small></div><span>${finite(m.change)?`${directionIcon} ${esc(diff(m.change))} cm`:'–'}</span></div>`;
 }
-export function vtaperOverviewHtml141(m){
+export function vtaperOverviewHtml141(m,{nutrition=null}={}){
  const word=headline(m),first=m.first,last=m.latest;
  const change=finite(m.ratioPct)?`${diff(m.ratioPct,2)} %`:'–';
  const ratio=finite(m.ratioLatest)?display(m.ratioLatest,3):'–';
@@ -115,6 +116,7 @@ export function vtaperOverviewHtml141(m){
   </div>
   <div class="vt141-lower"><div class="vt141-changes"><div class="vt141-section-title"><strong>Was hat sich verändert?</strong><small>Letzte zwei Check-ins</small></div><div class="vt141-changes-grid">${m.measures.map(metric141).join('')}</div></div>
    <div class="vt141-effort"><div class="vt141-section-title"><strong>Deine Beständigkeit</strong><small>Beobachtete Daten · kein Ziel-Score</small></div><div class="vt141-effort-grid">${cards.map(c=>`<div><small>${esc(c.label)}</small><strong>${esc(c.value)}</strong><span>${esc(c.detail)}</span></div>`).join('')}</div></div></div>
+  ${nutrition?vtaperNutritionHtml144(nutrition):''}
   <footer class="vt141-footer"><span aria-hidden="true">✦</span> <strong>Nächster Schritt:</strong> ${m.comparable?'Weiter regelmäßig morgens wiegen und wöchentlich vor dem Training messen. Erst nach weiteren vergleichbaren Check-ins sollte der Coach den längerfristigen Körperformtrend zur Trainingsplanung heranziehen.':'Smart-Tape-Umfänge wöchentlich erfassen; dann erscheint hier automatisch der erste Vorher-nachher-Vergleich.'} <span class="vt141-footer-detail">↓ Alle bisherigen Messwerte, Muskelgrafiken und Detailanalysen folgen darunter.</span></footer>
  </section>`;
 }

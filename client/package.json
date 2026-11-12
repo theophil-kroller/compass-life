@@ -1,7 +1,7 @@
 {
   "name": "@compass/client",
   "private": true,
-  "version": "0.5.91.43",
+  "version": "0.5.91.44",
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.fullsource.config.js --host 127.0.0.1",
