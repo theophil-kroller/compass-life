@@ -1,0 +1,20 @@
+{
+  "version": "0.5.91.45",
+  "baselineVersion": "0.5.91.44",
+  "baselineArchive": "Compass_Life_0.5.91.44_VTAPER_NUTRITION_COACH_FULL_SOURCE.zip",
+  "features": [
+    "four-concrete-protein-menu-cards-and-three-more",
+    "verified-existing-vegetarian-food-menu-ids",
+    "portion-specific-macros-from-nutrient-entry",
+    "diverse-dairy-vegan-shake-and-soy-snack-options",
+    "selected-7-14-42-day-context",
+    "readonly-no-auto-food-logging"
+  ],
+  "checks": {"deploymentTestsPassed":33,"targetedTestsPassed":19},
+  "caveats": [
+    "Some nutrition values are estimates from user-supplied labels or food proxies",
+    "Historic average calorie room is not today's remaining calorie allowance",
+    "Full regression rerun timed out; previous run differed from baseline by one now-fixed outdated version test",
+    "GitHub Actions must validate Vite production build"
+  ]
+}

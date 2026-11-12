@@ -48,19 +48,47 @@ export function vtaperWeightTrend144(rows,days){
  slopes.sort((a,b)=>a-b);const m=Math.floor(slopes.length/2);
  return {kgPerWeek:round(slopes.length%2?slopes[m]:(slopes[m-1]+slopes[m])/2,2),days:rows.length,spanDays:gap(rows[0].day,rows.at(-1).day),method:'robuster Median der Gewichtstrends'};
 }
-function suggestion(state,needed){
- const byId=new Map(nutritionFoods(state).map(f=>[f.id,f]));
- const options=[
-  {id:'ehrmann-high-protein-skyr-natural-450g',amount:'250 g',label:'250 g High-Protein-Skyr'},
-  {id:'alpro-plant-protein-vanilla-pudding-200g',amount:'1 Becher (200 g)',label:'Alpro Plant Protein Vanille, 200 g'},
-  {id:'milsani-skyr-maracuja-150g',amount:'2 Becher (300 g)',label:'2 Becher Milsani Skyr Maracuja'}
- ];
- for(const option of options){
-  const food=byId.get(option.id);if(!food)continue;
-  const n=nutrientEntry(food,{foodId:option.id,amount:option.amount});
-  if(finite(n.values.protein)&&n.values.protein>=10&&finite(n.values.kcal))return {...option,protein:round(n.values.protein,1),kcal:round(n.values.kcal),needed:round(needed)};
+/** 0.5.91.45 · Concrete vegetarian menu products with computed, portion-specific
+ * kcal and protein. No inventory assumption; this is a suggestion, never a log.
+ * All names and numeric values come from the existing Compass food catalog.
+ */
+const PROTEIN_MENU_CANDIDATES_145=Object.freeze([
+ {id:'bio-magertopfen-250g',amount:'1 Becher (250 g)',kind:'Milchprodukt'},
+ {id:'spar-freefrom-bio-skyr-250g',amount:'1 Becher (250 g)',kind:'Milchprodukt'},
+ {id:'ehrmann-high-protein-skyr-natural-450g',amount:'250 g',kind:'Milchprodukt'},
+ {id:'milsani-skyr-maracuja-150g',amount:'2 Becher (300 g)',kind:'Milchprodukt'},
+ {id:'ironmaxx-vegan-protein-shake-mixed-berries',amount:'1 Glas (30 g Pulver + 300 ml Wasser)',kind:'Shake · pflanzlich'},
+ {id:'alpro-plant-protein-vanilla-pudding-200g',amount:'1 Becher (200 g)',kind:'Snack · pflanzlich'},
+ {id:'alpro-plant-protein-chocolate-pudding-200g',amount:'1 Becher (200 g)',kind:'Snack · pflanzlich'}
+]);
+/** Returns only existing, quantified, substantial protein choices.
+ * Caller-supplied 'budget' refers to an average, NOT today's available kcal.
+ */
+export function vtaperProteinOptions145(state,{needed=null,budget=null}={}){
+ const foods=new Map(nutritionFoods(state).map(f=>[f.id,f]));
+ const rows=[];
+ for(const candidate of PROTEIN_MENU_CANDIDATES_145){
+  const food=foods.get(candidate.id);if(!food)continue;
+  const result=nutrientEntry(food,{foodId:candidate.id,amount:candidate.amount});
+  const protein=result.values.protein,kcal=result.values.kcal;
+  if(!finite(protein)||!finite(kcal)||protein<12||kcal<=0||kcal>450)continue;
+  rows.push({id:candidate.id,title:food.title,emoji:food.emoji||'🥣',amount:candidate.amount,kind:candidate.kind,
+   protein:round(protein,1),kcal:round(kcal),proteinPer100Kcal:round(protein/kcal*100,1),
+   estimatedProtein:result.estimatedKeys.has('protein')||result.partialKeys.has('protein'),
+   estimatedKcal:result.estimatedKeys.has('kcal')||result.partialKeys.has('kcal'),
+   fitsAverageBudget:finite(budget)?kcal<=budget:null,
+   gapCoverage:finite(needed)&&needed>0?round(Math.min(protein,needed),1):null});
  }
- return null;
+ // First four contain diverse genuine options, not four almost identical dairy brands.
+ const byDensity=(a,b)=>b.proteinPer100Kcal-a.proteinPer100Kcal||b.protein-a.protein;
+ const dairy=rows.filter(r=>r.kind==='Milchprodukt').sort(byDensity);
+ const shake=rows.filter(r=>r.kind.startsWith('Shake')).sort(byDensity);
+ const plant=rows.filter(r=>r.kind.startsWith('Snack')).sort(byDensity);
+ const chosen=[];
+ for(const candidate of [dairy[0],shake[0],plant[0],dairy[1],...rows.slice().sort(byDensity)]){
+  if(candidate&&!chosen.some(x=>x.id===candidate.id))chosen.push(candidate);
+ }
+ return chosen;
 }
 export function vtaperNutritionModel144(state,{today=new Date().toLocaleDateString('sv-SE'),nutritionIndex=null}={}){
  if(!validDay(today))throw Error('Datum für V-Taper-Ernährungsanalyse ungültig.');
@@ -94,7 +122,11 @@ export function vtaperNutritionModel144(state,{today=new Date().toLocaleDateStri
    kcalMissing:kc.reduce((n,r)=>n+r.kcalUnknown,0),proteinMissing:pr.reduce((n,r)=>n+r.proteinUnknown,0),
    kcalEstimatedDays:kc.filter(r=>r.kcalEstimated>0).length,proteinEstimatedDays:pr.filter(r=>r.proteinEstimated>0).length,
    avgDeficit:round(avg(deficitRows.map(r=>r.amount))),deficitDays:deficitRows.length,weight,
-   weightDays:weightRows.length,blockAligned:days===42&&start===activeStart&&activeStart!==null};
+   weightDays:weightRows.length,blockAligned:days===42&&start===activeStart&&activeStart!==null,
+   // A window average never pretends to be today's remaining calorie budget.
+   proteinGap:pr.length&&finite(avg(pr.map(r=>r.protein)))?round(Math.max(0,proteinMin-avg(pr.map(r=>r.protein))),1):null,
+   avgCalorieRoom:energy.ready&&kc.length?round(energy.target-avg(kc.map(r=>r.kcal))):null};
+  windows[days].foodOptions=vtaperProteinOptions145(state,{needed:windows[days].proteinGap,budget:windows[days].avgCalorieRoom});
  }
  const recent=windows[14],seven=windows[7];
  // Do not classify intake using a single day, or mistake estimated portions for omitted meals.
@@ -109,7 +141,7 @@ export function vtaperNutritionModel144(state,{today=new Date().toLocaleDateStri
  let advice='Behalte deine Routine bei. Ein einzelner Tag mit mehr Hunger ist kein Grund für eine Korrektur.';
  let food=null;
  if(enoughProtein&&finite(seven.avgProtein)&&seven.avgProtein<proteinMin){
-  food=suggestion(state,proteinMin-seven.avgProtein);
+  food=seven.foodOptions[0]||null;
   advice=`Der 7-Tage-Proteindurchschnitt liegt unter der Orientierung von etwa ${proteinMin} g. Ergänze bei Bedarf eine geeignete Proteinquelle innerhalb deines Kalorienbudgets.`;
  }else if(finite(pctWeight)&&pctWeight<-.85&&enoughIntake){
   advice='Prüfe bei anhaltend schnellem Gewichtsverlust über weitere 1–2 Wochen dein Energiedefizit, Kraftleistungen, Hunger und Erholung. Keine Kompensation einzelner Tage.';
@@ -129,6 +161,28 @@ function spark144(rows,metric,threshold){
  const max=Math.max(1,...values,finite(threshold)?threshold:0)*1.1;
  const bars=rows.map(r=>`<span class="${finite(r[metric])?'has-value':'no-value'}" style="height:${finite(r[metric])?Math.max(3,r[metric]/max*100).toFixed(1):2}%" title="${esc(r.day)} · ${finite(r[metric])?fmt(r[metric],metric==='protein'?1:0)+(metric==='protein'?' g':' kcal'):'ohne quantifizierten Wert'}"></span>`).join('');
  return `<div class="vt144-bars" role="img" aria-label="Tageswerte ${metric==='protein'?'Protein':'Kalorien'}, nur dokumentierte Werte">${bars}</div>`;
+}
+function proteinOptionsHtml145(w){
+ const options=w.foodOptions||[];
+ if(!options.length)return '';
+ const target=finite(w.proteinGap)?w.proteinGap:null;
+ const intro=target===null?'Proteinbedarf: kein verlässlicher Periodendurchschnitt berechenbar.':target>0
+  ?`Der Periodendurchschnitt liegt rechnerisch ${fmt(target,1)} g unter der unteren Proteinorientierung. Die Produkte sind optionale Ergänzungen, keine Pflicht.`
+  :'Dein erfasster Proteindurchschnitt erreicht die untere Orientierung. Diese Lebensmittel sind nur Alternativen, keine Aufforderung mehr zu essen.';
+ const render=r=>`<article class="vt145-food-choice" data-menu-food="${esc(r.id)}">
+  <div class="vt145-food-title"><span aria-hidden="true">${esc(r.emoji)}</span><strong>${esc(r.title)}</strong></div>
+  <div class="vt145-food-kind">${esc(r.kind)}</div>
+  <div class="vt145-food-portion">${esc(r.amount)}</div>
+  <div class="vt145-food-macros"><span><strong>${fmt(r.protein,1)} g</strong> Protein</span><span><strong>${fmt(r.kcal)}</strong> kcal</span></div>
+  ${r.estimatedProtein||r.estimatedKcal?'<small>Einzelne Makrowerte geschätzt</small>':''}
+ </article>`;
+ return `<section class="vt145-protein-menu" aria-label="Proteinreiche Produkte aus deinem Compass-Menü" data-vt145-for-period="${w.days}">
+  <div class="vt145-food-head"><strong>🥣 Konkrete Proteinoptionen aus deinem Menü</strong><small>${options.length} gespeicherte Produkte</small></div>
+  <p>${esc(intro)}</p>
+  <div class="vt145-food-grid">${options.slice(0,4).map(render).join('')}</div>
+  ${options.length>4?`<details class="vt145-more"><summary>Weitere ${options.length-4} passende Produkte anzeigen</summary><div class="vt145-food-grid">${options.slice(4).map(render).join('')}</div></details>`:''}
+  <small class="vt145-menu-foot">Portionswerte aus deiner Compass-Lebensmitteldatenbank; Vorschläge können auch Mahlzeiten ersetzen. Kein Nachweis, was du zu Hause hast. Die Angabe ist keine automatische Buchung und kein Tages-Kalorienrest.</small>
+ </section>`;
 }
 function panel144(w,m){
  const deficit=finite(w.avgDeficit)?`${w.avgDeficit>=0?'−':'+'}${fmt(Math.abs(w.avgDeficit))} kcal/Tag`:'–';
@@ -155,11 +209,11 @@ export function vtaperNutritionHtml144(m){
  const options=[[7,'7 Tage'],[14,'14 Tage'],[42,'6-Wochen-Block']];
  const tabs=options.map(([days,label])=>`<label><input type="radio" name="vt144-period" value="${days}" ${days===14?'checked':''}><span>${esc(label)}</span></label>`).join('');
  const panels=options.map(([days])=>panel144(m.windows[days],m)).join('');
- const food=m.food?`<p class="vt144-food">💡 Passend aus deiner Lebensmittel-Datenbank: <strong>${esc(m.food.label)}</strong> (≈ ${fmt(m.food.protein,1)} g Protein, ≈ ${fmt(m.food.kcal)} kcal). Option, keine automatische Buchung.</p>`:'';
+ const foodPanels=options.map(([days])=>proteinOptionsHtml145(m.windows[days])).join('');
  return `<section class="vt144-nutrition" aria-label="V-Taper Ernährungscoach" data-nutrition-source="tracked" data-version="0.5.91.44">
   <div class="vt144-head"><div><span class="vt144-eyebrow">COMPASS · ERNÄHRUNG & BODY RECOMPOSITION</span><h3>Unterstützt deine Ernährung den V-Taper?</h3><p>Kalorien · Protein · Gewichtstrend · dein bestehender 6-Wochen-Zyklus</p></div><span class="vt144-quiet">Langfristig statt Tagesurteil</span></div>
   <div class="vt144-switch" role="group" aria-label="Zeitraum der Ernährungsanalyse">${tabs}</div>
   ${panels}
-  <div class="vt144-coaching"><div><span class="vt144-dot"></span><strong>${esc(m.headline)}</strong></div><p>${esc(m.advice)}</p>${food}<small>Ein einzelner Tag über dem Kalorienziel führt zu keiner Warnung oder Kompensationsforderung. Die Werte beruhen auf deinen vorhandenen Einträgen; Aufnahme und Verbrauch sind Schätzungen, keine direkte Kalorimetrie.</small></div>
+  <div class="vt144-coaching"><div><span class="vt144-dot"></span><strong>${esc(m.headline)}</strong></div><p>${esc(m.advice)}</p>${foodPanels}<small>Ein einzelner Tag über dem Kalorienziel führt zu keiner Warnung oder Kompensationsforderung. Die Werte beruhen auf deinen vorhandenen Einträgen; Aufnahme und Verbrauch sind Schätzungen, keine direkte Kalorimetrie.</small></div>
  </section>`;
 }

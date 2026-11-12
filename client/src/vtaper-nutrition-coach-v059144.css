@@ -10,3 +10,21 @@
 .vt144-coaching{border-top:1px solid #42546b;margin-top:14px;padding-top:12px}.vt144-coaching>div{display:flex;align-items:center;gap:9px;color:#e9dfc8;font-size:13px}.vt144-dot{width:9px;height:9px;border-radius:50%;background:#87d5b7;flex-shrink:0}.vt144-coaching p{font-size:12px;line-height:1.55;color:#e6ebf2;margin:7px 0}.vt144-coaching small{font-size:10px;color:#adbed1;line-height:1.5}.vt144-food{padding:9px 12px;border-left:2px solid #ddbc80;background:#ffffff08;color:#f0e5c7!important}
 .vt144-detail{border-top:1px solid #ffffff1d;margin-top:12px;padding-top:11px;color:#c4d0df}.vt144-detail summary{cursor:pointer;font-size:11px;color:#e7c88d}.vt144-detail>p{font-size:11px;line-height:1.5;margin:10px 0 0}.vt144-trend-row{display:grid;grid-template-columns:65px 1fr;align-items:center;gap:10px;margin-top:12px}.vt144-trend-row strong{font-size:11px;color:#ecf1f5}.vt144-bars{height:56px;display:flex;align-items:flex-end;gap:3px;border-bottom:1px solid #55687e}.vt144-bars span{min-width:3px;flex:1;max-width:28px;background:#d7b777;border-radius:2px 2px 0 0}.vt144-trend-row:nth-of-type(2) .vt144-bars span{background:#79bfb4}.vt144-bars span.no-value{opacity:.18}.vt144-empty{font-size:11px;color:#b8c5d4}
 @media(max-width:1000px){.vt144-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.vt144-nutrition{margin:0 12px 12px;padding:12px}.vt144-stats>div{padding:9px}.vt144-stats strong{font-size:17px}.vt144-quiet{display:none}}@media(max-width:345px){.vt144-stats{grid-template-columns:1fr}}
+
+/* 0.5.91.45 · Multiple real, labeled menu choices in the selected interval */
+.vt145-protein-menu{display:none;margin:12px 0 12px;padding:12px;border:1px solid #456077;border-radius:11px;background:#ffffff05;color:#e7edf3}
+.vt144-nutrition:has(.vt144-switch input[value="7"]:checked) .vt145-protein-menu[data-vt145-for-period="7"],
+.vt144-nutrition:has(.vt144-switch input[value="14"]:checked) .vt145-protein-menu[data-vt145-for-period="14"],
+.vt144-nutrition:has(.vt144-switch input[value="42"]:checked) .vt145-protein-menu[data-vt145-for-period="42"]{display:block}
+.vt145-food-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap;color:#f8e8c2;font-size:13px}.vt145-food-head small{font-size:10px;color:#b7c9d9}
+.vt145-protein-menu>p{color:#c8d5df;font-size:11px;line-height:1.45;margin:5px 0 10px}
+.vt145-food-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.vt145-food-choice{min-width:0;padding:10px;border:1px solid #476079;background:#273d56a6;border-radius:9px;display:flex;flex-direction:column;gap:4px}
+.vt145-food-title{display:flex;align-items:flex-start;gap:6px;color:#fff;font-size:11px;line-height:1.4}.vt145-food-title span{font-size:16px;line-height:1.2}.vt145-food-title strong{overflow-wrap:anywhere}
+.vt145-food-kind{color:#7dd5b3;font-size:10px}.vt145-food-portion{color:#c5d3e0;font-size:11px;min-height:25px}
+.vt145-food-macros{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:10px;color:#c9d9e5;margin-top:auto}
+.vt145-food-macros strong{color:#f3d189;font-size:13px}.vt145-food-choice small,.vt145-menu-foot{color:#aebed0;font-size:10px;line-height:1.35}
+.vt145-menu-foot{display:block;margin-top:10px}.vt145-more{margin-top:8px}.vt145-more summary{color:#ebc98c;font-size:11px;cursor:pointer;padding:6px 0}.vt145-more .vt145-food-grid{padding-top:5px}
+@media(max-width:1050px){.vt145-food-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.vt145-food-grid{grid-template-columns:1fr 1fr}.vt145-food-choice{padding:8px}.vt145-food-macros{display:grid}.vt145-food-portion{min-height:0}}
+@media(max-width:335px){.vt145-food-grid{grid-template-columns:1fr}}

@@ -54,5 +54,5 @@ test('app mounts the score-free overview FIRST, then original Fitdays/Smart Tape
  assert.ok(body.indexOf('vtaperOverviewHtml141')<body.indexOf('fitdaysInterpretationView'));
  assert.ok(body.indexOf('fitdaysInterpretationView')<body.indexOf('bodyTransformationView'));
  assert.ok(body.indexOf('bodyTransformationView')<body.indexOf('healthBodyView'));
- const release=readFileSync(new URL('../client/src/compass-release-v57759402519.js',import.meta.url),'utf8');assert.match(release,/0\.5\.91\.44/);
+ const release=readFileSync(new URL('../client/src/compass-release-v57759402519.js',import.meta.url),'utf8');const version=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version;assert.ok(release.includes(`COMPASS_VISIBLE_RELEASE='${version}'`));
 });
