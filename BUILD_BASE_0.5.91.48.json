@@ -1,0 +1,14 @@
+{
+  "version": "0.5.91.48",
+  "baseVersion": "0.5.91.47",
+  "patchFiles": 17,
+  "sourceFiles": 1651,
+  "removedFiles": [],
+  "tests": {
+    "pass": 2264,
+    "existingFail": 66,
+    "newFail": 0,
+    "releaseChecks": 33
+  },
+  "notes": "UI taxonomy is read-only; homemade pastry values are estimates."
+}

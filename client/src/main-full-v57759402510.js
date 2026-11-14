@@ -1,3 +1,4 @@
+import {wireFoodMenu148} from './food-menu-v059148.js';
 import './strength-set-corrections-v059122.css';
 import './worktime-manual-v059117.css';
 import {quickHabitSnapshot117,quickHabitDone117} from './habit-daily-guard-v059117.js';
@@ -289,7 +290,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.47';
+const COMPASS_CLIENT_VERSION='0.5.91.48';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -3161,6 +3162,7 @@ function compass55FastTaskPaint(id){
 }
 
 function bind() {
+ if (typeof wireFoodMenu148==='function') wireFoodMenu148(app);
  if(tab==='insights'&&insightTab==='lifeweeks')bindLifeWeeks82();
  const packetsForm748=app.querySelector('#cap748-packets-form');
  if(packetsForm748)packetsForm748.onsubmit=async event=>{

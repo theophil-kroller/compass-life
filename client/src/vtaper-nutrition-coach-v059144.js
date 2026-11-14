@@ -59,7 +59,10 @@ const PROTEIN_MENU_CANDIDATES_145=Object.freeze([
  {id:'spar-naturpur-bio-skyr-mango-maracuja-400g',amount:'1 Becher',kind:'Milchprodukt'},
  {id:'ehrmann-high-protein-vegan-chocolate-200g',amount:'1 Becher',kind:'Snack · pflanzlich'},
  {id:'milsani-skyr-maracuja-150g',amount:'2 Becher (300 g)',kind:'Milchprodukt'},
+ {id:'milsani-high-protein-pfirsich-maracuja-200g',amount:'1 Becher (200 g)',kind:'Milchprodukt'},
  {id:'ironmaxx-vegan-protein-shake-mixed-berries',amount:'1 Glas (30 g Pulver + 300 ml Wasser)',kind:'Shake · pflanzlich'},
+ {id:'all-stars-whey-iced-matcha-latte-30g',amount:'1 Portion (30 g Pulver)',kind:'Shake · Whey'},
+ {id:'nutrinorm-whey-deluxe-cookies-cream-30g',amount:'1 Portion (30 g Pulver)',kind:'Shake · Whey'},
  {id:'alpro-plant-protein-vanilla-pudding-200g',amount:'1 Becher (200 g)',kind:'Snack · pflanzlich'},
  {id:'alpro-plant-protein-chocolate-pudding-200g',amount:'1 Becher (200 g)',kind:'Snack · pflanzlich'}
 ]);

@@ -1,3 +1,5 @@
+import {FOODS_148,PROFILES_148,HOMEMADE_148,HOMEMADE_BAKING_148,foodPortion148} from './food-additions-v059148.js';
+import {FOOD_FILTERS_148,foodCategory148,foodTags148,foodSearch148} from './food-menu-v059148.js';
 import {PROTEIN_CUPS_147,parseProteinCup147,proteinCupKcal147} from './protein-cup-serving-v059147.js';
 import {ALPRO_PUDDING_PACKAGES,parseAlproPuddingPortion,alproPuddingKcal} from './alpro-pudding-serving-v059138.js';
 import {HOFER_PRETZEL_BUTTER_ID,HOFER_PRETZEL_DEFAULT,parseHoferPretzelButterPortion,hoferPretzelButterKcal} from './hofer-pretzel-butter-serving-v059139.js';
@@ -96,9 +98,11 @@ export const FOOD_PRESETS=[
  ['chio-chips','🥔','Chio Chips','Snacks','1 Packung (150 g)',740,830],
  ['supplement-bluebonnet-one-men','💊','Bluebonnet ONE for Men · Multivitamin','Nahrungsergänzung','1 Kapsel',null,null],
  ['supplement-fuerstenmed','💊','FürstenMED Kombinationspräparat','Nahrungsergänzung','1 Kapsel',null,null],
+ ...FOODS_148.map(food=>[food.id,food.emoji,food.title,food.group,food.defaultAmount,food.kcalLow,food.kcalHigh]),
  ['other-food','➕','Anderes','Sonstiges']
 ].map(([id,emoji,title,group,defaultAmount='',kcalLow=null,kcalHigh=null])=>({
  id,emoji,title,group,defaultAmount,kcalLow,kcalHigh,
+ ...(FOODS_148.find(food=>food.id===id)?{recipeNote:FOODS_148.find(food=>food.id===id).recipeNote,aliases:FOODS_148.find(food=>food.id===id).aliases||[]} :{}),
  ...(id==='apple-shortcrust-cake'?{recipeNote:'1 Stück = ca. 125 g (nicht abgewogen). Referenz: Bundeslebensmittelschlüssel (BLS 4.0), Apfelkuchen gedeckt (Mürbeteig), Energieangabe je 100 g in der Referenzdatenbank; je nach Rezept/Portionsgröße starke Abweichungen möglich. Menge im Tagebuch anpassbar.'}:{}),
  ...(id==='lyttos-greek-natur'?{recipeNote:'150 g Lyttos Greek Style Natur: ca. 173 kcal. Vorläufige Drittanbieter-Schätzung, Produktetikett bitte prüfen.'}:{}),
  ...(id==='honey'?{recipeNote:'1 EL = ca. 15 g, angenommene Portionsmenge. Generische Honigwerte.'}:{}),
@@ -258,6 +262,15 @@ export function nutritionKcalEstimate(food,amount,recipe=null){
   const kcal=Math.round(grams*(food.id==='zotter-labooko-himbeer-kokos'?5.86:4.10));
   return {low:kcal,high:kcal,kind:'Originaletikett · proportional berechnet'};
  }
+ if(HOMEMADE_148.has(food?.id)||Object.hasOwn(PROFILES_148,food?.id)){
+  const portion=foodPortion148(food.id,amount,food.defaultAmount);
+  if(!portion)return null;
+  const profile=PROFILES_148[food.id];
+  const kcal=profile?.nutrients?.kcal;const basis=profile?.reference?.amount;
+  if(!Number.isFinite(kcal)||!Number.isFinite(basis)||basis<=0)return null;
+  const result=Math.round(portion.grams*kcal/basis);
+  return {low:result,high:result,kind:HOMEMADE_BAKING_148.has(food.id)?'Grobe Portionsschätzung · hausgemacht':HOMEMADE_148.has(food.id)?'Grobe Rezeptschätzung · gewählte Grammmenge':'Originaletikett · proportional berechnet'};
+ }
  if(food?.id===DR_GOERG_COCONUT_MILK_ID||food?.id===COPAYA_RAW_COCOA_ID){
   const portion=food.id===DR_GOERG_COCONUT_MILK_ID?parseCoconutMilkPortion(amount,food.defaultAmount):parseRawCocoaPortion(amount,food.defaultAmount);
   if(!portion)return null;
@@ -415,11 +428,21 @@ export function recommendedNutritionFoods(state,now=new Date(),limit=6){
   .slice(0,Math.max(0,Math.min(8,limit))).map(([id,stats])=>({...known.get(id),recommendedReason:stats.similar?`${stats.similar}× um diese Uhrzeit`:`${stats.total}× zuletzt erfasst`}));
 }
 export function nutritionQuickView(state,{selectedFoodId='',dateToday}={}){
- const foods=nutritionFoods(state),groups=[...new Set(foods.map(f=>f.group))];
+ const foods=nutritionFoods(state);
  const recommendations=recommendedNutritionFoods(state,dateToday?new Date(dateToday):new Date());
- const tile=(f,sub='')=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" title="${esc(f.recipeNote||f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji}</span><small>${esc(f.title)}${f.defaultAmount?` · ${esc(f.defaultAmount)}`:''}</small>${sub?`<em>${esc(sub)}</em>`:''}</button>`;
- const recommendedBlock=recommendations.length?`<section class="pj92-recommended" aria-label="Recommended: Empfehlungen nach Tageszeit und Tagestyp"><h3>✦ Recommended <small>· passend zu Uhrzeit, Werktag oder freiem Tag</small></h3><div class="pj92-recommended-grid">${recommendations.map(f=>tile(f,f.recommendedReason)).join('')}</div></section>`:'';
- return `<div class="pj92-nutrition-pop"><div class="pj92-food-grid">${recommendedBlock}${groups.map(group=>`<div class="pj92-food-group"><h3>${esc(group)}</h3>${group==='Frühstück'?'<p class="pj92-matcha-note">Matcha: 1 TL Pulver, heißes Wasser, ca. 75 ml Hafermilch; optional 1 TL Honig. Die ca. 500 ml sind die gesamte Trinkmenge. Hafermilch-Menge im Tagebuch bearbeitbar.</p>':''}<div>${foods.filter(f=>f.group===group).map(f=>tile(f)).join('')}</div></div>`).join('')}</div><p class="pj92-footnote">Ein Tippen speichert das Lebensmittel mit Uhrzeit. „Recommended“ bewertet frühere Logeinträge nach Uhrzeit und vergleichbaren Werktagen bzw. freien Tagen (Wochenenden/österreichische Feiertage). Mensa wird an freien Tagen nicht empfohlen. Es werden keine fehlenden Mahlzeiten vermutet. Die übrigen Lebensmittel bleiben unverändert verfügbar. ${state?'Verschlüsselt im Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p></div>`;
+ const groups=FOOD_FILTERS_148.filter(([key])=>key!=='quick'&&key!=='protein'&&key!=='all');
+ const tile=(f,sub='')=>`<button type="button" data-action="pj92-food-tap" data-id="${esc(f.id)}" data-pj148-tags="${esc(foodTags148(f).join(' '))}" data-pj148-search="${esc(foodSearch148(f))}" title="${esc(f.recipeNote||f.title)}" class="pj92-food-tile ${selectedFoodId===f.id?'active':''}"><span>${f.emoji||'🍴'}</span><small>${esc(f.title)}${f.defaultAmount?` · ${esc(f.defaultAmount)}`:''}</small>${sub?`<em>${esc(sub)}</em>`:''}</button>`;
+ const byCategory=new Map(groups.map(([id])=>[id,[]]));
+ for(const food of foods){const cat=foodCategory148(food);(byCategory.get(cat)||byCategory.get('other')).push(food);}
+ for(const foods of byCategory.values())foods.sort((a,b)=>String(a.title).localeCompare(String(b.title),'de-AT'));
+ const recommendedBlock=recommendations.length?`<section data-pj148-recommended class="pj92-recommended pj148-quick" aria-label="Recommended: Empfehlungen nach Uhrzeit"><h3>✦ Recommended · Zuletzt passend <small>· nach deinen bisherigen Einträgen</small></h3><div class="pj92-recommended-grid">${recommendations.map(f=>tile(f,f.recommendedReason)).join('')}</div></section>`:'';
+ const initial=recommendations.length?'quick':'all';
+ const quickCategories=FOOD_FILTERS_148.map(([id,emoji,label])=>`<button type="button" data-pj148-filter="${id}" aria-pressed="${id===initial}" class="pj148-filter ${id===initial?'active':''}">${emoji} ${esc(label)}</button>`).join('');
+ return `<div class="pj92-nutrition-pop pj148-menu" data-pj148-menu data-pj148-initial="${initial}">
+   <div class="pj148-search-header"><label class="pj148-search-label" for="pj148-food-search">Lebensmittel finden</label><input id="pj148-food-search" type="search" data-pj148-search autocomplete="off" placeholder="z. B. Skyr, Breze, BCAA, Kimchi …" aria-label="Alle Lebensmittel durchsuchen"><div class="pj148-filter-grid" role="group" aria-label="Lebensmittelgruppen">${quickCategories}</div><p class="pj148-count" data-pj148-count aria-live="polite"></p></div>
+   <div class="pj92-food-grid">${recommendedBlock}${groups.map(([id,emoji,label])=>`<section class="pj92-food-group" data-pj148-group="${id}"><h3>${emoji} ${esc(label)}</h3>${id==='drinks'?'<p class="pj92-matcha-note">Frühstück · Matcha: 1 TL Pulver, heißes Wasser, ca. 75 ml Hafermilch; optional 1 TL Honig. 500 ml sind die gesamte Trinkmenge, nicht die Hafermilchmenge.</p>':''}<div>${(byCategory.get(id)||[]).map(f=>tile(f)).join('')}</div></section>`).join('')}</div>
+   <p class="pj92-footnote">Tippen erfasst ein Lebensmittel mit Uhrzeit. Suche durchsucht alle Produkte, unabhängig von der Rubrik. Kategorieänderungen betreffen nur die Darstellung: Bestehende Produkte, IDs, Rezepte und Tresordaten bleiben erhalten. ${state?'Im verschlüsselten Tresor.':'Bei gesperrtem Tresor verschlüsselt vorgemerkt.'}</p>
+ </div>`;
 }
 export function nutritionInsightsView(state,{period=30,editingId=''}={}){
  const stats=nutritionStats(state,period),foods=nutritionFoods(state),editing=nutritionEntries(state).find(e=>e.id===editingId);

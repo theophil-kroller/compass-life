@@ -37,6 +37,24 @@ export function dailyDozenIngredientEvidence404(state,day){
    if(candidates.includes('vegetables')&&/ratatouille|gemüse|gemuese|vegetable/.test(title)){add('vegetables',0.5,'Mensa · Gemüseanteil im Gericht (vorläufig, Menge unbekannt)',sourceId);notes.vegetables.push('Mensa-Portion unbekannt: 0,5 vorläufiger Vergleichswert, bitte Gemüsemenge bestätigen.');}
    continue;
   }
+  if(id==='homemade_indian_lemon_red_cabbage_20261114'){
+   // Confirmed 1,387 g raw cabbage; assumed cooked yield 1,600 g.
+   // Credit is a provisional ingredient-based estimate, not a lab measurement.
+   const serving=g!==null?g:100*factor;
+   if(serving>0&&serving<=2000){
+    const cabbage=serving*1387/1600;
+    add('cruciferous',cabbage/80,'Indisches Rotkraut · geschätzter Rotkrautanteil (Endgewicht nicht gemessen)',sourceId);
+    notes.cruciferous.push('Vorläufig: 1.387 g Rotkraut im Rezept bestätigt; gegartes Endgewicht ~1.600 g nur angenommen.');
+   }
+   continue;
+  }
+  if(id==='homemade_red_cabbage_beet_kimchi_20261114'){
+   // The recipe's red-cabbage mass was not confirmed, and brine/solids ratios
+   // are unknown. Do not award a made-up full crucifer serving or probiotics.
+   notes.cruciferous.push('Kimchi enthält Rotkraut, aber dessen tatsächlich gegessener Anteil samt Lake ist unbestätigt: keine automatische Kreuzblütler-Gutschrift.');
+   notes.vegetables.push('150 g Rote Rübe im Ansatz bestätigt; Portionsgewicht mit Lake nicht ermittelt. Erst nach geklärtem Abtropfgewicht verrechnen.');
+   continue;
+  }
   if(id==='hofer-laugenbreze-butter'){
    notes.wholegrains.push('HOFER Laugenbreze: raffiniertes Laugengebäck, kein belegtes Vollkorn; Butter zählt nicht als Daily-Dozen-Portion.');
    continue;

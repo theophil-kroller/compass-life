@@ -1,3 +1,4 @@
+import {wireFoodMenu148} from './food-menu-v059148.js';
 import {economicFlowIndex,economicPresentationRows} from './finance-economic-flows-v05914.js';
 import {capacityForecast,capacitySettings} from './capacity-engine-v44.js';
 import {deadlineIntelligence} from './deadline-intelligence-v45.js';
@@ -2305,6 +2306,7 @@ function render(){
  if(performanceTrace.enabled&&typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(()=>performanceTrace.end('Render bis Darstellung',tab,renderMeasurement)));
 }
 function bind() {
+ if (typeof wireFoodMenu148==='function') wireFoodMenu148(app);
  const reportPeriodControl=app.querySelector('#clp-period');
  if(reportPeriodControl)reportPeriodControl.onchange=()=>{lifeReportSettings.period=reportPeriodControl.value;lifeReportSettings.rankedIds=[];render();};
  const reportFinanceControl=app.querySelector('#clp-finance');

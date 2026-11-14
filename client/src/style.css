@@ -3267,3 +3267,16 @@ button.sleep550-cal-dot{cursor:pointer}button.sleep550-cal-dot:focus-visible{out
 .pj92-recommended-grid .pj92-food-tile{background:#fff;border-color:#b9d9c7;min-height:84px}
 .pj92-recommended-grid .pj92-food-tile em{font-style:normal;color:#43816d;font-size:.63rem;line-height:1.2}
 @media(max-width:490px){.pj92-recommended-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pj92-recommended{padding:9px}}
+
+/* 0.5.91.48 — Food-menu taxonomy is view-only, no hidden or deleted catalog items. */
+.pj148-search-header{position:sticky;top:0;z-index:4;background:var(--surface,#fff);padding:9px 4px 11px;border-bottom:1px solid var(--border,#dce5df);margin-bottom:9px}
+.pj148-search-label{display:block;font-size:.7rem;font-weight:750;letter-spacing:.045em;color:#4b7265;margin-bottom:6px}
+.pj148-search-header input[type=search]{width:100%;box-sizing:border-box;border:1px solid #aec9bf;background:#fff;color:#173b30;border-radius:12px;padding:11px 13px;font:inherit;font-size:.88rem}
+.pj148-filter-grid{display:flex;gap:5px;flex-wrap:wrap;padding-top:9px}
+.pj148-filter{border:1px solid #cbded4;background:#f3f8f4;color:#375649;border-radius:999px;padding:7px 10px;font-size:.71rem;font-weight:650;cursor:pointer}
+.pj148-filter.active,.pj148-filter[aria-pressed=true]{background:#20564d;color:#fff;border-color:#20564d}
+.pj148-count{font-size:.71rem;color:#668074;margin:7px 0 0}
+.pj148-menu [hidden]{display:none!important}
+.pj148-menu .pj92-food-group h3{position:relative;font-size:.83rem;color:#2d6354;letter-spacing:normal;text-transform:none;margin:5px 0 9px}
+.pj148-menu .pj92-food-grid{gap:12px}
+@media(max-width:520px){.pj148-filter{font-size:.66rem;padding:7px 8px}.pj148-search-header{padding:7px 1px 9px}}
