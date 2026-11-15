@@ -1,6 +1,8 @@
+import {PLANT_FOODS_149,PLANT_PROFILES_149,plantPortion149} from './food-plants-v059149.js';
 /** 0.5.91.48 · Additive food presets. Existing IDs/categories and logged entries are never rewritten.
  * Source: user photographed Milsani label + structured user-supplied recipe handoff. */
 export const FOODS_148=Object.freeze([
+  ...PLANT_FOODS_149,
   {"id": "homemade-muffin-low-sugar-20261114", "emoji": "🧁", "title": "Muffin hausgemacht (wenig Zucker)", "group": "Snacks", "defaultAmount": "1 Stück (ca. 80 g)", "kcalLow": 225, "kcalHigh": 225, "recipeNote": "GROBE PORTIONSSCHÄTZUNG · Ohne Rezept und Wägung: grobe Portionsschätzung für einen Muffin von ca. 80 g. Weniger Zucker als üblich angenommen; Mehl und Fett können weiterhin viele Kalorien liefern. Keine automatisch gutgeschriebenen Daily-Dozen-Portionen.", "aliases": ["Hausgemachter Muffin", "Muffin von Mama", "Muffins wenig Zucker"]},
   {"id": "homemade-cake-slice-low-sugar-20261114", "emoji": "🍰", "title": "Kuchenstück hausgemacht (wenig Zucker)", "group": "Snacks", "defaultAmount": "1 Stück (ca. 100 g)", "kcalLow": 270, "kcalHigh": 270, "recipeNote": "GROBE PORTIONSSCHÄTZUNG · Ohne Rezept und Wägung: grobe Portionsschätzung für ein Kuchenstück von ca. 100 g, Rezept und Belag unbekannt. Weniger Zucker als üblich angenommen; keine automatisch gutgeschriebenen Obst- oder Daily-Dozen-Portionen.", "aliases": ["Hausgemachter Kuchen", "Kuchen von Mama", "Kuchenstück wenig Zucker"]},
   {"id": "all-stars-whey-iced-matcha-latte-30g", "emoji": "🥤", "title": "All Stars Whey Protein Shake · Iced Matcha Latte", "group": "Getränke", "defaultAmount": "1 Portion (30 g Pulver)", "kcalLow": 117, "kcalHigh": 117, "recipeNote": "Originaletikett vom Nutzerfoto 14.11.2026 · 30 g Pulver mit Wasser: 117 kcal, 20 g Eiweiß, 3,3 g Kohlenhydrate, 2,1 g Zucker, 2,2 g Fett, 1,5 g gesättigte Fettsäuren, 2,2 g Ballaststoffe, 0,06 g Salz, 90 mg Koffein. Milch separat buchen; diese Portion rechnet nur das Pulver.", "aliases": ["AS Whey Matcha", "Allstars Matcha Latte", "Proteinshake Matcha"]},
@@ -50,6 +52,7 @@ export const FOODS_148=Object.freeze([
   }
 ]);
 export const PROFILES_148=Object.freeze({
+  ...PLANT_PROFILES_149,
   "homemade-muffin-low-sugar-20261114": {"name": "Muffin hausgemacht (wenig Zucker)", "reference": {"amount": 80, "unit": "g"}, "nutrients": {"kcal": 225, "protein": 4, "carbs": 27, "sugar": 8, "fat": 11.5, "saturated": 4.5, "fiber": 1.3}, "source": "Grobe Portionsschätzung · Hausgebacken · Nutzerangabe 14.11.2026", "extra": {}, "note": "Ohne Rezept und Wägung: grobe Portionsschätzung für einen Muffin von ca. 80 g. Weniger Zucker als üblich angenommen; Mehl und Fett können weiterhin viele Kalorien liefern. Keine automatisch gutgeschriebenen Daily-Dozen-Portionen.", "estimatedNutrients": ["kcal", "protein", "carbs", "sugar", "fat", "saturated", "fiber"]},
   "homemade-cake-slice-low-sugar-20261114": {"name": "Kuchenstück hausgemacht (wenig Zucker)", "reference": {"amount": 100, "unit": "g"}, "nutrients": {"kcal": 270, "protein": 4, "carbs": 34, "sugar": 11, "fat": 13, "saturated": 5, "fiber": 1.1}, "source": "Grobe Portionsschätzung · Hausgebacken · Nutzerangabe 14.11.2026", "extra": {}, "note": "Ohne Rezept und Wägung: grobe Portionsschätzung für ein Kuchenstück von ca. 100 g, Rezept und Belag unbekannt. Weniger Zucker als üblich angenommen; keine automatisch gutgeschriebenen Obst- oder Daily-Dozen-Portionen.", "estimatedNutrients": ["kcal", "protein", "carbs", "sugar", "fat", "saturated", "fiber"]},
   "all-stars-whey-iced-matcha-latte-30g": {"name": "All Stars Whey Protein Shake · Iced Matcha Latte", "reference": {"amount": 30, "unit": "g"}, "nutrients": {"kcal": 117, "protein": 20, "carbs": 3.3, "sugar": 2.1, "fat": 2.2, "saturated": 1.5, "fiber": 2.2, "salt": 0.06, "caffeine": 90}, "source": "Originaletikett · Nutzerfoto 14.11.2026", "extra": {}, "note": "Originaletikett vom Nutzerfoto 14.11.2026 · 30 g Pulver mit Wasser: 117 kcal, 20 g Eiweiß, 3,3 g Kohlenhydrate, 2,1 g Zucker, 2,2 g Fett, 1,5 g gesättigte Fettsäuren, 2,2 g Ballaststoffe, 0,06 g Salz, 90 mg Koffein. Milch separat buchen; diese Portion rechnet nur das Pulver.", "estimatedNutrients": []},
@@ -527,6 +530,7 @@ export const RECIPE_EVIDENCE_148=Object.freeze({
 export const HOMEMADE_148=new Set(['homemade_indian_lemon_red_cabbage_20261114','homemade_red_cabbage_beet_kimchi_20261114']);
 export const HOMEMADE_BAKING_148=new Set(['homemade-muffin-low-sugar-20261114','homemade-cake-slice-low-sugar-20261114']);
 export function foodPortion148(id,amount='',defaultAmount=''){
+ if(Object.hasOwn(PLANT_PROFILES_149,id))return plantPortion149(id,amount,defaultAmount);
  const text=String(amount||defaultAmount||'').trim().toLowerCase();
  if(!text||text.startsWith('-'))return null;
  const num=m=>Number(m[1].replace(',','.'));

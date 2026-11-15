@@ -1,4 +1,5 @@
 import {wholegrainBreadEvidence} from './wholegrain-serving-v059138.js';
+import {PLANT_DD_149,plantPortion149} from './food-plants-v059149.js';
 /** Compass .59.40.4: One read-only, ingredient-level evidence ledger for both
  * Daily Dozen presentations and Anti-Aging Eight. No inferred meals, GPS,
  * nutrition edits, network calls, or persistent duplicate counters.
@@ -35,6 +36,17 @@ export function dailyDozenIngredientEvidence404(state,day){
    // Provisional partial serving from a *consumed* dish with clearly named vegetables.
    // No weight supplied => DO NOT assert a full serving.
    if(candidates.includes('vegetables')&&/ratatouille|gemüse|gemuese|vegetable/.test(title)){add('vegetables',0.5,'Mensa · Gemüseanteil im Gericht (vorläufig, Menge unbekannt)',sourceId);notes.vegetables.push('Mensa-Portion unbekannt: 0,5 vorläufiger Vergleichswert, bitte Gemüsemenge bestätigen.');}
+   continue;
+  }
+  if(Object.hasOwn(PLANT_DD_149,id)){
+   const spec=PLANT_DD_149[id];const parsed=plantPortion149(id,a);
+   if(parsed){
+    if(spec.group==='cruciferous')add('cruciferous',parsed.grams/80,'Gedämpfter Brokkoli · verzehrte Menge, Gemüsegewicht nach Garen',sourceId);
+    else if(spec.group==='vegetables')add('vegetables',parsed.grams/80,'Karotte / Süßkartoffel · essbare Portion',sourceId);
+    else if(spec.group==='fruit')add('fruit',parsed.grams/120,'Frisches Obst · essbares Gewicht / 120 g mittlere Portion',sourceId);
+    else if(id==='spelt-spaghetti-dry-20261115')notes.wholegrains.push('Dinkel-Spaghetti ohne Vollkornangabe: keine automatische Vollkorn-Gutschrift.');
+    else if(id==='calpis-kyohou-grape-diluted-20261115')notes.beverages.push('Calpis als gezuckertes Mischgetränk: erfasst, aber nicht als Wasser-/ungesüßte Getränkemenge gutgeschrieben.');
+   }
    continue;
   }
   if(id==='homemade_indian_lemon_red_cabbage_20261114'){

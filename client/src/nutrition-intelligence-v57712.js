@@ -173,7 +173,7 @@ const round=x=>Math.round((x+Number.EPSILON)*100)/100;
 const amountNumber=x=>Number(String(x).replace(',','.'));
 function quantityFor(entry,food){
  const a=String(entry?.amount||food?.defaultAmount||'').toLowerCase();
- if(HOMEMADE_148.has(entry?.foodId)||Object.hasOwn(PROFILES_148,entry?.foodId)){const portion=foodPortion148(entry.foodId,entry.amount,food?.defaultAmount);return portion?{value:portion.grams,unit:'g'}:null;}
+ if(HOMEMADE_148.has(entry?.foodId)||Object.hasOwn(PROFILES_148,entry?.foodId)){const portion=foodPortion148(entry.foodId,entry.amount,food?.defaultAmount);return portion?{value:portion.grams,unit:portion.unit||'g'}:null;}
  if(entry?.foodId===DR_GOERG_COCONUT_MILK_ID){const portion=parseCoconutMilkPortion(entry.amount,food?.defaultAmount);return portion?{value:portion.value,unit:'ml'}:null;}
  if(entry?.foodId===COPAYA_RAW_COCOA_ID){const portion=parseRawCocoaPortion(entry.amount,food?.defaultAmount);return portion?{value:portion.value,unit:'g'}:null;}
  if(PROTEIN_CUPS_147[entry?.foodId]){const portion=parseProteinCup147(entry.foodId,entry.amount,food?.defaultAmount);return portion?{value:portion.grams,unit:'g'}:null;}

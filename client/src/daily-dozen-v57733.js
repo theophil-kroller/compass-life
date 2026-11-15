@@ -1,4 +1,5 @@
 import {wholegrainBreadEvidence} from './wholegrain-serving-v059138.js';
+import {PLANT_DD_149} from './food-plants-v059149.js';
 import {dailyDozenIngredientEvidence404} from './daily-dozen-evidence-v57759404.js';
 import {dailyDozenEvidence} from './daily-dozen-auto-v57734.js';
 export {dailyDozenEvidence} from './daily-dozen-auto-v57734.js';
@@ -36,7 +37,7 @@ export function dailyDozenSummary(state,day){
  const evidence=dailyDozenEvidence(state,day);
  // The legacy tracker omits these two documented recipes. Use their ingredient
  // evidence here without touching the existing other-food credit rules.
- const recipeEntries=(state?.nutritionJournal?.entries||[]).filter(e=>['basmati-lentil-dal-broccoli-personal','ironmaxx-vegan-protein-shake-mixed-berries','korean-spicy-tofu-vegetable-strudel','steamed-potatoes-sichuan-veg-personal','black-rice-cooked-personal'].includes(e?.foodId));
+ const recipeEntries=(state?.nutritionJournal?.entries||[]).filter(e=>['basmati-lentil-dal-broccoli-personal','ironmaxx-vegan-protein-shake-mixed-berries','korean-spicy-tofu-vegetable-strudel','steamed-potatoes-sichuan-veg-personal','black-rice-cooked-personal'].includes(e?.foodId)||Object.hasOwn(PLANT_DD_149,e?.foodId));
  const recipeEvidence=dailyDozenIngredientEvidence404({nutritionJournal:{entries:recipeEntries}},day);
  const breadEvidence=breadEvidenceForDay(state,day);
  const rows=DAILY_DOZEN.map(c=>{const partial=Math.max(0,(Number(evidence.totals[c.id])||0)+(Number(recipeEvidence.totals[c.id])||0)+(c.id==='wholegrains'?(Number(breadEvidence.totals.wholegrains)||0):0)),auto=clamp(partial,c.target),manual=record[c.id];

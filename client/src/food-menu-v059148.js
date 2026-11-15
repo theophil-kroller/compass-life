@@ -4,7 +4,7 @@
 export const FOOD_FILTERS_148=Object.freeze([
  ['quick','✦','Für dich'],['protein','💪','Proteinreich'],['dairy','🥣','Milchprodukte'],
  ['bakery','🥨','Brot & Gebäck'],['sport','🥤','Shakes & Supplemente'],
- ['meals','🍽️','Gerichte & Beilagen'],['fruitnuts','🥜','Obst & Nüsse'],
+ ['meals','🍽️','Gerichte & Beilagen'],['vegetables','🥦','Gemüse'],['fruitnuts','🥜','Obst & Nüsse'],
  ['sweets','🍫','Süßes & Snacks'],['drinks','☕','Getränke'],
  ['ingredients','🧂','Zutaten'],['other','◌','Weitere'],['all','▦','Alle']
 ]);
@@ -14,6 +14,11 @@ const explicit=Object.freeze({
  'matcha-powder':'ingredients', // Matcha is a culinary ingredient, not a protein supplement
  'braineffect-mct-c8-oil':'ingredients','water-glass':'drinks',
  'milsani-high-protein-pfirsich-maracuja-200g':'dairy',
+ 'broccoli-steamed-home-20261115':'vegetables','sweet-potato-steamed-20261115':'vegetables','spelt-spaghetti-dry-20261115':'meals',
+ 'passion-fruit-fresh-20261115':'fruitnuts','carrot-raw-fresh-20261115':'vegetables',
+ 'mango-fresh-20261115':'fruitnuts','mandarin-fresh-20261115':'fruitnuts','dragon-fruit-fresh-20261115':'fruitnuts',
+ 'pomelo-fresh-20261115':'fruitnuts','pomegranate-fresh-20261115':'fruitnuts','kiwi-green-fresh-20261115':'fruitnuts',
+ 'avocado-fresh-20261115':'fruitnuts','calpis-kyohou-grape-diluted-20261115':'drinks',
  'all-stars-whey-iced-matcha-latte-30g':'sport',
  'nutrinorm-whey-deluxe-cookies-cream-30g':'sport',
  'golden-turtle-peanuts-raw-with-skin-500g':'fruitnuts',

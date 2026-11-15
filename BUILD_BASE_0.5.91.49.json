@@ -1,0 +1,26 @@
+{
+  "version": "0.5.91.49",
+  "baselineVersion": "0.5.91.48",
+  "features": [
+    "13 additive plant and beverage entries, including Calpis as diluted beverage",
+    "existing banana profile reused",
+    "per-100g or per-100ml macro and micro profiles with explicit estimation",
+    "Greger Daily Dozen automatic food ingredient mapping",
+    "Anti-Aging Eight non-causal evidence mapping",
+    "new Gemüse menu filter",
+    "no lost product IDs or nutrition entries"
+  ],
+  "baselineFoodIds": 101,
+  "newFoodIds": 13,
+  "removedFiles": [],
+  "tests": {
+    "pass": 2270,
+    "existingFail": 66,
+    "newFail": 0,
+    "releaseChecks": 33,
+    "focused": 14,
+    "importGraphModules": 299
+  },
+  "viteBuildRun": false,
+  "sourceChangesExcludingManifest": 16
+}

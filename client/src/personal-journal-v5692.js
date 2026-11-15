@@ -269,7 +269,7 @@ export function nutritionKcalEstimate(food,amount,recipe=null){
   const kcal=profile?.nutrients?.kcal;const basis=profile?.reference?.amount;
   if(!Number.isFinite(kcal)||!Number.isFinite(basis)||basis<=0)return null;
   const result=Math.round(portion.grams*kcal/basis);
-  return {low:result,high:result,kind:HOMEMADE_BAKING_148.has(food.id)?'Grobe Portionsschätzung · hausgemacht':HOMEMADE_148.has(food.id)?'Grobe Rezeptschätzung · gewählte Grammmenge':'Originaletikett · proportional berechnet'};
+  return {low:result,high:result,kind:HOMEMADE_BAKING_148.has(food.id)?'Grobe Portionsschätzung · hausgemacht':HOMEMADE_148.has(food.id)?'Grobe Rezeptschätzung · gewählte Grammmenge':food.id==='calpis-kyohou-grape-diluted-20261115'?'Originaletikett · trinkfertig, 5:1 verdünnt':'Referenzwert/Etikett · proportional berechnet'};
  }
  if(food?.id===DR_GOERG_COCONUT_MILK_ID||food?.id===COPAYA_RAW_COCOA_ID){
   const portion=food.id===DR_GOERG_COCONUT_MILK_ID?parseCoconutMilkPortion(amount,food.defaultAmount):parseRawCocoaPortion(amount,food.defaultAmount);
