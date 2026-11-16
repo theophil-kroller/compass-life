@@ -290,7 +290,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.50';
+const COMPASS_CLIENT_VERSION='0.5.91.51';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -467,7 +467,7 @@ let feelingOverlayOpen=false,feelingSaving=false,feelingDraft=newFeelingDraft(),
 let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let touchPeriod=30,touchEditingId='',touchQuickOpen=false,touchDefaultPersonId='';
 let mealComposeText='',mealComposeModel=null;
-let mensaApi=null,mensaLoadPending=null,mensaImportDraft=null,mensaMessage='',mensaEmailDraftRaw='';
+let mensaApi=null,mensaLoadPending=null,mensaLoadError='',mensaImportDraft=null,mensaMessage='',mensaEmailDraftRaw='';
 let coachHorizon88=6;
 let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',nutritionView712='journal',nutritionTimingMode725='week',nutritionTimingAnchor725=localDateString(new Date()),nutritionTimingSelected725='',nutritionTrendsMode726='week',nutritionTrendsAnchor726=localDateString(new Date()),nutritionTrendsMetric726='protein',nutritionDay712=localDateString(new Date()),nutritionProduct712='matcha-powder',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
 let nutritionConnInput727='lastMeal',nutritionConnOutcome727='sleep',nutritionConnRange727='90';
@@ -2140,19 +2140,51 @@ function compass56TodayWorkspace(){
 
 
 // Menu catalog module + GPT prompt are loaded ONLY after entering Insights → Ernährung.
+// Mensa is loaded only when its tab is opened. UI hydration is never blocked
+// by a potentially slow encrypted vault write or by the device journal sync.
+function mensaPageVisible(){return Boolean(state&&tab==='insights'&&insightTab==='nutrition'&&nutritionView712==='mensa');}
 function ensureMensaForNutrition(){
- if(mensaApi||mensaLoadPending||!state||tab!=='insights'||insightTab!=='nutrition')return;
- mensaLoadPending=import('./mensa-catalog-v57759402512.js').then(async mod=>{
+ if(mensaApi||mensaLoadPending||mensaLoadError||!mensaPageVisible())return;
+ // A stalled chunk fetch must not leave an endless loading message.
+ let loadTimeout;
+ const modulePromise=Promise.race([
+  import('./mensa-catalog-v57759402512.js'),
+  new Promise((_,reject)=>{loadTimeout=setTimeout(()=>reject(Error('Zeitüberschreitung beim Nachladen. Bitte erneut versuchen oder die Seite neu laden.')),12000);})
+ ]).finally(()=>clearTimeout(loadTimeout));
+ mensaLoadPending=modulePromise.then(mod=>{
+  // Reveal the usable catalog immediately: no await mutate/persist/network first.
   mensaApi=mod;
-  if(!state.mensaCatalog?.seedImported){
-   await mutate(st=>{mod.installMensaSeed(st);},null,true);
-  }
-  if(state?.privateDeviceMirror?.key&&authToken&&navigator.onLine){
-   // Only the Nutrition workspace initiates the on-demand Mensa catalogue refresh.
-   await syncPersonalJournal().catch(ex=>{mensaMessage='Journal-Abgleich nicht bestätigt: '+ex.message;});
-  }
-  if(state&&tab==='insights'&&insightTab==='nutrition')render();
- }).catch(ex=>{mensaMessage='Mensa-Katalog konnte nicht geladen werden: '+ex.message;render();}).finally(()=>{mensaLoadPending=null;});
+  mensaLoadError='';
+  if(mensaPageVisible())render();
+  // Post-paint initialization; neither the first paint nor opening "Heute"
+  // waits for encryption, local storage or a slow/offline sync endpoint.
+  const finishInBackground=async()=>{
+   try{
+    if(!state)return;
+    if(!state.mensaCatalog?.seedImported){
+     await mutate(st=>{mod.installMensaSeed(st);},null,true);
+     if(mensaPageVisible())render();
+    }
+    if(state?.privateDeviceMirror?.key&&authToken&&navigator.onLine){
+     await syncPersonalJournal().catch(ex=>{
+      mensaMessage='Journal-Abgleich nicht bestätigt: '+ex.message;
+      if(mensaPageVisible())render();
+     });
+    }
+   }catch(ex){
+    // Stored offers remain readable even when seeding or the cloud fails.
+    mensaMessage='Mensa-Datenabgleich nicht abgeschlossen: '+ex.message;
+    if(mensaPageVisible())render();
+   }
+  };
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>setTimeout(finishInBackground,0));
+  else setTimeout(finishInBackground,0);
+ }).catch(ex=>{
+  // A failed dynamic chunk previously looked like an endless spinner.
+  // Report the failure and offer an explicit retry rather than auto-looping.
+  mensaLoadError='Mensa-Modul konnte nicht geladen werden: '+ex.message;
+  if(mensaPageVisible())render();
+ }).finally(()=>{mensaLoadPending=null;});
 }
 const mensaLocalDay=()=>localDateString(new Date());
 function mensaQuickStatus(){
@@ -2699,7 +2731,7 @@ function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensa
    renderHistory:()=>nutritionHistoryView(state,{period:nutritionPeriod}),
    renderManualDozen:()=>dailyDozenView(state,{day:dailyDozenDay733,today:localDate()}),
    renderSync:()=>journalSyncPanel(),
-   renderMensa:()=>mensaApi?mensaApi.mensaCatalogPanel(state,{draft:mensaImportDraft,day:today,status:mensaMessage,emailText:mensaEmailDraftRaw}):'<p>Mensa-Datenbank wird geladen …</p>',
+   renderMensa:()=>mensaApi?mensaApi.mensaCatalogPanel(state,{draft:mensaImportDraft,day:today,status:mensaMessage,emailText:mensaEmailDraftRaw}):mensaLoadError?`<section class="mensa-load-failure" role="alert"><p>${h(mensaLoadError)}</p><button type="button" data-action="mensa-retry-load">Erneut laden</button></section>`:'<p role="status">Mensa-Datenbank wird geladen …</p>',
    renderSection:kind=>kind==='daily-dozen'?dailyDozen5930View(dailyDozen5930(state,{day:today}))
     :kind==='nutrients'?nutritionIntelligenceView(state,{day:nutritionDay712,detail:nutritionProduct712})
     :kind==='timing'?nutritionTimingView(state,{mode:nutritionTimingMode725,anchor:nutritionTimingAnchor725,selectedId:nutritionTimingSelected725})
@@ -4692,6 +4724,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
   if(!mensaApi)return;try{await navigator.clipboard.writeText(mensaApi.MENSA_GPT_PROMPT);toast('GPT-Rechercheprompt kopiert.');}
   catch{const box=app.querySelector('#mensa-gpt-prompt');box?.select();toast('Prompt markieren und kopieren.');}return;
  }
+ if(action==='mensa-retry-load'){mensaLoadError='';mensaMessage='';ensureMensaForNutrition();render();return;}
  if(action==='mensa-cancel-import'){mensaImportDraft=null;render();return;}
  if(action==='mensa-confirm-import'){
   if(!mensaApi||!mensaImportDraft?.length)return;

@@ -1,0 +1,20 @@
+{
+  "version": "0.5.91.51",
+  "baselineVersion": "0.5.91.50",
+  "features": [
+    "Mensa panel renders immediately after its lazily loaded module becomes available, without awaiting seed vault persistence or encrypted journal network sync",
+    "Mensa seed initialization and optional journal sync run after the first Mensa paint; no startup work is added to Today",
+    "Failed or stalled dynamic imports display a retryable error instead of an indefinite loading placeholder; module fetch capped at twelve seconds",
+    "Mensa module loads only when the Mensa subtab is actually selected, not on normal Nutrition or Today navigation"
+  ],
+  "preservation": "No food data, catalog IDs, diary entries, task deadlines, encrypted vault data or personal journal data are migrated or removed.",
+  "tests": {
+    "pass": 2279,
+    "existingFail": 66,
+    "newFail": 0,
+    "releaseChecks": 33,
+    "newTargeted": 4
+  },
+  "viteBuildRun": false,
+  "viteBuildReason": "Vite is not locally installed. Production bundling must be confirmed via GitHub Actions."
+}
