@@ -6,7 +6,7 @@
 .nf4017-header h2{font-family:inherit;font-weight:700;font-size:clamp(1.5rem,2.7vw,2.05rem);letter-spacing:-.04em;margin:3px 0 4px}
 .nf4017-header p{color:#6b8078;margin:0;font-size:.85rem}
 .nf4017-primary{background:#246e59!important;color:white!important;border:1px solid #246e59!important;border-radius:11px!important;padding:11px 18px!important;font-weight:700;white-space:nowrap;min-height:42px;cursor:pointer}
-.nf4017-nav{display:flex;gap:5px;padding:5px;margin:0 0 15px;border-radius:13px;background:#eef3f0;max-width:610px}
+.nf4017-nav{display:flex;gap:5px;padding:5px;margin:0 0 15px;border-radius:13px;background:#eef3f0;max-width:780px}
 .nf4017-nav button{flex:1;border:0;border-radius:9px;background:transparent;color:#4f6c61;font-size:.86rem;font-weight:600;min-height:37px;padding:6px 12px;cursor:pointer;white-space:nowrap}
 .nf4017-nav button.selected{background:#fff;color:#164b3b;box-shadow:0 1px 5px #173d2b16}
 .nf4017-nav button:focus-visible,.nf4017-subnav button:focus-visible,.nf4017-primary:focus-visible,.nf4017-link:focus-visible{outline:3px solid #78bca6;outline-offset:2px}
@@ -49,3 +49,5 @@
 @media(max-width:850px){.nf4017-header{margin-top:2px}.nf4017-plot,.nf4017-recent{padding:13px 14px}.nf4017-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.nf4017-summary-item:last-child{grid-column:span 2}.nf4017-svg{min-width:0}.nf4017-section-heading{flex-wrap:wrap}}
 @media(max-width:530px){.nf4017-header{gap:8px}.nf4017-header h2{font-size:1.55rem}.nf4017-header p{font-size:.74rem}.nf4017-primary{padding:9px 11px!important}.nf4017-nav{width:100%;max-width:none;overflow-x:auto}.nf4017-nav button{padding:8px 9px;font-size:.76rem}.nf4017-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.nf4017-summary-item{padding:11px}.nf4017-recent-energy{font-size:.72rem}.nf4017-section-heading p{max-width:300px}.nf4017-svg{margin-top:7px}}
 @media(prefers-reduced-motion:reduce){.nf4017-workspace *{scroll-behavior:auto!important;transition:none!important}}
+
+@media(max-width:680px){.nf4017-nav{overflow-x:auto;max-width:100%}.nf4017-nav button{min-width:80px;flex:0 0 auto}}

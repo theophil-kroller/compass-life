@@ -290,7 +290,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.51';
+const COMPASS_CLIENT_VERSION='0.5.91.52';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -468,8 +468,10 @@ let worktimeQuickOpen=false,habitQuickOpen=false,habitDraftTitle='';
 let touchPeriod=30,touchEditingId='',touchQuickOpen=false,touchDefaultPersonId='';
 let mealComposeText='',mealComposeModel=null;
 let mensaApi=null,mensaLoadPending=null,mensaLoadError='',mensaImportDraft=null,mensaMessage='',mensaEmailDraftRaw='';
+// Nutrition Intelligence: code-split. Never imported for Today, Inbox or Planen.
+let nutritionCoachApi52=null,nutritionCoachPending52=null,nutritionCoachError52='',nutritionCoachDays52=14,nutritionCoachMetric52='protein',nutritionCoachAnchor52=localDateString(new Date()),nutritionCoachReport52=null;
 let coachHorizon88=6;
-let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',nutritionView712='journal',nutritionTimingMode725='week',nutritionTimingAnchor725=localDateString(new Date()),nutritionTimingSelected725='',nutritionTrendsMode726='week',nutritionTrendsAnchor726=localDateString(new Date()),nutritionTrendsMetric726='protein',nutritionDay712=localDateString(new Date()),nutritionProduct712='matcha-powder',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
+let nutritionQuickOpen=false, timeJournalPeriod=7,timeJournalEditId='',timeJournalShowForm=false,nutritionPeriod=30,nutritionEditId='',nutritionView712='overview',nutritionTimingMode725='week',nutritionTimingAnchor725=localDateString(new Date()),nutritionTimingSelected725='',nutritionTrendsMode726='week',nutritionTrendsAnchor726=localDateString(new Date()),nutritionTrendsMetric726='protein',nutritionDay712=localDateString(new Date()),nutritionProduct712='matcha-powder',foodQueuedCount=0,journalSyncStatus='lokal',journalSyncBusy=false;
 let nutritionConnInput727='lastMeal',nutritionConnOutcome727='sleep',nutritionConnRange727='90';
 let strengthRange728='28',strengthSide728='front',strengthActivity737='combined';
 let nutritionFatDays731='30',nutritionFatMetric731='saturated',strengthEditId732='',dailyDozenDay733=localDateString(new Date()),antiAgingDay734=localDateString(new Date()),phytoPeriod736=30;
@@ -2142,6 +2144,17 @@ function compass56TodayWorkspace(){
 // Menu catalog module + GPT prompt are loaded ONLY after entering Insights → Ernährung.
 // Mensa is loaded only when its tab is opened. UI hydration is never blocked
 // by a potentially slow encrypted vault write or by the device journal sync.
+function nutritionCoachPageVisible52(){return Boolean(state&&tab==='insights'&&insightTab==='nutrition'&&nutritionView712==='overview');}
+function ensureNutritionCoach52(){
+ if(!nutritionCoachPageVisible52()||nutritionCoachApi52||nutritionCoachPending52||nutritionCoachError52)return;
+ let timer;
+ nutritionCoachPending52=Promise.race([
+  Promise.all([import('./nutrition-coach-v059152.js'),import('./nutrition-coach-v059152.css')]).then(([mod])=>mod),
+  new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Das Nachladen hat zu lange gedauert.')),12000);})
+ ]).then(mod=>{nutritionCoachApi52=mod;if(nutritionCoachPageVisible52())render();})
+ .catch(err=>{nutritionCoachError52='Ernährungsübersicht konnte nicht geladen werden: '+err.message;if(nutritionCoachPageVisible52())render();})
+ .finally(()=>{clearTimeout(timer);nutritionCoachPending52=null;});
+}
 function mensaPageVisible(){return Boolean(state&&tab==='insights'&&insightTab==='nutrition'&&nutritionView712==='mensa');}
 function ensureMensaForNutrition(){
  if(mensaApi||mensaLoadPending||mensaLoadError||!mensaPageVisible())return;
@@ -2705,7 +2718,8 @@ function cachedSleepInsights(data,today,period){
  const value=buildSleepInsights(data,today,period);sleepMemo={data,period,today,value};return value;
 }
 function invalidateDerivedInsights(){sleepMemo.data=null;sleepMemo.value=null;}
-function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensaForNutrition);if(insightTab!=='dreamworld'&&!compass54Ready('insights'))return compass54LoadingScreen('insights');
+function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensaForNutrition);
+ if(insightTab==='nutrition')queueMicrotask(ensureNutritionCoach52);if(insightTab!=='dreamworld'&&!compass54Ready('insights'))return compass54LoadingScreen('insights');
  const tabDef=insightTab==='lifeweeks'?{label:'My Life in Weeks',subtitle:'Ars Vivendi · Lebenschronik'}:insightTab==='report'?{label:'Ars Vivendi',subtitle:'Compass Life Report'}:insightTab==='intelligence'?{label:'Intelligence-Cockpit',subtitle:'Übersichten, Muster und nächste Schritte'}:insightTab==='capacity'?{label:'Fristen & Kapazität',subtitle:'Aktueller GTD-Stand · bewusst geschätzte Arbeitskapazität'}:insightTab==='weekly'?{label:'Wochenkompass',subtitle:'Letzte vollständig vergangene Tage · Datenstand je Quelle'}:insightTab==='dreamworld'?{label:'Traumwelt',subtitle:'Nachtträume, Tagträume und Fantasien'}:insightTab==='touch'?{label:'Berührung & Nähe',subtitle:'Freiwillig dokumentierte körperliche Nähe'}:(INSIGHT_TABS.find(t=>t.id===insightTab)||INSIGHT_TABS[0]);
  const today=localDate();
  const model=(insightTab==='sleep'||insightTab==='places')?cachedSleepInsights(state?.healthImports||{},today,insightPeriod):null;
@@ -2731,6 +2745,7 @@ function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensa
    renderHistory:()=>nutritionHistoryView(state,{period:nutritionPeriod}),
    renderManualDozen:()=>dailyDozenView(state,{day:dailyDozenDay733,today:localDate()}),
    renderSync:()=>journalSyncPanel(),
+   renderOverview:()=>nutritionCoachApi52?nutritionCoachApi52.nutritionCoachDashboard52(state,{days:nutritionCoachDays52,anchor:nutritionCoachAnchor52,today:localDateString(new Date()),metric:nutritionCoachMetric52,report:nutritionCoachReport52}):nutritionCoachError52?`<section class="ni152-error" role="alert"><p>${h(nutritionCoachError52)}</p><button type="button" data-action="ni152-retry">Erneut laden</button></section>`:'<p role="status">Ernährungsübersicht wird bei Bedarf nachgeladen …</p>',
    renderMensa:()=>mensaApi?mensaApi.mensaCatalogPanel(state,{draft:mensaImportDraft,day:today,status:mensaMessage,emailText:mensaEmailDraftRaw}):mensaLoadError?`<section class="mensa-load-failure" role="alert"><p>${h(mensaLoadError)}</p><button type="button" data-action="mensa-retry-load">Erneut laden</button></section>`:'<p role="status">Mensa-Datenbank wird geladen …</p>',
    renderSection:kind=>kind==='daily-dozen'?dailyDozen5930View(dailyDozen5930(state,{day:today}))
     :kind==='nutrients'?nutritionIntelligenceView(state,{day:nutritionDay712,detail:nutritionProduct712})
@@ -4732,7 +4747,12 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
     mensaMessage=`${result.added} neue Menüs · ${result.updated} aktualisiert · ${result.unchanged} unverändert. Verschlüsselt gespeichert.`;render();toast(mensaMessage);}
   catch(ex){toast('Mensa-Import: '+ex.message,true);}return;
  }
- if(action==='ni712-view'){if(!['journal','nutrients','timing','trends','connections','fats','daily-dozen','anti-aging','phyto','mensa'].includes(id))return;nutritionView712=id;if(id!=='journal')nutritionEditId='';if(id==='nutrients')nutritionDay712=localDateString(new Date());render();return;}
+ if(action==='ni152-retry'){nutritionCoachError52='';ensureNutritionCoach52();render();return;}
+ if(action==='ni152-metric'){if(!['kcal','protein','salt','fiber','saturated'].includes(id))return;nutritionCoachMetric52=id;render();return;}
+ if(action==='ni152-period'){const v=Number(id);if(![7,14,42,90].includes(v))return;nutritionCoachDays52=v;nutritionCoachAnchor52=localDateString(new Date());render();return;}
+ if(action==='ni152-shift'){if(!nutritionCoachApi52||!['prev','next'].includes(id))return;nutritionCoachAnchor52=nutritionCoachApi52.shiftNutritionCoachWindow52(nutritionCoachDays52,nutritionCoachAnchor52,id,localDateString(new Date()));render();return;}
+ if(action==='ni152-analyze'){if(!nutritionCoachApi52||!state)return;try{nutritionCoachReport52=nutritionCoachApi52.nutritionCoachAnalyze52(state,{days:nutritionCoachDays52,anchor:nutritionCoachAnchor52,today:localDateString(new Date())});render();}catch(ex){toast('Ernährungsanalyse: '+ex.message,true);}return;}
+ if(action==='ni712-view'){if(!['overview','journal','nutrients','timing','trends','connections','fats','daily-dozen','anti-aging','phyto','mensa'].includes(id))return;nutritionView712=id;if(id!=='journal')nutritionEditId='';if(id==='nutrients')nutritionDay712=localDateString(new Date());render();return;}
  // Nutrition 3: independent, read-only scatter series and light-weight subpanel updates.
  if(action==='ni727-input'){
   if(!['lastMeal','kcal','protein','caffeine'].includes(id))return;
@@ -5436,7 +5456,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
   render();return;
  }
  if(action==='calm-nav-group'){if(id==='insights'||id==='finance'){tab=id;calmNavGroup=id;if(id==='insights')insightTab='intelligence';else{financePane='Überblick';financeReviewPage=0;financeLedgerPage=0;}render();return;}calmNavGroup=calmNavGroup===id?'':id;render();return;}
-    if(action==='calm-insight-view'){if(id==='nutrition')nutritionView712='journal';if(id==='dreamworld'||id==='weekly'||id==='capacity'||INSIGHT_TABS.some(t=>t.id===id)||['touch','habits','feelings','balance','focus','worktime','timejournal','nutrition','places','explore','sources','sleep'].includes(id)){tab='insights';calmNavGroup='insights';insightTab=id;if(id==='places')insightPeriod='all';render();if(authToken){reloadWatchSessions().catch(()=>{});reloadHealth().catch(()=>{});}}return;}
+    if(action==='calm-insight-view'){if(id==='nutrition')nutritionView712='overview';if(id==='dreamworld'||id==='weekly'||id==='capacity'||INSIGHT_TABS.some(t=>t.id===id)||['touch','habits','feelings','balance','focus','worktime','timejournal','nutrition','places','explore','sources','sleep'].includes(id)){tab='insights';calmNavGroup='insights';insightTab=id;if(id==='places')insightPeriod='all';render();if(authToken){reloadWatchSessions().catch(()=>{});reloadHealth().catch(()=>{});}}return;}
     if(action==='nav-more'){await mutate(s=>{s.uiPreferences??={};s.uiPreferences.advancedNav=!(s.uiPreferences.advancedNav===true);});return;}
     if(action==='recovery-idea-remove'){if(!String(id).startsWith('idea-'))return;await mutate(s=>{s.recoveryIdeas=(s.recoveryIdeas||[]).filter(i=>i.id!==id);});return;}
     if(action==='recovery-idea-hide'){if(!String(id).startsWith('starter-'))return;await mutate(s=>{s.hiddenStarterIdeas=[...new Set([...(s.hiddenStarterIdeas||[]),id])];});return;}
@@ -6030,7 +6050,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       placesPreview=null;selectedPlaceKey='';toast('Alle lokalen Standortdaten gelöscht.');return;
     }
     if(action==='open-worldmap'){tab='insights';insightTab='places';insightPeriod='all';selectedPlaceKey='';render();return;}
-    if(action==='insights-tab'){if(id==='nutrition')nutritionView712='journal';if(id==='touch'||id==='dreamworld'||id==='weekly'||id==='capacity'||INSIGHT_TABS.some(t=>t.id===id)){tab='insights';calmNavGroup='insights';if(id==='places'&&insightTab!=='places')insightPeriod='all';insightTab=id;render();if(['focus','timejournal'].includes(id)&&authToken){reloadWatchSessions().catch(()=>{});}}return;}
+    if(action==='insights-tab'){if(id==='nutrition')nutritionView712='overview';if(id==='touch'||id==='dreamworld'||id==='weekly'||id==='capacity'||INSIGHT_TABS.some(t=>t.id===id)){tab='insights';calmNavGroup='insights';if(id==='places'&&insightTab!=='places')insightPeriod='all';insightTab=id;render();if(['focus','timejournal'].includes(id)&&authToken){reloadWatchSessions().catch(()=>{});}}return;}
     if(action==='sports-mode'){if(SPORTS_MODES.some(([v])=>v===id)){sportsMode=id;sportsAnchor=localDate();render();}return;}
     if(action==='sports-shift'){if(['-1','1'].includes(id)&&sportsMode!=='all'){sportsAnchor=sportsShiftAnchor(sportsMode,sportsAnchor,Number(id),localDate());render();}return;}
     if(action==='sports-metric'){if(['time','count','distance'].includes(id)){sportsMetric=id;render();}return;}

@@ -1,0 +1,30 @@
+{
+  "version": "0.5.91.52",
+  "baselineVersion": "0.5.91.51",
+  "features": [
+    "Code-split Nutrition Intelligence overview, accessible as first nutrition subtab; lazy loaded exclusively when it is selected",
+    "Rolling 7/14/42/90-day windows with previous/next paging across calendar weeks",
+    "Source-aware kcal, protein, salt, fibre, saturated fat and selected vitamin/mineral daily averages, and selectable historical bar chart",
+    "Product frequency, sum of recorded quantities without inventing absent gram conversions, macro-nutrient contributions",
+    "Daily Dozen documented servings and target reach per category over time, plus evidence-based Anti-Aging Eight observable categories (not a longevity score)",
+    "Explicit on-demand local recommendation engine: named ranked salt sources with grams and share of quantified sum, Daily Dozen gaps and catalog-based food suggestions; protein and ALA only where quantification supports",
+    "On-demand results invalidated by changes to log, catalog or date period; no vault mutations, automatic habits or internet requests",
+    "Preserves all previous journal tabs, food entries, IDs, deadlines and Mensa integration. Does not add Nutrition module to Today startup."
+  ],
+  "scopeLimits": [
+    "This is the first nutrition-coaching stage. Sleep, worktime, contacts, habits and training-time causal analyses are not implemented in this release.",
+    "The 42-day option is a rolling window; not yet the start/end dates of a specific strength training block.",
+    "Anti-Aging Eight entries requiring biomarkers (NAD+, microRNA) are not measurable from food logging.",
+    "Recorded food and nutrient contributions are not proof of dietary completeness or clinical deficiency."
+  ],
+  "preservation": "No catalog or journal entries/food IDs changed; UI and read-only analysis only.",
+  "tests": {
+    "pass": 2287,
+    "existingFail": 66,
+    "newFail": 0,
+    "releaseChecks": 33,
+    "newTargeted": 8
+  },
+  "viteBuildRun": false,
+  "viteBuildReason": "Vite not installed locally; GitHub Actions must verify actual production build."
+}
