@@ -31,11 +31,58 @@ export function dailyDozenIngredientEvidence404(state,day){
  for(const e of entries){
   const id=String(e.foodId||''),a=String(e.amount||''),g=grams(a),factor=scale(e),sourceId=String(e.id||id);
   if(id.startsWith('mensa-menu-')&&e.menuSnapshot){
-   const title=String(e.menuSnapshot.title||custom.get(id)?.title||'').toLowerCase();
-   const candidates=e.menuSnapshot.dailyDozenCandidateCategories||[];
-   // Provisional partial serving from a *consumed* dish with clearly named vegetables.
-   // No weight supplied => DO NOT assert a full serving.
-   if(candidates.includes('vegetables')&&/ratatouille|gemüse|gemuese|vegetable/.test(title)){add('vegetables',0.5,'Mensa · Gemüseanteil im Gericht (vorläufig, Menge unbekannt)',sourceId);notes.vegetables.push('Mensa-Portion unbekannt: 0,5 vorläufiger Vergleichswert, bitte Gemüsemenge bestätigen.');}
+   // Mensa dishes only count when actually eaten. Prefer per-day saved snapshots,
+   // but recover ingredient assumptions from the catalog for older journal entries.
+   const snap=e.menuSnapshot;
+   const offer=(state?.mensaCatalog?.entries||[]).find(o=>o?.id===e.catalogOfferId||o?.menuDate===snap.menuDate);
+   const weights=Object.keys(snap.ingredientWeightsGrams||{}).length?snap.ingredientWeightsGrams:offer?.ingredientWeightsGrams;
+   const named=[...(snap.ingredientsNamedInMenu||offer?.ingredientsNamedInMenu||[])];
+   const observedCategories=new Set();
+   const classify=name=>{
+    const t=String(name).toLocaleLowerCase('de');
+    // Names must describe the ingredient itself: a rice wrapper or a
+    // breaded vegetable is not a confirmed whole-grain serving.
+    if(/(?:brokkoli|broccoli|blumenkohl|rotkraut|weißkraut|weisskraut|kohlrabi|kohlsprossen|rosenkohl)/.test(t))return 'cruciferous';
+    if(/(?:spinat|mangold|grünkohl|rucola|blattsalat)/.test(t))return 'greens';
+    if(/(?:linsen|kichererbsen|kidneybohnen|käferbohnen|bohnen|tofu|tempeh)/.test(t))return 'beans';
+    if(/(?:vollkorn|naturreis|brauner reis|schwarzer reis|buchweizen|quinoa|bulgur)/.test(t))return 'wholegrains';
+    if(/(?:wokgemüse|gemüse|gemuese|paprika|karotte|möhre|zucchini|aubergine|kürbis|tomat|rote rübe|rote beete)/.test(t))return 'vegetables';
+    // Plain basmati rice, pasta, wheat, potatoes and generic grain names
+    // must NOT be promoted to Greger's whole-grain category.
+    return null;
+   };
+   const denom={beans:90,cruciferous:80,greens:85,vegetables:80,wholegrains:100};
+   if(weights&&typeof weights==='object'&&!Array.isArray(weights)){
+    for(const [name,raw] of Object.entries(weights)){
+     const category=classify(name),mass=Number(raw);
+     if(!category||!Number.isFinite(mass)||mass<=0||mass>1500)continue;
+     observedCategories.add(category);
+     // Source weights are typical-recipe estimates, never measured portions.
+     const amount=Math.min(3,mass/denom[category]);
+     add(category,amount,`Mensa · ${name}: ca. ${round(mass)} g laut Rezeptschätzung (nicht gewogen)`,sourceId);
+    }
+   }
+   // Older meals can have a clear named side but no weights. Show at most a
+   // provisional half serving, never a fictitious full Daily-Dozen checkmark.
+   if(!observedCategories.size){
+    for(const label of named){
+     const category=classify(label);
+     if(!category||observedCategories.has(category))continue;
+     observedCategories.add(category);
+     add(category,0.5,`Mensa · ${label}: ungewogene Beilage, vorsichtig geschätzte Teilportion`,sourceId);
+    }
+   }
+   const candidates=snap.dailyDozenCandidateCategories||offer?.dailyDozenCandidateCategories||[];
+   // Legacy saved ratatouille entries carried only a dish title and category;
+   // keep their older conservative half-serving behaviour intact.
+   if(!observedCategories.size&&candidates.includes('vegetables')&&/ratatouille|gemüse|gemuese|vegetable/i.test(String(snap.title||''))){
+    observedCategories.add('vegetables');
+    add('vegetables',0.5,'Mensa · Gemüse ausdrücklich im Gericht genannt, Portionsgewicht unbekannt (vorläufig)',sourceId);
+   }
+   for(const candidate of candidates){
+    const category=candidate==='legumes'?'beans':candidate;
+    if(NAMES[category]&&!observedCategories.has(category))notes[category].push('Mensa · mögliche Zutat laut Speiseplan, aber kein hinreichender Mengenbeleg für eine Portion.');
+   }
    continue;
   }
   if(Object.hasOwn(PLANT_DD_149,id)){

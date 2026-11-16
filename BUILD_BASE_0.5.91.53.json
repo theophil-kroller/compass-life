@@ -1,0 +1,21 @@
+{
+  "version": "0.5.91.53",
+  "baselineVersion": "0.5.91.52",
+  "features": [
+    "Numerically scaled y-axis, dates, quantitative daily summary and meaningful reference lines",
+    "Food-frequency list separates meal/food products from beverages and supplements",
+    "On-demand recommender prioritizes three findings with additional details on request",
+    "Consumed Mensa meals contribute estimated ingredient servings to Daily Dozen; basmati does not count as wholegrain",
+    "Existing Mensa journal entries recover ingredient quantities read-only from the catalog when possible"
+  ],
+  "preservation": "No deletions, migrations or writes to historical journal records. Source files updated only; lazily loaded Nutrition overview stays lazy.",
+  "tests": {
+    "pass": 2294,
+    "existingFail": 66,
+    "newFail": 0,
+    "releaseChecks": 33,
+    "newTargeted": 7
+  },
+  "viteBuildRun": false,
+  "viteBuildReason": "Vite dependencies absent in local environment; GitHub Actions must confirm production compilation."
+}

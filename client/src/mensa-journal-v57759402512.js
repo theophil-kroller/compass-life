@@ -32,6 +32,7 @@ export function logMensaMeal(state,date,at=new Date().toISOString()){
  const logged=addNutrition(state,{foodId,at,amount:'1 Study-Teller',note:'Mensa Rooftop · grobe Nährwertschätzung'});
  logged.catalogOfferId=offer.id;logged.catalogVersion=offer.catalogVersion;logged.consumedAt=at;
  logged.menuSnapshot=structuredClone({title:offer.title,menuDate:offer.menuDate,venueId:offer.venueId,nutrientEstimates:offer.nutrientEstimates,
+    ingredientsNamedInMenu:offer.ingredientsNamedInMenu,ingredientWeightsGrams:offer.ingredientWeightsGrams,
     dailyDozenCandidateCategories:offer.dailyDozenCandidateCategories,antiAgingEightCandidateTopics:offer.antiAgingEightCandidateTopics,
     evidence:offer.evidence});
  return {added:true,entry:logged};

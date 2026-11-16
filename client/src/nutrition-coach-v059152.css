@@ -4,3 +4,16 @@
 .ni152-trendhead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}.ni152-trendhead nav{display:flex;flex-wrap:wrap;gap:4px}.ni152-trendhead button{border:1px solid #dae5de;background:#f5faf7;border-radius:8px;color:#4d6659;padding:6px 8px;cursor:pointer;font-size:.73rem}.ni152-trendhead button.selected{background:#316f57;color:white}.ni152-trendbars{display:flex;align-items:stretch;gap:3px;min-height:108px;height:108px;padding:4px 3px 0;border-bottom:1px solid #dce6df;overflow-x:auto}.ni152-trendbar{height:100%;min-width:5px;flex:1;display:flex;align-items:flex-end;justify-content:center;align-self:flex-end}.ni152-trendbar>span{background:#3f9584;display:block;width:100%;max-width:28px;min-height:2px;border-radius:3px 3px 0 0}.ni152-trendbar>span.partial{background:#8cbbaa;opacity:.78}.ni152-trendbar>span.unknown{background:transparent;border:1px dashed #9fafaa;box-sizing:border-box}
 
 .ni152-aging{display:flex;gap:6px;flex-wrap:wrap}.ni152-aging span{background:#edf6ef;color:#315b46;border-radius:10px;padding:6px 8px;font-size:.71rem}
+/* .53: legible quantitative trend and separate food vs. supplement frequency */
+.ni153-chart{display:grid;gap:9px;min-width:0}
+.ni153-chart svg{display:block;width:100%;max-height:260px;overflow:visible}
+.ni153-interpret{display:flex;align-items:baseline;gap:9px 20px;flex-wrap:wrap}
+.ni153-interpret strong{color:#246b56;font-size:.97rem}
+.ni153-interpret span{color:#6e8177;font-size:.76rem}
+.ni153-extras{border-top:1px solid #e1eae5;padding-top:10px;margin-top:6px;font-size:.78rem}
+.ni153-extras summary{font-weight:700;cursor:pointer;color:#285d4d}
+.ni153-extras h5{margin:13px 0 7px;color:#416559;font-size:.78rem}
+.ni153-mensa-note{background:#eaf5ef;color:#275842!important;border:1px solid #cce3d6;border-radius:8px;padding:9px;font-size:.74rem!important;line-height:1.5}
+.ni153-more summary{cursor:pointer;font-size:.81rem;font-weight:700;color:#e8c88a;padding:10px 2px}
+.ni153-more article{margin:7px 0}
+@media(max-width:600px){.ni153-interpret{display:grid;gap:3px}.ni153-chart svg{min-width:280px}}
