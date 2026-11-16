@@ -290,7 +290,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.53';
+const COMPASS_CLIENT_VERSION='0.5.91.54';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -3163,6 +3163,7 @@ function compass55BindTaskEditForm(){
 
 function compass55BindDataActions(root){
  root.querySelectorAll('[data-action]').forEach(el=>{if(el.closest('#fw705-network-results'))return;el.onclick=ev=>{
+    if(el.dataset.action==='ni154-select-category')ev.preventDefault();
     if(['capture-close-backdrop','pj92-food-close-backdrop','worktime-quick-close-backdrop','t577-capture-cancel'].includes(el.dataset.action)&&ev.target!==el)return;
     if(el.dataset.action==='date-adjust'||el.dataset.action==='date-clear'){
       const field=el.closest('form')?.querySelector(`[name="${el.dataset.field}"]`);
@@ -4746,6 +4747,14 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
   try{let result;await mutate(st=>{result=mensaApi.importMensaOffers(st,mensaImportDraft);},null,true);mensaImportDraft=null;
     mensaMessage=`${result.added} neue Menüs · ${result.updated} aktualisiert · ${result.unchanged} unverändert. Verschlüsselt gespeichert.`;render();toast(mensaMessage);}
   catch(ex){toast('Mensa-Import: '+ex.message,true);}return;
+ }
+ if(action==='ni154-select-category'){
+  // The donut is a light, read-only navigation shortcut to an existing
+  // native details element. No rerender, vault access or nutrition reanalysis.
+  if(!/^[a-z-]+$/.test(String(id||'')))return;
+  const category=app.querySelector('#ni154-category-'+id);
+  if(category){category.open=true;category.scrollIntoView?.({behavior:'smooth',block:'nearest'});}
+  return;
  }
  if(action==='ni152-retry'){nutritionCoachError52='';ensureNutritionCoach52();render();return;}
  if(action==='ni152-metric'){if(!['kcal','protein','salt','fiber','saturated'].includes(id))return;nutritionCoachMetric52=id;render();return;}
