@@ -1,0 +1,21 @@
+{
+  "version": "0.5.91.50",
+  "baselineVersion": "0.5.91.49",
+  "features": [
+    "Today: open overdue GTD deadlines remain visible after due date, including weekends, until explicit resolution",
+    "Today Mensa research button switches to Extended and navigates directly in a single user-initiated render",
+    "Mensa JSON importer normalizes rich text HTML spaces, backslash newlines, and double escaped interior quotes",
+    "User screenshot without URL imports as estimated_from_source, no invented HTTPS provenance",
+    "Mensa catalog remains dynamically loaded only on the nutrition workspace"
+  ],
+  "preservation": "No existing food records, food IDs, calendar events, tasks or nutrition entries are migrated or removed.",
+  "tests": {
+    "pass": 2275,
+    "existingFail": 66,
+    "newFail": 0,
+    "releaseChecks": 33,
+    "newTargeted": 5
+  },
+  "viteBuildRun": false,
+  "viteBuildReason": "npm dependencies including Vite are not installed locally; GitHub Actions production build must be checked."
+}

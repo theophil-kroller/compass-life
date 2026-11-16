@@ -290,7 +290,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.49';
+const COMPASS_CLIENT_VERSION='0.5.91.50';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -1662,7 +1662,7 @@ function compass55InspectorContent(){return `${todayInspectorOpen&&state?.tasks?
 let ctx40Expanded=false;
 function todayWork(locked=false){
  const selected=localDateString(new Date())===selectedDay;
- const dayTasks=tasksForDay(state,selectedDay).filter(t=>!waitingSourceId(t));
+ const dayTasks=tasksForDay(state,selectedDay,{includeOverdue:selectedDay===localDate()}).filter(t=>!waitingSourceId(t));
  return `${ctx40Expanded&&selectedDay===localDate()?contextNextPanel40(state,{day:selectedDay,context:effectiveContext39(state).kind}):""}<div class="today-layout premium751-today">${calendarRail()}<div class="today-center">
  <section class="work-card appointments"><div class="work-heading"><span>${ico('calendar',18)} Termine ${selected?'heute':h(dayFormat(new Date(`${selectedDay}T12:00:00`)))}</span><span class="quiet-tag">${h(calendarStatus)}</span></div>
  ${calendarRowsOrConnect36(selectedDay)}</section>${eventAgendaPanel()}${selectedDay===localDate()?researchRefreshPanel('today'): ''}
@@ -1776,7 +1776,7 @@ function taskProgressInline(t){
 function taskList(items,scope,hideEmpty=false){
  const nextScope=scope==='next';
  const yesterdayIds=nextScope?new Set(yesterdayIntentions(state,localDate()).map(x=>x.task.id)):new Set();
- return items.length?`<div class="task-list ${nextScope?'next38-list':''}" data-scope="${h(scope)}">${items.map((t,i)=>`<div class="task-row ${nextScope?'next38-row':''} ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}" ${nextScope?`data-next-row="${h(t.id)}"`:''}>${scope==='day'?`<span class="p49-today-move"><button type="button" data-action="p49-today-up" data-id="${h(t.id)}" title="Nach oben" aria-label="${h(t.title)} nach oben" ${i===0||t.completed?'disabled':''}>↑</button><button type="button" data-action="p49-today-down" data-id="${h(t.id)}" title="Nach unten" aria-label="${h(t.title)} nach unten" ${i===items.length-1||t.completed?'disabled':''}>↓</button></span>`:''}${nextScope?`<span class="next38-drag" draggable="true" data-next-drag="${h(t.id)}" role="img" aria-label="${h(t.title)} zum Sortieren ziehen" title="Ziehen zum Sortieren, alternativ Pfeiltasten">⠿</span>`:''}<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':''}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button>${inlineTaskTitle(t,`<span ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`:''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · Deadline '+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}${nextScope&&t.plannedDate===localDate()?' · Für heute vorgemerkt':''}</small>${nextScope&&yesterdayIds.has(t.id)?'<span class="yesterday710-label">↶ Gestern geplant</span>':''}${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</span>`)}${taskProgressInline(t)}${nextScope?`<button type="button" class="next38-today ${t.plannedDate===localDate()?'is-planned':''}" data-action="next-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" title="${t.plannedDate===localDate()?'Heute-Vormerkung entfernen':'Ohne Fälligkeitsdatum für heute vormerken'}">${ico('calendar',14)} <span>${t.plannedDate===localDate()?'Heute ✓':'Heute'}</span></button><span class="next38-move"><button type="button" data-action="next-move-up" data-id="${h(t.id)}" aria-label="${h(t.title)} nach oben" title="Nach oben" ${i===0?'disabled':''}>↑</button><button type="button" data-action="next-move-down" data-id="${h(t.id)}" aria-label="${h(t.title)} nach unten" title="Nach unten" ${i===items.length-1?'disabled':''}>↓</button></span>`:''}${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;
+ return items.length?`<div class="task-list ${nextScope?'next38-list':''}" data-scope="${h(scope)}">${items.map((t,i)=>`<div class="task-row ${nextScope?'next38-row':''} ${selectedTaskId===t.id?'is-selected':''} ${t.completed?'completed':''}" ${nextScope?`data-next-row="${h(t.id)}"`:''}>${scope==='day'?`<span class="p49-today-move"><button type="button" data-action="p49-today-up" data-id="${h(t.id)}" title="Nach oben" aria-label="${h(t.title)} nach oben" ${i===0||t.completed?'disabled':''}>↑</button><button type="button" data-action="p49-today-down" data-id="${h(t.id)}" title="Nach unten" aria-label="${h(t.title)} nach unten" ${i===items.length-1||t.completed?'disabled':''}>↓</button></span>`:''}${nextScope?`<span class="next38-drag" draggable="true" data-next-drag="${h(t.id)}" role="img" aria-label="${h(t.title)} zum Sortieren ziehen" title="Ziehen zum Sortieren, alternativ Pfeiltasten">⠿</span>`:''}<button type="button" class="task-check" data-action="task-toggle" data-id="${h(t.id)}" aria-label="${t.completed?'Wieder öffnen':'Erledigen'}">${t.completed?'✓':''}</button><button type="button" class="flag-button ${t.flagged?'is-flagged':''}" data-action="task-flag" data-id="${h(t.id)}" title="Flagged umschalten">${ico('flag',17)}</button>${inlineTaskTitle(t,`<span ${Number.isInteger(t.depth)?`style="padding-left:${Math.min(t.depth,8)*17}px"`:''}><strong>${t.depth?'↳ ':''}${h(t.title)}</strong><small>${h(CATEGORY_LABELS[t.category]||t.category)}${t.dueDate?' · '+(!t.completed&&t.dueDate<localDate()?'Überfällig seit ':'Deadline ')+h(t.dueDate):''}${t.workflow==='waiting'?' · Waiting For':t.workflow==='hold'?' · On Hold':''}${t.deferUntil&&t.deferUntil>localDate()?' · ab '+h(t.deferUntil):''}${t.estimateMinutes?' · '+t.estimateMinutes+' min':''}${(t.contextTags||[]).length?' · @'+h(t.contextTags.join(' @')):''}${state?.taskPending?.[t.id]?' · Lokal gespeichert':''}${nextScope&&t.plannedDate===localDate()?' · Für heute vorgemerkt':''}</small>${nextScope&&yesterdayIds.has(t.id)?'<span class="yesterday710-label">↶ Gestern geplant</span>':''}${t.tags?.length?`<span class="task-tags">${t.tags.map(tag=>'<i>#'+h(tag)+'</i>').join('')}</span>`:''}</span>`)}${taskProgressInline(t)}${nextScope?`<button type="button" class="next38-today ${t.plannedDate===localDate()?'is-planned':''}" data-action="next-plan-today" data-id="${h(t.id)}" aria-pressed="${t.plannedDate===localDate()}" title="${t.plannedDate===localDate()?'Heute-Vormerkung entfernen':'Ohne Fälligkeitsdatum für heute vormerken'}">${ico('calendar',14)} <span>${t.plannedDate===localDate()?'Heute ✓':'Heute'}</span></button><span class="next38-move"><button type="button" data-action="next-move-up" data-id="${h(t.id)}" aria-label="${h(t.title)} nach oben" title="Nach oben" ${i===0?'disabled':''}>↑</button><button type="button" data-action="next-move-down" data-id="${h(t.id)}" aria-label="${h(t.title)} nach unten" title="Nach unten" ${i===items.length-1?'disabled':''}>↓</button></span>`:''}${state?.taskConflicts?.[t.id]?'<span class="task-conflict-pill">Konflikt</span>':''}</div>`).join('')}</div>`:hideEmpty?'':`<div class="task-empty">Keine passenden Aufgaben.</div>`;
 }
 function waitingSourceAction(t){
  const origin=state?.tasks?.[waitingSourceId(t)];
@@ -2114,7 +2114,7 @@ function compass56RecommendationPanel(){
 }
 function compass56TodayWorkspace(){
  const day=selectedDay,actual=day===localDateString(new Date());
- const tasks=todayOrdered49(tasksForDay(state,day).filter(t=>!waitingSourceId(t)));
+ const tasks=todayOrdered49(tasksForDay(state,day,{includeOverdue:actual}).filter(t=>!waitingSourceId(t)));
  const formatted=new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'numeric',month:'long'}).format(new Date(day+'T12:00:00'));
  const completed=tasks.filter(t=>t.completed).length;
  return `<div class="today-layout compass56-today">
@@ -4669,7 +4669,15 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  }
  if(action==='pj92-open-timejournal'){tab='insights';insightTab='timejournal';calmNavGroup='insights';render();if(state?.privateDeviceMirror?.key&&authToken)syncPersonalJournal().catch(ex=>toast('Journal-Abgleich: '+ex.message,true));return;}
  if(action==='pj92-period'){timeJournalPeriod=Number(id)||7;render();return;}
- if(action==='mensa-open-insights'){nutritionQuickOpen=false;tab='insights';insightTab='nutrition';nutritionView712='mensa';calmNavGroup='insights';render();return;}
+ if(action==='mensa-open-insights'){
+  // User-initiated navigation: switch mode and destination in one render.
+  // Do not preload the Mensa catalog (or trigger a sync) while Today loads.
+  nutritionQuickOpen=false;
+  compass55Mode='extended';
+  try{localStorage.setItem(COMPASS55_MODE_KEY,'extended');}catch{}
+  tab='insights';insightTab='nutrition';nutritionView712='mensa';calmNavGroup='insights';
+  render();return;
+ }
  if(action==='mensa-eat-today'){
   if(!state)return;const {day,offer}=mensaQuickStatus();if(!offer)return toast('Noch kein Menü für heute vorhanden.',true);
   try{let outcome;

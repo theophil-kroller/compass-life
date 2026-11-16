@@ -29,7 +29,10 @@ export function normalizeMensaOffer(x){
  const src=isObj(x.evidence)?x.evidence:{};
  const url=maxlen(src.sourceUrl||x.sourceUrl,1000);
  if(url&&!/^https:\/\/[^\s<>"']+$/i.test(url))throw Error('Quelllink muss eine HTTPS-Adresse sein.');
- if(x.menuStatus==='confirmed_from_published_menu'&&!url)throw Error('Online bestätigtes Menü braucht einen prüfbaren HTTPS-Quellenlink. E-Mail-Menüs bitte als estimated_from_source markieren.');
+ if(x.menuStatus==='confirmed_from_published_menu'&&!url&&src.sourceType!=='user_provided_official_menu_screenshot')throw Error('Online bestätigtes Menü braucht einen prüfbaren HTTPS-Quellenlink. E-Mail-Menüs bitte als estimated_from_source markieren.');
+ // A screenshot described in GPT output can be imported, but without an
+ // independently verifiable URL it must not be labelled online-confirmed.
+ const menuStatus=x.menuStatus==='confirmed_from_published_menu'&&!url?'estimated_from_source':x.menuStatus;
  const candidateEvidence=textArray(x.dailyDozenCandidateCategories||x.candidateDailyDozen);
  const antiAging=textArray(x.antiAgingEightCandidateTopics||x.candidateAntiAgingEight);
  const portion=clamp(x.portionGrams,3000),price=clamp(x.priceActualStudyEuro,50),standard=clamp(x.priceStandardEuro,50),listed=clamp(x.priceMenuListedEuro,50);
@@ -45,13 +48,41 @@ export function normalizeMensaOffer(x){
    dailyDozenCandidateCategories:candidateEvidence,dailyDozenConfirmedServings:{},
    antiAgingEightCandidateTopics:antiAging,antiAgingEightConfirmedEvidence:{},
    evidence:{sourceType:maxlen(src.sourceType||'web_research',80),sourceUrl:url,retrievedOn:maxlen(src.retrievedOn||x.retrievedOn,30),sourceClaimsOnly:maxlen(src.sourceClaimsOnly,300)},
-   menuStatus:['confirmed_from_published_menu','estimated_from_source','unverified'].includes(x.menuStatus)?x.menuStatus:'unverified',
+   menuStatus:['confirmed_from_published_menu','estimated_from_source','unverified'].includes(menuStatus)?menuStatus:'unverified',
    confidence:isObj(x.confidence)?x.confidence:{menu:url?'medium':'low',nutrientEstimate:'low'},
    updatedAt:maxlen(x.updatedAt||'',40),catalogVersion:1};
 }
+/** Accept normal JSON and common GPT copy/paste artifacts without
+ * mutating quoted JSON data. Keep the actual parsing and schema validation
+ * separate from transport cleanup. No remote call and no changes to storage.
+ */
+export function cleanMensaJsonInput(raw){
+ const source=String(raw??'').trim();
+ const fenced=source.match(/```(?:json)?\s*([\s\S]*?)```/i);
+ let text=(fenced?fenced[1]:source).trim();
+ // Rich-text exports may prefix each line with an HTML-encoded space and a
+ // backslash line-continuation (\ + LF), as in the observed GPT export.
+ text=text.replace(/\\\r?\n/g,'\n').replace(/^[ \t]*&#(?:x20|32);/gmi,' ')
+  .replace(/\u00a0/g,' ').trim();
+ if(!text.startsWith('{')&&!text.startsWith('[')){
+  const first=Math.min(...[text.indexOf('{'),text.indexOf('[')].filter(n=>n>=0));
+  if(Number.isFinite(first))text=text.slice(first);
+ }
+ if(!text.endsWith('}')&&!text.endsWith(']')){
+  const end=Math.max(text.lastIndexOf('}'),text.lastIndexOf(']'));
+  if(end>=0)text=text.slice(0,end+1);
+ }
+ return text;
+}
 export function parseMensaJSON(raw){
  if(typeof raw!=='string'||raw.length>500000)throw Error('JSON zu groß.');
- let json;try{json=JSON.parse(raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));}catch{throw Error('Ungültiges JSON. Bitte GPT um reines JSON bitten.');}
+ let json;const cleaned=cleanMensaJsonInput(raw);
+ try{json=JSON.parse(cleaned);}
+ catch{
+  // Some rich-text GPT exports double-escape quotes *inside* JSON strings.
+  try{json=JSON.parse(cleaned.replace(/\\\\(?=")/g,'\\'));}
+  catch{throw Error('Mensa-JSON nicht lesbar. Bitte den vollständigen JSON-Block einfügen (Codeblock und kopierte Formatierung werden automatisch erkannt).');}
+ }
  const rows=Array.isArray(json)?json:Array.isArray(json?.entries)?json.entries:Array.isArray(json?.menus)?json.menus:[json];
  if(!rows.length||rows.length>35)throw Error('Bitte 1 bis 35 Menüs auf einmal importieren.');
  const menus=rows.map(normalizeMensaOffer);if(new Set(menus.map(x=>x.id)).size!==menus.length)throw Error('Mehrere unterschiedliche Angebote für denselben Tag. Bitte Duplikate klären.');

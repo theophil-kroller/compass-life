@@ -55,7 +55,15 @@ export function validLocalTask(t){return Boolean(taskCounterValid(t)&&t&&typeof 
 export const taskPlain=t=>({id:t.id,title:t.title,note:t.note||'',plannedDate:t.plannedDate||null,dueDate:t.dueDate||null,category:t.category,completed:!!t.completed,archived:!!t.archived,workflow:t.workflow||'next',flagged:!!t.flagged,projectId:t.projectId||null,tags:t.tags||[],deferUntil:t.deferUntil||null,contextTags:t.contextTags||[],estimateMinutes:t.estimateMinutes??null,parentTaskId:t.parentTaskId||null,sortOrder:t.sortOrder??0,progressCurrent:t.progressCurrent??0,progressTarget:t.progressTarget??null});
 export const sameTask=(a,b)=>Boolean(a&&b&&JSON.stringify(taskPlain(a))===JSON.stringify(taskPlain(b)));
 export function localDate(d=new Date()){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
-export function tasksForDay(state,day){return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!isShoppingItem(state,t)&&(t.plannedDate===day||t.dueDate===day)).sort((a,b)=>Number(a.completed)-Number(b.completed)||a.title.localeCompare(b.title,'de'));}
+export function tasksForDay(state,day,{includeOverdue=false}={}){
+ // Only today's explicit view opts in. Overdue tasks stay visible until a user
+ // completes, postpones, archives or removes them. Historical days are unchanged.
+ return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!isShoppingItem(state,t)&&
+  (t.plannedDate===day||t.dueDate===day||(includeOverdue&&!t.completed&&t.dueDate&&t.dueDate<day)))
+  .sort((a,b)=>Number(a.completed)-Number(b.completed)||
+   (includeOverdue?(Number(Boolean(b.dueDate&&b.dueDate<day))-Number(Boolean(a.dueDate&&a.dueDate<day))||
+   String(a.dueDate||'').localeCompare(String(b.dueDate||''))):0)||a.title.localeCompare(b.title,'de'));
+}
 export function dueTasks(state,limit=120){return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!isShoppingItem(state,t)&&!t.completed&&t.dueDate).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)||a.title.localeCompare(b.title,'de')).slice(0,limit);}
 export function nextActions(state,day=localDate()){return Object.values(state?.tasks||{}).filter(t=>isActionAvailable(state,t,day)).sort((a,b)=>Number(!!b.flagged)-Number(!!a.flagged)||(a.dueDate||'9999').localeCompare(b.dueDate||'9999')||a.title.localeCompare(b.title,'de'));}
 export function flaggedTasks(state){return Object.values(state?.tasks||{}).filter(t=>!t.archived&&!isTemplateTask(state,t)&&!t.completed&&t.flagged===true).sort((a,b)=>a.title.localeCompare(b.title,'de'));}
