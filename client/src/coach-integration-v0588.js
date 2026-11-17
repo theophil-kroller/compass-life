@@ -7,6 +7,7 @@ import {nutritionFoods,ensureJournal} from './personal-journal-v5692.js';
 import {nutrientEntry} from './nutrition-intelligence-v57712.js';
 import {nutritionTrendsIndex} from './nutrition-trends-v57726.js';
 import {strengthPeriod} from './strength-insights-v57728.js';
+import {bodyMeasurementObservations} from './body-measurements-v05918.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dOK=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d+'T00:00:00Z'));
 const round=n=>Math.round(n*10)/10;
@@ -114,29 +115,64 @@ export function proteinTodayMarkup88(state,today,{compact=false}={}){
 export function proteinInsightsMarkup88(state,today){const p=proteinDay88(state,today),history=proteinHistory88(state,{today,days:30}),target=p.target;const valid=history.filter(x=>x.grams!==null),avg=n=>{const r=valid.slice(-n);return r.length?round(r.reduce((s,x)=>s+x.grams,0)/r.length):null;};
  const bars=history.slice(-14).map(x=>`<span title="${esc(x.day)} · ${x.grams===null?'unbekannt':fmt(x.grams)+' g'}${x.unknown?' · '+x.unknown+' unbekannt':''}" style="height:${x.grams===null?'3px':Math.max(4,Math.min(90,x.grams/target*90))+'px'};opacity:${x.unknown||x.estimated?'.5':'1'}"></span>`).join('');
  return `<section class="work-card ci88-protein-insights"><div class="work-heading"><span>💪 Protein Intelligence</span><span class="quiet-tag">Ziel ${target} g/Tag · anpassbar</span></div><div class="ci88-protein-main"><strong>${p.grams===null?'–':fmt(p.grams)} / ${target} g</strong><small>Heute · ${p.unknown} Eintrag/Einträge ohne Proteinwert${p.estimated?' · '+p.estimated+' geschätzt':''}</small></div><div class="ci88-trend" aria-label="Letzte 14 Tage mit erfassten Proteinmengen">${bars}</div><p>Beobachteter Mittelwert der <b>${valid.length}</b> Tage mit bekannten Proteinmengen: letzte 7 Datenpunkte <b>${fmt(avg(7))} g</b> · bis zu 30 Datenpunkte <b>${fmt(avg(30))} g</b>. Keine Aussage über nicht erfasste Mahlzeiten.</p><form id="ci88-protein-settings"><label>Protein-Ziel (g)<input name="targetG" type="number" min="60" max="250" step="5" value="${target}"></label><label>Fastenfenster<select name="fasting">${['flex','16:8','18:6','20:4'].map(x=>`<option value="${x}" ${state?.nutritionJournal?.proteinCoach88?.fasting===x?'selected':''}>${x==='flex'?'Flexibel':x}</option>`).join('')}</select></label><label>Taille (cm, optional)<input name="waistCm" type="number" min="40" max="200" step=".1" placeholder="Nur Messwerte"></label><label>Schulterumfang (cm, optional)<input name="shoulderCm" type="number" min="50" max="220" step=".1" placeholder="Nur Messwerte"></label><button type="submit" class="secondary-btn">Ziel / Maße speichern</button></form><details><summary>Vegetarische Proteinoptionen ohne feste Essenszeiten</summary><p>Skyr oder Magerquark/Topfen, Hüttenkäse, Seitan, Edamame, Tofu oder ein Proteinshake liefern viel Protein je Kalorie. Orientierung: ca. 250 g Skyr (~25 g Protein), 200 g Magerquark (~24 g), 150 g Seitan (~30 g); je nach Produktetikett. Fehlende Tageslogs bedeuten keinen nachgewiesenen Bedarf. Fastenfenster ist eine Planungshilfe, kein Anlass, einzelne Mahlzeiten zu erzwingen.</p></details>${openFoodView88()}</section>`;}
+/** Read the very same encrypted Smart-Tape rows as the body dashboard.
+ * Only a shoulder and waist from ONE measurement session can form a ratio.
+ * The old legacy form (shoulderCm/waistCm) is normalized by the shared reader.
+ */
+export function vTaperTapeRatio88(state,{today}={}){
+ const observations=bodyMeasurementObservations(state,{today});
+ const sessions=new Map();
+ for(const row of observations){
+  if(!['shoulder','waist'].includes(row.regionId)||row.qualityStatus==='questionable')continue;
+  const key=[row.at,row.source||'',row.method||'',row.protocol||''].join('|');
+  const group=sessions.get(key)||{at:row.at,day:row.day,source:row.source,shoulderCm:null,waistCm:null};
+  if(row.regionId==='shoulder')group.shoulderCm=row.valueCm;
+  if(row.regionId==='waist')group.waistCm=row.valueCm;
+  sessions.set(key,group);
+ }
+ const matched=[...sessions.values()].filter(x=>Number.isFinite(x.shoulderCm)&&Number.isFinite(x.waistCm)&&x.waistCm>0).sort((a,b)=>a.at.localeCompare(b.at));
+ const latest=matched.at(-1)||null;
+ return latest?{...latest,ratio:Math.round(latest.shoulderCm/latest.waistCm*1000)/1000}:null;
+}
+/** The forecast MUST be drawn from exactly the post-training observations shown
+ * in the weekly/monthly trend. The prior 90-day-window forecast mixed regimes.
+ * This is a decelerating planning scenario, NOT an extrapolated CI or guarantee.
+ */
 export function vTaperModel88(state,{today,horizonMonths=6}={}){
  const rows=(state?.healthImports?.fitdays||[]).filter(x=>dOK(x?.day)&&x.day<=today&&Number.isFinite(x.weightKg)&&x.weightKg>=30&&x.weightKg<=250).sort((a,b)=>a.day.localeCompare(b.day));
  const latest=rows.at(-1)||null,dayCounts=new Set(rows.map(x=>x.day)).size;
- const lastMonths=rows.filter(x=>latest&&(Date.parse(latest.day)-Date.parse(x.day))<=90*86400000);
  const bodyFat=latest&&Number.isFinite(latest.bodyFatPct)?latest.bodyFatPct:null;
- const measurements=[...(state?.nutritionJournal?.bodyMeasures88||[])].filter(x=>dOK(x.day)&&x.day<=today).sort((a,b)=>a.day.localeCompare(b.day));const circum=measurements.at(-1)||{};
- const ratio=Number.isFinite(circum.shoulderCm)&&Number.isFinite(circum.waistCm)&&circum.waistCm>0?round(circum.shoulderCm/circum.waistCm):null;
+ const circum=vTaperTapeRatio88(state,{today});
+ const ratio=circum?.ratio??null;
  const period=strengthPeriod(state,{today,range:'90'}),sessions=period?.sessions||[],trainedDays=new Set(sessions.filter(s=>s.sets?.some(t=>t?.exerciseId)).map(s=>s.day)).size;
  const protein=proteinHistory88(state,{today,days:30});const proteinDays=protein.filter(x=>x.grams!==null).length;
- // Training start is the earliest *documented* session in this training period,
- // not a fabricated physiological intervention or an assertion of causality.
  const startDays=sessions.map(s=>s.day||String(s.start||'').slice(0,10)).filter(d=>dOK(d)&&d<=today).sort();
  const trainingStart=startDays[0]||null;
  const trainingObservations=trainingStart?rows.filter(r=>r.day>=trainingStart):[];
  const postTrainingTrend=trendModel96(trainingObservations.map(r=>({day:r.day,value:r.weightKg})));
  const preTraining=trainingStart?rows.filter(r=>r.day<trainingStart):[];
  const preTrainingTrend=trendModel96(preTraining.map(r=>({day:r.day,value:r.weightKg})),{minPoints:5,minSpanDays:30});
- const enough=lastMonths.length>=8&&new Set(lastMonths.map(x=>x.day)).size>=8&&lastMonths.at(-1).day>lastMonths[0].day&&((Date.parse(lastMonths.at(-1).day)-Date.parse(lastMonths[0].day))/86400000)>=45;
- const weightMedian=v=>{const xs=v.map(x=>x.weightKg).sort((a,b)=>a-b);return xs.length?xs[Math.floor(xs.length/2)]:null;};
- const first=lastMonths.slice(0,Math.max(3,Math.floor(lastMonths.length/4))),last=lastMonths.slice(-Math.max(3,Math.floor(lastMonths.length/4)));const firstKg=weightMedian(first),lastKg=weightMedian(last);const span=first.length&&last.length?(Date.parse(last.at(-1).day)-Date.parse(first[0].day))/86400000:0;
- const slope=enough&&span>20?Math.max(-.06,Math.min(.06,(lastKg-firstKg)/span)):null; // kg/day, bounded scenario input, not a prediction
- const forecast=enough&&slope!==null&&Math.abs(slope)>=.003?['konservativ','mittleres','ambitioniert'].map((kind,i)=>({kind,months:horizonMonths,weightRangeKg:[round(lastKg+slope*horizonMonths*30*[.2,.45,.65][i]-Math.max(1,horizonMonths*.3)),round(lastKg+slope*horizonMonths*30*[.2,.45,.65][i]+Math.max(1,horizonMonths*.3))]})):null;
- return {today,latest,bodyFat,ratio,circum,dayCounts,trainedDays,proteinDays,horizonMonths,forecast,trainingStart,trainingObservations:trainingObservations.length,postTrainingTrend,preTrainingTrend,preTrainingDays:preTraining.length,weightTrendKgPer30:slope===null?null:round(slope*30),sufficient:enough,method:'Fitdays-Punkte, geglättete Gewichtsfenster über mindestens 45 Tage; Szenarien mit abgebremstem Trend und bewusst breiten Intervallen. Kein kausales Körperrekompositionsmodell, keine verlässliche Körperfett- oder Muskelwachstumsprognose. BIA ist hydrationsabhängig.'};
+ const uniqueTrainingDays=new Set(trainingObservations.map(x=>x.day)).size;
+ const measuredSpanDays=trainingObservations.length>1?Math.round((Date.parse(trainingObservations.at(-1).day)-Date.parse(trainingObservations[0].day))/86400000):0;
+ const sinceLatest=latest?(Date.parse(today)-Date.parse(latest.day))/86400000:Infinity;
+ const enough=!!(trainingStart&&postTrainingTrend&&uniqueTrainingDays>=8&&measuredSpanDays>=45&&sinceLatest<=14);
+ // Recent measured baseline is less sensitive to a single hydration fluctuation.
+ const recent=trainingObservations.slice(-7).map(x=>x.weightKg).sort((a,b)=>a-b);
+ const forecastBaselineKg=recent.length?recent[Math.floor(recent.length/2)]:null;
+ const rawSlope=postTrainingTrend?.slopePerDay??null;
+ const cappedSlope=rawSlope===null?null:Math.max(-.08,Math.min(.08,rawSlope));
+ const days=Math.max(1,Math.min(24,Number(horizonMonths)||6))*30;
+ const taperDays=120; // 4-month time constant: avoids linear multi-year weight loss claims.
+ const slowingFactor=taperDays*(1-Math.exp(-days/taperDays));
+ const forecast=enough&&Math.abs(cappedSlope)>=.003?['konservativ','mittleres','ambitioniert'].map((kind,i)=>{
+  const center=forecastBaselineKg+cappedSlope*slowingFactor*[.55,.8,1.05][i];
+  const spread=Math.max(1,Math.sqrt(days/30)*.7);
+  return {kind,months:horizonMonths,weightRangeKg:[round(Math.max(35,center-spread)),round(Math.min(250,center+spread))]};
+ }):null;
+ return {today,latest,bodyFat,ratio,circum,dayCounts,trainedDays,proteinDays,horizonMonths,forecast,forecastBaselineKg,
+  trainingStart,trainingObservations:uniqueTrainingDays,trainingSpanDays:measuredSpanDays,postTrainingTrend,preTrainingTrend,
+  preTrainingDays:preTraining.length,weightTrendKgPer30:rawSlope===null?null:rawSlope*30,
+  sufficient:enough,method:'Trends und Szenarien verwenden ausschließlich Fitdays-Messwerte seit dem dokumentierten Trainingsbeginn. Für Szenarien sind mindestens 8 Messtage über 45 Tage nötig. Der aktuelle beobachtete Trend wird für Planungsszenarien begrenzt und über die Zukunft abgebremst; die Bereiche sind keine Vorhersage des künftigen Körpergewichts.'};
 }
 /** Plot only the recent training-era window to prevent years-old Fitdays readings
  * from compressing the user's 2026 training points into the far right edge.
@@ -152,6 +188,7 @@ export function vTaperChart88(state,model){
  const training=obs.filter(r=>model.trainingStart&&r.day>=model.trainingStart);
  const trend=trendModel96(training.map(r=>({day:r.day,value:r.weightKg})));
  const values=trendExtent96(trend,obs.map(r=>r.weightKg)),bounds=model.forecast?.flatMap(f=>f.weightRangeKg)||[];
+ if(model.forecastBaselineKg!==null&&model.forecastBaselineKg!==undefined)bounds.push(model.forecastBaselineKg);
  const lo=Math.min(...values,...bounds)-.6,hi=Math.max(...values,...bounds)+.6,range=Math.max(.5,hi-lo);
  const W=720,H=202,L=48,R=32,T=24,B=35,plotBottom=H-B;
  const Y=n=>plotBottom-(n-lo)/range*(plotBottom-T);
@@ -161,14 +198,15 @@ export function vTaperChart88(state,model){
  const ticks=[0,.5,1].map(f=>{const v=lo+(hi-lo)*f;return `<line x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(2)}" y2="${Y(v).toFixed(2)}" stroke="#dbe8e2"/><text x="${L-6}" y="${(Y(v)+4).toFixed(2)}" text-anchor="end" fill="#647d74" font-size="11">${fmt(v)}</text>`;}).join('');
  const dots=obs.map(r=>`<circle cx="${X(r.day).toFixed(1)}" cy="${Y(r.weightKg).toFixed(1)}" r="3.6" fill="#417e8d"><title>${esc(r.day)} · ${fmt(r.weightKg)} kg · Fitdays</title></circle>`).join('');
  const marker=model.trainingStart&&model.trainingStart>=obs[0].day&&model.trainingStart<=obs.at(-1).day?`<path d="M${X(model.trainingStart)} ${T}V${plotBottom}" stroke="#b8996e" stroke-dasharray="3 5"/><text x="${X(model.trainingStart)+5}" y="${T-7}" font-size="10" fill="#95734c">Trainingsbeginn</text>`:'';
- const scenario=model.forecast?model.forecast.map((f,i)=>{const middle=(f.weightRangeKg[0]+f.weightRangeKg[1])/2,x=W-R-15;return `<path d="M${right+2} ${Y(obs.at(-1).weightKg)}L${x} ${Y(middle)}" fill="none" stroke="${['#987e97','#3e8571','#c3a27a'][i]}" stroke-width="1.8" stroke-dasharray="6 5"/><path d="M${x} ${Y(f.weightRangeKg[0])}V${Y(f.weightRangeKg[1])}" stroke="${['#987e97','#3e8571','#c3a27a'][i]}" stroke-width="5" opacity=".4"/>`;}).join(''):'';
+ const scenario=model.forecast?model.forecast.map((f,i)=>{const middle=(f.weightRangeKg[0]+f.weightRangeKg[1])/2,x=W-R-15;return `<path d="M${right+2} ${Y(model.forecastBaselineKg??obs.at(-1).weightKg)}L${x} ${Y(middle)}" fill="none" stroke="${['#987e97','#3e8571','#c3a27a'][i]}" stroke-width="1.8" stroke-dasharray="6 5"/><path d="M${x} ${Y(f.weightRangeKg[0])}V${Y(f.weightRangeKg[1])}" stroke="${['#987e97','#3e8571','#c3a27a'][i]}" stroke-width="5" opacity=".4"/>`;}).join(''):'';
  const periodLabel=model.trainingStart?'seit dokumentiertem Trainingsbeginn':'letzte verfügbare 90 Tage';
  return `<svg class="ci88-forecast-svg" viewBox="0 0 ${W} ${H}" role="img" xmlns="http://www.w3.org/2000/svg" aria-label="Fitdays-Messpunkte ${esc(periodLabel)}; soweit statistisch möglich Trendlinie mit 96-Prozent-Konfidenzintervall">${ticks}${marker}${trendSvg96(trend,{X,Y,color:'#2b7f78'})}${dots}${scenario}<text x="${L}" y="${H-13}" font-size="11" fill="#657e76">${esc(obs[0].day)}</text><text x="${right}" y="${H-13}" text-anchor="end" font-size="11" fill="#657e76">${esc(obs.at(-1).day)}</text>${model.forecast?`<text x="${W-R}" y="${H-13}" text-anchor="end" font-size="10" fill="#657e76">+${model.horizonMonths} M.</text>`:''}<text x="${W-R}" y="${H-1}" text-anchor="end" font-size="10" fill="#647d74">kg · ${esc(periodLabel)}</text></svg>`;
 }
 export function vTaperView88(state,{today,horizonMonths=6}={}){
  const m=vTaperModel88(state,{today,horizonMonths});
  const trend=m.postTrainingTrend;
- const trendSummary=m.trainingStart?`<div class="ci91-training-trend"><strong>Seit Trainingsbeginn ${esc(m.trainingStart)}</strong> · ${m.trainingObservations} Fitdays-Messdaten · ${trend?`Beobachteter Trend ${trend.slopePerDay>0?'+':''}${fmt(trend.slopePerDay*7)} kg/Woche <small>(96-%-KI um den Mittelwert; nur im beobachteten Fenster, keine Hochrechnung)</small>`:'für einen Kurztrend mindestens 5 Messdaten über 7 Tage erforderlich'}${m.preTrainingTrend?`<p>Historischer Trend vor Trainingsbeginn: ${fmt(m.preTrainingTrend.slopePer30Days)} kg / 30 Tage, aus ${m.preTrainingTrend.n} Messdaten. Zwei getrennte Beobachtungszeiträume – keine nachgewiesene Trainingswirkung.</p>`:''}</div>`:'<p>Für die Trennung „vor / nach Trainingsbeginn“ wird mindestens eine dokumentierte Trainingseinheit benötigt.</p>';
- const forecastHelp=m.forecast?`<div class="ci88-scenarios">${m.forecast.map(r=>`<div><small>${r.kind} · Szenarioband</small><strong>${fmt(r.weightRangeKg[0])}–${fmt(r.weightRangeKg[1])} kg</strong></div>`).join('')}</div>`:'<p>Langfristige Prognose noch nicht belastbar: mindestens acht Fitdays-Messtage über 45 Tage erforderlich. Der Trend seit Trainingsbeginn wird oben bereits separat angezeigt, aber nicht auf Monate oder Jahre extrapoliert.</p>';
- return `<section class="work-card ci88-vtaper"><div class="work-heading"><span>◇ V-Taper Entwicklung · Fitdays + bestätigtes Training</span><span class="quiet-tag">Messung ≠ Prognose</span></div><div class="ci88-metrics"><div><small>Gewicht · Messung</small><strong>${m.latest?fmt(m.latest.weightKg)+' kg':'–'}</strong></div><div><small>Körperfett · BIA-Schätzung</small><strong>${m.bodyFat===null?'–':fmt(m.bodyFat)+' %'}</strong></div><div><small>Schulter / Taille</small><strong>${m.ratio===null?'–':fmt(m.ratio)}</strong></div><div><small>Trainingstage · 90 Tage</small><strong>${m.trainedDays||'–'}</strong></div></div>${vTaperChart88(state,m)}${trendSummary}<div class="ci88-forecast-header"><strong>Vorausschau · ${horizonMonths} Monate</strong><div>${[3,6,12,24].map(n=>`<button type="button" data-action="ci88-horizon" data-id="${n}" class="secondary-btn ${horizonMonths===n?'active':''}">${n} M.</button>`).join('')}</div></div>${forecastHelp}<small>${esc(m.method)} Ein 96-%-Konfidenzband ist statistisch bedingt und erfasst weder die Hydratationsunsicherheit der BIA noch zukünftige Verhaltensänderungen.</small></section>`;
+ const trendSummary=m.trainingStart?`<div class="ci91-training-trend"><strong>Seit Trainingsbeginn ${esc(m.trainingStart)}</strong> · ${m.trainingObservations} Fitdays-Messtage über ${m.trainingSpanDays} Tage · ${trend?`<strong>Beobachteter Trend ${trend.slopePerDay>0?'+':''}${fmt(trend.slopePerDay*7)} kg/Woche · ${trend.slopePerDay>0?'+':''}${fmt(trend.slopePerDay*30)} kg/30 Tage</strong><small>Beide Angaben stammen aus derselben Zeitreihe seit Trainingsbeginn; keine Hochrechnung. 96-%-KI der beobachteten Mittelwertkurve.</small>`:'für einen Kurztrend mindestens fünf Messtage über sieben Tage erforderlich'}</div>`:'<p>Für den Trainingsverlauf wird mindestens eine dokumentierte Trainingseinheit benötigt.</p>';
+ const forecastHelp=m.forecast?`<div class="ci88-scenarios">${m.forecast.map(r=>`<div><small>${r.kind} · Planungsszenario</small><strong>${fmt(r.weightRangeKg[0])}–${fmt(r.weightRangeKg[1])} kg</strong></div>`).join('')}</div><small>Startpunkt: Median der letzten sieben Fitdays-Messungen seit Trainingsbeginn ${fmt(m.forecastBaselineKg)} kg. Die Kurven flachen mit der Zeit ab, statt die Wochenrate linear fortzuschreiben.</small>`:`<p>Für eine Vorausschau fehlen noch ausreichend Messungen <strong>seit Beginn des aktuellen Trainingsprogramms</strong> (mindestens 8 Messtage über 45 Tage; letzter Messwert höchstens 14 Tage alt). Bis dahin zeigen wir nur den tatsächlichen Trend. Ältere Gewichtsänderungen fließen nicht in die Vorausschau ein.</p>`;
+ const ratioInfo=m.circum?`<small>Schulter ${fmt(m.circum.shoulderCm)} cm · Taille ${fmt(m.circum.waistCm)} cm · ${esc(m.circum.day)} · Smart Tape</small>`:'';
+ return `<section class="work-card ci88-vtaper"><div class="work-heading"><span>◇ V-Taper Entwicklung · Fitdays + bestätigtes Training</span><span class="quiet-tag">Messung ≠ Prognose</span></div><div class="ci88-metrics"><div><small>Gewicht · Messung</small><strong>${m.latest?fmt(m.latest.weightKg)+' kg':'–'}</strong></div><div><small>Körperfett · BIA-Schätzung</small><strong>${m.bodyFat===null?'–':fmt(m.bodyFat)+' %'}</strong></div><div><small>Schulter / Taille</small><strong>${m.ratio===null?'–':m.ratio.toLocaleString('de-AT',{minimumFractionDigits:3,maximumFractionDigits:3})}</strong>${ratioInfo}</div><div><small>Trainingstage · 90 Tage</small><strong>${m.trainedDays||'–'}</strong></div></div>${vTaperChart88(state,m)}${trendSummary}<div class="ci88-forecast-header"><strong>Vorausschau · ${horizonMonths} Monate</strong><div>${[3,6,12,24].map(n=>`<button type="button" data-action="ci88-horizon" data-id="${n}" class="secondary-btn ${horizonMonths===n?'active':''}">${n} M.</button>`).join('')}</div></div>${forecastHelp}<small>${esc(m.method)}</small></section>`;
 }
