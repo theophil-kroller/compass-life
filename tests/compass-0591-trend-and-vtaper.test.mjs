@@ -38,7 +38,7 @@ test('V-Taper shows a short training-era trend before 45-day forecasting is allo
  assert.ok(model.postTrainingTrend);assert.ok(model.trainingObservations>=8);
  const chart=vTaperChart88(state,model),view=vTaperView88(state,{today:'2026-11-01',horizonMonths:3});
  assert.match(chart,/ci91-confidence/);assert.match(chart,/Trainingsbeginn/);
- assert.match(view,/Seit Trainingsbeginn/);assert.match(view,/45 Tage/);
+ assert.match(view,/Seit Trainingsbeginn/);assert.match(view,/14 Tage/);
  assert.doesNotMatch(chart,/NaN|Infinity/);
 });
 test('body weight, fat and muscle dot charts show 96% bands, readable values',()=>{

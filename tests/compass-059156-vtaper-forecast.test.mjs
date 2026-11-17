@@ -27,16 +27,16 @@ test('Legacy manually entered paired measurements still render alongside importe
  const st={nutritionJournal:{bodyMeasures88:[{id:'old',day:'2026-11-01',shoulderCm:110,waistCm:90}]}};
  assert.equal(vTaperTapeRatio88(st,{today:'2026-11-17'}).ratio,1.222);
 });
-test('Short recent training window never generates scenarios from longer PRE-training measurements',()=>{
+test('Recent 16-day training window can show cautious scenarios without borrowing PRE-training measurements',()=>{
  const st={healthImports:{fitdays:[...measurements('2026-08-01',30,3,88),...measurements('2026-11-01',9,2,86)]},strengthGuidedSessions:[guide('2026-11-01')]};
  const m=vTaperModel88(st,{today:'2026-11-17',horizonMonths:6});
- assert.equal(m.sufficient,false);assert.equal(m.forecast,null);
+ assert.equal(m.sufficient,true);assert.equal(m.forecast.length,3);assert.equal(m.forecastStage,'early');
  assert.equal(m.trainingStart,'2026-11-01');assert.ok(m.postTrainingTrend);
  assert.ok(Math.abs(m.weightTrendKgPer30-m.postTrainingTrend.slopePerDay*30)<1e-9);
  const html=vTaperView88(st,{today:'2026-11-17'});
  assert.match(html,/kg\/Woche/);assert.match(html,/kg\/30 Tage/);
  assert.doesNotMatch(html,/Historischer Trend vor Trainingsbeginn/);
- assert.match(html,/seit Beginn des aktuellen Trainingsprogramms/);
+ assert.match(html,/Frühe Vorausschau/);
 });
 test('With 45+ post-training days, changing PRE-training points cannot change the forecast',()=>{
  const recent=measurements('2026-09-01',13,5,86),base={strengthGuidedSessions:[guide('2026-09-01')]};

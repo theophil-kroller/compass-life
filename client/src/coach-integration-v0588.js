@@ -8,6 +8,7 @@ import {nutrientEntry} from './nutrition-intelligence-v57712.js';
 import {nutritionTrendsIndex} from './nutrition-trends-v57726.js';
 import {strengthPeriod} from './strength-insights-v57728.js';
 import {bodyMeasurementObservations} from './body-measurements-v05918.js';
+import {deficitPlan57} from './vtaper-deficit-scenarios-v059157.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dOK=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d+'T00:00:00Z'));
 const round=n=>Math.round(n*10)/10;
@@ -138,7 +139,7 @@ export function vTaperTapeRatio88(state,{today}={}){
  * in the weekly/monthly trend. The prior 90-day-window forecast mixed regimes.
  * This is a decelerating planning scenario, NOT an extrapolated CI or guarantee.
  */
-export function vTaperModel88(state,{today,horizonMonths=6}={}){
+export function vTaperModel88(state,{today,horizonMonths=6,deficitLevel=null,deficitPlan=null}={}){
  const rows=(state?.healthImports?.fitdays||[]).filter(x=>dOK(x?.day)&&x.day<=today&&Number.isFinite(x.weightKg)&&x.weightKg>=30&&x.weightKg<=250).sort((a,b)=>a.day.localeCompare(b.day));
  const latest=rows.at(-1)||null,dayCounts=new Set(rows.map(x=>x.day)).size;
  const bodyFat=latest&&Number.isFinite(latest.bodyFatPct)?latest.bodyFatPct:null;
@@ -155,24 +156,38 @@ export function vTaperModel88(state,{today,horizonMonths=6}={}){
  const uniqueTrainingDays=new Set(trainingObservations.map(x=>x.day)).size;
  const measuredSpanDays=trainingObservations.length>1?Math.round((Date.parse(trainingObservations.at(-1).day)-Date.parse(trainingObservations[0].day))/86400000):0;
  const sinceLatest=latest?(Date.parse(today)-Date.parse(latest.day))/86400000:Infinity;
- const enough=!!(trainingStart&&postTrainingTrend&&uniqueTrainingDays>=8&&measuredSpanDays>=45&&sinceLatest<=14);
+ // An early 3–4 week training block can already support a cautious scenario.
+ // The former 45-day lock hid all forecast cards despite enough valid current
+ // measurements. Wider ranges distinguish an early planning scenario from a
+ // better established measurement history.
+ const enough=!!(trainingStart&&postTrainingTrend&&uniqueTrainingDays>=8&&measuredSpanDays>=14&&sinceLatest<=14);
+ const forecastStage=measuredSpanDays>=45?'established':'early';
  // Recent measured baseline is less sensitive to a single hydration fluctuation.
  const recent=trainingObservations.slice(-7).map(x=>x.weightKg).sort((a,b)=>a-b);
  const forecastBaselineKg=recent.length?recent[Math.floor(recent.length/2)]:null;
  const rawSlope=postTrainingTrend?.slopePerDay??null;
- const cappedSlope=rawSlope===null?null:Math.max(-.08,Math.min(.08,rawSlope));
+ // Limit aggressive loss scenarios to ~1% of the current body weight per week.
+ // The previous universal -.08 kg/day cap flattened ALL 600–900 kcal options
+ // into identical results for someone already losing ~0.6 kg/week.
+ const maxLossKgPerDay=Math.min(.15,Math.max(.04,(forecastBaselineKg??latest?.weightKg??75)*.01/7));
+ const cappedSlope=rawSlope===null?null:Math.max(-maxLossKgPerDay,Math.min(.08,rawSlope));
+ // A selected deficit adjusts the empirical training-era slope only by the
+ // CHANGE in daily energy balance (rough ~7,700 kcal per kg), not by blindly
+ // projecting all intake for years. The same decelerating horizon remains.
+ const selectedDeficit=(deficitPlan?.eligible&&deficitPlan.selected===deficitLevel&&Number.isFinite(deficitPlan.pastAvgDeficitKcal))?deficitLevel:null;
+ const scenarioSlope=selectedDeficit===null?cappedSlope:Math.max(-maxLossKgPerDay,Math.min(.08,cappedSlope+(deficitPlan.pastAvgDeficitKcal-selectedDeficit)/7700));
  const days=Math.max(1,Math.min(24,Number(horizonMonths)||6))*30;
  const taperDays=120; // 4-month time constant: avoids linear multi-year weight loss claims.
  const slowingFactor=taperDays*(1-Math.exp(-days/taperDays));
- const forecast=enough&&Math.abs(cappedSlope)>=.003?['konservativ','mittleres','ambitioniert'].map((kind,i)=>{
-  const center=forecastBaselineKg+cappedSlope*slowingFactor*[.55,.8,1.05][i];
-  const spread=Math.max(1,Math.sqrt(days/30)*.7);
+ const forecast=enough?['konservativ','mittleres','ambitioniert'].map((kind,i)=>{
+  const center=forecastBaselineKg+scenarioSlope*slowingFactor*[.55,.8,1.05][i];
+  const spread=Math.max(1,Math.sqrt(days/30)*.7*(forecastStage==='early'?1.5:1));
   return {kind,months:horizonMonths,weightRangeKg:[round(Math.max(35,center-spread)),round(Math.min(250,center+spread))]};
  }):null;
- return {today,latest,bodyFat,ratio,circum,dayCounts,trainedDays,proteinDays,horizonMonths,forecast,forecastBaselineKg,
+ return {today,latest,bodyFat,ratio,circum,dayCounts,trainedDays,proteinDays,horizonMonths,forecast,forecastBaselineKg,forecastStage,selectedDeficit,
   trainingStart,trainingObservations:uniqueTrainingDays,trainingSpanDays:measuredSpanDays,postTrainingTrend,preTrainingTrend,
   preTrainingDays:preTraining.length,weightTrendKgPer30:rawSlope===null?null:rawSlope*30,
-  sufficient:enough,method:'Trends und Szenarien verwenden ausschließlich Fitdays-Messwerte seit dem dokumentierten Trainingsbeginn. Für Szenarien sind mindestens 8 Messtage über 45 Tage nötig. Der aktuelle beobachtete Trend wird für Planungsszenarien begrenzt und über die Zukunft abgebremst; die Bereiche sind keine Vorhersage des künftigen Körpergewichts.'};
+  sufficient:enough,method:'Trends und Szenarien verwenden ausschließlich Fitdays-Messwerte seit Trainingsbeginn. Ab 8 Messtagen über mindestens 14 Tage ist eine vorsichtige Vorausschau möglich. Bei einer kurzen Trainingsphase werden die Szenariobänder breiter; das Tempo wird begrenzt und flacht langfristig ab.'};
 }
 /** Plot only the recent training-era window to prevent years-old Fitdays readings
  * from compressing the user's 2026 training points into the far right edge.
@@ -202,11 +217,13 @@ export function vTaperChart88(state,model){
  const periodLabel=model.trainingStart?'seit dokumentiertem Trainingsbeginn':'letzte verfügbare 90 Tage';
  return `<svg class="ci88-forecast-svg" viewBox="0 0 ${W} ${H}" role="img" xmlns="http://www.w3.org/2000/svg" aria-label="Fitdays-Messpunkte ${esc(periodLabel)}; soweit statistisch möglich Trendlinie mit 96-Prozent-Konfidenzintervall">${ticks}${marker}${trendSvg96(trend,{X,Y,color:'#2b7f78'})}${dots}${scenario}<text x="${L}" y="${H-13}" font-size="11" fill="#657e76">${esc(obs[0].day)}</text><text x="${right}" y="${H-13}" text-anchor="end" font-size="11" fill="#657e76">${esc(obs.at(-1).day)}</text>${model.forecast?`<text x="${W-R}" y="${H-13}" text-anchor="end" font-size="10" fill="#657e76">+${model.horizonMonths} M.</text>`:''}<text x="${W-R}" y="${H-1}" text-anchor="end" font-size="10" fill="#647d74">kg · ${esc(periodLabel)}</text></svg>`;
 }
-export function vTaperView88(state,{today,horizonMonths=6}={}){
- const m=vTaperModel88(state,{today,horizonMonths});
+export function vTaperView88(state,{today,horizonMonths=6,deficitOpen=false,deficitLevel=null}={}){
+ const plan=deficitOpen?deficitPlan57(state,{today,selected:deficitLevel}):null;
+ const m=vTaperModel88(state,{today,horizonMonths,deficitLevel,deficitPlan:plan});
  const trend=m.postTrainingTrend;
  const trendSummary=m.trainingStart?`<div class="ci91-training-trend"><strong>Seit Trainingsbeginn ${esc(m.trainingStart)}</strong> · ${m.trainingObservations} Fitdays-Messtage über ${m.trainingSpanDays} Tage · ${trend?`<strong>Beobachteter Trend ${trend.slopePerDay>0?'+':''}${fmt(trend.slopePerDay*7)} kg/Woche · ${trend.slopePerDay>0?'+':''}${fmt(trend.slopePerDay*30)} kg/30 Tage</strong><small>Beide Angaben stammen aus derselben Zeitreihe seit Trainingsbeginn; keine Hochrechnung. 96-%-KI der beobachteten Mittelwertkurve.</small>`:'für einen Kurztrend mindestens fünf Messtage über sieben Tage erforderlich'}</div>`:'<p>Für den Trainingsverlauf wird mindestens eine dokumentierte Trainingseinheit benötigt.</p>';
- const forecastHelp=m.forecast?`<div class="ci88-scenarios">${m.forecast.map(r=>`<div><small>${r.kind} · Planungsszenario</small><strong>${fmt(r.weightRangeKg[0])}–${fmt(r.weightRangeKg[1])} kg</strong></div>`).join('')}</div><small>Startpunkt: Median der letzten sieben Fitdays-Messungen seit Trainingsbeginn ${fmt(m.forecastBaselineKg)} kg. Die Kurven flachen mit der Zeit ab, statt die Wochenrate linear fortzuschreiben.</small>`:`<p>Für eine Vorausschau fehlen noch ausreichend Messungen <strong>seit Beginn des aktuellen Trainingsprogramms</strong> (mindestens 8 Messtage über 45 Tage; letzter Messwert höchstens 14 Tage alt). Bis dahin zeigen wir nur den tatsächlichen Trend. Ältere Gewichtsänderungen fließen nicht in die Vorausschau ein.</p>`;
+ const forecastHelp=m.forecast?`<div class="ci88-scenarios">${m.forecast.map(r=>`<div><small>${r.kind} · Planungsszenario</small><strong>${fmt(r.weightRangeKg[0])}–${fmt(r.weightRangeKg[1])} kg</strong></div>`).join('')}</div><small>${m.forecastStage==='early'?`Frühe Vorausschau aus ${m.trainingObservations} Messtagen über ${m.trainingSpanDays} Tage mit bewusst breiteren Szenariobändern. `:''}Startpunkt: Median der letzten sieben Fitdays-Messungen seit Trainingsbeginn ${fmt(m.forecastBaselineKg)} kg. Die Kurven flachen mit der Zeit ab, statt die Wochenrate linear fortzuschreiben.</small>`:`<p>Für eine Vorausschau fehlen noch ausreichend Messungen <strong>seit Beginn des aktuellen Trainingsprogramms</strong> (mindestens 8 Messtage über 14 Tage; letzter Messwert höchstens 14 Tage alt). Bis dahin zeigen wir nur den tatsächlichen Trend. Ältere Gewichtsänderungen fließen nicht in die Vorausschau ein.</p>`;
+ const deficitControls=deficitOpen?`<div class="ci57-deficit-planner"><div class="ci57-deficit-title"><strong>Defizit-Szenarien</strong><button type="button" class="secondary-btn" data-action="ci57-deficit-close">Schließen</button></div>${plan?.ready?`<p>Geschätzter Gesamtbedarf <b>${fmt(plan.tdee)} kcal</b> · Ruheenergie <b>${fmt(plan.resting)} kcal</b>. Wähle ein hypothetisches tägliches Defizit – auch 600 bis 900 kcal, sofern dein Gesamtbedarf es erlaubt:</p><div class="ci57-deficit-tiers"><button type="button" data-action="ci57-deficit-stage" data-id="observed" class="${deficitLevel===null?'active':''}">Bisheriger Trend</button>${plan.tiers.map(t=>`<button type="button" data-action="ci57-deficit-stage" data-id="${t.kcal}" ${t.available?'':'disabled'} class="${t.kcal===deficitLevel?'active':''}" title="${t.available?'':'Unter der Planungsuntergrenze'}">${t.label}<small>${t.kcal===0?'0 kcal Defizit':`−${t.kcal} kcal/Tag`}</small></button>`).join('')}</div><small>Maximal wählbar: ${fmt(plan.allowedMax)} kcal/Tag (maximal 900 kcal; Planungsziel nicht unter der geschätzten Ruheenergie). ${plan.source?`Bisherige Referenz: ${fmt(plan.pastAvgDeficitKcal)} kcal/Tag (${esc(plan.source)}${plan.loggedDays?`, ${plan.loggedDays} protokollierte Tage`:''}).`:''}</small>${plan.eligible&&plan.source?`<p><strong>Hypothetisch:</strong> Tagesziel ≈ ${fmt(plan.targetKcal)} kcal · Defizit ${fmt(plan.selected)} kcal. Die Szenariowerte oben verwenden diese Einstellung. Weder deine Messwerte noch dein Kalorienziel werden verändert.</p>`:deficitLevel!==null?'<p>Bitte eine verfügbare Stufe wählen.</p>':''}`:`<p>Um Szenarien mit Kalorien zu vergleichen, ergänze den geschätzten Ruhe- und Gesamtenergiebedarf unter „Persönliches Energieziel“. Deine bisherige Gewichtsprognose bleibt verfügbar.</p>`}</div>`:'';
  const ratioInfo=m.circum?`<small>Schulter ${fmt(m.circum.shoulderCm)} cm · Taille ${fmt(m.circum.waistCm)} cm · ${esc(m.circum.day)} · Smart Tape</small>`:'';
- return `<section class="work-card ci88-vtaper"><div class="work-heading"><span>◇ V-Taper Entwicklung · Fitdays + bestätigtes Training</span><span class="quiet-tag">Messung ≠ Prognose</span></div><div class="ci88-metrics"><div><small>Gewicht · Messung</small><strong>${m.latest?fmt(m.latest.weightKg)+' kg':'–'}</strong></div><div><small>Körperfett · BIA-Schätzung</small><strong>${m.bodyFat===null?'–':fmt(m.bodyFat)+' %'}</strong></div><div><small>Schulter / Taille</small><strong>${m.ratio===null?'–':m.ratio.toLocaleString('de-AT',{minimumFractionDigits:3,maximumFractionDigits:3})}</strong>${ratioInfo}</div><div><small>Trainingstage · 90 Tage</small><strong>${m.trainedDays||'–'}</strong></div></div>${vTaperChart88(state,m)}${trendSummary}<div class="ci88-forecast-header"><strong>Vorausschau · ${horizonMonths} Monate</strong><div>${[3,6,12,24].map(n=>`<button type="button" data-action="ci88-horizon" data-id="${n}" class="secondary-btn ${horizonMonths===n?'active':''}">${n} M.</button>`).join('')}</div></div>${forecastHelp}<small>${esc(m.method)}</small></section>`;
+ return `<section class="work-card ci88-vtaper"><div class="work-heading"><span>◇ V-Taper Entwicklung · Fitdays + bestätigtes Training</span><span class="quiet-tag">Messung ≠ Prognose</span></div><div class="ci88-metrics"><div><small>Gewicht · Messung</small><strong>${m.latest?fmt(m.latest.weightKg)+' kg':'–'}</strong></div><div><small>Körperfett · BIA-Schätzung</small><strong>${m.bodyFat===null?'–':fmt(m.bodyFat)+' %'}</strong></div><div><small>Schulter / Taille</small><strong>${m.ratio===null?'–':m.ratio.toLocaleString('de-AT',{minimumFractionDigits:3,maximumFractionDigits:3})}</strong>${ratioInfo}</div><div><small>Trainingstage · 90 Tage</small><strong>${m.trainedDays||'–'}</strong></div></div>${vTaperChart88(state,m)}${trendSummary}<div class="ci88-forecast-header"><strong>Vorausschau · ${horizonMonths} Monate</strong><div>${[3,6,12,24].map(n=>`<button type="button" data-action="ci88-horizon" data-id="${n}" class="secondary-btn ${horizonMonths===n?'active':''}">${n} M.</button>`).join('')}</div></div>${forecastHelp}<div class="ci57-deficit-toggle">${!deficitOpen?'<button type="button" class="secondary-btn" data-action="ci57-deficit-open">⚖️ Kaloriendefizit vergleichen</button>':''}</div>${deficitControls}<small>${esc(m.method)}</small></section>`;
 }

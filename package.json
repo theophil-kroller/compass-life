@@ -1,7 +1,7 @@
 {
   "name": "compass-personal-life-manager",
   "private": true,
-  "version": "0.5.91.56",
+  "version": "0.5.91.57",
   "type": "module",
   "workspaces": [
     "client",

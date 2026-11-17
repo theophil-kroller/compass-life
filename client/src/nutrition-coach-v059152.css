@@ -117,3 +117,44 @@
 @media(max-width:500px){.ni155-report>header{flex-direction:column;align-items:flex-start}.ni155-report-body{padding:14px}.ni155-assessment-grid{grid-template-columns:1fr 1fr}.ni155-assessment>strong{font-size:14px}}
 
 .ni155-jump{display:flex;justify-content:flex-end;margin:6px 0 10px}.ni155-jump a{border:1px solid #c8d8d1;color:#236657;background:#f3f8f5;border-radius:10px;padding:7px 11px;font-size:12px;text-decoration:none;font-weight:650}.ni155-jump a:hover{text-decoration:underline}.ni152-recommend{scroll-margin-top:80px}
+
+/* .57 mobile-first nutrition report: contain width at every nested grid boundary.
+   Long category names wrap; controls and genuinely wide tables scroll independently. */
+.ni152,.ni152>*{min-width:0;max-width:100%;box-sizing:border-box}
+.ni152 .ni152-panel,.ni152 .ni154-categories,.ni152 .ni154-donut-layout,
+.ni152 .ni154-category-list,.ni152 .ni154-category-detail,
+.ni152 .ni155-report,.ni152 .ni155-report-body{min-width:0;max-width:100%;box-sizing:border-box}
+.ni152 :is(.ni154-category-name,.ni154-category-detail span,.ni152-product strong,.ni155-priority p,.ni155-assessment){overflow-wrap:anywhere}
+.ni152 .ni154-category-detail>div{min-width:0}
+.ni152 .ni154-category-detail>div>span{min-width:0;flex:1}
+.ni152 .ni154-category-detail>div>b{flex:0 0 auto}
+@media(max-width:700px){
+ .ni152 .ni152-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+ .ni152 .ni152-periods{max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;
+   -webkit-overflow-scrolling:touch;touch-action:pan-x;padding-bottom:3px}
+ .ni152 .ni152-periods button{flex:0 0 auto;white-space:nowrap}
+ .ni152 .ni152-pager{justify-content:space-between;min-width:0;max-width:100%}
+ .ni152 .ni152-pager strong{min-width:0;flex:1;overflow-wrap:anywhere}
+ .ni152 .ni152-panel{padding:12px}
+ .ni152 .ni154-donut-layout{grid-template-columns:minmax(0,1fr)}
+ .ni152 .ni154-donut-visual svg{max-width:min(100%,270px)}
+ .ni152 .ni153-chart svg{width:100%;min-width:0;overflow:hidden}
+ .ni152 .ni155-report>header{padding:13px;gap:10px}
+ .ni152 .ni155-report-body{padding:12px}
+ .ni152 .ni155-keyfinding{padding:11px}
+}
+@media(max-width:420px){
+ .ni152 .ni152-stats{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .ni152 .ni152-stat{padding:10px}
+ .ni152 .ni152-dozenrow{grid-template-columns:minmax(0,1fr) auto;gap:5px 9px}
+ .ni152 .ni152-dozenrow>span:first-child{grid-column:1;grid-row:1;overflow-wrap:anywhere}
+ .ni152 .ni152-dozenrow>strong{grid-column:2;grid-row:1;white-space:nowrap}
+ .ni152 .ni152-dozenrow>.ni152-meter{grid-column:1/-1;grid-row:2}
+ .ni152 .ni152-dozenrow>small{grid-column:1/-1;grid-row:3;text-align:left}
+ .ni152 .ni152-micros{grid-template-columns:minmax(0,1fr)}
+ .ni152 .ni154-category>summary{gap:5px}
+ .ni152 .ni154-category-value{white-space:normal;max-width:36%;min-width:0}
+ .ni152 .ni154-category-value small{overflow-wrap:anywhere}
+ .ni152 .ni155-assessment-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .ni152 .ni155-assessment{padding:9px}
+}
