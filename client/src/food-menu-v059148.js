@@ -14,6 +14,9 @@ const explicit=Object.freeze({
  'matcha-powder':'ingredients', // Matcha is a culinary ingredient, not a protein supplement
  'braineffect-mct-c8-oil':'ingredients','water-glass':'drinks',
  'milsani-high-protein-pfirsich-maracuja-200g':'dairy',
+ 'dr-oetker-high-protein-milchreis-zimt-400g':'dairy',
+ 'billa-high-protein-griesspudding-zimt-500g':'dairy',
+ 'noem-pro20-topfencreme-blueberry-cheesecake-235g':'dairy',
  'broccoli-steamed-home-20261115':'vegetables','sweet-potato-steamed-20261115':'vegetables','spelt-spaghetti-dry-20261115':'meals',
  'passion-fruit-fresh-20261115':'fruitnuts','carrot-raw-fresh-20261115':'vegetables',
  'mango-fresh-20261115':'fruitnuts','mandarin-fresh-20261115':'fruitnuts','dragon-fruit-fresh-20261115':'fruitnuts',
@@ -45,6 +48,7 @@ const proteinIds=new Set([
  'ehrmann-high-protein-skyr-natural-450g','ehrmann-high-protein-vegan-chocolate-200g',
  'spar-naturpur-bio-skyr-mango-maracuja-400g','milsani-high-protein-pfirsich-maracuja-200g',
  'milsani-skyr-maracuja-150g','spar-freefrom-bio-skyr-250g','bio-magertopfen-250g',
+ 'dr-oetker-high-protein-milchreis-zimt-400g','billa-high-protein-griesspudding-zimt-500g','noem-pro20-topfencreme-blueberry-cheesecake-235g',
  'alpro-plant-protein-vanilla-pudding-200g','alpro-plant-protein-chocolate-pudding-200g',
  'organic-hemp-fruit-protein-bar-35g'
 ]);

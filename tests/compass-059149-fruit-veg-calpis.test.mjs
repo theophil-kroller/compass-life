@@ -1,3 +1,4 @@
+import {PROTEIN_CUP_FOODS_155} from '../client/src/food-protein-cups-v059155.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -18,7 +19,7 @@ test('every v0.5.91.48 product survives; original banana has exactly one matchin
  assert.equal(foods.length,new Set(foods.map(x=>x.id)).size,'no duplicate IDs');
  assert.equal(foods.filter(x=>x.id==='banana').length,1,'reuse banana, do not duplicate');
  assert.equal(PLANT_FOODS_149.length,13);
- assert.equal(foods.length,before.length+PLANT_FOODS_149.length);
+ assert.equal(foods.length,before.length+PLANT_FOODS_149.length+PROTEIN_CUP_FOODS_155.length);
  assert.equal(get('banana').defaultAmount,'1 Stück (120 g essbar)');
 });
 test('all 13 new presets show in existing food menu/search/categories with macro, micro sources',()=>{

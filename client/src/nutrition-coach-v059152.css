@@ -81,3 +81,39 @@
 .ni154-category-detail>div b{white-space:nowrap;color:#366956}
 @media(max-width:790px){.ni154-donut-layout{grid-template-columns:1fr;gap:12px}.ni154-donut-visual svg{max-width:270px}.ni154-categories>header{flex-wrap:wrap}}
 @media(max-width:460px){.ni154-category-name{font-size:.72rem}.ni154-category-value strong{font-size:.91rem}.ni154-category-value small{white-space:normal}.ni154-category>summary{padding:8px 6px;gap:5px}.ni154-category-icon{font-size:.9rem}}
+
+/* 0.5.91.55 · Nutrition Care style report, only created after manual analysis. */
+.ni155-report{background:#14243b;color:#e9f1f6;border-radius:18px;margin:18px 0;overflow:hidden;border:1px solid #304866}
+.ni155-report>header{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:19px 22px;background:#192d48;border-bottom:1px solid #39536c}
+.ni155-report>header small{letter-spacing:.13em;color:#d9bc7a;font-size:10px;font-weight:800}
+.ni155-report>header h4{margin:5px 0;font-size:21px;color:#fff}
+.ni155-report>header p{margin:0;color:#c8d8e7;font-size:12px}
+.ni155-pill{white-space:nowrap;color:#d9bc7a;border:1px solid #9c8152;padding:6px 11px;border-radius:24px;font-size:11px}
+.ni155-report-body{padding:20px 22px}
+.ni155-keyfinding{border-left:4px solid #dbb96f;background:#253b56;border-radius:6px;padding:14px 17px;margin-bottom:21px}
+.ni155-keyfinding strong{color:#f3d291;font-size:15px}.ni155-keyfinding p{margin:5px 0 0;line-height:1.5;font-size:13px}
+.ni155-report-body>h5{font-size:15px;color:#f0d495;margin:18px 0 10px}
+.ni155-assessment-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.ni155-assessment{display:flex;flex-direction:column;gap:5px;background:#263b54;border-radius:10px;border-top:3px solid #7e9aab;padding:12px;min-width:0}
+.ni155-assessment.ni155-good{border-color:#69b69a}.ni155-assessment.ni155-watch{border-color:#e4b66b}
+.ni155-assessment>span{font-size:12px;color:#d0dce8}.ni155-assessment>strong{font-size:17px;color:#fff}.ni155-assessment>small{font-size:11px;color:#c0d1dc;line-height:1.4}
+.ni155-topgroups{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px;align-items:center;font-size:12px}
+.ni155-topgroups>strong{margin-right:6px;color:#e2c68b}.ni155-topgroups>span{padding:5px 9px;border-radius:16px;background:#2f445a}
+.ni155-topgroups span strong{color:#f0d297}.ni155-positive{margin:14px 0;background:#173f3c;border-radius:8px;padding:10px 12px;font-size:12px;color:#c4eadc}
+.ni155-priorities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ni155-priority{background:#263b54;border:1px solid #435a70;border-radius:12px;padding:13px;min-width:0}
+.ni155-priority-heading{display:flex;align-items:center;gap:8px}.ni155-number{display:flex;align-items:center;justify-content:center;border-radius:50%;width:26px;height:26px;background:#e3ba6c;color:#102338;font-size:13px;font-weight:800;flex-shrink:0}
+.ni155-priority h5{margin:0;font-size:13px;color:#fff}.ni155-priority p{font-size:12px;line-height:1.55;color:#dce8f0}
+.ni155-priority .ni155-observation{color:#f0d197;font-weight:700}.ni155-priority small{display:block;color:#8fd3bd;border-top:1px solid #3d5871;margin-top:11px;padding-top:9px;line-height:1.45}
+.ni155-report-body>p{font-size:12px;line-height:1.5;color:#d5e0e9}
+.ni155-monitoring{list-style:none;padding:0;margin:8px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ni155-monitoring li{background:#213650;border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px}
+.ni155-monitoring li strong{color:#f0d297}.ni155-monitoring li span{color:#dae6ee}
+.ni155-report-body .ni155-review-date{font-size:12px;color:#a8daca;font-weight:650}
+.ni155-more,.ni155-basis{color:#c6d5e4;margin-top:10px;font-size:12px}.ni155-more summary,.ni155-basis summary,.ni155-original-findings summary{cursor:pointer}
+.ni155-more>div{padding:8px 0;border-bottom:1px solid #3b5166}.ni155-more p{margin:4px 0}
+.ni155-original-findings{margin-top:10px}.ni155-original-findings>summary{font-weight:600;color:#e2c58b;font-size:12px}
+@media(max-width:900px){.ni155-assessment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ni155-priorities,.ni155-monitoring{grid-template-columns:1fr}}
+@media(max-width:500px){.ni155-report>header{flex-direction:column;align-items:flex-start}.ni155-report-body{padding:14px}.ni155-assessment-grid{grid-template-columns:1fr 1fr}.ni155-assessment>strong{font-size:14px}}
+
+.ni155-jump{display:flex;justify-content:flex-end;margin:6px 0 10px}.ni155-jump a{border:1px solid #c8d8d1;color:#236657;background:#f3f8f5;border-radius:10px;padding:7px 11px;font-size:12px;text-decoration:none;font-weight:650}.ni155-jump a:hover{text-decoration:underline}.ni152-recommend{scroll-margin-top:80px}

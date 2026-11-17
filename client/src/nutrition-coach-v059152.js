@@ -1,4 +1,4 @@
-/** Compass 0.5.91.54 — local, read-only Nutrition Intelligence overview.
+/** Compass 0.5.91.55 — local, read-only Nutrition Intelligence overview.
  * The expensive personalised recommender is NEVER run on render: only by the
  * explicit `ni152-analyze` action. No network, vault writes, AI or cross-person
  * inference. Reuses documented nutrient and Daily Dozen evidence.
@@ -11,6 +11,7 @@ import {DAILY_NRV} from './nutrition-reference-v57722.js';
 import {fatEntry} from './nutrition-fat-quality-v57731.js';
 import {macroSuggestions} from './macro-goals-v57723.js';
 import {foodCategory148} from './food-menu-v059148.js';
+import {nutritionCareReport55} from './nutrition-care-report-v059155.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const round=(n,p=1)=>Math.round(n*10**p)/10**p;
 const fmt=(n,p=1)=>Number.isFinite(n)?n.toLocaleString('de-AT',{maximumFractionDigits:p}):'–';
@@ -125,12 +126,12 @@ export function nutritionSignals54(state,m){
   result.push(contextStatus54(nutritionCoverage54(m,'kcal')<.70?'neutral':change>.10?'caution':change<-.15?'caution':'good','Kalorien · Zeitraummittel',`${fmt(kcal.avg,0)} / ${fmt(energyGoal,0)} kcal`,Math.abs(change)<.10?'Im ungefähren Zielkorridor. Einzelne Tage müssen nicht exakt passen.':change>.10?'Über dem eingestellten Ziel im Zeitmittel; Gewichtstrend mitbetrachten.':'Unter dem eingestellten Ziel im Zeitmittel; Erholung und Kraftleistung mitbetrachten.'));
  }else result.push(contextStatus54('neutral','Kalorien · Zeitraum',`${fmt(kcal.avg,0)} kcal / Tag`,'Noch kein aktiviertes Energieziel für eine farbliche Soll-Ist-Bewertung.'));
  const pc=nutritionCoverage54(m,'protein');
- result.push(contextStatus54(pc<.7?'neutral':goals.ready&&protein.avg<goals.protein*.85?'caution':'good','Protein · V-Taper',`${fmt(protein.avg)} g / Tag`,pc<.7?'Nicht alle Mahlzeiten haben Proteinwerte; keine sichere Zielbewertung.':goals.ready?`Trainingsorientierung ca. ${fmt(goals.protein,0)} g/Tag · ${protein.avg>=goals.protein*.85?'im Bereich der Orientierung':'regelmäßige Ergänzung prüfen'}`:'Zur persönlichen Einordnung wird eine Gewichtsmessung benötigt.'));
+ result.push(contextStatus54(pc<.7?'neutral':goals.ready&&protein.avg<goals.protein*.85?'caution':'good','Protein · V-Taper',`${fmt(protein.avg)} g / Tag`,pc<.7?'Persönliche Proteinquellen kannst du im Ernährungsreport ansehen.':goals.ready?`Trainingsorientierung ca. ${fmt(goals.protein,0)} g/Tag · ${protein.avg>=goals.protein*.85?'im Bereich der Orientierung':'regelmäßige Ergänzung prüfen'}`:'Zur persönlichen Einordnung wird eine Gewichtsmessung benötigt.'));
  const ironPct=iron.avg!==null&&Number.isFinite(DAILY_NRV.iron)?100*iron.avg/DAILY_NRV.iron:null;
  const ic=nutritionCoverage54(m,'iron');
- result.push(contextStatus54(ic<.7?'neutral':ironPct<60?'caution':'good','Eisen · dokumentierte Menge',`${fmt(iron.avg)} mg / Tag`,ic<.7?`Nur ${fmt(ic*100,0)} % der Einträge mit Eisenwerten: keine tatsächliche Unterversorgung ableitbar.`:`${fmt(ironPct,0)} % des EU-Kennzeichnungswerts; kein Blutwert oder Mangeltest.`));
+ result.push(contextStatus54(ic<.7?'neutral':ironPct<60?'caution':'good','Eisen · dokumentierte Menge',`${fmt(iron.avg)} mg / Tag`,ic<.7?'Pflanzliche Eisenquellen und konkrete Portionen im Ernährungsreport ansehen.':`${fmt(ironPct,0)} % des EU-Kennzeichnungswerts; kein Blutwert oder Mangeltest.`));
  const fat=nutritionFatSignal54(m);
- result.push(contextStatus54(!fat.interpretable?'neutral':fat.pct>12?'caution':fat.pct>=10?'watch':'good','Gesättigte Fette · Energieanteil',fat.pct===null?'Nicht berechenbar':`${fmt(fat.pct,1)} % der kcal`,fat.pct===null?'Keine Tage mit beiden Werten.':`${fmt(fat.avgSat)} g/Tag dokumentiert · WHO-Orientierung unter 10 % der Energie. ${fat.interpretable?'Ausreichend quantifizierte Einträge für eine vorläufige Bewertung.':'Teilbilanz: unvollständig erfasste Fettwerte können den Anteil verändern.'}`));
+ result.push(contextStatus54(!fat.interpretable?'neutral':fat.pct>12?'caution':fat.pct>=10?'watch':'good','Gesättigte Fette · Energieanteil',fat.pct===null?'Nicht berechenbar':`${fmt(fat.pct,1)} % der kcal`,fat.pct===null?'Keine Tage mit beiden Werten.':`${fmt(fat.avgSat)} g/Tag dokumentiert · WHO-Orientierung unter 10 % der Energie. ${fat.interpretable?'Wochendurchschnitt statt Einzelwerte.':'Veränderung im Zeitverlauf vergleichen.'}`));
  return result;
 }
 /** Only runs on explicit click. Each recommendation cites actual local product
@@ -207,7 +208,32 @@ export function nutritionCoachAnalyze52(state,{days=14,anchor=dateKey(new Date()
  items.sort((a,b)=>b.priority-a.priority);
  // Three initial recommendations and optional additional evidence, plus
  // informational source/coverage cards requested by the user.
- return {key:m.fingerprint,window:m.window,items:items.slice(0,9),generatedAt:new Date().toISOString()};
+ return {key:m.fingerprint,window:m.window,items:items.slice(0,9),care:nutritionCareReport55(state,m,{groups:nutritionFoodGroups54(m),fat:fatSignal}),generatedAt:new Date().toISOString()};
+}
+/** Accessible professional-style report, generated only after explicit analysis.
+ * Actionable findings first; underlying evidence and extra observations remain in details.
+ */
+export function nutritionCareReportView55(care){
+ if(!care)return '';
+ const chips=care.assessment.map(x=>`<div class="ni155-assessment ni155-${esc(x.status)}"><span>${esc(x.label)}</span><strong>${esc(x.value)}</strong><small>${esc(x.detail)}</small></div>`).join('');
+ const priorities=care.priorities.map((x,i)=>`<article class="ni155-priority"><div class="ni155-priority-heading"><span class="ni155-number">${i+1}</span><h5>${esc(x.title)}</h5></div><p class="ni155-observation">${esc(x.observation)}</p><p>${esc(x.action)}</p><small><strong>Im nächsten Zyklus:</strong> ${esc(x.target)}</small></article>`).join('');
+ const more=care.additional.length?`<details class="ni155-more"><summary>Weitere sinnvolle Anpassungen (${care.additional.length})</summary>${care.additional.map(x=>`<div><strong>${esc(x.title)}</strong><p>${esc(x.action)}</p></div>`).join('')}</details>`:'';
+ const categories=care.topGroups.map(g=>`<span>${esc(g.name)} <strong>${fmt(g.share)} %</strong></span>`).join('');
+ const positives=care.positive.length?`<p class="ni155-positive"><strong>Das läuft bereits gut:</strong> ${esc(care.positive.join(' '))}</p>`:'';
+ const monitoring=care.monitoring.map(x=>`<li><strong>${esc(x.label)}</strong><span>${esc(x.target)}</span></li>`).join('');
+ return `<section class="ni155-report" aria-label="Persönlicher Ernährungsreport">
+  <header><div><small>COMPASS · NUTRITION ASSESSMENT</small><h4>📋 ${esc(care.title)}</h4><p>${esc(care.period)} · ${esc(care.headline)}</p></div><span class="ni155-pill">6-Wochen-Coaching</span></header>
+  <div class="ni155-report-body">
+   <div class="ni155-keyfinding"><strong>Dein Fazit</strong><p>${esc(care.summary)}</p></div>
+   <h5>1 · Ernährungsassessment</h5><div class="ni155-assessment-grid">${chips}</div>
+   ${categories?`<div class="ni155-topgroups"><strong>Größte Kaloriengruppen</strong>${categories}</div>`:''}
+   ${positives}
+   <h5>2 · Die wichtigsten Handlungsfelder</h5><div class="ni155-priorities">${priorities||'<p>Kein unmittelbarer Änderungsbedarf aus der aktuellen Auswertung.</p>'}</div>${more}
+   <h5>3 · Maßnahmen & Erfolgskontrolle</h5><p>Arbeite mit diesen Maßnahmen in deinem bestehenden 6-Wochen-Block. Compass kann beim nächsten Review Veränderungen in denselben Kennzahlen vergleichen.</p>
+   <ul class="ni155-monitoring">${monitoring||'<li>Weiter Mahlzeiten dokumentieren und Trends vergleichen.</li>'}</ul>
+   <p class="ni155-review-date">Nächstes vorgeschlagenes Review: ${esc(care.reviewDate)}</p>
+   <details class="ni155-basis"><summary>Methodik & Referenzen</summary><p>Erstellt aus deinem lokalen Ernährungsjournal. Einordnung angelehnt an Nutrition Care Process sowie Daily Dozen; dies ist eine automatische Ernährungsauswertung und keine klinische Diagnosestellung.</p></details>
+  </div></section>`;
 }
 const smallCard=(label,value,subtitle)=>`<div class="ni152-stat"><small>${esc(label)}</small><strong>${esc(value)}</strong><span>${esc(subtitle)}</span></div>`;
 // Transparent, numeric trend chart with calendar labels, comparable axis and
@@ -261,6 +287,7 @@ export function nutritionFoodGroup54(food){
  const id=String(food?.id||'').toLowerCase(),name=String(food?.title||'').toLocaleLowerCase('de'),group=String(food?.group||'').toLocaleLowerCase('de');
  const joined=id+' '+name;
  const menu=foodCategory148(food);
+ if(['dr-oetker-high-protein-milchreis-zimt-400g','billa-high-protein-griesspudding-zimt-500g','noem-pro20-topfencreme-blueberry-cheesecake-235g'].includes(id))return 'dairy';
  if(menu==='sport'||/supplement|multivitamin|alphaminos|bcaa|kapsel|vitamin.*daily/.test(joined))return 'supplements';
  if(menu==='drinks'||/grüntee|tee ungesüßt|wasser|calpis|shake|smoothie|matcha.*hafermilch/.test(joined))return 'drinks';
  if(/mensa|study.teller|frühlingsrolle|hauptgericht|menü|curry|risotto|salat mit|suppe|dal|kimchi|omelette|frühstücksschüssel|meal/i.test(joined)&&!/(mango|apfel).*dessert/.test(joined))return 'meals';
@@ -362,7 +389,7 @@ export function nutritionCoachDashboard52(state,{days=14,anchor=dateKey(new Date
  if(!m.loggedDays)return `<section class="ni152" aria-label="Ernährungsübersicht"><header><small>COMPASS · NUTRITION INTELLIGENCE</small><h3>Ernährung im Zeitverlauf</h3><p>Aus deinen lokal vorhandenen Protokollen – ohne zusätzliche Erfassung.</p></header>${periodNav}<div class="ni152-empty">Im gewählten Zeitraum sind noch keine Ernährungseinträge vorhanden. Mit ‹ kannst du frühere Zeiträume ansehen. Fehlende Einträge sind keine Nullwerte.</div></section>`;
  const macros=`<div class="ni152-stats">${smallCard('Ø Kalorien',m.metrics.kcal.avg===null?'–':fmt(m.metrics.kcal.avg,0)+' kcal',`${m.metrics.kcal.days}/${m.loggedDays} Tage mit kcal-Werten`)}${smallCard('Ø Protein',m.metrics.protein.avg===null?'–':fmt(m.metrics.protein.avg)+' g',`${m.metrics.protein.days}/${m.loggedDays} Tage mit Proteinwerten`)}${smallCard('Ø Salz',m.metrics.salt.avg===null?'–':fmt(m.metrics.salt.avg,2)+' g',`${m.metrics.salt.days}/${m.loggedDays} Tage mit Salzangaben`)}${smallCard('Ø Ballaststoffe',m.metrics.fiber.avg===null?'–':fmt(m.metrics.fiber.avg)+' g',`${m.metrics.fiber.days}/${m.loggedDays} Tage mit bekannten Werten`)}</div>`;
  const signals=nutritionSignals54(state,m);
- const quickInsight=`<section class="ni154-glance" aria-label="Ernährung auf einen Blick"><div class="ni154-intro"><h4>🎯 Was sagen dir deine Daten?</h4><p>Einordnung des gewählten Zeitraums. Nur dokumentierte Werte; detaillierte Lebensmittelvorschläge erst nach Klick unten.</p></div><div class="ni154-glance-grid">${signals.map(x=>`<div class="ni154-insight ni154-${x.tone}"><strong>${esc(x.title)}</strong><b>${esc(x.value)}</b><span>${esc(x.detail)}</span></div>`).join('')}</div></section>`;
+ const quickInsight=`<section class="ni154-glance" aria-label="Ernährung auf einen Blick"><div class="ni154-intro"><h4>🎯 Was sagen dir deine Daten?</h4><p>Einordnung nach Kalorien, Protein, Eisen und Fettqualität. Konkrete Maßnahmen im Ernährungsreport.</p></div><div class="ni154-glance-grid">${signals.map(x=>`<div class="ni154-insight ni154-${x.tone}"><strong>${esc(x.title)}</strong><b>${esc(x.value)}</b><span>${esc(x.detail)}</span></div>`).join('')}</div></section>`;
  const graphMetric=['kcal','protein','salt','fiber','saturated'].includes(metric)?metric:'protein';
  const trendNames={kcal:'Kalorien',protein:'Protein',salt:'Salz',fiber:'Ballaststoffe',saturated:'Gesättigte Fette'};
  const goals=macroSuggestions(state);
@@ -378,6 +405,7 @@ export function nutritionCoachDashboard52(state,{days=14,anchor=dateKey(new Date
  const micros=NUTRIENT_TREND_MICROS.filter(k=>m.metrics[k]?.days>0).slice(0,10);
  const micronutrients=`<details class="ni152-panel ni152-details" open><summary>🔬 Mikronährstoffe & Fettqualität · Zeitdurchschnitt</summary><div class="ni152-micros">${micros.map(k=>{const v=m.metrics[k],nrv=DAILY_NRV[k],pct=Number.isFinite(nrv)&&v.avg!==null?v.avg/nrv*100:null;return `<div><strong>${esc(NUTRIENT_LABELS[k]?.[0]||k)}</strong><span>Ø ${fmt(v.avg)} ${esc(NUTRIENT_LABELS[k]?.[1]||'')} · ${v.days}/${m.loggedDays} Tage</span>${Number.isFinite(pct)?chartBar(pct,100,'#4d8d95'):''}<small>${Number.isFinite(pct)?fmt(pct,0)+' % EU-NRV · '+fmt(nutritionCoverage54(m,k)*100,0)+' % der Einträge quantifiziert (kein Mangeltest)':''}</small></div>`;}).join('')}</div><p class="ni152-note">Gesättigte Fette: Ø ${fmt(m.metrics.saturated.avg,2)} g an ${m.metrics.saturated.days} Tagen mit bekannten Werten; ${fmt(nutritionFatSignal54(m).pct,1)} % der zeitgleich dokumentierten Energie (WHO-Orientierung unter 10 %; ${nutritionFatSignal54(m).interpretable?'ausreichende':'eingeschränkte'} Datenabdeckung). ALA/EPA/DHA sind im bestehenden Fettqualitäts-Tab differenziert verfügbar; fehlende Etikettwerte werden nicht als 0 gewertet.</p></details>`;
  const currentReport=report?.key===m.fingerprint?report:null;
- const recommendations=`<section class="ni152-recommend"><div class="ni152-recommend-head"><div><small>OPTIONAL · LOKALE ANALYSE</small><h4>✨ Dein persönlicher Nutrition Coach</h4><p>Konkrete Quellen, Daily-Dozen-Lücken und passende Lebensmittel aus deinem Menü – nur nach deinem Klick.</p></div><button type="button" data-action="ni152-analyze">${currentReport?'Erneut analysieren':'Meine Ernährung analysieren'}</button></div>${currentReport?`<div class="ni152-recommend-list">${currentReport.items.length?currentReport.items.slice(0,3).map(x=>`<article><h5>${esc(x.title)}</h5><p><strong>Beobachtung:</strong> ${esc(x.observation)}</p><p><strong>Dein nächster Schritt:</strong> ${esc(x.action)}</p>${x.detail?`<small>${esc(x.detail)}</small>`:''}</article>`).join('')+(currentReport.items.length>3?`<details class="ni153-more"><summary>Weitere ${currentReport.items.length-3} Befunde ansehen</summary>${currentReport.items.slice(3).map(x=>`<article><h5>${esc(x.title)}</h5><p><strong>Beobachtung:</strong> ${esc(x.observation)}</p><p><strong>Vorschlag:</strong> ${esc(x.action)}</p>${x.detail?`<small>${esc(x.detail)}</small>`:''}</article>`).join('')}</details>`:''):'<p>Keine ausreichenden Daten für belastbare Empfehlungen im Zeitraum. Weiter dokumentieren genügt.</p>'}</div>`:`<p class="ni152-note">${report?'Seit der Analyse wurden Daten oder der Zeitraum geändert. Bitte erneut analysieren.':'Keine automatische Analyse oder KI-Anfrage beim Öffnen dieser Seite.'}</p>`}<p class="ni152-note">Befunde beschreiben dokumentierte Ernährung; fehlende Tage oder Nährstoffangaben sind keine Nullwerte. Empfehlungen sind Optionen, keine Pflicht. Keine automatische Änderung an Mahlzeiten oder Habits.</p></section>`;
- return `<section class="ni152" aria-label="Nutrition Intelligence Überblick"><header><small>COMPASS · NUTRITION INTELLIGENCE</small><h3>Deine Ernährung im Überblick</h3><p>Dr. Gregers Daily Dozen · vollwertig pflanzenbetont · ausreichend Protein für deinen V-Taper</p></header>${periodNav}<p class="ni152-coverage">${esc(dateInfo)} · Durchschnitt nur über Tage mit quantifizierten Werten</p>${quickInsight}${macros}${nutritionCategory54(m)}${trend}${productSources}<div class="ni152-columns">${dailyDozen}${micronutrients}</div>${products}${recommendations}</section>`;
+ const careReportHtml=currentReport?.care?nutritionCareReportView55(currentReport.care):'';
+ const recommendations=`<section class="ni152-recommend" id="ni155-report-anchor"><div class="ni152-recommend-head"><div><small>OPTIONAL · LOKALE ANALYSE</small><h4>✨ Dein persönlicher Nutrition Coach</h4><p>Konkrete Quellen, Daily-Dozen-Lücken und passende Lebensmittel aus deinem Menü – nur nach deinem Klick.</p></div><button type="button" data-action="ni152-analyze">${currentReport?'Erneut analysieren':'Meine Ernährung analysieren'}</button></div>${careReportHtml}${currentReport?`<details class="ni155-original-findings"><summary>Einzelbefunde und Berechnungsdetails ansehen</summary><div class="ni152-recommend-list">${currentReport.items.length?currentReport.items.slice(0,3).map(x=>`<article><h5>${esc(x.title)}</h5><p><strong>Beobachtung:</strong> ${esc(x.observation)}</p><p><strong>Dein nächster Schritt:</strong> ${esc(x.action)}</p>${x.detail?`<small>${esc(x.detail)}</small>`:''}</article>`).join('')+(currentReport.items.length>3?`<details class="ni153-more"><summary>Weitere ${currentReport.items.length-3} Befunde ansehen</summary>${currentReport.items.slice(3).map(x=>`<article><h5>${esc(x.title)}</h5><p><strong>Beobachtung:</strong> ${esc(x.observation)}</p><p><strong>Vorschlag:</strong> ${esc(x.action)}</p>${x.detail?`<small>${esc(x.detail)}</small>`:''}</article>`).join('')}</details>`:''):'<p>Keine ausreichenden Daten für belastbare Empfehlungen im Zeitraum. Weiter dokumentieren genügt.</p>'}</div></details>`:`<p class="ni152-note">${report?'Seit der Analyse wurden Daten oder der Zeitraum geändert. Bitte erneut analysieren.':'Keine automatische Analyse oder KI-Anfrage beim Öffnen dieser Seite.'}</p>`}</section>`;
+ return `<section class="ni152" aria-label="Nutrition Intelligence Überblick"><header><small>COMPASS · NUTRITION INTELLIGENCE</small><h3>Deine Ernährung im Überblick</h3><p>Dr. Gregers Daily Dozen · vollwertig pflanzenbetont · ausreichend Protein für deinen V-Taper</p></header>${periodNav}<div class="ni155-jump"><a href="#ni155-report-anchor">📋 Ernährungsreport &amp; Maßnahmenplan</a></div><p class="ni152-coverage">${esc(dateInfo)} · Durchschnitt nur über Tage mit quantifizierten Werten</p>${quickInsight}${macros}${nutritionCategory54(m)}${trend}${productSources}<div class="ni152-columns">${dailyDozen}${micronutrients}</div>${products}${recommendations}</section>`;
 }

@@ -1,8 +1,10 @@
 import {PLANT_FOODS_149,PLANT_PROFILES_149,plantPortion149} from './food-plants-v059149.js';
+import {PROTEIN_CUP_FOODS_155,PROTEIN_CUP_PROFILES_155,PROTEIN_CUP_GRAMS_155} from './food-protein-cups-v059155.js';
 /** 0.5.91.48 · Additive food presets. Existing IDs/categories and logged entries are never rewritten.
  * Source: user photographed Milsani label + structured user-supplied recipe handoff. */
 export const FOODS_148=Object.freeze([
   ...PLANT_FOODS_149,
+  ...PROTEIN_CUP_FOODS_155,
   {"id": "homemade-muffin-low-sugar-20261114", "emoji": "🧁", "title": "Muffin hausgemacht (wenig Zucker)", "group": "Snacks", "defaultAmount": "1 Stück (ca. 80 g)", "kcalLow": 225, "kcalHigh": 225, "recipeNote": "GROBE PORTIONSSCHÄTZUNG · Ohne Rezept und Wägung: grobe Portionsschätzung für einen Muffin von ca. 80 g. Weniger Zucker als üblich angenommen; Mehl und Fett können weiterhin viele Kalorien liefern. Keine automatisch gutgeschriebenen Daily-Dozen-Portionen.", "aliases": ["Hausgemachter Muffin", "Muffin von Mama", "Muffins wenig Zucker"]},
   {"id": "homemade-cake-slice-low-sugar-20261114", "emoji": "🍰", "title": "Kuchenstück hausgemacht (wenig Zucker)", "group": "Snacks", "defaultAmount": "1 Stück (ca. 100 g)", "kcalLow": 270, "kcalHigh": 270, "recipeNote": "GROBE PORTIONSSCHÄTZUNG · Ohne Rezept und Wägung: grobe Portionsschätzung für ein Kuchenstück von ca. 100 g, Rezept und Belag unbekannt. Weniger Zucker als üblich angenommen; keine automatisch gutgeschriebenen Obst- oder Daily-Dozen-Portionen.", "aliases": ["Hausgemachter Kuchen", "Kuchen von Mama", "Kuchenstück wenig Zucker"]},
   {"id": "all-stars-whey-iced-matcha-latte-30g", "emoji": "🥤", "title": "All Stars Whey Protein Shake · Iced Matcha Latte", "group": "Getränke", "defaultAmount": "1 Portion (30 g Pulver)", "kcalLow": 117, "kcalHigh": 117, "recipeNote": "Originaletikett vom Nutzerfoto 14.11.2026 · 30 g Pulver mit Wasser: 117 kcal, 20 g Eiweiß, 3,3 g Kohlenhydrate, 2,1 g Zucker, 2,2 g Fett, 1,5 g gesättigte Fettsäuren, 2,2 g Ballaststoffe, 0,06 g Salz, 90 mg Koffein. Milch separat buchen; diese Portion rechnet nur das Pulver.", "aliases": ["AS Whey Matcha", "Allstars Matcha Latte", "Proteinshake Matcha"]},
@@ -53,6 +55,7 @@ export const FOODS_148=Object.freeze([
 ]);
 export const PROFILES_148=Object.freeze({
   ...PLANT_PROFILES_149,
+  ...PROTEIN_CUP_PROFILES_155,
   "homemade-muffin-low-sugar-20261114": {"name": "Muffin hausgemacht (wenig Zucker)", "reference": {"amount": 80, "unit": "g"}, "nutrients": {"kcal": 225, "protein": 4, "carbs": 27, "sugar": 8, "fat": 11.5, "saturated": 4.5, "fiber": 1.3}, "source": "Grobe Portionsschätzung · Hausgebacken · Nutzerangabe 14.11.2026", "extra": {}, "note": "Ohne Rezept und Wägung: grobe Portionsschätzung für einen Muffin von ca. 80 g. Weniger Zucker als üblich angenommen; Mehl und Fett können weiterhin viele Kalorien liefern. Keine automatisch gutgeschriebenen Daily-Dozen-Portionen.", "estimatedNutrients": ["kcal", "protein", "carbs", "sugar", "fat", "saturated", "fiber"]},
   "homemade-cake-slice-low-sugar-20261114": {"name": "Kuchenstück hausgemacht (wenig Zucker)", "reference": {"amount": 100, "unit": "g"}, "nutrients": {"kcal": 270, "protein": 4, "carbs": 34, "sugar": 11, "fat": 13, "saturated": 5, "fiber": 1.1}, "source": "Grobe Portionsschätzung · Hausgebacken · Nutzerangabe 14.11.2026", "extra": {}, "note": "Ohne Rezept und Wägung: grobe Portionsschätzung für ein Kuchenstück von ca. 100 g, Rezept und Belag unbekannt. Weniger Zucker als üblich angenommen; keine automatisch gutgeschriebenen Obst- oder Daily-Dozen-Portionen.", "estimatedNutrients": ["kcal", "protein", "carbs", "sugar", "fat", "saturated", "fiber"]},
   "all-stars-whey-iced-matcha-latte-30g": {"name": "All Stars Whey Protein Shake · Iced Matcha Latte", "reference": {"amount": 30, "unit": "g"}, "nutrients": {"kcal": 117, "protein": 20, "carbs": 3.3, "sugar": 2.1, "fat": 2.2, "saturated": 1.5, "fiber": 2.2, "salt": 0.06, "caffeine": 90}, "source": "Originaletikett · Nutzerfoto 14.11.2026", "extra": {}, "note": "Originaletikett vom Nutzerfoto 14.11.2026 · 30 g Pulver mit Wasser: 117 kcal, 20 g Eiweiß, 3,3 g Kohlenhydrate, 2,1 g Zucker, 2,2 g Fett, 1,5 g gesättigte Fettsäuren, 2,2 g Ballaststoffe, 0,06 g Salz, 90 mg Koffein. Milch separat buchen; diese Portion rechnet nur das Pulver.", "estimatedNutrients": []},
@@ -536,7 +539,7 @@ export function foodPortion148(id,amount='',defaultAmount=''){
  const num=m=>Number(m[1].replace(',','.'));
  const grams=text.match(/^(\d+(?:[.,]\d+)?)\s*(?:g|gramm)\b/);
  const packs=text.match(/^(\d+(?:[.,]\d+)?)\s*(?:becher|bechern|packung|portion(?:en)?|beilage(?:n)?|st[üu]ck(?:e)?|muffins?|kuchenst[üu]cke?)\b/);
- const unit=HOMEMADE_BAKING_148.has(id)?(id==='homemade-muffin-low-sugar-20261114'?80:100):HOMEMADE_148.has(id)?100:id==='milsani-high-protein-pfirsich-maracuja-200g'?200:id==='golden-turtle-peanuts-raw-with-skin-500g'||id==='all-stars-whey-iced-matcha-latte-30g'||id==='nutrinorm-whey-deluxe-cookies-cream-30g'?30:null;
+ const unit=PROTEIN_CUP_GRAMS_155[id] || (HOMEMADE_BAKING_148.has(id)?(id==='homemade-muffin-low-sugar-20261114'?80:100):HOMEMADE_148.has(id)?100:id==='milsani-high-protein-pfirsich-maracuja-200g'?200:id==='golden-turtle-peanuts-raw-with-skin-500g'||id==='all-stars-whey-iced-matcha-latte-30g'||id==='nutrinorm-whey-deluxe-cookies-cream-30g'?30:null);
  if(!unit)return null;
  const scoops=text.match(/^(\d+(?:[.,]\d+)?)\s*(?:scoops?|messlöffel|messloeffel|handvoll)\b/);
  const g=grams?num(grams):packs?num(packs)*unit:scoops?num(scoops)*unit:null;
