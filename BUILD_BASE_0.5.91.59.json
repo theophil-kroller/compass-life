@@ -1,0 +1,7 @@
+{
+  "version": "0.5.91.59",
+  "patchFrom": "0.5.91.58",
+  "features": ["teaching-effort-priority", "overdue-task-alert", "collapsible-today-top-through-mensa"],
+  "source": "Compass_Life_0.5.91.58_GIFTS_TOUCH_RECOVERY_QUICK_CLOCK_FULL_SOURCE.zip",
+  "notes": "Only source differences plus release metadata are shipped in patch. Encrypted user data unchanged."
+}

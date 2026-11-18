@@ -49,7 +49,7 @@ test('Protein compact view keeps partial ledger and quick food action',()=>{
 test('Today no longer renders full-width protein banner and instead renders it in right rail',()=>{
  const main=src('main-full-v57759402510.js');
  assert.match(main,/proteinTodayMarkup88\(state,selectedDay,\{compact:true\}\)/);
- assert.match(main,/chrome\(mensaTodayCompact\(\)\+workspace\)/);
+ assert.match(main,/chrome\(workspace,\{todayMensaMarkup:mensaTodayCompact\(\)\}\)/); // Mensa liegt jetzt im ein-/ausklappbaren Hinweisblock
  assert.match(main,/if\(action==='ci88-food-open'\)\{if\(tab==='today'\)/);
  assert.match(main,/if\(action==='compass56-recommend'\)/);
 });

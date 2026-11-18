@@ -30,6 +30,27 @@ export function teachingEventType(event){
 }
 export const TEACHING_RADAR_LEADS=Object.freeze({lecture:21,workshop:21,moderation:35});
 const sourceKey=(e,d)=>`${String(e.id)}::${d}`;
+const EFFORT_LEVELS=Object.freeze({low:1,medium:2,high:3});
+/** A manual effort rating follows the same course name across repeat calendar meetings. */
+export const teachingSubjectKey=title=>norm(String(title||'').replace(/\([^()]*\)/g,'').replace(/[–—-]/g,' ')).replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+/** Starter suggestions only for courses whose workload was explicitly characterized. */
+export function suggestedTeachingEffort(title){
+ const subject=teachingSubjectKey(title);
+ if(/\b(intro(?:duction)?(?: to)? entrepreneurship|marketing)\b/.test(subject))return 'high';
+ if(/\b(design thinking|business model|einleitung(?: administration)?)\b/.test(subject))return 'low';
+ return 'medium';
+}
+export function teachingEffortFor(title,state){
+ const key=teachingSubjectKey(title),value=state?.teachingRadar?.efforts?.[key]?.level;
+ return {level:Object.hasOwn(EFFORT_LEVELS,value)?value:suggestedTeachingEffort(title),manual:Object.hasOwn(EFFORT_LEVELS,value)};
+}
+export function teachingRadarSetEffort(state,entry,level,updatedAt=new Date().toISOString()){
+ if(!state||!entry||!Object.hasOwn(EFFORT_LEVELS,level))return false;
+ const key=teachingSubjectKey(entry.title);if(!key||key.length>180)return false;
+ state.teachingRadar??={};state.teachingRadar.efforts??={};
+ state.teachingRadar.efforts[key]={level,updatedAt};return true;
+}
+
 const signature=(e,d)=>norm(String(e.summary||'').replace(/\([^()]*\)/g,'')).replace(/[^\p{L}\p{N}]+/gu,'-')+'|'+String(e?.start?.dateTime||e?.start?.date||d);
 export function teachingRadarEntries(events,state,{today,horizon=90,limit=18}={}){
  if(!validDay(today))return [];
@@ -46,9 +67,9 @@ export function teachingRadarEntries(events,state,{today,horizon=90,limit=18}={}
   const decision=state?.teachingRadar?.decisions?.[key];
   if(decision?.status==='snoozed'&&decision.until>today&&!project)continue;
   const title=String(event.summary||'').trim();
-  result.push({key,id:String(event.id),day,daysLeft:remaining,kind,lead,title,fingerprint,projectId:project?.id||null,calendarId:event.calendarId||event.calendar_id||null});
+  result.push({key,id:String(event.id),day,daysLeft:remaining,kind,lead,title,fingerprint,effort:teachingEffortFor(title,state),projectId:project?.id||null,calendarId:event.calendarId||event.calendar_id||null});
  }
- return result.sort((a,b)=>a.daysLeft-b.daysLeft||a.title.localeCompare(b.title,'de')).slice(0,Math.max(1,Math.min(60,limit)));
+ return result.sort((a,b)=>EFFORT_LEVELS[b.effort.level]-EFFORT_LEVELS[a.effort.level]||a.daysLeft-b.daysLeft||a.title.localeCompare(b.title,'de')).slice(0,Math.max(1,Math.min(60,limit)));
 }
 const projectTasksFor=kind=>kind==='moderation'?[ 
  ['Moderationsablauf, Timings und Übergänge abstimmen',45],
@@ -92,13 +113,17 @@ export function teachingRadarSnooze(state,key,today,days=3){
  state.teachingRadar.decisions[key]={status:'snoozed',until:addDays(today,days),updatedAt:new Date().toISOString()};return true;
 }
 export function mergeTeachingRadar(local={},remote={}){
- const a=local?.decisions||{},b=remote?.decisions||{},decisions={...a};
- for(const [key,item] of Object.entries(b))if(!decisions[key]||String(item.updatedAt||'')>String(decisions[key].updatedAt||''))decisions[key]=item;
- return {decisions};
+ const merge=(a={},b={})=>{
+  const result={...a};
+  for(const [key,item] of Object.entries(b))if(!result[key]||String(item?.updatedAt||'')>String(result[key]?.updatedAt||''))result[key]=item;
+  return result;
+ };
+ return {decisions:merge(local?.decisions,remote?.decisions),efforts:merge(local?.efforts,remote?.efforts)};
 }
+const EFFORT_VIEW=Object.freeze({low:['🟢','Wenig'],medium:['🟡','Mittel'],high:['🔴','Hoch']});
 export function teachingRadarPanel(entries,{view='today'}={}){
  if(!entries?.length)return '';
  const max=view==='today'?3:12;
  const shown=entries.slice(0,max);
- return `<section class="tr919-radar" aria-label="Lehr- und Event-Vorbereitungsradar"><div class="tr919-head"><strong>🎓 Lehr- & Event-Vorbereitung</strong><small>Google Kalender · ${view==='today'?'demnächst':'Vorschau'}</small></div><div class="tr919-list">${shown.map(e=>`<div class="tr919-row"><div class="tr919-time"><strong>${e.daysLeft===0?'Heute':e.daysLeft===1?'Morgen':`In ${e.daysLeft} Tagen`}</strong><small>${safe(new Date(e.day+'T12:00:00Z').toLocaleDateString('de-AT',{day:'numeric',month:'short'}))}</small></div><div class="tr919-desc"><strong>${safe(e.title)}</strong><small>${safe(({lecture:'Lehre',workshop:'Business Model Workshop',moderation:'Final Pitch · Moderation'})[e.kind])} · Vorbereitung ${e.projectId?'angelegt':'empfohlen'}</small></div><div class="tr919-actions">${e.projectId?`<button type="button" data-action="tr919-project-open" data-id="${safe(e.projectId)}">Projekt öffnen</button>`:`<button type="button" data-action="tr919-create" data-id="${safe(e.key)}">Projekt anlegen</button><button type="button" class="tr919-later" data-action="tr919-snooze" data-id="${safe(e.key)}">Später</button>`}</div></div>`).join('')}</div>${entries.length>shown.length?`<button class="tr919-more" type="button" data-tab="forecast">Weitere ${entries.length-shown.length} Termine im Forecast</button>`:''}<small class="tr919-foot">Kalendertermine werden nur gelesen. Projekt und Aufgaben entstehen erst nach Bestätigung.</small></section>`;
+ return `<section class="tr919-radar" aria-label="Lehr- und Event-Vorbereitungsradar"><div class="tr919-head"><strong>🎓 Lehr- & Event-Vorbereitung</strong><small>Hoher Aufwand zuerst · ${view==='today'?'demnächst':'Vorschau'}</small></div><div class="tr919-list">${shown.map(e=>`<div class="tr919-row tr919-effort-${e.effort?.level||'medium'}"><div class="tr919-time"><strong>${e.daysLeft===0?'Heute':e.daysLeft===1?'Morgen':`In ${e.daysLeft} Tagen`}</strong><small>${safe(new Date(e.day+'T12:00:00Z').toLocaleDateString('de-AT',{day:'numeric',month:'short'}))}</small></div><div class="tr919-desc"><strong>${safe(e.title)}</strong><small>${safe(({lecture:'Lehre',workshop:'Business Model Workshop',moderation:'Final Pitch · Moderation'})[e.kind])} · Vorbereitung ${e.projectId?'angelegt':'empfohlen'}</small><div class="tr919-effort-choice" role="group" aria-label="Vorbereitungsaufwand für ${safe(e.title)}">${Object.entries(EFFORT_VIEW).map(([level,[emoji,label]])=>`<button type="button" data-action="tr919-effort" data-id="${safe(e.key)}" data-step="${level}" class="tr919-effort-button tr919-effort-button-${level} ${e.effort?.level===level?'is-selected':''}" aria-pressed="${e.effort?.level===level}" title="${label} Vorbereitungsaufwand für dieses Thema">${emoji}<span>${label}</span></button>`).join('')}</div></div><div class="tr919-actions">${e.projectId?`<button type="button" data-action="tr919-project-open" data-id="${safe(e.projectId)}">Projekt öffnen</button>`:`<button type="button" data-action="tr919-create" data-id="${safe(e.key)}">Projekt anlegen</button><button type="button" class="tr919-later" data-action="tr919-snooze" data-id="${safe(e.key)}">Später</button>`}</div></div>`).join('')}</div>${entries.length>shown.length?`<button class="tr919-more" type="button" data-tab="forecast">Weitere ${entries.length-shown.length} Termine im Forecast</button>`:''}<small class="tr919-foot">Die Farben zeigen deinen Vorbereitungsaufwand, keine Termindringlichkeit. Du kannst sie pro Lehrveranstaltung ändern; die Einstufung gilt auch für spätere Termine des Themas.</small></section>`;
 }

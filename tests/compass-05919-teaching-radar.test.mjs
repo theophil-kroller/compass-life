@@ -24,7 +24,7 @@ test('Workshop und Final Pitch werden auch ohne kro gefunden; Absagen nicht',()=
 test('Countdowns, horizon und Spiegeltermine; jedes Ereignis hat ein eigenes Projekt',()=>{
  const events=[when('2026-11-02','Entrepreneurship (kro)','e0'),when('2026-11-20','Marketing (kro, xy)','e1'),when('2026-11-20','Marketing (kro, xy)','mirror'),when('2026-12-10','Marketing (kro)','e3'),when('2026-11-29','Final Pitch Abend','fp'),when('2026-12-01','Intro (abc)','no')];
  const rows=teachingRadarEntries(events,state(),{today:'2026-11-02'});
- assert.equal(rows.length,3);assert.deepEqual(rows.map(x=>x.daysLeft),[0,18,27]);
+ assert.equal(rows.length,3);assert.deepEqual(rows.map(x=>x.daysLeft),[18,0,27]); // hoher Vorbereitungsaufwand zuerst
  assert.ok(rows.some(x=>x.kind==='moderation'));
 });
 test('bestätigter Projektvorschlag erzeugt gültige GTD-Projekte/Aufgaben genau einmal',()=>{

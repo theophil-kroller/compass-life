@@ -1,0 +1,21 @@
+/* Preparation effort: selected radio-like pills remain legible even on narrow phones. */
+.tr919-radar .tr919-row{border-left:4px solid transparent;padding-left:9px;border-radius:7px}
+.tr919-radar .tr919-effort-high{border-left-color:#b72f40;background:color-mix(in srgb,#c4494b 7%,transparent)}
+.tr919-radar .tr919-effort-medium{border-left-color:#c69232}
+.tr919-radar .tr919-effort-low{border-left-color:#31966c}
+.tr919-effort-choice{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:7px}
+.tr919-radar .tr919-effort-button{border:1px solid color-mix(in srgb,currentColor 13%,transparent);border-radius:7px;background:transparent;padding:4px 8px;white-space:nowrap;font-size:.7rem;min-height:29px;line-height:1.2;color:inherit;cursor:pointer}
+.tr919-radar .tr919-effort-button.is-selected{font-weight:750;border-color:currentColor;box-shadow:0 0 0 1px color-mix(in srgb,currentColor 17%,transparent)}
+.tr919-radar .tr919-effort-button-high.is-selected{color:#a5273b;background:#fff1f0}
+.tr919-radar .tr919-effort-button-medium.is-selected{color:#90620a;background:#fff7df}
+.tr919-radar .tr919-effort-button-low.is-selected{color:#176d4b;background:#e9f7ef}
+.today59-top-toggle{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:10px;min-height:42px;width:100%;padding:9px 13px;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:11px;background:color-mix(in srgb,#d5c295 6%,transparent);color:inherit;cursor:pointer;margin:8px 0 7px}
+.today59-top-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:.83rem}
+.today59-top-title small{opacity:.67;font-size:.72rem;font-weight:400}
+.today59-top-action{flex:none;font-size:.74rem;font-weight:700;color:#8b671e}
+.today59-top-content{min-width:0}
+/* A past real deadline is a signal, not a planned date or an effort category. */
+.shell .task-row.is-overdue:not(.completed){border:1px solid #d66265;background:color-mix(in srgb,#e55b56 11%,white);box-shadow:inset 3px 0 #c7303e}
+.shell .task-row.is-overdue:not(.completed) .task-title-button strong{color:#b52835}
+.task-overdue-badge59{display:inline-flex;vertical-align:middle;margin-left:6px;padding:2px 6px;border-radius:5px;background:#ba2a3c;color:#fff;font-size:.65rem;letter-spacing:.02em;font-weight:750}
+@media(max-width:650px){.tr919-radar .tr919-row{grid-template-columns:65px minmax(0,1fr)}.tr919-radar .tr919-actions{grid-column:2}.tr919-radar .tr919-effort-button{padding:5px 7px}.today59-top-title small{flex-basis:100%;padding-left:25px}.today59-top-toggle{padding:10px}}
