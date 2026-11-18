@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0\.."
-echo Compass Outlook Bridge 0.5.77.24 - nur klassisches Outlook fuer Windows
+echo Compass Outlook Bridge 0.5.91.61 - nur klassisches Outlook fuer Windows
 where py >nul 2>nul
 if errorlevel 1 (
  echo Python Launcher fehlt. Bitte Python 3.10+ mit py Launcher installieren.
@@ -10,7 +10,7 @@ if errorlevel 1 (
 )
 py -c "import win32com.client" >nul 2>nul
 if errorlevel 1 (
- echo pywin32 fehlt. Installiere es einmalig mit: py -m pip install pywin32
+ echo pywin32 fehlt. Installiere es einmalig mit: py -m pip install pywin32 tzdata
  pause
  exit /b 1
 )

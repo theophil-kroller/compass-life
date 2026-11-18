@@ -19,7 +19,8 @@ import secrets
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
+from outlook_calendar import read_calendar
 
 SCHEMA='compass-outlook-flags-v1'
 
@@ -110,14 +111,26 @@ def serve(origin,port,limit):
         def _permitted(self):
             return self.headers.get('Origin')==origin and secrets.compare_digest(self.headers.get('X-Compass-Bridge-Key',''),token)
         def do_OPTIONS(self):
-            if self.path!='/v1/flags' or self.headers.get('Origin')!=origin:
+            if self.path.split('?')[0] not in ('/v1/flags','/v1/calendar','/v1/status') or self.headers.get('Origin')!=origin:
                 self._headers(403);return
             self._headers(204)
         def do_GET(self):
-            if self.path!='/v1/flags' or not self._permitted():
+            if self.path.split('?')[0] not in ('/v1/flags','/v1/calendar','/v1/status') or not self._permitted():
                 self._headers(403);self.wfile.write(b'{"error":"Not allowed"}');return
             try:
-                payload=json.dumps(read_flagged(limit),ensure_ascii=False).encode('utf-8')
+                route=urlsplit(self.path)
+                if route.path=='/v1/calendar':
+                    q=parse_qs(route.query)
+                    def integer(name,default,low,high):
+                        n=int(q.get(name,[default])[0]);
+                        if not low<=n<=high:raise ValueError('Calendar window out of bounds')
+                        return n
+                    payload_data=read_calendar(integer('back',14,0,365),integer('forward',180,1,730),
+                                               include_body=q.get('description',['0'])[0]=='1')
+                elif route.path=='/v1/status':
+                    payload_data={'ok':True,'calendar':True,'mail':True,'source':'classic-outlook-local'}
+                else:payload_data=read_flagged(limit)
+                payload=json.dumps(payload_data,ensure_ascii=False).encode('utf-8')
                 self._headers(200);self.wfile.write(payload)
             except Exception as exc:
                 # Do not echo mailbox internals to requesting pages.
@@ -127,7 +140,7 @@ def serve(origin,port,limit):
             # No email subjects or access token in logs.
             pass
     with ThreadingHTTPServer(('127.0.0.1',port),Handler) as server:
-        print('Compass Outlook Bridge 0.5.77.24 (read-only)')
+        print('Compass Outlook Bridge 0.5.91.61 (read-only, E-Mail und Kalender)')
         print('Website:',origin)
         print('URL: http://127.0.0.1:%d/v1/flags'%port)
         print('Bridge-Schlüssel (nur in Compass eingeben, NICHT teilen):',token)
@@ -141,9 +154,13 @@ def main():
     group=parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--serve',action='store_true',help='lokaler Bridge-Server, nur 127.0.0.1')
     group.add_argument('--export',metavar='PATH',help='JSON-Vorschau zum manuellen Import exportieren')
+    group.add_argument('--export-calendar',metavar='PATH',help='Outlook-Kalender-Snapshot exportieren')
     parser.add_argument('--origin',help='Erlaubte HTTPS-Website-Origin, erforderlich für --serve')
     parser.add_argument('--port',type=int,default=8765)
     parser.add_argument('--limit',type=int,default=200)
+    parser.add_argument('--back',type=int,default=14)
+    parser.add_argument('--forward',type=int,default=180)
+    parser.add_argument('--include-descriptions',action='store_true')
     args=parser.parse_args()
     if not 1024<=args.port<=65535 or not 1<=args.limit<=250:parser.error('Port 1024..65535 und Limit 1..250 erforderlich')
     try:
@@ -151,12 +168,12 @@ def main():
             if not args.origin:parser.error('--serve benötigt --origin')
             serve(args.origin,args.port,args.limit)
         else:
-            target=Path(args.export).expanduser().resolve()
+            target=Path(args.export_calendar or args.export).expanduser().resolve()
             if target.exists():raise ValueError('Exportdatei existiert bereits. Nicht unbemerkt überschreiben.')
-            content=read_flagged(args.limit)
+            content=read_calendar(args.back,args.forward,include_body=args.include_descriptions) if args.export_calendar else read_flagged(args.limit)
             with target.open('x',encoding='utf-8') as f:
                 json.dump(content,f,ensure_ascii=False,indent=2)
-            print(len(content['items']),'markierte Nachrichten nach',target,'exportiert. Enthält BETREFFZEILEN im Klartext! Nach Import sicher löschen.')
+            print(len(content.get('items',content.get('events',[]))),'Einträge nach',target,'exportiert. Die JSON-Datei enthält unverschlüsselte Titel und Orte! Nach Import sicher löschen.')
     except (OSError,ValueError,RuntimeError) as exc:
         parser.exit(1,'Outlook Bridge: '+str(exc)+'\n')
 

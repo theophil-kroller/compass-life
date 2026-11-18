@@ -1,0 +1,25 @@
+{
+  "version": "0.5.91.61",
+  "patch_base": "0.5.91.60",
+  "source": "Compass Life source and local Windows Outlook bridge",
+  "changed_paths": [
+    "PATCH_INSTALL_0.5.91.61.md",
+    "RELEASE_0.5.91.61.md",
+    "client/package.json",
+    "client/src/calendar-rules.js",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/main-full-v57759402510.js",
+    "client/src/outlook-calendar-v059161.css",
+    "client/src/outlook-calendar-v059161.js",
+    "client/src/personal-journal-v5692.js",
+    "package.json",
+    "tests/compass-059161-outlook-calendar.test.mjs",
+    "tests/test_outlook_calendar_comfree.py",
+    "tools/outlook_bridge.py",
+    "tools/outlook_calendar.py",
+    "tools/start_outlook_bridge.cmd"
+  ],
+  "removed_paths": [],
+  "outlook_requires": "Classic Outlook for Windows + Python 3.10 + pywin32 + tzdata",
+  "windows_com_validated": false
+}

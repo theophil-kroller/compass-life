@@ -42,7 +42,11 @@ export function effectiveCalendarRules(state){return Array.isArray(state?.calend
 export function validCalendarRule(rule){return Boolean(rule&&typeof rule.id==='string'&&/^[\w-]{1,80}$/.test(rule.id)&&typeof rule.label==='string'&&rule.label.trim().length>0&&rule.label.length<=70&&typeof rule.emoji==='string'&&rule.emoji.length>0&&[...rule.emoji].length<=8&&CALENDAR_CATEGORIES.includes(rule.category)&&typeof rule.terms==='string'&&rule.terms.length<=500&&split(rule.terms).length>0&&typeof (rule.exclude||'')==='string'&&String(rule.exclude||'').length<=300&&typeof rule.enabled==='boolean');}
 export function validCalendarOverride(entry){return Boolean(entry&&(!entry.category||CALENDAR_CATEGORIES.includes(entry.category))&&(!entry.emoji||(typeof entry.emoji==='string'&&[...entry.emoji].length<=8))&&(!entry.title||(typeof entry.title==='string'&&entry.title.length<=180))&&typeof entry.hidden==='boolean');}
 export function visibleCalendarEventsForDay(events,day,rules,overrides={},showHidden=false,showBlocks=false){
- return events.filter(e=>calendarEventDay(e)===day&&e.status!=='cancelled'&&(showBlocks||!isRoutineCalendarBlock(e))&&(showHidden||!classifyCalendarEvent(e,rules,overrides).hidden))
+ return events.filter(e=>{
+   const start=calendarEventDay(e),exclusiveEnd=e.end?.date;
+   const last=exclusiveEnd?new Date(Date.parse(exclusiveEnd+'T00:00:00Z')-1).toISOString().slice(0,10):e.end?.dateTime?calendarEventDay({start:{dateTime:new Date(Date.parse(e.end.dateTime)-1).toISOString()}}):start;
+   return start<=day&&day<=last;
+  }).filter(e=>e.status!=='cancelled'&&(showBlocks||!isRoutineCalendarBlock(e))&&(showHidden||!classifyCalendarEvent(e,rules,overrides).hidden))
  .sort((a,b)=>(a.start?.dateTime||a.start?.date||'').localeCompare(b.start?.dateTime||b.start?.date||''));
 }
 export function calendarEventDay(e){const value=e?.start?.dateTime;if(value){const d=new Date(value);if(!Number.isNaN(+d))return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}return (e?.start?.date||'').slice(0,10);}

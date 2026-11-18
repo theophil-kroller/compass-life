@@ -1,0 +1,10 @@
+# Compass Life 0.5.91.60 → 0.5.91.61
+
+1. **Patch ausschließlich auf den unveränderten Full-Source-Stand 0.5.91.60 anwenden.** Bei abweichendem Stand stattdessen das Full-Source-ZIP verwenden.
+2. Das Patch-ZIP **im Projektstammverzeichnis** entpacken, alle enthaltenen Quelldateien am jeweiligen Pfad überschreiben und die neuen Dateien ergänzen. Keine Nutzer-Datenbankdateien ersetzen oder löschen; der bestehende Tresor bleibt erhalten.
+3. Änderungen committen und GitHub Actions einschließlich Vite-Build ausführen lassen. Nach Deploy die App/PWA neu laden. Die bisherige Outlook-E-Mail-Bridge `/v1/flags` funktioniert weiterhin.
+4. Auf deinem Windows-PC (klassisches Desktop-Outlook und lokales Exchange-Konto) ggf. `py -m pip install pywin32 tzdata`, dann `tools/start_outlook_bridge.cmd` ausführen, die tatsächliche HTTPS-Origin der Compass-Web-App eingeben und den ausgegebenen einmaligen Schlüssel in **System → Integrationen → Outlook Calendar** eintragen.
+5. Einmal manuell „Outlook-Kalender jetzt aktualisieren“ drücken, dann 15-Minuten-Abgleich bei laufender Bridge. Ein neues Startskript kann nach jedem Neustart einen neuen zufälligen Schlüssel ausgeben. Falls die HTTPS-Web-App keine localhost-Anfragen zulässt, per `py tools/outlook_bridge.py --export-calendar outlook-snapshot.json` einen lokalen Snapshot exportieren und in Compass als JSON importieren.
+6. **Voll-Export/Delta-Export** auf der Integrationsseite. Die Delta-Datei in ChatGPT hochladen, Google Calendar abgleichen und erst **nach vollständig erfolgreicher Übernahme** „In Google übernommen – Delta bestätigen“ klicken. Ohne Bestätigung werden die Änderungen beim nächsten Delta erneut exportiert. Google-Event-IDs nach dem ChatGPT-Abgleich in Compass zuordnen.
+
+Weitere Hinweise und bekannte Windows-/Browser-Prüfpunkte: `RELEASE_0.5.91.61.md`. Die Outlook-Integration ist strikt read-only gegenüber Outlook; Daten werden im bestehenden Compass-Tresor verschlüsselt gespeichert. E2EE-Gerätesynchronisation nur nach Überprüfung der dienstlichen Vertraulichkeitsrichtlinien aktivieren.

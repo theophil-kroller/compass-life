@@ -1,3 +1,4 @@
+import {mergeOutlookCalendars61} from './outlook-calendar-v059161.js';
 import {FOODS_148,PROFILES_148,HOMEMADE_148,HOMEMADE_BAKING_148,foodPortion148} from './food-additions-v059148.js';
 import {FOOD_FILTERS_148,foodCategory148,foodTags148,foodSearch148} from './food-menu-v059148.js';
 import {PROTEIN_CUPS_147,parseProteinCup147,proteinCupKcal147} from './protein-cup-serving-v059147.js';
@@ -506,6 +507,7 @@ export function mergeJournalData(local,remote){
   ...(lc.strengthCycle||rc.strengthCycle?{strengthCycle:mergeStrengthCycles35(lc.strengthCycle,rc.strengthCycle)}:{}),
   ...(lc.habitsQuick||rc.habitsQuick?{habitsQuick:mergeHabitQuick(lc.habitsQuick,rc.habitsQuick)}:{}),
   ...(lc.calendarArchive||rc.calendarArchive?{calendarArchive:mergeCalendarArchives(lc.calendarArchive,rc.calendarArchive)}:{}),
+  ...(lc.outlookCalendar61||rc.outlookCalendar61?{outlookCalendar61:mergeOutlookCalendars61(lc.outlookCalendar61,rc.outlookCalendar61)}:{}),
   ...(lc.familyRadar||rc.familyRadar?{familyRadar:mergeFamilyRadar37(lc.familyRadar,rc.familyRadar)}:{}),
   ...(lc.teachingRadar||rc.teachingRadar?{teachingRadar:mergeTeachingRadar(lc.teachingRadar,rc.teachingRadar)}:{}),
   ...(lc.miracleMorning||rc.miracleMorning?{miracleMorning:mergeMorningData(lc.miracleMorning,rc.miracleMorning)}:{}),

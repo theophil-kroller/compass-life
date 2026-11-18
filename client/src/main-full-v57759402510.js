@@ -59,6 +59,8 @@ import {inboxTaskDraft} from './inbox-promotion-v27.js';
 import {inboxTodayTaskDraft} from './inbox-today-v557.js';
 import {parseOutlookFlags,outlookCandidates,outlookTask,outlookInboxRecord,chooseOutlookItems,outlookBridgeUrl} from './outlook-bridge-v57724.js';
 import './outlook-bridge-v57724.css';
+import {applyOutlookSnapshot61,normalizeOutlookCalendar61,outlookCalendarDedup61,outlookCalendarPanel61,outlookExport61,saveOutlookExportDraft61,confirmOutlookExport61,saveGoogleOutlookLink61} from './outlook-calendar-v059161.js';
+import './outlook-calendar-v059161.css';
 import {dailyDozen5930,dailyDozen5930View} from './daily-dozen-v5775930.js';
 import './daily-dozen-v5775930.css';
 import './mobile-direct-v5775930.css';
@@ -296,7 +298,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.60';
+const COMPASS_CLIENT_VERSION='0.5.91.61';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -625,6 +627,7 @@ let nextActionsVisibleLimit=80;
 const NEXT_ACTIONS_BATCH=80;
 // The Outlook token stays only in this tab's memory and is forgotten on vault lock.
 // No Outlook endpoint is contacted unless the user explicitly connects.
+let outlook61Connected=false,outlook61Busy=false,outlook61Message='',outlook61Back=14,outlook61Forward=180,outlook61Descriptions=false,outlook61SourceFilter='all',outlook61LastScan=0;
 let outlook724Token='',outlook724Port=8765,outlook724Preview=[],outlook724Status='',outlook724Busy=false,outlook724Connected=false,outlook724Open=false,outlook724LastFetch=0;
 function outlook724Markup(){
  const seen=state?.outlookBridgeImported||{};
@@ -658,6 +661,29 @@ async function outlook724Fetch(auto=false){
  finally{outlook724Busy=false;}
 }
 if(typeof setInterval==='function')setInterval(()=>{if(state&&outlook724Connected&&outlook724Token&&Date.now()-outlook724LastFetch>90000)outlook724Fetch(true).catch(()=>{});},30000);
+async function outlook61ApplySnapshot(data){
+ if(!state)return;
+ await mutate(s=>{s.outlookCalendar61=applyOutlookSnapshot61(s.outlookCalendar61,data);});
+ restoreCalendarFromVault(state);outlook61Connected=true;outlook61LastScan=Date.now();
+ outlook61Message=`${state.outlookCalendar61.events.filter(e=>e.status!=='cancelled').length} Outlook-Termine verschlüsselt gespeichert.`;
+ render();
+}
+async function outlook61Refresh(auto=false){
+ if(!state||outlook61Busy||!outlook724Token)return;
+ if(auto&&(document.visibilityState!=='visible'||Date.now()-outlook61LastScan<15*60*1000))return;
+ outlook61Busy=true;
+ const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),90000);
+ try{
+  const port=Number(outlook724Port);if(!Number.isInteger(port)||port<1024||port>65535)throw Error('Bridge-Port ungültig');
+  const params=new URLSearchParams({back:String(outlook61Back),forward:String(outlook61Forward),description:outlook61Descriptions?'1':'0'});
+  const response=await fetch(`http://127.0.0.1:${port}/v1/calendar?${params}`,{headers:{'X-Compass-Bridge-Key':outlook724Token},mode:'cors',cache:'no-store',signal:controller.signal});
+  if(!response.ok)throw Error('Outlook-Bridge HTTP '+response.status);
+  const data=await response.json();await outlook61ApplySnapshot(data);
+ }catch(ex){outlook61Connected=false;outlook61Message='Bridge derzeit nicht erreichbar. Gespeicherte Termine bleiben erhalten: '+String(ex.message||ex);if(!auto)render();}
+ finally{clearTimeout(timeout);outlook61Busy=false;}
+}
+if(typeof setInterval==='function')setInterval(()=>{if(state&&outlook724Token&&document.visibilityState==='visible'&&Date.now()-outlook61LastScan>=15*60*1000)void outlook61Refresh(true);},60000);
+
 
 let captureBulkOpen=false,captureBulkMode='lines',captureBulkRaw='',captureBulkPreview=null;
 const bootSearch=new URLSearchParams(location.search);
@@ -744,7 +770,7 @@ let calendarUpdatedAt=0,calendarCoverage=null;
 let calendarIndex=null,calendarIndexedArray=null;
 function restoreCalendarFromVault(st){
  const archive=normalizeCalendarArchive(st?.calendarArchive);
- calendarEvents=visibleCachedCalendar(archive);calendarIndex=null;calendarIndexedArray=null;
+ calendarEvents=outlookCalendarDedup61(visibleCachedCalendar(archive),st?.outlookCalendar61);calendarIndex=null;calendarIndexedArray=null;
  calendarUpdatedAt=Date.parse(archive.updatedAt)||0;calendarCoverage=archive.completed?{complete:true,start:archive.start,end:archive.end}:null;
  if(archive.completed||calendarEvents.length)calendarStatus=`${calendarEvents.length} gespeicherte Termine · ${calendarUpdatedAt?'Stand '+new Date(calendarUpdatedAt).toLocaleDateString('de-AT'):'Aktualisierungsdatum unbekannt'}`;
  scheduleWatchCalendarSnapshot();
@@ -796,9 +822,17 @@ async function uploadWatchCalendarSnapshot(){
  await request(config.apiUrl,authToken,'/api/watch/calendar-snapshot',{method:'POST',body:JSON.stringify(payload)});
  watchCalendarLastKey=key;
 }
+function calendarOccupiedDays61(e){
+ const start=calendarDate(e),endStr=e?.end?.dateTime||e?.end?.date;
+ if(!start||!/^\d{4}-\d{2}-\d{2}$/.test(start))return [];
+ const until=e?.end?.date?new Date(Date.parse(e.end.date+'T00:00:00Z')-1):endStr?new Date(Date.parse(endStr)-1):null;
+ const finish=until&&Number.isFinite(+until)?e?.end?.date?until.toISOString().slice(0,10):localDateString(until):start;
+ const span=Math.max(0,Math.min(366,Math.round((Date.parse(finish+'T12:00:00Z')-Date.parse(start+'T12:00:00Z'))/86400000)));
+ return Array.from({length:span+1},(_,n)=>shiftCalendarDay(start,n));
+}
 function indexedCalendarDay(day){
  if(calendarIndexedArray!==calendarEvents){calendarIndex=new Map();calendarIndexedArray=calendarEvents;
-  for(const event of calendarEvents){const date=calendarDate(event);if(!calendarIndex.has(date))calendarIndex.set(date,[]);calendarIndex.get(date).push(event);}
+  for(const event of calendarEvents){for(const date of calendarOccupiedDays61(event)){if(!calendarIndex.has(date))calendarIndex.set(date,[]);calendarIndex.get(date).push(event);}}
   for(const items of calendarIndex.values())items.sort((a,b)=>(a.start?.dateTime||a.start?.date||'').localeCompare(b.start?.dateTime||b.start?.date||''));
  }
  return calendarIndex.get(day)||[];
@@ -815,17 +849,17 @@ function calendarTime(e){
  if(!t)return 'Ganztägig';
  try{return new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit'}).format(new Date(t));}catch{return 'Termin';}
 }
-function visibleCalendarEvents(day){return visibleCalendarEventsForDay(indexedCalendarDay(day),day,effectiveCalendarRules(state),state?.calendarOverrides||{},showHiddenCalendarEvents,showCalendarBlocks);}
+function visibleCalendarEvents(day){return visibleCalendarEventsForDay(indexedCalendarDay(day),day,effectiveCalendarRules(state),state?.calendarOverrides||{},showHiddenCalendarEvents,showCalendarBlocks).filter(e=>outlook61SourceFilter==='all'||(outlook61SourceFilter==='outlook'?e.source==='outlook_local':e.source!=='outlook_local'));}
 function isRoutineBlock(e){return isRoutineCalendarBlock(e);}
 function eventAppearance(e){return classifyCalendarEvent(e,effectiveCalendarRules(state),state?.calendarOverrides||{});}
 function recoveryEvents(day){return visibleCalendarEvents(day).filter(e=>eventAppearance(e).category==='Erholung');}
 function agendaEvent(e){const matched=agendaForEvent(state,e);return matched.length?`<span class="agenda-count">${ico('list',13)} ${matched.length} Agenda</span>`:'';}
 function calendarCardRows(day){
  const ev=visibleCalendarEvents(day);
- return ev.length?`<div class="compass-calendar-list">${ev.map(e=>`<button type="button" class="compass-calendar-event calendar-clickable" data-action="agenda-open" data-id="${h(e.id)}"><span class="compass-calendar-hour">${h(calendarTime(e))}</span><span class="event-emoji" aria-hidden="true">${h(eventAppearance(e).emoji)}</span><strong>${h(eventAppearance(e).displayTitle||'Termin')}</strong>${agendaEvent(e)}${ico('arrow',14)}</button>`).join('')}</div>`
+ return ev.length?`<div class="compass-calendar-list">${ev.map(e=>`<button type="button" class="compass-calendar-event calendar-clickable ${e.source==='outlook_local'?'calendar-outlook-local':''}" data-action="agenda-open" data-id="${h(e.id)}"><span class="compass-calendar-hour">${h(calendarTime(e))}</span><span class="event-emoji" aria-hidden="true">${h(eventAppearance(e).emoji)}</span><strong>${h(eventAppearance(e).displayTitle||'Termin')}</strong>${e.source==='outlook_local'?'<span class="calendar-source-outlook" title="Lokales Outlook">Outlook</span>':''}${agendaEvent(e)}${ico('arrow',14)}</button>`).join('')}</div>`
   :'<div class="appointments-empty"><span>Keine relevanten Termine für diesen Tag.</span></div>';
 }
-function calendarFilterToggle(){return `<div class="calendar-controls"><button type="button" class="secondary-btn calendar-filter-toggle" data-action="calendar-toggle-blocks">${ico(showCalendarBlocks?'eye':'eyeOff',15)} ${showCalendarBlocks?'Zeitblöcke ausblenden':'Zeitblöcke einblenden'}</button><button type="button" class="secondary-btn" data-action="calendar-toggle-hidden">${showHiddenCalendarEvents?'Ausgeblendete verbergen':'Ausgeblendete zeigen'}</button><button type="button" class="secondary-btn" data-action="calendar-rules-toggle">${ico('pencil',14)} Kalenderregeln</button></div>${calendarRulesPanel()}`;}
+function calendarFilterToggle(){return `<div class="calendar-controls"><div class="calendar-source-filter" role="group" aria-label="Kalenderquelle">${[['all','Alle'],['google','Google'],['outlook','Outlook']].map(([k,t])=>`<button type="button" class="secondary-btn ${outlook61SourceFilter===k?'is-selected':''}" data-action="outlook61-filter" data-id="${k}">${t}</button>`).join('')}</div><button type="button" class="secondary-btn calendar-filter-toggle" data-action="calendar-toggle-blocks">${ico(showCalendarBlocks?'eye':'eyeOff',15)} ${showCalendarBlocks?'Zeitblöcke ausblenden':'Zeitblöcke einblenden'}</button><button type="button" class="secondary-btn" data-action="calendar-toggle-hidden">${showHiddenCalendarEvents?'Ausgeblendete verbergen':'Ausgeblendete zeigen'}</button><button type="button" class="secondary-btn" data-action="calendar-rules-toggle">${ico('pencil',14)} Kalenderregeln</button></div>${calendarRulesPanel()}`;}
 function categorySelect(name,selected='Neutral'){return `<select name="${name}">${CALENDAR_CATEGORIES.map(c=>`<option value="${h(c)}" ${c===selected?'selected':''}>${h(c)}</option>`).join('')}</select>`;}
 function calendarRulesPanel(){if(!calendarRulesOpen||!state)return '';
  const rules=effectiveCalendarRules(state);
@@ -842,8 +876,8 @@ function eventAgendaPanel(){
  const suggested=/\buko\b/i.test(title)?'uko':person?person[1].toLocaleLowerCase('de'):(title.match(/[\p{L}\p{N}]{3,}/u)?.[0]?.toLocaleLowerCase('de')||'');
  const externalUrl=typeof event.htmlLink==='string'&&/^https:\/\/(?:calendar\.google\.com\/|www\.google\.com\/calendar\/)/.test(event.htmlLink)?event.htmlLink:'';
  return `<section id="agenda-details" tabindex="-1" class="work-card agenda-panel" aria-label="Kalendertermin und persönliches Overlay"><div class="work-heading"><span>${h(look.emoji)} Kalendertermin</span><button type="button" class="secondary-btn" data-action="agenda-close">Schließen</button></div>
- <h3>${h(title||'Termin')}</h3><p class="muted-line">${h(calendarDate(event))} · ${h(calendarTime(event))} · Google Calendar (nur lesen) ${externalUrl?`· <a href="${h(externalUrl)}" target="_blank" rel="noopener noreferrer">In Google Calendar bearbeiten ↗</a>`:''}</p>
- <form id="calendar-overlay-form" data-id="${h(event.id)}" class="calendar-overlay-form"><div class="work-heading"><span>Compass-Overlay (nur lokal)</span></div><label>Eigener Anzeigetitel<input name="title" value="${h(over.title||'')}" maxlength="180" placeholder="Originaltitel beibehalten"/></label><div class="overlay-fields"><label>Kategorie${categorySelect('category',over.category||look.category)}</label><label>Symbol<input name="emoji" aria-label="Terminsymbol" maxlength="16" value="${h(over.emoji||look.emoji)}"/></label></div><label class="flag-check"><input type="checkbox" name="hidden" ${look.hidden?'checked':''}/> In Compass ausblenden</label><div class="rule-actions"><button type="submit" class="primary-btn">Overlay speichern</button><button type="button" class="secondary-btn" data-action="calendar-overlay-reset" data-id="${h(event.id)}">Automatische Zuordnung</button></div><small>Nur Anzeige in Compass; der originale Google-Termin wird nicht verändert. Für alle ähnlichen Termine ändere die Kalenderregeln.</small></form>
+ <h3>${h(title||'Termin')}</h3><p class="muted-line">${h(calendarDate(event))} · ${h(calendarTime(event))} · ${event.source==='outlook_local'?'Outlook Desktop (nur lesen)':'Google Calendar (nur lesen)'}${event.location?' · '+h(event.location):''} ${externalUrl?`· <a href="${h(externalUrl)}" target="_blank" rel="noopener noreferrer">In Google Calendar bearbeiten ↗</a>`:''}</p>
+ <form id="calendar-overlay-form" data-id="${h(event.id)}" class="calendar-overlay-form"><div class="work-heading"><span>Compass-Overlay (nur lokal)</span></div><label>Eigener Anzeigetitel<input name="title" value="${h(over.title||'')}" maxlength="180" placeholder="Originaltitel beibehalten"/></label><div class="overlay-fields"><label>Kategorie${categorySelect('category',over.category||look.category)}</label><label>Symbol<input name="emoji" aria-label="Terminsymbol" maxlength="16" value="${h(over.emoji||look.emoji)}"/></label></div><label class="flag-check"><input type="checkbox" name="hidden" ${look.hidden?'checked':''}/> In Compass ausblenden</label><div class="rule-actions"><button type="submit" class="primary-btn">Overlay speichern</button><button type="button" class="secondary-btn" data-action="calendar-overlay-reset" data-id="${h(event.id)}">Automatische Zuordnung</button></div><small>Nur Anzeige in Compass; der Originaltermin wird nicht verändert. Für alle ähnlichen Termine ändere die Kalenderregeln.</small></form>
  <div class="work-heading"><span>${ico('users',19)} Gesprächsvorbereitung</span></div>
  ${notes.length?`<div class="agenda-items">${notes.map(x=>`<div class="agenda-item">${ico('checkSquare',16)} <span>${h(x.title)}</span><small>${x.tags?.map(t=>'#'+h(t)).join(' ')||''}</small></div>`).join('')}</div>`:'<p class="muted-line">Noch keine offenen Gesprächspunkte mit passenden Tags.</p>'}
  <form id="agenda-note-form" class="project-form"><input type="hidden" name="tag" value="${h(suggested)}"><label>Neuen Agendapunkt notieren<input name="title" required maxlength="180" placeholder="Was möchte ich besprechen?"/></label><button type="submit" class="primary-btn">${ico('plus',16)} Agendapunkt hinzufügen</button></form>
@@ -855,7 +889,7 @@ function calendarAccess36(){
  // functions without module imports. Never cache a Google access token.
  const tokenValid=Boolean(calendarToken)&&Date.now()<calendarExpires;
  const archive=state?.calendarArchive;
- const cached=archive?.completed===true||calendarEvents.length>0;
+ const cached=archive?.completed===true||state?.outlookCalendar61?.completed===true||calendarEvents.length>0;
  const updatedAt=typeof archive?.updatedAt==='string'&&Number.isFinite(Date.parse(archive.updatedAt))?archive.updatedAt:'';
  return {tokenValid,cached,canDisplay:tokenValid||cached,updatedAt,count:calendarEvents.length};
 }
@@ -2144,7 +2178,7 @@ function compass56TodayWorkspace(){
     <div class="capture-inline compass56-capture"><form id="capture-form"><label class="sr-only" for="capture">In die Inbox erfassen</label><input id="capture" name="title" maxlength="1000" required placeholder="Zur Inbox hinzufügen …"/><button type="submit" class="primary-btn" aria-label="In Inbox erfassen" title="In Inbox erfassen">${ico('plus',17)}</button></form></div>
    </section>
    <section class="work-card appointments compass56-calendar"><div class="work-heading"><span>${ico('calendar',18)} Termine</span><button type="button" class="compass56-link" data-tab="forecast">Forecast ${ico('arrow',14)}</button></div>
-     ${calendarToken?calendarCardRows(day):calendarConnectUI()}</section>
+     ${calendarReadable36()?calendarCardRows(day):calendarConnectUI()}</section>
    ${compass56PlanningOpen?`<section class="compass56-extra" aria-label="Weitere Tagesplanung">
       ${yesterday710Panel(day)}${waiting715TodayPanel(day)}${calendarDeadlinePanel()}${occasionPanel()}${eventAgendaPanel()}${actual?researchRefreshPanel('today'):''}
       <div class="compass56-slim-review">${gtdTodaySummary()}</div>
@@ -2359,8 +2393,8 @@ function reviewScreen(){
 }
 // Opt-in E2EE device mirror. The Worker cannot read the records or derive this device's key.
 // Source device is authoritative. Receiver is an offline-capable read-only mirror.
-function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},giftPlanner58:st.giftPlanner58||{entries:[]},strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},mensaCatalog:st.mensaCatalog||{schemaVersion:1,entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,taskInspiration:st.taskInspiration||[],habitTimeSessions:st.habitTimeSessions||[],makkoHoSessions:st.makkoHoSessions||[],strengthGuidedSessions:st.strengthGuidedSessions||[],...(st.strengthCycle?{strengthCycle:st.strengthCycle}:{}),financeMobileDecisions:st.financeMobileDecisions||[],lifeWeekEvents:st.lifeWeekEvents||[],...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.teachingRadar?{teachingRadar:st.teachingRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
-function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.giftPlanner58=m.giftPlanner58||{entries:[]};st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.mensaCatalog=m.mensaCatalog;st.feelingCheckins=m.feelingCheckins;st.taskInspiration=m.taskInspiration||[];st.habitTimeSessions=m.habitTimeSessions||[];st.makkoHoSessions=m.makkoHoSessions||[];st.strengthGuidedSessions=m.strengthGuidedSessions||[];if(m.strengthCycle)st.strengthCycle=m.strengthCycle;st.financeMobileDecisions=m.financeMobileDecisions||[];st.lifeWeekEvents=m.lifeWeekEvents||[];if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.teachingRadar)st.teachingRadar=m.teachingRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
+function journalSyncPayload(st){const copy=ensureJournal(st);return {quickWorktime:copy.quickWorktime||{},timeJournal:copy.timeJournal,nutritionJournal:copy.nutritionJournal,touchJournal:copy.touchJournal||{entries:[]},giftPlanner58:st.giftPlanner58||{entries:[]},outlookCalendar61:st.outlookCalendar61||null,strengthJournal:st.strengthJournal||{annotations:[]},dreamJournal:st.dreamJournal||{entries:[]},receiptJournal:st.receiptJournal||{entries:[]},mensaCatalog:st.mensaCatalog||{schemaVersion:1,entries:[]},miracleMorning:ensureMorning(st),feelingCheckins:Array.isArray(st?.feelingCheckins)?st.feelingCheckins:[],habitsQuick:ensureHabitState(st),calendarArchive:st.calendarArchive||null,taskInspiration:st.taskInspiration||[],habitTimeSessions:st.habitTimeSessions||[],makkoHoSessions:st.makkoHoSessions||[],strengthGuidedSessions:st.strengthGuidedSessions||[],...(st.strengthCycle?{strengthCycle:st.strengthCycle}:{}),financeMobileDecisions:st.financeMobileDecisions||[],lifeWeekEvents:st.lifeWeekEvents||[],...(st.familyRadar?{familyRadar:st.familyRadar}:{}),...(st.teachingRadar?{teachingRadar:st.teachingRadar}:{}),...(st.peopleSyncEnabled===true?{people:st.people||{},peopleDeleted:st.peopleDeleted||{}}:{})};}
+function applyJournalPayload(st,payload){const m=mergeJournalData(journalSyncPayload(st),payload);st.quickWorktime=m.quickWorktime;st.timeJournal=m.timeJournal;st.nutritionJournal=m.nutritionJournal;st.touchJournal=m.touchJournal;st.giftPlanner58=m.giftPlanner58||{entries:[]};if(m.outlookCalendar61){st.outlookCalendar61=m.outlookCalendar61;restoreCalendarFromVault(st);}st.strengthJournal=m.strengthJournal;st.dreamJournal=m.dreamJournal;st.receiptJournal=m.receiptJournal;st.mensaCatalog=m.mensaCatalog;st.feelingCheckins=m.feelingCheckins;st.taskInspiration=m.taskInspiration||[];st.habitTimeSessions=m.habitTimeSessions||[];st.makkoHoSessions=m.makkoHoSessions||[];st.strengthGuidedSessions=m.strengthGuidedSessions||[];if(m.strengthCycle)st.strengthCycle=m.strengthCycle;st.financeMobileDecisions=m.financeMobileDecisions||[];st.lifeWeekEvents=m.lifeWeekEvents||[];if(st.peopleSyncEnabled===true&&m.people){st.people=m.people;st.peopleDeleted=m.peopleDeleted||{};}if(m.habitsQuick)st.habitsQuick=m.habitsQuick;if(m.calendarArchive){st.calendarArchive=m.calendarArchive;restoreCalendarFromVault(st);}if(m.familyRadar)st.familyRadar=m.familyRadar;if(m.teachingRadar)st.teachingRadar=m.teachingRadar;if(m.miracleMorning){st.miracleMorning=m.miracleMorning;for(const session of m.miracleMorning.sessions||[]){if(!session.finishedAt||!session.steps?.some(x=>!x.skipped))continue;const habits=ensureHabitState(st);if(!habits.items.some(h=>h.id==='miracle-morning'))habits.items.push({id:'miracle-morning',title:'Miracle Morning',slot:'Morgen',active:true});const day=session.day||session.finishedAt.slice(0,10);if(!habits.completions.some(c=>c.habitId==='miracle-morning'&&c.day===day))setHabitDoneState(st,'miracle-morning',day,true,session.finishedAt);}}}
 async function syncPersonalJournal(){
  // One E2EE journal flight per device. Mutations during flight queue an immediate
  // follow-up instead of being hidden by a generic "synced" status.
@@ -2520,6 +2554,7 @@ function systemScreen(){
  <div class="security-line">${ico('check',17)} AES-256-GCM verschlüsselte Speicherung</div><div class="security-line">${ico('check',17)} Passphrase bleibt auf deinem Gerät</div><div class="security-line">${ico('check',17)} Keine privaten Aufgaben in GitHub</div>
  <button class="secondary-btn full" data-action="export-encrypted">Verschlüsseltes Backup herunterladen</button><button class="secondary-btn full" data-action="export-json">Klartext-JSON exportieren</button><p class="small-muted">Klartext-Exporte enthalten unverschlüsselte private Inhalte.</p></section></div>
  ${privateMirrorSettings()}
+ ${outlookCalendarPanel61(state?.outlookCalendar61,{connected:outlook61Connected,port:outlook724Port,token:outlook724Token,back:outlook61Back,forward:outlook61Forward,descriptions:outlook61Descriptions,message:outlook61Message})}
  <section class="work-card people-sync719"><div class="work-heading"><span>${ico('people',18)} Kontaktprofile geräteübergreifend</span><span class="quiet-tag">E2EE · ausdrücklich aktivieren</span></div>
  <p class="muted-line">Bisher wurden Kontakte einschließlich Beziehungslandkarte nur im lokalen Tresor gespeichert. Die normale Projekt-/Inbox-Synchronisierung überträgt keine Kontakte. Mit diesem Schalter werden Kontakte und persönliche Notizen über den bereits eingerichteten, Ende-zu-Ende-verschlüsselten Journalabgleich zusammengeführt. Bitte auf <strong>beiden Geräten</strong> aktivieren. Eine leere Liste überschreibt keine vorhandenen Kontakte.</p>
  <p class="small-muted">Auf diesem Gerät: <strong>${Object.keys(state?.people||{}).length}</strong> Kontaktprofile · Journalabgleich: ${state?.privateDeviceMirror?.key?'eingerichtet':'nicht eingerichtet'} · Profile: ${state?.peopleSyncEnabled?'freigegeben':'nur lokal'}</p>
@@ -3691,7 +3726,13 @@ function bind() {
       notice=state?'Sicher in deiner Inbox gespeichert'+(authToken?' · Cloud-Abgleich vorgemerkt':' · nur auf diesem Gerät')+'.':'Verschlüsselt vorgemerkt. Nach dem Entsperren gelangt der Eintrag in deine Inbox.';error='';render();
     }catch(ex){if(submit)submit.disabled=false;toast(ex.message,true);}
   });
-  const outlookDetails=app.querySelector('#outlook724-details');if(outlookDetails)outlookDetails.ontoggle=()=>{outlook724Open=outlookDetails.open;};
+  const outlook61File=app.querySelector('#outlook61-file');if(outlook61File)outlook61File.onchange=async()=>{
+  const file=outlook61File.files?.[0];if(!file)return;
+  try{if(file.size>12*1024*1024)throw Error('Snapshot zu groß');await outlook61ApplySnapshot(JSON.parse(await file.text()));}
+  catch(ex){outlook61Message='Snapshot nicht übernommen: '+ex.message;render();}
+ };
+ const outlook61Link=app.querySelector('#outlook61-link');if(outlook61Link)outlook61Link.onsubmit=async ev=>{ev.preventDefault();const fd=new FormData(outlook61Link);try{await mutate(s=>{s.outlookCalendar61=saveGoogleOutlookLink61(s.outlookCalendar61,String(fd.get('sourceId')||''),String(fd.get('googleId')||''));});restoreCalendarFromVault(state);toast('Google-Event-ID gespeichert.');}catch(ex){toast(ex.message,true);}};
+ const outlookDetails=app.querySelector('#outlook724-details');if(outlookDetails)outlookDetails.ontoggle=()=>{outlook724Open=outlookDetails.open;};
   const outlookKey=app.querySelector('#outlook724-key');if(outlookKey)outlookKey.oninput=()=>{outlook724Token=outlookKey.value;};
   const outlookPort=app.querySelector('#outlook724-port');if(outlookPort)outlookPort.oninput=()=>{outlook724Port=Number(outlookPort.value)||8765;};
   const outlookFile=app.querySelector('#outlook724-file');if(outlookFile)outlookFile.onchange=async()=>{
@@ -4637,6 +4678,29 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
    catch(ex){lifeReportSettings.aiStatus='Nicht alle Verbindungen erreichbar: '+ex.message;}
    render();return;
  }
+ if(action==='outlook61-filter'){if(['all','google','outlook'].includes(id)){outlook61SourceFilter=id;render();}return;}
+ if(action==='outlook61-refresh'||action==='outlook61-full'||action==='outlook61-delta'){
+  const port=Number(app.querySelector('#outlook61-port')?.value||8765),back=Number(app.querySelector('#outlook61-back')?.value??14),forward=Number(app.querySelector('#outlook61-forward')?.value??180);
+  if(!Number.isInteger(port)||port<1024||port>65535||!Number.isInteger(back)||back<0||back>365||!Number.isInteger(forward)||forward<1||forward>730){toast('Outlook-Zeitfenster/Port ungültig.',true);return;}
+  outlook724Port=port;outlook724Token=String(app.querySelector('#outlook61-key')?.value||'').trim();outlook61Back=back;outlook61Forward=forward;outlook61Descriptions=!!app.querySelector('#outlook61-descriptions')?.checked;
+  if(action==='outlook61-refresh'){
+   if(!outlook724Token){outlook61Message='Bridge-Schlüssel aus der Windows-Konsole eingeben.';render();return;}
+   await outlook61Refresh(false);return;
+  }
+  const start=shiftCalendarDay(localDate(),-back),end=shiftCalendarDay(localDate(),forward+1);
+  try{
+   const exportId=crypto.randomUUID();const result=outlookExport61(state.outlookCalendar61,{type:action==='outlook61-full'?'full':'delta',start,end,descriptions:outlook61Descriptions,exportId});
+   download(`compass-outlook-${action==='outlook61-full'?'full':'delta'}-${localDate()}.json`,result.pack);
+   await mutate(s=>{s.outlookCalendar61=saveOutlookExportDraft61(s.outlookCalendar61,result.manifest);});
+   outlook61Message=`${result.pack.events.length} Termine im ${result.pack.export_type}-Export. Bestätigung erst nach Google-Übernahme.`;render();
+  }catch(ex){outlook61Message='Export fehlgeschlagen: '+ex.message;render();}return;
+ }
+ if(action==='outlook61-confirm'){
+  const draft=state?.outlookCalendar61?.pendingExport;if(!draft)return;
+  if(!confirm('Alle Einträge dieser JSON-Datei wurden erfolgreich in Google Calendar übernommen?'))return;
+  try{await mutate(s=>{s.outlookCalendar61=confirmOutlookExport61(s.outlookCalendar61,draft.id);});outlook61Message='Delta erfolgreich bestätigt.';render();}catch(ex){toast(ex.message,true);}return;
+ }
+ if(action==='outlook61-hold'){outlook61Message='Export bleibt unbestätigt. Änderungen erscheinen beim nächsten Delta weiterhin.';render();return;}
  if(action==='outlook724-fetch'){
   const key=app.querySelector('#outlook724-key');if(key)outlook724Token=key.value.trim();
   const port=app.querySelector('#outlook724-port');if(port)outlook724Port=Number(port.value)||8765;
@@ -6187,7 +6251,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
       await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
     }
-    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;outlook724Token='';outlook724Connected=false;outlook724Preview=[];authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;outlook724Token='';outlook724Connected=false;outlook61Connected=false;outlook724Preview=[];authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){
