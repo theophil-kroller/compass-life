@@ -69,3 +69,25 @@
 .shell .ci90-protein-peek .ci125-protein-meter{height:9px;margin:3px 0}
 .shell .ci90-protein-peek .ci125-protein-labels{font-size:10px;line-height:1.35;color:#52665f}
 .shell .ci90-protein-peek .ci125-protein-labels span{white-space:normal}
+
+/* 0.5.91.60 – second, immediate kcal/deficit line below Today protein. */
+.shell .ci160-energy-peek{display:grid;gap:6px;min-width:0;border-top:1px solid #e3ebe7;margin-top:3px;padding-top:8px;color:#31574c}
+.shell .ci160-energy-head{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:3px 7px;min-width:0}
+.shell .ci160-energy-head>span{display:grid;gap:1px;min-width:0}
+.shell .ci160-energy-head strong{font-size:11px;font-weight:720;color:#27584a;white-space:normal}
+.shell .ci160-energy-head small{font-size:9px;color:#6e827b}
+.shell .ci160-energy-balance{font-size:11px;font-weight:780;white-space:normal;text-align:right;max-width:100%;color:#277b60}
+.shell .ci160-energy-track{position:relative;display:flex;isolation:isolate;min-width:0;width:100%;height:8px;border-radius:8px;background:#ecf0ed;overflow:visible}
+.shell .ci160-zone{height:100%;min-width:0}
+.shell .ci160-zone-loss{background:#6fac92;border-radius:8px 0 0 8px}
+.shell .ci160-zone-maintain{background:#e5be74}
+.shell .ci160-zone-surplus{background:#d28a7c;border-radius:0 8px 8px 0}
+.shell .ci160-energy-marker{position:absolute;top:-3px;width:3px;height:14px;border-radius:2px;transform:translateX(-50%);background:#2c4551;box-shadow:0 0 0 1px #fff,0 1px 3px #0003}
+.shell .ci160-energy-caption{display:grid;gap:1px;min-width:0;line-height:1.25}
+.shell .ci160-energy-caption strong{font-size:10px;color:#37846a}
+.shell .ci160-energy-caption small{font-size:9px;color:#6e827b;overflow-wrap:anywhere}
+.shell .ci160-tone-maintain .ci160-energy-caption strong,.shell .ci160-tone-maintain .ci160-energy-balance{color:#85692a}
+.shell .ci160-tone-high .ci160-energy-caption strong,.shell .ci160-tone-high .ci160-energy-balance{color:#a05f2e}
+.shell .ci160-tone-over .ci160-energy-caption strong,.shell .ci160-tone-over .ci160-energy-balance{color:#b84d44}
+.shell .ci160-tone-neutral .ci160-energy-head strong{font-size:11px}
+@media(max-width:760px){.shell .ci160-energy-head{flex-direction:column;gap:2px}.shell .ci160-energy-balance{text-align:left}}

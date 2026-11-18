@@ -1,0 +1,7 @@
+{
+  "version": "0.5.91.60",
+  "patchFrom": "0.5.91.59",
+  "features": ["today-compact-kcal-intake", "today-energy-deficit-context", "deficit-range-and-colour-stages"],
+  "source": "Compass_Life_0.5.91.59_TEACHING_PRIORITY_CALM_TODAY_FULL_SOURCE.zip",
+  "notes": "Only source differences plus release metadata are shipped in patch; no nutrition or user state migration."
+}

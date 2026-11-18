@@ -9,6 +9,7 @@ import {nutritionTrendsIndex} from './nutrition-trends-v57726.js';
 import {strengthPeriod} from './strength-insights-v57728.js';
 import {bodyMeasurementObservations} from './body-measurements-v05918.js';
 import {deficitPlan57} from './vtaper-deficit-scenarios-v059157.js';
+import {todayEnergyMarkup160} from './today-energy-peek-v059160.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dOK=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d+'T00:00:00Z'));
 const round=n=>Math.round(n*10)/10;
@@ -110,7 +111,7 @@ export function proteinTodayMarkup88(state,today,{compact=false}={}){
  const p=proteinDay88(state,today),label=p.grams===null?'Noch keine Proteinwerte':`${fmt(p.grams)} g Protein erfasst`;
  const scale=proteinScaleMarkup125(p,state,today);
  const foot=`Erfasste Teilbilanz · ${p.unknown?'fehlende Nährwerte möglich':'weitere Mahlzeiten möglich'}${p.estimated?' · teils geschätzt':''}`;
- if(compact)return `<div class="ci90-protein-peek" aria-label="Protein Tagesorientierung – erfasste Teilbilanz"><div class="ci90-protein-head"><span>💪 ${esc(label)}</span><button type="button" data-action="ci88-food-open" aria-label="Ernährung erfassen">＋ Essen</button></div>${scale}<small>${foot}</small></div>`;
+ if(compact)return `<div class="ci90-protein-peek" aria-label="Protein und Kalorien – erfasste Tageswerte"><div class="ci90-protein-head"><span>💪 ${esc(label)}</span><button type="button" data-action="ci88-food-open" aria-label="Ernährung erfassen">＋ Essen</button></div>${scale}<small>${foot}</small>${todayEnergyMarkup160(state,today)}</div>`;
  return `<div class="ci88-protein-today" aria-label="Protein Tagesorientierung"><span>💪 ${esc(label)}</span>${scale}<small>${p.partial?'Teilbilanz · unbekannte Lebensmittel möglich':'Erfasste Werte · vollständige Tagesernährung nicht bestätigt'}</small><button type="button" data-action="ci88-food-open">＋ Essen</button></div>`;
 }
 export function proteinInsightsMarkup88(state,today){const p=proteinDay88(state,today),history=proteinHistory88(state,{today,days:30}),target=p.target;const valid=history.filter(x=>x.grams!==null),avg=n=>{const r=valid.slice(-n);return r.length?round(r.reduce((s,x)=>s+x.grams,0)/r.length):null;};
