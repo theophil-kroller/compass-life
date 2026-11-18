@@ -8,7 +8,9 @@ import './compass-5928-lux.css';
 import './unlock-feedback-v059137.css';
 import {attachUnlockProgress137} from './unlock-feedback-v059137.js';
 import {COMPASS_VISIBLE_RELEASE} from './compass-release-v57759402519.js';
-import {sealedCaptureReady,appendSealedCapture} from './vault.js';
+import {sealedCaptureReady,appendSealedCapture,appendSealedWorktime} from './vault.js';
+import './ars-vivendi-lock-work-v059158.css';
+import {LOCKED_WORKTIME_PUBLIC_KEY58,readPublicWorktime58,mirrorPublicWorktime58} from './locked-worktime-public-v059158.js';
 import './compass-25-23-lock-capture.css';
 
 const BASE=String(import.meta.env?.BASE_URL||'/').replace(/\/?$/,'/');
@@ -21,11 +23,13 @@ function init(){
   if(!app)return;
   let shell=null,activeForm=null,observer=null,panel=null,trigger=null,detachProgress=null;
   let wasOpen=false;
+  let onWorkStorage=null;
   const appPreviousInert=app.inert;
 
   function remove(){
     // Form may have been moved into the overlay. Discard ONLY when Compass
     // itself renders an unlocked view or a replacement vault form.
+    if(onWorkStorage){window.removeEventListener('storage',onWorkStorage);onWorkStorage=null;}
     detachProgress?.();detachProgress=null;
     if(shell)shell.remove();
     shell=null;panel=null;trigger=null;activeForm=null;wasOpen=false;
@@ -63,6 +67,7 @@ function init(){
        <div class="ars28-version">Compass Life · Build ${COMPASS_VISIBLE_RELEASE}</div>
        <button class="ars22-tap" type="button" data-ars22-open aria-controls="ars22-unlock-dialog" aria-expanded="false" aria-label="Compass Tresor entsperren"></button>
        <button type="button" class="ars23-capture-trigger" data-ars23-capture aria-label="Gedanken ohne Tresor-Entsperren verschlüsselt in die Inbox erfassen">✎ <span>Gedanke</span></button>
+       <button type="button" class="ars58-work-trigger" data-ars58-work aria-label="Arbeitszeit ohne Tresorpasswort erfassen">◷ Arbeitsbeginn</button><p class="ars58-work-feedback" data-ars58-feedback aria-live="polite"></p>
      </div>
      <section class="ars23-capture-dialog" data-ars23-dialog hidden role="dialog" aria-modal="true" aria-label="Gedanken schnell erfassen">
       <form data-ars23-form><div class="ars23-capture-heading"><div><small>✦ QUICK CAPTURE · INBOX</small><h2>Gedanken festhalten</h2></div><button type="button" data-ars23-close aria-label="Schließen">×</button></div>
@@ -92,6 +97,27 @@ function init(){
     const captureTrigger=shell.querySelector('[data-ars23-capture]');
     const captureForm=shell.querySelector('[data-ars23-form]');
     const captureStatus=shell.querySelector('[data-ars23-status]');
+    const workButton=shell.querySelector('[data-ars58-work]');
+    const workFeedback=shell.querySelector('[data-ars58-feedback]');
+    const workPublic=readPublicWorktime58;
+    const showWork=()=>{const active=!!workPublic().worktime?.activeStart;workButton.textContent=active?'◼ Arbeitsende':'▶ Arbeitsbeginn';workButton.setAttribute('aria-label',active?'Arbeitszeit ohne Tresorpasswort beenden':'Arbeitszeit ohne Tresorpasswort beginnen');workButton.classList.toggle('is-active',active);};
+    showWork();
+    onWorkStorage=event=>{if(event.key===LOCKED_WORKTIME_PUBLIC_KEY58)showWork();};
+    window.addEventListener('storage',onWorkStorage);
+    let workBusy=false;
+    workButton.addEventListener('click',async()=>{
+      if(workBusy)return;workBusy=true;workButton.disabled=true;
+      try{
+        if(!await sealedCaptureReady())throw Error('Bitte einmalig den Tresor entsperren und Schnellerfassung aktivieren.');
+        const old=workPublic(),oldWork=old.worktime||{},start=!!oldWork.activeStart;
+        const at=new Date().toISOString(),type=start?'stop':'start';
+        // Persist the ciphertext first. Never advertise a successful punch before this completes.
+        await appendSealedWorktime({type,at,category:'work',id:crypto.randomUUID()});
+        mirrorPublicWorktime58(type,at);
+        showWork();workFeedback.textContent=type==='start'?'✓ Eingestempelt · verschlüsselt vorgemerkt':'✓ Ausgestempelt · verschlüsselt vorgemerkt';
+      }catch(ex){workFeedback.textContent='Nicht gespeichert: '+String(ex.message||ex);}
+      finally{workBusy=false;workButton.disabled=false;}
+    });
     captureTrigger.addEventListener('click',async()=>{
       captureStatus.textContent='Verschlüsselte Erfassung prüfen …';
       captureDialog.hidden=false;

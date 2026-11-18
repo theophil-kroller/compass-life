@@ -477,6 +477,7 @@ import {mergeTeachingRadar} from './teaching-preparation-radar-v05919.js';
 import {mergeHabitTimeSessions} from './habit-time-v57759402525.js';
 import {mergeFinanceMobileDecisions} from './finance-mobile-decisions-v0579.js';
 import {mergeLifeWeekEvents} from './life-weeks-v0582.js';
+import {mergeGiftPlanner} from './gift-planner-v059158.js';
 export function mergeJournalData(local,remote){
  // Versioned per-ID merge; a remote device must never erase a newer local entry.
  const lc=local&&typeof local==='object'?local:{},rc=remote&&typeof remote==='object'?remote:{};
@@ -489,6 +490,7 @@ export function mergeJournalData(local,remote){
   timeJournal:{entries:byId(lc.timeJournal?.entries,rc.timeJournal?.entries),overrides:unionObject(lc.timeJournal?.overrides,rc.timeJournal?.overrides)},
   nutritionJournal:{entries:byId(lc.nutritionJournal?.entries,rc.nutritionJournal?.entries),customFoods:byId(lc.nutritionJournal?.customFoods,rc.nutritionJournal?.customFoods),...(lc.nutritionJournal?.macroPrefs||rc.nutritionJournal?.macroPrefs?{macroPrefs:(()=>{const a=lc.nutritionJournal?.macroPrefs,b=rc.nutritionJournal?.macroPrefs;return !a?b:!b?a:String(a.updatedAt||'')>=String(b.updatedAt||'')?a:b;})()}:{}),...(lc.nutritionJournal?.proteinCoach88||rc.nutritionJournal?.proteinCoach88?{proteinCoach88:(()=>{const a=lc.nutritionJournal?.proteinCoach88,b=rc.nutritionJournal?.proteinCoach88;return !a?b:!b?a:String(a.updatedAt||'')>=String(b.updatedAt||'')?a:b;})()}:{}),...(lc.nutritionJournal?.bodyMeasures88||rc.nutritionJournal?.bodyMeasures88?{bodyMeasures88:byId(lc.nutritionJournal?.bodyMeasures88,rc.nutritionJournal?.bodyMeasures88)}:{}),...(lc.nutritionJournal?.bodyMeasureContexts140||rc.nutritionJournal?.bodyMeasureContexts140?{bodyMeasureContexts140:byId(lc.nutritionJournal?.bodyMeasureContexts140,rc.nutritionJournal?.bodyMeasureContexts140)}:{}),...(lc.nutritionJournal?.energyGoal||rc.nutritionJournal?.energyGoal?{energyGoal:(()=>{const left=lc.nutritionJournal?.energyGoal,right=rc.nutritionJournal?.energyGoal;if(!left)return energyGoalSettings(right);if(!right)return energyGoalSettings(left);return energyGoalSettings(String(left.updatedAt||'')>=String(right.updatedAt||'')?left:right);})()}:{} )},
   touchJournal:mergeTouchRecords(lc.touchJournal,rc.touchJournal),
+  giftPlanner58:mergeGiftPlanner(lc.giftPlanner58,rc.giftPlanner58),
   strengthJournal:mergeStrengthJournal(lc.strengthJournal,rc.strengthJournal),
   dreamJournal:mergeDreamJournals(lc.dreamJournal,rc.dreamJournal),
   receiptJournal:mergeReceiptJournals(lc.receiptJournal,rc.receiptJournal),
