@@ -5,6 +5,16 @@ import {PROTEIN_CUP_FOODS_155,PROTEIN_CUP_PROFILES_155,PROTEIN_CUP_GRAMS_155} fr
 export const FOODS_148=Object.freeze([
   ...PLANT_FOODS_149,
   ...PROTEIN_CUP_FOODS_155,
+  {
+    id: 'realmix-ube-latte-stick-16g',
+    emoji: '🍠',
+    title: 'REALMIX Ube Latte · vegan',
+    group: 'Getränke',
+    defaultAmount: '1 Stick (16 g Pulver)',
+    kcalLow: 80, kcalHigh: 80,
+    recipeNote: 'Originaletikett · Nutzerfotos 19.11.2026. 1 Stick = 16 g Pulver, mit Wasser: 80,48 kcal (Anzeige 80), 0,48 g Eiweiß, 10,56 g Kohlenhydrate (8,00 g Zucker), 4,32 g Fett (4,16 g gesättigt), 0,09 g Ballaststoffe, 0,013 g Salz. Zutaten: Zucker, Kokosmilchpulver, violette Süßkartoffel (7 % = 1,12 g/Stick), Maltodextrin, E551, E1450. Vegan laut Packung; mögliche Spuren von Gluten, Soja, Milch. Zusätzliche Milch oder Süßungsmittel separat erfassen. Mikronährstoffe und Anthocyane sind nicht deklariert: unbekannt, nicht Null. Daily Dozen: keine Gutschrift als Gemüse oder ungesüßtes Getränk. Anti-Aging Eight: keine belegbare Gutschrift oder Wirkungsbehauptung.',
+    aliases: ['Real Mix Ube', 'RealMix Ube Latte Style', 'Ube Latte Stick', 'Purple Sweet Potato Latte', 'Violette Süßkartoffel Latte']
+  },
   {"id": "homemade-muffin-low-sugar-20261114", "emoji": "🧁", "title": "Muffin hausgemacht (wenig Zucker)", "group": "Snacks", "defaultAmount": "1 Stück (ca. 80 g)", "kcalLow": 225, "kcalHigh": 225, "recipeNote": "GROBE PORTIONSSCHÄTZUNG · Ohne Rezept und Wägung: grobe Portionsschätzung für einen Muffin von ca. 80 g. Weniger Zucker als üblich angenommen; Mehl und Fett können weiterhin viele Kalorien liefern. Keine automatisch gutgeschriebenen Daily-Dozen-Portionen.", "aliases": ["Hausgemachter Muffin", "Muffin von Mama", "Muffins wenig Zucker"]},
   {"id": "homemade-cake-slice-low-sugar-20261114", "emoji": "🍰", "title": "Kuchenstück hausgemacht (wenig Zucker)", "group": "Snacks", "defaultAmount": "1 Stück (ca. 100 g)", "kcalLow": 270, "kcalHigh": 270, "recipeNote": "GROBE PORTIONSSCHÄTZUNG · Ohne Rezept und Wägung: grobe Portionsschätzung für ein Kuchenstück von ca. 100 g, Rezept und Belag unbekannt. Weniger Zucker als üblich angenommen; keine automatisch gutgeschriebenen Obst- oder Daily-Dozen-Portionen.", "aliases": ["Hausgemachter Kuchen", "Kuchen von Mama", "Kuchenstück wenig Zucker"]},
   {"id": "all-stars-whey-iced-matcha-latte-30g", "emoji": "🥤", "title": "All Stars Whey Protein Shake · Iced Matcha Latte", "group": "Getränke", "defaultAmount": "1 Portion (30 g Pulver)", "kcalLow": 117, "kcalHigh": 117, "recipeNote": "Originaletikett vom Nutzerfoto 14.11.2026 · 30 g Pulver mit Wasser: 117 kcal, 20 g Eiweiß, 3,3 g Kohlenhydrate, 2,1 g Zucker, 2,2 g Fett, 1,5 g gesättigte Fettsäuren, 2,2 g Ballaststoffe, 0,06 g Salz, 90 mg Koffein. Milch separat buchen; diese Portion rechnet nur das Pulver.", "aliases": ["AS Whey Matcha", "Allstars Matcha Latte", "Proteinshake Matcha"]},
@@ -56,6 +66,15 @@ export const FOODS_148=Object.freeze([
 export const PROFILES_148=Object.freeze({
   ...PLANT_PROFILES_149,
   ...PROTEIN_CUP_PROFILES_155,
+  'realmix-ube-latte-stick-16g': {
+    name: 'REALMIX Ube Latte · vegan',
+    reference: {amount: 16, unit: 'g'},
+    nutrients: {kcal: 80.48, protein: 0.48, carbs: 10.56, sugar: 8, fat: 4.32, saturated: 4.16, fiber: 0.0896, salt: 0.0128},
+    source: 'Originaletikett · Nutzerfotos 19.11.2026 · Nährwerte je 100 g rechnerisch auf 16 g umgerechnet',
+    extra: {},
+    note: '1 Stick = 16 g Pulver mit Wasser. Zutaten: Zucker, Kokosmilchpulver, violette Süßkartoffel (7 %; 1,12 g/Stick), Maltodextrin, E551, E1450. Vegan laut Verpackung; kann Spuren von Gluten, Soja und Milch enthalten. Weitere Mikronährstoffe und Anthocyangehalte wurden nicht gemessen/deklariert und bleiben unbekannt (nicht 0). Kein Daily-Dozen-Gemüse- oder ungesüßtes-Getränk-Credit; keine belegte Anti-Aging-Eight-Wirkung. Milch/Extras separat erfassen.',
+    estimatedNutrients: []
+  },
   "homemade-muffin-low-sugar-20261114": {"name": "Muffin hausgemacht (wenig Zucker)", "reference": {"amount": 80, "unit": "g"}, "nutrients": {"kcal": 225, "protein": 4, "carbs": 27, "sugar": 8, "fat": 11.5, "saturated": 4.5, "fiber": 1.3}, "source": "Grobe Portionsschätzung · Hausgebacken · Nutzerangabe 14.11.2026", "extra": {}, "note": "Ohne Rezept und Wägung: grobe Portionsschätzung für einen Muffin von ca. 80 g. Weniger Zucker als üblich angenommen; Mehl und Fett können weiterhin viele Kalorien liefern. Keine automatisch gutgeschriebenen Daily-Dozen-Portionen.", "estimatedNutrients": ["kcal", "protein", "carbs", "sugar", "fat", "saturated", "fiber"]},
   "homemade-cake-slice-low-sugar-20261114": {"name": "Kuchenstück hausgemacht (wenig Zucker)", "reference": {"amount": 100, "unit": "g"}, "nutrients": {"kcal": 270, "protein": 4, "carbs": 34, "sugar": 11, "fat": 13, "saturated": 5, "fiber": 1.1}, "source": "Grobe Portionsschätzung · Hausgebacken · Nutzerangabe 14.11.2026", "extra": {}, "note": "Ohne Rezept und Wägung: grobe Portionsschätzung für ein Kuchenstück von ca. 100 g, Rezept und Belag unbekannt. Weniger Zucker als üblich angenommen; keine automatisch gutgeschriebenen Obst- oder Daily-Dozen-Portionen.", "estimatedNutrients": ["kcal", "protein", "carbs", "sugar", "fat", "saturated", "fiber"]},
   "all-stars-whey-iced-matcha-latte-30g": {"name": "All Stars Whey Protein Shake · Iced Matcha Latte", "reference": {"amount": 30, "unit": "g"}, "nutrients": {"kcal": 117, "protein": 20, "carbs": 3.3, "sugar": 2.1, "fat": 2.2, "saturated": 1.5, "fiber": 2.2, "salt": 0.06, "caffeine": 90}, "source": "Originaletikett · Nutzerfoto 14.11.2026", "extra": {}, "note": "Originaletikett vom Nutzerfoto 14.11.2026 · 30 g Pulver mit Wasser: 117 kcal, 20 g Eiweiß, 3,3 g Kohlenhydrate, 2,1 g Zucker, 2,2 g Fett, 1,5 g gesättigte Fettsäuren, 2,2 g Ballaststoffe, 0,06 g Salz, 90 mg Koffein. Milch separat buchen; diese Portion rechnet nur das Pulver.", "estimatedNutrients": []},
@@ -535,6 +554,14 @@ export const HOMEMADE_BAKING_148=new Set(['homemade-muffin-low-sugar-20261114','
 export function foodPortion148(id,amount='',defaultAmount=''){
  if(Object.hasOwn(PLANT_PROFILES_149,id))return plantPortion149(id,amount,defaultAmount);
  const text=String(amount||defaultAmount||'').trim().toLowerCase();
+ if(id==='realmix-ube-latte-stick-16g'){
+  const a=text.replace(',', '.');
+  const mass=a.match(/^(\d+(?:\.\d+)?)\s*(?:g|gramm)\b/);
+  const sticks=a.match(/^(\d+(?:\.\d+)?)\s*(?:sticks?|beutel|tütchen|tuetchen|portion(?:en)?)\b/);
+  const half=/^(?:halber|halbe|halb|½)\s*(?:stick|beutel|tütchen|tuetchen)\b/.test(a);
+  const value=mass?Number(mass[1]):sticks?Number(sticks[1])*16:half?8:null;
+  return Number.isFinite(value)&&value>0&&value<=5000?{grams:value,portions:value/16}:null;
+ }
  if(!text||text.startsWith('-'))return null;
  const num=m=>Number(m[1].replace(',','.'));
  const grams=text.match(/^(\d+(?:[.,]\d+)?)\s*(?:g|gramm)\b/);

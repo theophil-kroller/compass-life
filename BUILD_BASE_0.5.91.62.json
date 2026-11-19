@@ -1,0 +1,23 @@
+{
+  "version": "0.5.91.62",
+  "patch_base": "0.5.91.61",
+  "base_commit": "1aaff79d5681b35cc81295575e68d68d63d10599",
+  "source": "GitHub Actions compass-full-source artifact #14444233663, deploy run #417",
+  "changed_paths": [
+    "BUILD_BASE_0.5.91.62.json",
+    "PATCH_INSTALL_0.5.91.62.md",
+    "RELEASE_0.5.91.62.md",
+    "client/src/food-additions-v059148.js",
+    "client/src/food-menu-v059148.js",
+    "client/src/daily-dozen-evidence-v57759404.js",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/main-full-v57759402510.js",
+    "client/package.json",
+    "package.json",
+    "tests/compass-059149-fruit-veg-calpis.test.mjs",
+    "tests/compass-059162-realmix-ube-latte.test.mjs"
+  ],
+  "removed_paths": [],
+  "new_product_id": "realmix-ube-latte-stick-16g",
+  "d1_migration": false
+}

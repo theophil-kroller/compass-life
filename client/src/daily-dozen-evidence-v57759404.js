@@ -96,6 +96,11 @@ export function dailyDozenIngredientEvidence404(state,day){
    }
    continue;
   }
+  if(id==='realmix-ube-latte-stick-16g'){
+   notes.vegetables.push('REALMIX Ube Latte: nur 7 % violette Süßkartoffel im Pulver (1,12 g pro Stick); keine Daily-Dozen-Gemüseportion.');
+   notes.beverages.push('REALMIX Ube Latte: gezuckertes Instantgetränk; nicht als Wasser oder ungesüßter Tee gutgeschrieben.');
+   continue;
+  }
   if(id==='homemade_indian_lemon_red_cabbage_20261114'){
    // Confirmed 1,387 g raw cabbage; assumed cooked yield 1,600 g.
    // Credit is a provisional ingredient-based estimate, not a lab measurement.
