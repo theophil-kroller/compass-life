@@ -62,6 +62,8 @@ import './outlook-bridge-v57724.css';
 import {applyOutlookSnapshot61,normalizeOutlookCalendar61,outlookCalendarDedup61,outlookCalendarPanel61,outlookExport61,saveOutlookExportDraft61,confirmOutlookExport61,saveGoogleOutlookLink61} from './outlook-calendar-v059161.js';
 import './outlook-calendar-v059161.css';
 import {dailyDozen5930,dailyDozen5930View} from './daily-dozen-v5775930.js';
+import {VAULT_IDLE_MINUTES_163,readVaultIdleMinutes163,writeVaultIdleMinutes163,vaultIdleElapsed163} from './vault-idle-v059163.js';
+import './daily-dozen-peek-v059163.css';
 import './daily-dozen-v5775930.css';
 import './mobile-direct-v5775930.css';
 import {buildLifeBalanceRadar,buildLifeBalanceHistory,lifeBalanceRadarView,validateBalanceGoals} from './life-balance-radar-v563.js';
@@ -298,7 +300,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.62';
+const COMPASS_CLIENT_VERSION='0.5.91.63';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -349,6 +351,7 @@ function compass54LoadingScreen(kind){
 
 let config={apiUrl:'',googleClientId:''};
 let state=null, hasVault=false, authToken='', currentUser='', busy=false, notice='', error='', tab='today', lastActivity=Date.now();
+let vaultIdleMinutes163=readVaultIdleMinutes163();
 let saveQueue=Promise.resolve();
 let calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let selectedDay=localDateString(new Date());
@@ -2550,7 +2553,7 @@ function systemScreen(){
  <div class="system-actions"><button class="primary-btn" data-action="sync" ${!authToken||busy?'disabled':''}>${busy?'Synchronisiere …':'Jetzt synchronisieren'} ${ico('sync',16)}</button><button class="secondary-btn" data-action="logout" ${!authToken?'disabled':''}>Google trennen</button></div>
  <div class="mini-stats"><div><span>Wartende Änderungen</span><strong>${state.pending.length}</strong></div><div><span>Konflikte</span><strong>${state.conflicts.length}</strong></div><div><span>Sync-Cursor</span><strong>${state.cursor}</strong></div></div></section>
  <section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('shield',22)}<h2>Lokaler Tresor</h2></div></div><p class="module-subtitle">Verschlüsselt und offline nutzbar.</p>
- <label style="display:grid;gap:5px;margin:10px 0">Automatische Sperre bei Inaktivität <select id="vault58-idle">${[15,30,60].map(n=>`<option value="${n}" ${Number(state?.uiPreferences?.vaultIdleMinutes||15)===n?'selected':''}>${n} Minuten</option>`).join('')}</select></label><p class="small-muted">Längere Entsperrzeit nur auf vertrauenswürdigen Geräten einstellen. Arbeitsbeginn und Arbeitsende funktionieren auch bei gesperrtem Tresor.</p>
+ <label style="display:grid;gap:5px;margin:10px 0">Automatische Sperre bei Inaktivität · dieses Gerät <select id="vault58-idle">${VAULT_IDLE_MINUTES_163.map(n=>`<option value="${n}" ${vaultIdleMinutes163===n?'selected':''}>${n<60?n+' Minuten':n===60?'1 Stunde':n===120?'2 Stunden':'4 Stunden'}</option>`).join('')}</select></label><p class="small-muted">Standard: 1 Stunde. Diese Einstellung gilt nur in diesem Browser auf diesem Gerät; am Handy kannst du eine andere wählen. Nur auf vertrauenswürdigen Geräten verlängern. Manuell sperren bleibt jederzeit möglich. Bei einem gesperrten Gerät bleibt Compass zusätzlich durch die Gerätesperre geschützt.</p>
  <div class="security-line">${ico('check',17)} AES-256-GCM verschlüsselte Speicherung</div><div class="security-line">${ico('check',17)} Passphrase bleibt auf deinem Gerät</div><div class="security-line">${ico('check',17)} Keine privaten Aufgaben in GitHub</div>
  <button class="secondary-btn full" data-action="export-encrypted">Verschlüsseltes Backup herunterladen</button><button class="secondary-btn full" data-action="export-json">Klartext-JSON exportieren</button><p class="small-muted">Klartext-Exporte enthalten unverschlüsselte private Inhalte.</p></section></div>
  ${privateMirrorSettings()}
@@ -2799,7 +2802,7 @@ function insightsScreen(){if(insightTab==='nutrition')queueMicrotask(ensureMensa
    renderSync:()=>journalSyncPanel(),
    renderOverview:()=>nutritionCoachApi52?nutritionCoachApi52.nutritionCoachDashboard52(state,{days:nutritionCoachDays52,anchor:nutritionCoachAnchor52,today:localDateString(new Date()),metric:nutritionCoachMetric52,report:nutritionCoachReport52}):nutritionCoachError52?`<section class="ni152-error" role="alert"><p>${h(nutritionCoachError52)}</p><button type="button" data-action="ni152-retry">Erneut laden</button></section>`:'<p role="status">Ernährungsübersicht wird bei Bedarf nachgeladen …</p>',
    renderMensa:()=>mensaApi?mensaApi.mensaCatalogPanel(state,{draft:mensaImportDraft,day:today,status:mensaMessage,emailText:mensaEmailDraftRaw}):mensaLoadError?`<section class="mensa-load-failure" role="alert"><p>${h(mensaLoadError)}</p><button type="button" data-action="mensa-retry-load">Erneut laden</button></section>`:'<p role="status">Mensa-Datenbank wird geladen …</p>',
-   renderSection:kind=>kind==='daily-dozen'?dailyDozen5930View(dailyDozen5930(state,{day:today}))
+   renderSection:kind=>kind==='daily-dozen'?dailyDozen5930View(dailyDozen5930(state,{day:dailyDozenDay733}))
     :kind==='nutrients'?nutritionIntelligenceView(state,{day:nutritionDay712,detail:nutritionProduct712})
     :kind==='timing'?nutritionTimingView(state,{mode:nutritionTimingMode725,anchor:nutritionTimingAnchor725,selectedId:nutritionTimingSelected725})
     :kind==='trends'?nutritionTrendsView(state,{mode:nutritionTrendsMode726,anchor:nutritionTrendsAnchor726,metric:nutritionTrendsMetric726})
@@ -3262,7 +3265,7 @@ function compass55FastTaskPaint(id){
 }
 
 function bind() {
- const idle58=app.querySelector('#vault58-idle');if(idle58)idle58.onchange=async()=>{const value=Number(idle58.value);if(![15,30,60].includes(value))return;try{await mutate(st=>{st.uiPreferences??={};st.uiPreferences.vaultIdleMinutes=value;});toast('Automatische Tresorsperre: '+value+' Minuten.');}catch(ex){toast(ex.message,true);}};
+ const idle58=app.querySelector('#vault58-idle');if(idle58)idle58.onchange=()=>{const value=Number(idle58.value);if(!VAULT_IDLE_MINUTES_163.includes(value))return;vaultIdleMinutes163=value;const saved=writeVaultIdleMinutes163(value);toast('Tresorsperre auf diesem Gerät: '+(value<60?value+' Minuten':value/60+' Stunde(n)')+(saved?'.':'. Nur bis zum Schließen der App gespeichert.'));};
  const giftForm58=app.querySelector('#gift58-form');if(giftForm58)giftForm58.onsubmit=async ev=>{ev.preventDefault();if(!state)return;const fd=new FormData(giftForm58),personId=String(fd.get('personId')||'');try{await mutate(st=>{const original=giftEntries(st).find(x=>x.id===String(fd.get('id')||''));upsertGift(st,{...Object.fromEntries(fd),year:original?.year??giftYear58,occasion:original?.occasion??giftOccasion58,person:personId?(st.people?.[personId]?.name||original?.person||''):fd.get('person')});});giftEditing58='';toast('Geschenk im verschlüsselten Planer gespeichert.');}catch(ex){toast(ex.message,true);}};
  app.querySelectorAll('[data-gift58-filter]').forEach(select=>select.onchange=()=>{if(select.dataset.gift58Filter==='year')giftYear58=Number(select.value);else giftOccasion58=select.value in GIFT_OCCASIONS?select.value:'christmas';giftEditing58='';render();});
  app.querySelectorAll('[data-touch58]').forEach(select=>select.onchange=()=>{if(select.dataset.touch58==='unit')touchUnit58=select.value==='week'?'week':'month';else touchPerson58=select.value;render();});
@@ -4776,6 +4779,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='t577-edit'){touchEditingId=id;render();return;}
  if(action==='t577-cancel'){touchEditingId='';render();return;}
  if(action==='t577-delete'){if(!state||!confirm('Diesen Nähe-Eintrag entfernen?'))return;try{await mutate(s=>deleteTouch(s,id));touchEditingId='';toast('Eintrag entfernt.');}catch(ex){toast(ex.message,true);}return;}
+ if(action==='ci163-dozen-open'){tab='insights';insightTab='nutrition';calmNavGroup='insights';nutritionView712='daily-dozen';dailyDozenDay733=selectedDay;render();return;}
  if(action==='ci88-food-open'){if(tab==='today'){tab='insights';insightTab='nutrition';calmNavGroup='insights';}nutritionQuickOpen=true;render();requestAnimationFrame(()=>{const panel=app.querySelector('.ci88-open-food');if(panel){panel.open=true;panel.scrollIntoView?.({block:'center'});panel.querySelector('[name=title]')?.focus?.({preventScroll:true});}});return;}
  if(action==='ci88-copy-food-prompt'){const title=app.querySelector('#ci88-open-food-form [name=title]')?.value||'[Mahlzeit eingeben]';try{await navigator.clipboard.writeText(OPEN_FOOD_PROMPT88+title);toast('GPT-Schätzprompt kopiert.');}catch{toast('Zwischenablage nicht verfügbar.',true);}return;}
  if(action==='ci57-deficit-open'){coachDeficitOpen57=true;render();return;}
@@ -4869,7 +4873,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
  if(action==='ni152-period'){const v=Number(id);if(![7,14,42,90].includes(v))return;nutritionCoachDays52=v;nutritionCoachAnchor52=localDateString(new Date());render();return;}
  if(action==='ni152-shift'){if(!nutritionCoachApi52||!['prev','next'].includes(id))return;nutritionCoachAnchor52=nutritionCoachApi52.shiftNutritionCoachWindow52(nutritionCoachDays52,nutritionCoachAnchor52,id,localDateString(new Date()));render();return;}
  if(action==='ni152-analyze'){if(!nutritionCoachApi52||!state)return;try{nutritionCoachReport52=nutritionCoachApi52.nutritionCoachAnalyze52(state,{days:nutritionCoachDays52,anchor:nutritionCoachAnchor52,today:localDateString(new Date())});render();}catch(ex){toast('Ernährungsanalyse: '+ex.message,true);}return;}
- if(action==='ni712-view'){if(!['overview','journal','nutrients','timing','trends','connections','fats','daily-dozen','anti-aging','phyto','mensa'].includes(id))return;nutritionView712=id;if(id!=='journal')nutritionEditId='';if(id==='nutrients')nutritionDay712=localDateString(new Date());render();return;}
+ if(action==='ni712-view'){if(!['overview','journal','nutrients','timing','trends','connections','fats','daily-dozen','anti-aging','phyto','mensa'].includes(id))return;if(id==='daily-dozen')dailyDozenDay733=localDate();nutritionView712=id;if(id!=='journal')nutritionEditId='';if(id==='nutrients')nutritionDay712=localDateString(new Date());render();return;}
  // Nutrition 3: independent, read-only scatter series and light-weight subpanel updates.
  if(action==='ni727-input'){
   if(!['lastMeal','kcal','protein','caffeine'].includes(id))return;
@@ -6167,7 +6171,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       placesPreview=null;selectedPlaceKey='';toast('Alle lokalen Standortdaten gelöscht.');return;
     }
     if(action==='open-worldmap'){tab='insights';insightTab='places';insightPeriod='all';selectedPlaceKey='';render();return;}
-    if(action==='insights-tab'){if(id==='nutrition')nutritionView712='overview';if(id==='touch'||id==='dreamworld'||id==='weekly'||id==='capacity'||INSIGHT_TABS.some(t=>t.id===id)){tab='insights';calmNavGroup='insights';if(id==='places'&&insightTab!=='places')insightPeriod='all';insightTab=id;render();if(['focus','timejournal'].includes(id)&&authToken){reloadWatchSessions().catch(()=>{});}}return;}
+    if(action==='insights-tab'){if(id==='nutrition'){nutritionView712='overview';dailyDozenDay733=localDate();}if(id==='touch'||id==='dreamworld'||id==='weekly'||id==='capacity'||INSIGHT_TABS.some(t=>t.id===id)){tab='insights';calmNavGroup='insights';if(id==='places'&&insightTab!=='places')insightPeriod='all';insightTab=id;render();if(['focus','timejournal'].includes(id)&&authToken){reloadWatchSessions().catch(()=>{});}}return;}
     if(action==='sports-mode'){if(SPORTS_MODES.some(([v])=>v===id)){sportsMode=id;sportsAnchor=localDate();render();}return;}
     if(action==='sports-shift'){if(['-1','1'].includes(id)&&sportsMode!=='all'){sportsAnchor=sportsShiftAnchor(sportsMode,sportsAnchor,Number(id),localDate());render();}return;}
     if(action==='sports-metric'){if(['time','count','distance'].includes(id)){sportsMetric=id;render();}return;}
@@ -6638,7 +6642,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   }});
 window.addEventListener('offline',render);
 for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();coreIdlePolicy.noteActivity(lastActivity);},{passive:true});
-setInterval(async()=>{if(state&&Date.now()-lastActivity>Number([15,30,60].includes(Number(state?.uiPreferences?.vaultIdleMinutes))?state.uiPreferences.vaultIdleMinutes:15)*60*1000&&document.documentElement.dataset.compassRoutineActive!=='yes'&&Number(document.documentElement.dataset.compassRoutineGraceUntil||0)<Date.now()){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Wegen Inaktivität automatisch gesperrt.';render();}},60000);
+setInterval(async()=>{if(state&&vaultIdleElapsed163({now:Date.now(),lastActivity,minutes:vaultIdleMinutes163,activeRoutine:document.documentElement.dataset.compassRoutineActive==='yes',graceUntil:Number(document.documentElement.dataset.compassRoutineGraceUntil||0)})){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Wegen Inaktivität automatisch gesperrt.';render();}},60000);
 (async()=>{
   try{config=await fetch(`${import.meta.env.BASE_URL}runtime-config.json`,{cache:'no-store'}).then(r=>r.json());}
   catch{config={};}

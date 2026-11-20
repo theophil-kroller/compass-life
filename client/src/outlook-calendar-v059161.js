@@ -44,13 +44,47 @@ export function outlookToGoogleShape61(row){
   updated:row.last_modified||row.recordedAt,all_day:row.all_day};
 }
 export function outlookVisible61(v){return normalizeOutlookCalendar61(v).events.filter(r=>r.status!=='cancelled').map(outlookToGoogleShape61);}
+/** Normalize harmless title differences without erasing a real meeting topic.
+ * "Marketing (GRO)" and "Marketing ()" may be the same meeting, but
+ * "Marketing (GRO)" and "Marketing (HR)" remain distinct without an explicit link.
+ */
+export function calendarTitleParts163(text){
+ let s=String(text??'').normalize('NFKC').toLocaleLowerCase('de').replace(/[\u200b-\u200d\ufeff]/g,'').replace(/\s+/g,' ').trim();
+ s=s.replace(/[（]/g,'(').replace(/[）]/g,')').replace(/\s*\(\s*\)\s*$/g,'').trim();
+ const match=s.match(/^(.*?)\s*\(\s*([^()]*)\s*\)\s*$/u);
+ const base=match?match[1]:s,suffix=match?match[2]:'';
+ const tidy=x=>x.replace(/[\s\u00a0]+/g,' ').replace(/[.,;:!?]+$/gu,'').trim();
+ return {base:tidy(base),suffix:tidy(suffix),full:tidy(s)};
+}
+export function sameCrossCalendarEvent163(a,b){
+ if(!a||!b)return false;
+ const allDay=v=>Boolean(v?.start?.date&&!v?.start?.dateTime);
+ if(allDay(a)!==allDay(b))return false;
+ const timestamp=v=>v?.dateTime?Date.parse(v.dateTime):null;
+ if(allDay(a)){
+  if(a.start?.date!==b.start?.date||a.end?.date!==b.end?.date)return false;
+ }else{
+  const sa=timestamp(a.start),sb=timestamp(b.start),ea=timestamp(a.end),eb=timestamp(b.end);
+  if(![sa,sb,ea,eb].every(Number.isFinite)||Math.abs(sa-sb)>5*60000||Math.abs(ea-eb)>5*60000)return false;
+ }
+ const x=calendarTitleParts163(a.summary),y=calendarTitleParts163(b.summary);
+ if(!x.base||!y.base||x.base!==y.base)return false;
+ // A meaningful different parenthetical label can indicate a separate event.
+ return !x.suffix||!y.suffix||x.suffix===y.suffix;
+}
 export function outlookCalendarDedup61(google,archive){
  const x=normalizeOutlookCalendar61(archive),link=x.googleLinks||{};
  const g=(google||[]).filter(e=>e.status!=='cancelled');const gl=new Set(g.map(x=>x.id));
- const moment=v=>v?.date|| (v?.dateTime&&Number.isFinite(Date.parse(v.dateTime))?String(Math.round(Date.parse(v.dateTime)/60000)):String(v?.dateTime||''));
- const sig=e=>String(e.summary||'').toLocaleLowerCase('de').trim().replace(/\s+/g,' ')+'|'+moment(e.start)+'|'+moment(e.end);
- const googleSigs=new Set(g.map(sig));
- return [...g,...outlookVisible61(x).filter(e=>!gl.has(link[e.source_id])&&!googleSigs.has(sig(e)))];
+ const googleByTopic=new Map();
+ for(const event of g){
+  const topic=calendarTitleParts163(event.summary).base;
+  if(!topic)continue;
+  if(!googleByTopic.has(topic))googleByTopic.set(topic,[]);
+  googleByTopic.get(topic).push(event);
+ }
+ // Preserve Google's event on the timeline; only suppress a matching Outlook
+ // *display row*. Never touch either stored calendar or a later export.
+ return [...g,...outlookVisible61(x).filter(e=>!gl.has(link[e.source_id])&&!(googleByTopic.get(calendarTitleParts163(e.summary).base)||[]).some(ge=>sameCrossCalendarEvent163(ge,e)))];
 }
 export function mergeOutlookCalendars61(a,b){
  const left=normalizeOutlookCalendar61(a),right=normalizeOutlookCalendar61(b),rows=new Map();

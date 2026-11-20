@@ -10,6 +10,7 @@ import {strengthPeriod} from './strength-insights-v57728.js';
 import {bodyMeasurementObservations} from './body-measurements-v05918.js';
 import {deficitPlan57} from './vtaper-deficit-scenarios-v059157.js';
 import {todayEnergyMarkup160} from './today-energy-peek-v059160.js';
+import {dailyDozen5930} from './daily-dozen-v5775930.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dOK=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d+'T00:00:00Z'));
 const round=n=>Math.round(n*10)/10;
@@ -107,11 +108,17 @@ function proteinScaleMarkup125(p,state,day){
   ${b.weightKnown?'':`<small class="ci125-protein-weight-note">Vorläufige Skala: noch kein Körpergewicht bis zu diesem Tag importiert.</small>`}
  </div>`;
 }
-export function proteinTodayMarkup88(state,today,{compact=false}={}){
+export function proteinTodayMarkup88(state,today,{compact=false,dailyDozen=null}={}){
  const p=proteinDay88(state,today),label=p.grams===null?'Noch keine Proteinwerte':`${fmt(p.grams)} g Protein erfasst`;
  const scale=proteinScaleMarkup125(p,state,today);
  const foot=`Erfasste Teilbilanz · ${p.unknown?'fehlende Nährwerte möglich':'weitere Mahlzeiten möglich'}${p.estimated?' · teils geschätzt':''}`;
- if(compact)return `<div class="ci90-protein-peek" aria-label="Protein und Kalorien – erfasste Tageswerte"><div class="ci90-protein-head"><span>💪 ${esc(label)}</span><button type="button" data-action="ci88-food-open" aria-label="Ernährung erfassen">＋ Essen</button></div>${scale}<small>${foot}</small>${todayEnergyMarkup160(state,today)}</div>`;
+ if(compact){
+  const documented=dailyDozen||dailyDozen5930(state,{day:today});
+  const dozen=documented&&Number.isFinite(documented.observed)&&Number.isFinite(documented.goal)&&documented.goal>0?documented:null;
+  const score=dozen?Number(dozen.observed).toLocaleString('de-AT',{maximumFractionDigits:1}):null;
+  const ddChip=dozen?`<button type="button" class="ci163-daily-dozen-chip" data-action="ci163-dozen-open" title="Daily Dozen: dokumentierter Fortschritt, Details ansehen" aria-label="Daily Dozen ${esc(score)} von ${dozen.goal} dokumentierten Portionen und Aktivitäten, Details öffnen"><span aria-hidden="true">🌿</span><span>Daily Dozen <b>${esc(score)}/${dozen.goal}</b></span></button>`:'';
+  return `<div class="ci90-protein-peek" aria-label="Protein, Daily Dozen und Kalorien – dokumentierte Tageswerte"><div class="ci90-protein-head"><span>💪 ${esc(label)}</span>${ddChip}<button type="button" data-action="ci88-food-open" aria-label="Ernährung erfassen">＋ Essen</button></div>${scale}<small>${foot}</small>${todayEnergyMarkup160(state,today)}</div>`;
+ }
  return `<div class="ci88-protein-today" aria-label="Protein Tagesorientierung"><span>💪 ${esc(label)}</span>${scale}<small>${p.partial?'Teilbilanz · unbekannte Lebensmittel möglich':'Erfasste Werte · vollständige Tagesernährung nicht bestätigt'}</small><button type="button" data-action="ci88-food-open">＋ Essen</button></div>`;
 }
 export function proteinInsightsMarkup88(state,today){const p=proteinDay88(state,today),history=proteinHistory88(state,{today,days:30}),target=p.target;const valid=history.filter(x=>x.grams!==null),avg=n=>{const r=valid.slice(-n);return r.length?round(r.reduce((s,x)=>s+x.grams,0)/r.length):null;};

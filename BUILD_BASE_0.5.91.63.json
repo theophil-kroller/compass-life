@@ -1,0 +1,42 @@
+{
+  "version": "0.5.91.63",
+  "patch_base": "0.5.91.62",
+  "source": "Compass_Life_0.5.91.62_FULL_SOURCE.zip (created from GitHub 0.5.91.61)",
+  "features": [
+    "per-device vault inactivity timeout 15/30/60/120/240min",
+    "Outlook/Google display dedup tolerant of empty parenthetical suffix",
+    "small Today Daily Dozen X/24 link next to protein"
+  ],
+  "changed_paths": [
+    "BUILD_BASE_0.5.91.63.json",
+    "PATCH_INSTALL_0.5.91.63.md",
+    "RELEASE_0.5.91.63.md",
+    "TESTRESULTS_0.5.91.63.txt",
+    "client/package.json",
+    "client/src/coach-integration-v0588.js",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/daily-dozen-peek-v059163.css",
+    "client/src/main-full-v57759402510.js",
+    "client/src/outlook-calendar-v059161.js",
+    "client/src/vault-idle-v059163.js",
+    "package.json",
+    "tests/compass-059163-idle-dedup-dozen.test.mjs"
+  ],
+  "removed_paths": [],
+  "d1_migration": false,
+  "vault_migration": false,
+  "tests": {
+    "baseline": {
+      "total": 2423,
+      "pass": 2356,
+      "fail": 67
+    },
+    "updated": {
+      "total": 2433,
+      "pass": 2366,
+      "fail": 67
+    },
+    "new_failures": 0
+  },
+  "vite_production_build": "not_run_dependencies_absent"
+}

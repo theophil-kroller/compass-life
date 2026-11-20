@@ -1,0 +1,20 @@
+Compass Life 0.5.91.63 – Tests und Baseline-Vergleich
+==========================================================
+Basis Full Source: Compass_Life_0.5.91.62_FULL_SOURCE.zip
+
+Gezielte Regressionstests: 30/30 bestanden (inkl. 0.5.91.63 sowie
+bestehender 0.5.91.61 Outlook- und älterer UI-/Buildtests).
+Vollständiger Basistest 0.5.91.62: 2423 gesamt, 2356 bestanden, 67 fehlgeschlagen.
+Vollständiger neuer Test 0.5.91.63: 2433 gesamt, 2366 bestanden, 67 fehlgeschlagen.
+Identische 67 fehlgeschlagene Testnamen, 0 neue Fehler.
+Neuer 0.5.91.63 Testbestand: 10/10 grün.
+Importgraph: 311 Module, keine fehlenden relativen Importe.
+JavaScript-Syntax: node --check für die geänderten Module erfolgreich.
+
+Die 67 Legacy-Fehler sind NICHT behoben. Dieser Build ist damit NICHT als
+vollständig fehlerfrei zu deklarieren. Der Vite-Produktionsbuild ist wegen
+fehlender node_modules/vite-Abhängigkeiten in dieser Arbeitsumgebung nicht
+abgeschlossen. GitHub Actions muss ihn nach dem Commit prüfen. Live-PWA,
+Outlook-COM und E2EE-Synchronisierung wurden nicht auf dem Nutzergerät getestet.
+
+Keine D1-Migration, kein Zurücksetzen des lokalen Tresors.
