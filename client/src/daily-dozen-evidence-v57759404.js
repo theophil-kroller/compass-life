@@ -1,3 +1,4 @@
+import {BEET_SALAD_ID_164,BEET_SALAD_164,beetSaladPortion164} from './beet-potato-salad-v059164.js';
 import {wholegrainBreadEvidence} from './wholegrain-serving-v059138.js';
 import {PLANT_DD_149,plantPortion149} from './food-plants-v059149.js';
 /** Compass .59.40.4: One read-only, ingredient-level evidence ledger for both
@@ -99,6 +100,24 @@ export function dailyDozenIngredientEvidence404(state,day){
   if(id==='realmix-ube-latte-stick-16g'){
    notes.vegetables.push('REALMIX Ube Latte: nur 7 % violette Süßkartoffel im Pulver (1,12 g pro Stick); keine Daily-Dozen-Gemüseportion.');
    notes.beverages.push('REALMIX Ube Latte: gezuckertes Instantgetränk; nicht als Wasser oder ungesüßter Tee gutgeschrieben.');
+   continue;
+  }
+  if(id===BEET_SALAD_ID_164){
+   const p=beetSaladPortion164(a);if(!p)continue;
+   const proportion=p.grams/BEET_SALAD_164.batchGrams;
+   // Actual raw beets and carrots count as other vegetables. Potatoes do not count as wholegrains.
+   const beet=300*proportion,carrot=50*proportion;
+   add('vegetables',(beet+carrot)/80,`Hausgemachter Rote-Rüben-Kartoffelsalat · Rüben ca. ${round(beet)} g, Karotte ca. ${round(carrot)} g (Rezeptschätzung)`,sourceId);
+   const sesame=40*proportion,pumpkinSeeds=20*proportion,nuts=sesame+pumpkinSeeds;
+   nutGrams+=nuts;notes.nuts.push(`Rote-Rüben-Kartoffelsalat · schwarzer Sesam ca. ${round(sesame)} g + Kürbiskerne ca. ${round(pumpkinSeeds)} g (geschätzt)`);
+   sources.push({id:sourceId,category:'nuts',grams:round(nuts),source:'Salat · Sesam & Kürbiskerne (geschätzt)'});
+   // Treat fresh rosemary as one tenth dry-equivalent. Coriander seeds as dry spice.
+   const herbEquivalent=(3+2/10)*proportion;
+   spiceGrams+=herbEquivalent;
+   notes.spices.push(`Salat · Koriandersamen + frischer Rosmarin: ~${round(herbEquivalent)} g Trockenäquivalent (geschätzt)`);
+   sources.push({id:sourceId,category:'spices',grams:round(herbEquivalent),source:'Salat · Koriander & Rosmarin (geschätzt)'});
+   notes.wholegrains.push('Gedämpfte Kartoffeln sind kein Vollkorn; Schafkäse, Öl, Sirup, Sojasauce und Salz ergeben keine zusätzlichen Daily-Dozen-Portionen.');
+   notes.vegetables.push('Rote-Rüben/Karottenmengen sind aus einer nicht abgewogenen, halben Rezeptportion abgeleitet; bitte bei anderer tatsächlicher Menge korrigieren.');
    continue;
   }
   if(id==='homemade_indian_lemon_red_cabbage_20261114'){

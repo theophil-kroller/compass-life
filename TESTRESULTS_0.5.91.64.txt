@@ -1,0 +1,14 @@
+Compass Life 0.5.91.64 — Testbericht (21.11.2026)
+==============================================================
+
+Ausgangsbasis: Compass_Life_0.5.91.63_FULL_SOURCE.zip
+Gezielte Tests (0.5.91.62 Ube Latte, 0.5.91.63 Sperre/Dedup/Dozen, 0.5.91.64 Salat): 21/21 bestanden.
+Eigene neue Salat-Tests: 7/7 bestanden.
+Vollständige Suite Baseline: 2433 Tests, 2366 bestanden, 67 fehlgeschlagen.
+Vollständige Suite 0.5.91.64: 2440 Tests, 2373 bestanden, 67 fehlgeschlagen.
+Die 67 fehlgeschlagenen Testnamen sind IDENTISCH; 0 neue Testfehler.
+Node-Syntaxprüfung der bearbeiteten .js-Dateien: bestanden.
+Importgraph: 312 Module, keine fehlenden relativen Importe.
+Nicht geprüft: Vite-Produktionskompilierung, da vite/node_modules nicht lokal installiert; GitHub Actions nach Upload prüfen.
+Nicht geprüft: Live-Browser/PWA, tatsächlicher Tresor und Windows Outlook-COM.
+Keine Cloudflare-D1-Migration, kein Zurücksetzen des lokalen Tresors.

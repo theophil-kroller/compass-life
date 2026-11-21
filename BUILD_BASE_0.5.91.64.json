@@ -1,0 +1,39 @@
+{
+  "version": "0.5.91.64",
+  "patch_base": "0.5.91.63",
+  "feature": "Rote-Rüben-Kartoffelsalat mit Schafkäse, Sesam, Kürbiskernen: default halbes Rezept, geschätzte Makros/Mikros, Daily Dozen & Anti-Aging Eight",
+  "source": "Compass Life 0.5.91.63 FULL SOURCE ZIP",
+  "changed_paths": [
+    "client/src/beet-potato-salad-v059164.js",
+    "client/src/food-additions-v059148.js",
+    "client/src/food-menu-v059148.js",
+    "client/src/daily-dozen-evidence-v57759404.js",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/main-full-v57759402510.js",
+    "client/package.json",
+    "package.json",
+    "tests/compass-059164-beet-potato-salad.test.mjs",
+    "RELEASE_0.5.91.64.md",
+    "PATCH_INSTALL_0.5.91.64.md",
+    "BUILD_BASE_0.5.91.64.json",
+    "client/src/daily-dozen-v57733.js",
+    "client/src/anti-aging-eight-v57734.js",
+    "TESTRESULTS_0.5.91.64.txt"
+  ],
+  "d1_migration": false,
+  "vault_migration": false,
+  "verification": {
+    "baseline_total": 2433,
+    "baseline_pass": 2366,
+    "baseline_fail": 67,
+    "new_total": 2440,
+    "new_pass": 2373,
+    "new_fail": 67,
+    "new_failures": 0,
+    "targeted_pass": 21,
+    "targeted_total": 21,
+    "new_recipe_tests_pass": 7,
+    "importgraph_modules": 312,
+    "vite_build": "not run (npm dependencies absent)"
+  }
+}

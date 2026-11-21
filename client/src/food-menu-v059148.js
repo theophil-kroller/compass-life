@@ -13,6 +13,7 @@ const explicit=Object.freeze({
  'profuel-alphaminos-bcaa':'sport','supplement-bluebonnet-one-men':'sport','supplement-fuerstenmed':'sport',
  'matcha-powder':'ingredients', // Matcha is a culinary ingredient, not a protein supplement
  'realmix-ube-latte-stick-16g':'drinks',
+ 'homemade-beet-potato-sheep-cheese-salad-20261121':'meals',
  'braineffect-mct-c8-oil':'ingredients','water-glass':'drinks',
  'milsani-high-protein-pfirsich-maracuja-200g':'dairy',
  'dr-oetker-high-protein-milchreis-zimt-400g':'dairy',
