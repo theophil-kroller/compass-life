@@ -1,0 +1,12 @@
+Compass Life 0.5.91.65 – Prüfung vom 22.11.2026
+===================================================
+Basis 0.5.91.64: 2440 Tests, 2373 bestanden, 67 fehlgeschlagen.
+Neuer Stand 0.5.91.65: 2445 Tests, 2378 bestanden, 67 fehlgeschlagen.
+Exakter Vergleich der 67 fehlgeschlagenen Testnamen: IDENTISCH.
+Neue Testfälle: 5/5 bestanden.
+Vorrelease-Regression: 7/7 erfolgreich.
+Import graph: 313 Module, keine fehlenden relativen Importe.
+Syntaxprüfungen: node --check für neues Modul und geänderte JS-Module erfolgreich.
+Production Vite build: NICHT lokal ausgeführt; node_modules/vite nicht installiert.
+App-/PWA-Abnahme auf Nutzergeräten und Live-Vault: NICHT durchgeführt.
+Keine D1-/Vault-Migration, keine automatische Buchung von Ernährungslogs.

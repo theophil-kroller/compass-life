@@ -14,6 +14,8 @@ const explicit=Object.freeze({
  'matcha-powder':'ingredients', // Matcha is a culinary ingredient, not a protein supplement
  'realmix-ube-latte-stick-16g':'drinks',
  'homemade-beet-potato-sheep-cheese-salad-20261121':'meals',
+ 'all-seasons-roesti-toast-camembert-lingonberry-200g':'meals',
+ 'homemade-raw-cacao-oat-milk-20261122':'drinks',
  'braineffect-mct-c8-oil':'ingredients','water-glass':'drinks',
  'milsani-high-protein-pfirsich-maracuja-200g':'dairy',
  'dr-oetker-high-protein-milchreis-zimt-400g':'dairy',

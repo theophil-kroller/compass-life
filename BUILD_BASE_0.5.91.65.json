@@ -1,0 +1,39 @@
+{
+  "version": "0.5.91.65",
+  "patch_base": "0.5.91.64",
+  "feature": "All Seasons Rösti-Toast (1 Stück/200g) und hausgemachter Rohkakao mit Hafermilch (1 Tasse, 200ml+8g): Makros, geschätzte Mikros, Daily Dozen/Anti-Aging Eight, Portionsparser",
+  "source": "Compass_Life_0.5.91.64_FULL_SOURCE.zip",
+  "changed_paths": [
+    "PATCH_INSTALL_0.5.91.65.md",
+    "RELEASE_0.5.91.65.md",
+    "client/package.json",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/daily-dozen-evidence-v57759404.js",
+    "client/src/food-additions-v059148.js",
+    "client/src/food-menu-v059148.js",
+    "client/src/main-full-v57759402510.js",
+    "client/src/roesti-cocoa-v059165.js",
+    "package.json",
+    "tests/compass-059165-roesti-raw-cocoa.test.mjs",
+    "BUILD_BASE_0.5.91.65.json",
+    "TESTRESULTS_0.5.91.65.txt"
+  ],
+  "vault_migration": false,
+  "d1_migration": false,
+  "validation": {
+    "baseline_expected_failures": 67,
+    "new_feature_target_tests": 5,
+    "importgraph_modules": 313,
+    "vite_build": "not executed; npm dependencies absent",
+    "baseline_total": 2440,
+    "baseline_pass": 2373,
+    "baseline_fail": 67,
+    "new_total": 2445,
+    "new_pass": 2378,
+    "new_fail": 67,
+    "new_failures": 0,
+    "targeted_pass": 12,
+    "targeted_total": 12,
+    "new_feature_tests_pass": 5
+  }
+}

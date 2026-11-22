@@ -1,3 +1,4 @@
+import {ROESTI_TOAST_ID_165,RAW_CACAO_OAT_ID_165,ROESTI_COCOA_FOODS_165,ROESTI_COCOA_PROFILES_165,ROESTI_COCOA_RECIPE_165,roestiToastPortion165,rawCacaoOatPortion165} from './roesti-cocoa-v059165.js';
 import {BEET_SALAD_164,BEET_SALAD_ID_164,BEET_SALAD_FOOD_164,BEET_SALAD_PROFILE_164,beetSaladPortion164} from './beet-potato-salad-v059164.js';
 import {PLANT_FOODS_149,PLANT_PROFILES_149,plantPortion149} from './food-plants-v059149.js';
 import {PROTEIN_CUP_FOODS_155,PROTEIN_CUP_PROFILES_155,PROTEIN_CUP_GRAMS_155} from './food-protein-cups-v059155.js';
@@ -7,6 +8,7 @@ export const FOODS_148=Object.freeze([
   ...PLANT_FOODS_149,
   ...PROTEIN_CUP_FOODS_155,
   BEET_SALAD_FOOD_164,
+  ...ROESTI_COCOA_FOODS_165,
   {
     id: 'realmix-ube-latte-stick-16g',
     emoji: '🍠',
@@ -69,6 +71,7 @@ export const PROFILES_148=Object.freeze({
   ...PLANT_PROFILES_149,
   ...PROTEIN_CUP_PROFILES_155,
   [BEET_SALAD_ID_164]:BEET_SALAD_PROFILE_164,
+  ...ROESTI_COCOA_PROFILES_165,
   'realmix-ube-latte-stick-16g': {
     name: 'REALMIX Ube Latte · vegan',
     reference: {amount: 16, unit: 'g'},
@@ -199,6 +202,7 @@ export const PROFILES_148=Object.freeze({
 });
 export const RECIPE_EVIDENCE_148=Object.freeze({
   [BEET_SALAD_ID_164]:BEET_SALAD_164,
+  ...ROESTI_COCOA_RECIPE_165,
   "homemade_indian_lemon_red_cabbage_20261114": {
     "recipeIngredients": [
       {
@@ -553,10 +557,12 @@ export const RECIPE_EVIDENCE_148=Object.freeze({
     }
   }
 });
-export const HOMEMADE_148=new Set([BEET_SALAD_ID_164,'homemade_indian_lemon_red_cabbage_20261114','homemade_red_cabbage_beet_kimchi_20261114']);
+export const HOMEMADE_148=new Set([BEET_SALAD_ID_164,RAW_CACAO_OAT_ID_165,'homemade_indian_lemon_red_cabbage_20261114','homemade_red_cabbage_beet_kimchi_20261114']);
 export const HOMEMADE_BAKING_148=new Set(['homemade-muffin-low-sugar-20261114','homemade-cake-slice-low-sugar-20261114']);
 export function foodPortion148(id,amount='',defaultAmount=''){
  if(id===BEET_SALAD_ID_164)return beetSaladPortion164(amount,defaultAmount);
+ if(id===ROESTI_TOAST_ID_165)return roestiToastPortion165(amount,defaultAmount);
+ if(id===RAW_CACAO_OAT_ID_165)return rawCacaoOatPortion165(amount,defaultAmount);
  if(Object.hasOwn(PLANT_PROFILES_149,id))return plantPortion149(id,amount,defaultAmount);
  const text=String(amount||defaultAmount||'').trim().toLowerCase();
  if(id==='realmix-ube-latte-stick-16g'){

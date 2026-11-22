@@ -1,3 +1,4 @@
+import {ROESTI_TOAST_ID_165,RAW_CACAO_OAT_ID_165} from './roesti-cocoa-v059165.js';
 import {BEET_SALAD_ID_164,BEET_SALAD_164,beetSaladPortion164} from './beet-potato-salad-v059164.js';
 import {wholegrainBreadEvidence} from './wholegrain-serving-v059138.js';
 import {PLANT_DD_149,plantPortion149} from './food-plants-v059149.js';
@@ -95,6 +96,18 @@ export function dailyDozenIngredientEvidence404(state,day){
     else if(id==='spelt-spaghetti-dry-20261115')notes.wholegrains.push('Dinkel-Spaghetti ohne Vollkornangabe: keine automatische Vollkorn-Gutschrift.');
     else if(id==='calpis-kyohou-grape-diluted-20261115')notes.beverages.push('Calpis als gezuckertes Mischgetränk: erfasst, aber nicht als Wasser-/ungesüßte Getränkemenge gutgeschrieben.');
    }
+   continue;
+  }
+  if(id===ROESTI_TOAST_ID_165){
+   notes.berries.push('Rösti-Toast: Preiselbeeren 6,5 % (= ca. 13 g pro 200-g-Stück) in einer gezuckerten Füllung; keine volle Beerenportion und mangels verlässlicher Portionierung keine automatische Gutschrift.');
+   notes.wholegrains.push('Rösti-Toast aus Kartoffeln (64 %) ist kein Vollkorn; Kartoffeln/Käse ergeben keine Daily-Dozen-Kategorie.');
+   continue;
+  }
+  if(id===RAW_CACAO_OAT_ID_165){
+   notes.beverages.push('Rohkakao mit Hafermilch ist kein Wasser oder ungesüßter Tee; daher keine automatische Daily-Dozen-Getränkeportion.');
+   notes.spices.push('Feste Kakaomasse (ca. 8 g) wird nicht automatisch als tägliche Kräuter-/Gewürzportion gutgeschrieben.');
+   notes.wholegrains.push('Haferdrink enthält Haferanteile, ist aber kein belegter Vollkorngetreide-Verzehr.');
+   notes.nuts.push('Kakaomasse ist keine Nuss-/Samenportion im Daily Dozen.');
    continue;
   }
   if(id==='realmix-ube-latte-stick-16g'){
