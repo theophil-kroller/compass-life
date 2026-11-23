@@ -1,3 +1,4 @@
+import {TAKEAWAY_NOODLE_BOX_ID_167,TAKEAWAY_NOODLE_BOX_ASSUMPTIONS_167,noodleBoxPortion167} from './takeaway-noodlebox-v059167.js';
 import {MILLET_BAKE_ID_166,MILLET_BAKE_PEAR_ID_166,MILLET_BAKE_ASSUMPTIONS_166,milletBakePortion166} from './millet-egg-bake-v059166.js';
 import {ROESTI_TOAST_ID_165,RAW_CACAO_OAT_ID_165} from './roesti-cocoa-v059165.js';
 import {BEET_SALAD_ID_164,BEET_SALAD_164,beetSaladPortion164} from './beet-potato-salad-v059164.js';
@@ -97,6 +98,16 @@ export function dailyDozenIngredientEvidence404(state,day){
     else if(id==='spelt-spaghetti-dry-20261115')notes.wholegrains.push('Dinkel-Spaghetti ohne Vollkornangabe: keine automatische Vollkorn-Gutschrift.');
     else if(id==='calpis-kyohou-grape-diluted-20261115')notes.beverages.push('Calpis als gezuckertes Mischgetränk: erfasst, aber nicht als Wasser-/ungesüßte Getränkemenge gutgeschrieben.');
    }
+   continue;
+  }
+  if(id===TAKEAWAY_NOODLE_BOX_ID_167){
+   const parsed=noodleBoxPortion167(a);if(!parsed)continue;
+   const vegetableGrams=TAKEAWAY_NOODLE_BOX_ASSUMPTIONS_167.vegetablesGrams*parsed.portions;
+   add('vegetables',vegetableGrams/80,`Nudelbox mit Gemüse · ca. ${round(vegetableGrams)} g gemischtes Gemüse, ungewogene Imbiss-Schätzung`,sourceId);
+   notes.wholegrains.push('Nudelbox: Nudelsorte unbekannt; keine belegte Vollkorn-Gutschrift.');
+   notes.cruciferous.push('Nudelbox: Gemüsemix nicht genau bekannt; keine separate Kreuzblütler-Gutschrift.');
+   notes.spices.push('Thai-Curry-Soße nur vermutet und Gewürzmengen nicht beziffert; keine automatische Gewürzportion.');
+   notes.beans.push('Keine Bohnen, kein Tofu und kein Tempeh in dieser Nudelbox bestätigt.');
    continue;
   }
   if(id===MILLET_BAKE_ID_166||id===MILLET_BAKE_PEAR_ID_166){

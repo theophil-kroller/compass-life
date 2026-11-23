@@ -1,3 +1,4 @@
+import {TAKEAWAY_NOODLE_BOX_ID_167,TAKEAWAY_NOODLE_BOX_FOOD_167,TAKEAWAY_NOODLE_BOX_PROFILE_167,TAKEAWAY_NOODLE_BOX_RECIPE_167,noodleBoxPortion167} from './takeaway-noodlebox-v059167.js';
 import {MILLET_BAKE_ID_166,MILLET_BAKE_PEAR_ID_166,MILLET_BAKE_FOODS_166,MILLET_BAKE_PROFILES_166,MILLET_BAKE_RECIPE_166,milletBakePortion166} from './millet-egg-bake-v059166.js';
 import {ROESTI_TOAST_ID_165,RAW_CACAO_OAT_ID_165,ROESTI_COCOA_FOODS_165,ROESTI_COCOA_PROFILES_165,ROESTI_COCOA_RECIPE_165,roestiToastPortion165,rawCacaoOatPortion165} from './roesti-cocoa-v059165.js';
 import {BEET_SALAD_164,BEET_SALAD_ID_164,BEET_SALAD_FOOD_164,BEET_SALAD_PROFILE_164,beetSaladPortion164} from './beet-potato-salad-v059164.js';
@@ -11,6 +12,7 @@ export const FOODS_148=Object.freeze([
   BEET_SALAD_FOOD_164,
   ...ROESTI_COCOA_FOODS_165,
   ...MILLET_BAKE_FOODS_166,
+  TAKEAWAY_NOODLE_BOX_FOOD_167,
   {
     id: 'realmix-ube-latte-stick-16g',
     emoji: '🍠',
@@ -75,6 +77,7 @@ export const PROFILES_148=Object.freeze({
   [BEET_SALAD_ID_164]:BEET_SALAD_PROFILE_164,
   ...ROESTI_COCOA_PROFILES_165,
   ...MILLET_BAKE_PROFILES_166,
+  [TAKEAWAY_NOODLE_BOX_ID_167]:TAKEAWAY_NOODLE_BOX_PROFILE_167,
   'realmix-ube-latte-stick-16g': {
     name: 'REALMIX Ube Latte · vegan',
     reference: {amount: 16, unit: 'g'},
@@ -207,6 +210,7 @@ export const RECIPE_EVIDENCE_148=Object.freeze({
   [BEET_SALAD_ID_164]:BEET_SALAD_164,
   ...ROESTI_COCOA_RECIPE_165,
   ...MILLET_BAKE_RECIPE_166,
+  [TAKEAWAY_NOODLE_BOX_ID_167]:TAKEAWAY_NOODLE_BOX_RECIPE_167,
   "homemade_indian_lemon_red_cabbage_20261114": {
     "recipeIngredients": [
       {
@@ -561,9 +565,10 @@ export const RECIPE_EVIDENCE_148=Object.freeze({
     }
   }
 });
-export const HOMEMADE_148=new Set([BEET_SALAD_ID_164,RAW_CACAO_OAT_ID_165,MILLET_BAKE_ID_166,MILLET_BAKE_PEAR_ID_166,'homemade_indian_lemon_red_cabbage_20261114','homemade_red_cabbage_beet_kimchi_20261114']);
+export const HOMEMADE_148=new Set([BEET_SALAD_ID_164,RAW_CACAO_OAT_ID_165,MILLET_BAKE_ID_166,MILLET_BAKE_PEAR_ID_166,TAKEAWAY_NOODLE_BOX_ID_167,'homemade_indian_lemon_red_cabbage_20261114','homemade_red_cabbage_beet_kimchi_20261114']);
 export const HOMEMADE_BAKING_148=new Set(['homemade-muffin-low-sugar-20261114','homemade-cake-slice-low-sugar-20261114']);
 export function foodPortion148(id,amount='',defaultAmount=''){
+ if(id===TAKEAWAY_NOODLE_BOX_ID_167)return noodleBoxPortion167(amount,defaultAmount);
  if(id===BEET_SALAD_ID_164)return beetSaladPortion164(amount,defaultAmount);
  if(id===ROESTI_TOAST_ID_165)return roestiToastPortion165(amount,defaultAmount);
  if(id===RAW_CACAO_OAT_ID_165)return rawCacaoOatPortion165(amount,defaultAmount);

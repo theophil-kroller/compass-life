@@ -1,0 +1,38 @@
+{
+  "version": "0.5.91.67",
+  "patch_base": "0.5.91.66",
+  "source": "Compass_Life_0.5.91.66_FULL_SOURCE.zip",
+  "feature": "Nudelbox vom Chinesen mit Gemüse und vermuteter Thai-Curry-Soße: Makros, geschätzte Mikros, Daily Dozen, Anti-Aging Eight, Portionsskalierung",
+  "changed_paths": [
+    "BUILD_BASE_0.5.91.67.json",
+    "PATCH_INSTALL_0.5.91.67.md",
+    "RELEASE_0.5.91.67.md",
+    "TESTRESULTS_0.5.91.67.txt",
+    "client/package.json",
+    "client/src/anti-aging-eight-v57734.js",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/daily-dozen-evidence-v57759404.js",
+    "client/src/food-additions-v059148.js",
+    "client/src/food-menu-v059148.js",
+    "client/src/main-full-v57759402510.js",
+    "client/src/takeaway-noodlebox-v059167.js",
+    "package.json",
+    "tests/compass-059167-noodlebox.test.mjs"
+  ],
+  "removed_paths": [],
+  "vault_migration": false,
+  "d1_migration": false,
+  "validation": {
+    "targeted_pass": 7,
+    "targeted_total": 7,
+    "importgraph_modules": 315,
+    "baseline_tests": 2452,
+    "baseline_pass": 2385,
+    "baseline_fail": 67,
+    "new_tests": 2459,
+    "new_pass": 2392,
+    "new_fail": 67,
+    "new_failures": 0,
+    "vite_build": "not executed; vite not installed"
+  }
+}

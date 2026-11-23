@@ -1,0 +1,8 @@
+Compass Life 0.5.91.67
+Targeted: 7/7 PASS - tests/compass-059167-noodlebox.test.mjs
+Relative import graph: 315 modules; OK
+All tests 0.5.91.67: 2459 total, 2392 pass, 67 fail
+Exact baseline all tests 0.5.91.66: 2452 total, 2385 pass, 67 fail
+Failure-name comparison: same 67 names; 0 new test failures
+Production Vite build: NOT VERIFIED (vite not locally installed; CI deployment must check)
+No Vault/D1 migration or automatic journal writes.

@@ -16,6 +16,7 @@ const explicit=Object.freeze({
  'homemade-beet-potato-sheep-cheese-salad-20261121':'meals',
  'all-seasons-roesti-toast-camembert-lingonberry-200g':'meals',
  'homemade-raw-cacao-oat-milk-20261122':'drinks',
+ 'takeaway-noodle-box-vegetable-thai-curry-20261123':'meals',
  'homemade-millet-egg-bake-little-date-syrup-20261123':'meals',
  'homemade-millet-egg-bake-pear-breakfast-20261123':'meals',
  'braineffect-mct-c8-oil':'ingredients','water-glass':'drinks',
