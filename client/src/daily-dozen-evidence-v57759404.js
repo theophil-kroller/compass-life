@@ -1,3 +1,4 @@
+import {MILLET_BAKE_ID_166,MILLET_BAKE_PEAR_ID_166,MILLET_BAKE_ASSUMPTIONS_166,milletBakePortion166} from './millet-egg-bake-v059166.js';
 import {ROESTI_TOAST_ID_165,RAW_CACAO_OAT_ID_165} from './roesti-cocoa-v059165.js';
 import {BEET_SALAD_ID_164,BEET_SALAD_164,beetSaladPortion164} from './beet-potato-salad-v059164.js';
 import {wholegrainBreadEvidence} from './wholegrain-serving-v059138.js';
@@ -96,6 +97,24 @@ export function dailyDozenIngredientEvidence404(state,day){
     else if(id==='spelt-spaghetti-dry-20261115')notes.wholegrains.push('Dinkel-Spaghetti ohne Vollkornangabe: keine automatische Vollkorn-Gutschrift.');
     else if(id==='calpis-kyohou-grape-diluted-20261115')notes.beverages.push('Calpis als gezuckertes Mischgetränk: erfasst, aber nicht als Wasser-/ungesüßte Getränkemenge gutgeschrieben.');
    }
+   continue;
+  }
+  if(id===MILLET_BAKE_ID_166||id===MILLET_BAKE_PEAR_ID_166){
+   const parsed=milletBakePortion166(id,a);if(!parsed)continue;
+   const proportion=parsed.portions;
+   // One assumed base portion uses 125 g cooked whole millet, regardless of pear topping.
+   // 1/2 cup cooked whole grain ~100 g as an explicit approximation.
+   const milletGrams=125*proportion;
+   add('wholegrains',milletGrams/100,`Hirse-Ei-Auflauf · ~${round(milletGrams)} g gekochte Hirse (ganzes Korn, Rezeptmengen geschätzt)`,sourceId);
+   notes.wholegrains.push('Hirse als ganze Hirsekörner angenommen. Falls raffinierte Hirseprodukte verwendet wurden, muss die Vollkorn-Gutschrift korrigiert werden.');
+   if(id===MILLET_BAKE_PEAR_ID_166){
+    const pear=100*proportion;
+    add('fruit',pear/120,`Hirse-Ei-Auflauf mit Birne · ~${round(pear)} g Birne (optionale Frühstücksvariante)`,sourceId);
+    notes.fruit.push('Birne nur für die ausdrücklich gewählte Frühstücksvariante angenommen; nicht im ursprünglichen Auflauf bestätigt.');
+   }else{
+    notes.fruit.push('Original-Hirse-Ei-Auflauf: Obst nicht bestätigt. Falls Birne oder andere Früchte dazukommen, die Variante mit Birne wählen oder separat Obst erfassen.');
+   }
+   notes.beans.push('Eier und Dattelsirup sind keine Daily-Dozen-Hülsenfruchtportionen.');
    continue;
   }
   if(id===ROESTI_TOAST_ID_165){

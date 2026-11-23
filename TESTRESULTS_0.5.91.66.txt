@@ -1,0 +1,9 @@
+Compass Life 0.5.91.66
+
+Targeted: node --test tests/compass-059166-millet-egg-bake.test.mjs: 7/7 PASS
+Relative module graph: node scripts/check-import-graph.mjs: OK, 314 modules
+All tests (0.5.91.66): 2452 total, 2385 pass, 67 fail
+Baseline all tests (0.5.91.65): 2445 total, 2378 pass, 67 fail
+All 67 failing test names are identical in both versions. No new failing tests.
+Vite build: NOT VERIFIED (vite binary not installed locally); CI runs npm install/build.
+No Vault, D1 or data migration.
