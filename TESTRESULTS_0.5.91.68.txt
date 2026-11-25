@@ -1,0 +1,8 @@
+Compass Life 0.5.91.68
+Targeted tests: 9/9 PASS – tests/compass-059168-desserts-cranberries.test.mjs
+Relative import graph: 316 modules; OK
+All tests 0.5.91.68: 2468 total, 2401 pass, 67 fail
+Exact baseline 0.5.91.67: 2459 total, 2392 pass, 67 fail
+Failure-name comparison: same 67 names; 0 new test failures
+Production Vite build: NOT VERIFIED (vite not locally installed; GitHub Actions deployment must check)
+No Vault/D1 migration, no automatic nutrition-journal entries.

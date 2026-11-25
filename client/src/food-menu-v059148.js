@@ -17,6 +17,9 @@ const explicit=Object.freeze({
  'all-seasons-roesti-toast-camembert-lingonberry-200g':'meals',
  'homemade-raw-cacao-oat-milk-20261122':'drinks',
  'takeaway-noodle-box-vegetable-thai-curry-20261123':'meals',
+ 'billa-sahnepudding-vanille-500g-20261125':'sweets',
+ 'noem-pro20-topfencreme-vanille-235g-20261125':'dairy',
+ 'rapunzel-cranberries-apple-concentrate-100g-20261125':'fruitnuts',
  'homemade-millet-egg-bake-little-date-syrup-20261123':'meals',
  'homemade-millet-egg-bake-pear-breakfast-20261123':'meals',
  'braineffect-mct-c8-oil':'ingredients','water-glass':'drinks',
@@ -55,7 +58,7 @@ const proteinIds=new Set([
  'ehrmann-high-protein-skyr-natural-450g','ehrmann-high-protein-vegan-chocolate-200g',
  'spar-naturpur-bio-skyr-mango-maracuja-400g','milsani-high-protein-pfirsich-maracuja-200g',
  'milsani-skyr-maracuja-150g','spar-freefrom-bio-skyr-250g','bio-magertopfen-250g',
- 'dr-oetker-high-protein-milchreis-zimt-400g','billa-high-protein-griesspudding-zimt-500g','noem-pro20-topfencreme-blueberry-cheesecake-235g',
+ 'dr-oetker-high-protein-milchreis-zimt-400g','billa-high-protein-griesspudding-zimt-500g','noem-pro20-topfencreme-blueberry-cheesecake-235g','noem-pro20-topfencreme-vanille-235g-20261125',
  'alpro-plant-protein-vanilla-pudding-200g','alpro-plant-protein-chocolate-pudding-200g',
  'organic-hemp-fruit-protein-bar-35g'
 ]);

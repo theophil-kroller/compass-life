@@ -1,3 +1,4 @@
+import {PACKAGED_FOODS_168,PACKAGED_PROFILES_168,PACKAGED_GRAMS_168,packagedPortion168} from './food-desserts-cranberries-v059168.js';
 import {TAKEAWAY_NOODLE_BOX_ID_167,TAKEAWAY_NOODLE_BOX_FOOD_167,TAKEAWAY_NOODLE_BOX_PROFILE_167,TAKEAWAY_NOODLE_BOX_RECIPE_167,noodleBoxPortion167} from './takeaway-noodlebox-v059167.js';
 import {MILLET_BAKE_ID_166,MILLET_BAKE_PEAR_ID_166,MILLET_BAKE_FOODS_166,MILLET_BAKE_PROFILES_166,MILLET_BAKE_RECIPE_166,milletBakePortion166} from './millet-egg-bake-v059166.js';
 import {ROESTI_TOAST_ID_165,RAW_CACAO_OAT_ID_165,ROESTI_COCOA_FOODS_165,ROESTI_COCOA_PROFILES_165,ROESTI_COCOA_RECIPE_165,roestiToastPortion165,rawCacaoOatPortion165} from './roesti-cocoa-v059165.js';
@@ -9,6 +10,7 @@ import {PROTEIN_CUP_FOODS_155,PROTEIN_CUP_PROFILES_155,PROTEIN_CUP_GRAMS_155} fr
 export const FOODS_148=Object.freeze([
   ...PLANT_FOODS_149,
   ...PROTEIN_CUP_FOODS_155,
+  ...PACKAGED_FOODS_168,
   BEET_SALAD_FOOD_164,
   ...ROESTI_COCOA_FOODS_165,
   ...MILLET_BAKE_FOODS_166,
@@ -74,6 +76,7 @@ export const FOODS_148=Object.freeze([
 export const PROFILES_148=Object.freeze({
   ...PLANT_PROFILES_149,
   ...PROTEIN_CUP_PROFILES_155,
+  ...PACKAGED_PROFILES_168,
   [BEET_SALAD_ID_164]:BEET_SALAD_PROFILE_164,
   ...ROESTI_COCOA_PROFILES_165,
   ...MILLET_BAKE_PROFILES_166,
@@ -568,6 +571,7 @@ export const RECIPE_EVIDENCE_148=Object.freeze({
 export const HOMEMADE_148=new Set([BEET_SALAD_ID_164,RAW_CACAO_OAT_ID_165,MILLET_BAKE_ID_166,MILLET_BAKE_PEAR_ID_166,TAKEAWAY_NOODLE_BOX_ID_167,'homemade_indian_lemon_red_cabbage_20261114','homemade_red_cabbage_beet_kimchi_20261114']);
 export const HOMEMADE_BAKING_148=new Set(['homemade-muffin-low-sugar-20261114','homemade-cake-slice-low-sugar-20261114']);
 export function foodPortion148(id,amount='',defaultAmount=''){
+ if(Object.hasOwn(PACKAGED_GRAMS_168,id))return packagedPortion168(id,amount,defaultAmount);
  if(id===TAKEAWAY_NOODLE_BOX_ID_167)return noodleBoxPortion167(amount,defaultAmount);
  if(id===BEET_SALAD_ID_164)return beetSaladPortion164(amount,defaultAmount);
  if(id===ROESTI_TOAST_ID_165)return roestiToastPortion165(amount,defaultAmount);

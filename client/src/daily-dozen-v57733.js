@@ -37,7 +37,7 @@ export function dailyDozenSummary(state,day){
  const evidence=dailyDozenEvidence(state,day);
  // The legacy tracker omits a few documented ingredient-based recipes. Use their ingredient
  // evidence here without touching the existing other-food credit rules.
- const recipeEntries=(state?.nutritionJournal?.entries||[]).filter(e=>['basmati-lentil-dal-broccoli-personal','ironmaxx-vegan-protein-shake-mixed-berries','korean-spicy-tofu-vegetable-strudel','steamed-potatoes-sichuan-veg-personal','black-rice-cooked-personal','homemade-beet-potato-sheep-cheese-salad-20261121'].includes(e?.foodId)||String(e?.foodId||'').startsWith('mensa-menu-')||Object.hasOwn(PLANT_DD_149,e?.foodId));
+ const recipeEntries=(state?.nutritionJournal?.entries||[]).filter(e=>['basmati-lentil-dal-broccoli-personal','ironmaxx-vegan-protein-shake-mixed-berries','korean-spicy-tofu-vegetable-strudel','steamed-potatoes-sichuan-veg-personal','black-rice-cooked-personal','homemade-beet-potato-sheep-cheese-salad-20261121','rapunzel-cranberries-apple-concentrate-100g-20261125'].includes(e?.foodId)||String(e?.foodId||'').startsWith('mensa-menu-')||Object.hasOwn(PLANT_DD_149,e?.foodId));
  const recipeEvidence=dailyDozenIngredientEvidence404({nutritionJournal:{entries:recipeEntries},mensaCatalog:state?.mensaCatalog},day);
  const breadEvidence=breadEvidenceForDay(state,day);
  const rows=DAILY_DOZEN.map(c=>{const partial=Math.max(0,(Number(evidence.totals[c.id])||0)+(Number(recipeEvidence.totals[c.id])||0)+(c.id==='wholegrains'?(Number(breadEvidence.totals.wholegrains)||0):0)),auto=clamp(partial,c.target),manual=record[c.id];

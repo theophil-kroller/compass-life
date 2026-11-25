@@ -1,3 +1,4 @@
+import {BILLA_SAHNE_PUDDING_ID_168,NOEM_PRO20_VANILLA_ID_168,RAPUNZEL_CRANBERRY_ID_168,packagedPortion168} from './food-desserts-cranberries-v059168.js';
 import {TAKEAWAY_NOODLE_BOX_ID_167,TAKEAWAY_NOODLE_BOX_ASSUMPTIONS_167,noodleBoxPortion167} from './takeaway-noodlebox-v059167.js';
 import {MILLET_BAKE_ID_166,MILLET_BAKE_PEAR_ID_166,MILLET_BAKE_ASSUMPTIONS_166,milletBakePortion166} from './millet-egg-bake-v059166.js';
 import {ROESTI_TOAST_ID_165,RAW_CACAO_OAT_ID_165} from './roesti-cocoa-v059165.js';
@@ -98,6 +99,21 @@ export function dailyDozenIngredientEvidence404(state,day){
     else if(id==='spelt-spaghetti-dry-20261115')notes.wholegrains.push('Dinkel-Spaghetti ohne Vollkornangabe: keine automatische Vollkorn-Gutschrift.');
     else if(id==='calpis-kyohou-grape-diluted-20261115')notes.beverages.push('Calpis als gezuckertes Mischgetränk: erfasst, aber nicht als Wasser-/ungesüßte Getränkemenge gutgeschrieben.');
    }
+   continue;
+  }
+  if(id===RAPUNZEL_CRANBERRY_ID_168){
+   const parsed=packagedPortion168(id,a);if(!parsed)continue;
+   // Ingredients: 60% dried cranberries, 39% concentrated apple syrup,
+   // 1% sunflower oil. Dried-berry reference ~40g per serving (1/4 cup).
+   const actualBerryGrams=parsed.grams*0.60;
+   add('berries',actualBerryGrams/40,`Rapunzel Cranberries · ~${round(actualBerryGrams)} g tatsächliche getrocknete Cranberries aus ${round(parsed.grams)} g gesüßtem Produkt (60 % Fruchtanteil; Rechenannahme)`,sourceId);
+   notes.berries.push('Enthält zusätzlich 39 % Apfeldicksaft; eine gesüßte Trockenbeere ist ernährungsphysiologisch nicht mit ungesüßten Beeren gleichzusetzen. Nur 60 % Cranberry-Anteil gezählt.');
+   notes.fruit.push('Apfeldicksaft (39 %) wird NICHT als eigenständige Obstportion gutgeschrieben.');
+   continue;
+  }
+  if(id===BILLA_SAHNE_PUDDING_ID_168||id===NOEM_PRO20_VANILLA_ID_168){
+   notes.spices.push('Vanille in Sahnepudding / Topfencreme nicht mengenmäßig belegbar: keine Gewürzportion.');
+   notes.beans.push('Milchprodukt: Milchprotein ist keine Daily-Dozen-Hülsenfruchtportion.');
    continue;
   }
   if(id===TAKEAWAY_NOODLE_BOX_ID_167){

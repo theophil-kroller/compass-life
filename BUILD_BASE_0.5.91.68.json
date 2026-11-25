@@ -1,0 +1,38 @@
+{
+  "version": "0.5.91.68",
+  "patch_base": "0.5.91.67",
+  "source": "Compass_Life_0.5.91.67_FULL_SOURCE.zip",
+  "feature": "Drei fotografierte Verpackungsprodukte: BILLA Sahnepudding Vanille 500g, nöm PRO20 Topfencreme Vanille 235g, Rapunzel Bio Cranberries mit Apfeldicksaft 100g; Makros Etikett, Mikros geschätzt, Daily Dozen, Anti-Aging Eight, ganze Packung",
+  "changed_paths": [
+    "BUILD_BASE_0.5.91.68.json",
+    "PATCH_INSTALL_0.5.91.68.md",
+    "RELEASE_0.5.91.68.md",
+    "TESTRESULTS_0.5.91.68.txt",
+    "client/package.json",
+    "client/src/compass-release-v57759402519.js",
+    "client/src/daily-dozen-evidence-v57759404.js",
+    "client/src/daily-dozen-v57733.js",
+    "client/src/food-additions-v059148.js",
+    "client/src/food-desserts-cranberries-v059168.js",
+    "client/src/food-menu-v059148.js",
+    "client/src/main-full-v57759402510.js",
+    "package.json",
+    "tests/compass-059168-desserts-cranberries.test.mjs"
+  ],
+  "removed_paths": [],
+  "vault_migration": false,
+  "d1_migration": false,
+  "validation": {
+    "targeted_pass": 9,
+    "targeted_total": 9,
+    "importgraph_modules": 316,
+    "baseline_tests": 2459,
+    "baseline_pass": 2392,
+    "baseline_fail": 67,
+    "new_tests": 2468,
+    "new_pass": 2401,
+    "new_fail": 67,
+    "new_failures": 0,
+    "vite_build": "not executed; vite not locally installed"
+  }
+}
