@@ -288,6 +288,7 @@ import {smartImportHubView,inspectSmartFiles,collectFolderFiles,committedSmartIm
 import {sportsInsightsView,sportsPeriodWindow,sportsShiftAnchor,SPORTS_MODES} from './sports-insights.js';
 import {registerSW} from 'virtual:pwa-register';
 import * as vault from './vault.js';
+import {recoveryLocator,cloudBackupVault,cloudRecoverVault} from './vault-recovery-v059171.js';
 import {request,nextBatch,applyResult,mergePulled,sameItemContent,pruneIdenticalConflicts} from './sync.js';
 import {DEFAULT_CALENDAR_RULES,CALENDAR_CATEGORIES,effectiveCalendarRules,classifyCalendarEvent,validCalendarRule,validCalendarOverride,visibleCalendarEventsForDay,isRoutineCalendarBlock} from './calendar-rules.js';
 import {ACTIVITY_CATEGORIES,isoLocal,validActivityEdit,validManualActivity,projectActivities,activeActivities,activityStats,timelineItems} from './activity-management.js';
@@ -300,7 +301,7 @@ import {prepareTasks,TASK_CATEGORIES,CATEGORY_LABELS,validLocalTask,taskPlain,sa
 
 
 registerSW({immediate:true});
-const COMPASS_CLIENT_VERSION='0.5.91.70';
+const COMPASS_CLIENT_VERSION='0.5.91.71';
 const app=document.getElementById('app');
 const COMPASS55_MODE_KEY='compass.ui.focus.v57755';
 let compass55Mode=(()=>{try{return localStorage.getItem(COMPASS55_MODE_KEY)==='extended'?'extended':'focus';}catch{return 'focus';}})();
@@ -411,6 +412,27 @@ let contextFilter='';
 let recoveryIdeaMinutes=180,recoveryIdeaEnergy='medium',recoveryIdeaRange='trip';
 let syncResyncRequested=false;
 let syncTimer=null, lastSyncAt=0;
+// A password-derived capability lives ONLY in volatile memory while the vault is unlocked.
+let recoveryLocatorValue='',vaultRecoveryMode=true,recoveryBackupTimer=null,recoveryBackupActive=false,recoveryLastSavedAt='',recoveryLastError='';
+function forgetCloudRecovery(){recoveryLocatorValue='';clearTimeout(recoveryBackupTimer);recoveryBackupTimer=null;}
+function scheduleCloudRecoveryBackup(delay=45000){
+ if(!state||!authToken||!recoveryLocatorValue||!navigator.onLine)return;
+ clearTimeout(recoveryBackupTimer);
+ recoveryBackupTimer=setTimeout(()=>{recoveryBackupTimer=null;cloudRecoveryBackup().catch(()=>{});},delay);
+}
+async function cloudRecoveryBackup(force=false){
+ if(!state||!authToken||!recoveryLocatorValue||!navigator.onLine||recoveryBackupActive)return;
+ if(!force&&recoveryLastSavedAt&&Date.now()-Date.parse(recoveryLastSavedAt)<5*60*1000)return;
+ recoveryBackupActive=true;
+ try{
+   await saveQueue;await vault.flushCoreWrites();
+   const backup=await vault.exportEncrypted();
+   const result=await cloudBackupVault(config.apiUrl,authToken,recoveryLocatorValue,backup);
+   recoveryLastSavedAt=result.at||new Date().toISOString();recoveryLastError='';
+ }catch(ex){recoveryLastError=ex.message;console.warn('Cloud-Tresorsicherung ausstehend:',ex.message);throw ex;}
+ finally{recoveryBackupActive=false;if(state&&tab==='system')render();}
+}
+
 const SYNC_INTERVAL_MS=15*60*1000;
 const CHANGE_DEBOUNCE_MS=12000;
 const coreIdlePolicy=createCoreIdlePolicy({quietMs:10000,maxDelayMs:120000});
@@ -453,7 +475,7 @@ async function resumeSession(){
     if(!navigator.onLine)return;
     const who=await request(config.apiUrl,authToken,'/api/me');
     currentUser=who.email;render();
-    scheduleSync();scheduleJournalSync(12000);scheduleWatchCalendarSnapshot();
+    scheduleSync();scheduleCloudRecoveryBackup(1000);scheduleJournalSync(12000);scheduleWatchCalendarSnapshot();
   }catch(ex){
     if(ex.status===401){authToken='';currentUser='';await vault.clearSession();toast('Compass-Sitzung abgelaufen. Bitte einmalig mit Google anmelden.');}
     else {error='Verbindung derzeit nicht erreichbar. Lokale Erfassung bleibt möglich.';render();}
@@ -980,6 +1002,7 @@ function persist() {
   const measurement=performanceTrace.start();
   const snapshot=structuredClone(state);
   saveQueue=saveQueue.catch(()=>{}).then(()=>vault.save(snapshot)).finally(()=>performanceTrace.end('Tresor speichern',tab,measurement));
+  scheduleCloudRecoveryBackup();
   return saveQueue;
 }
 const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2144,15 +2167,16 @@ function calendarDeadlinePanel(){
  return `<section class="work-card v568-calendar-hints"><div class="work-heading"><span>🎓 Prüfung & Deadlines aus Google Kalender</span><span class="quiet-tag">${suggestions.length} Vorschläge</span></div><p class="muted-line">Kein passendes Vorbereitungsprojekt erkannt. Kalendertermine sind unverbindliche Hinweise – bitte prüfen.</p>${suggestions.slice(0,5).map(s=>`<div class="v568-suggestion"><div><strong>${h(s.title)}</strong><small>${h(s.day)} · Noch kein passendes aktives Projekt erkannt</small></div><div><button type="button" class="primary-btn" data-action="calendar-deadline-create" data-id="${h(s.id)}">Vorbereitungsprojekt anlegen</button><button type="button" class="secondary-btn" data-action="calendar-deadline-dismiss" data-id="${h(s.id)}">Passt nicht</button></div></div>`).join('')}<small>Automatische Textzuordnung kann ähnliche Projekte übersehen. Vor dem Anlegen bestehende Projekte prüfen.</small></section>`;
 }
 function vaultScreen(){
- return `<main class="compass54-lock" aria-label="Compass Tresor entsperren">
+ const recovering=!hasVault&&vaultRecoveryMode;
+ return `<main class="compass54-lock" aria-label="Compass Tresor entsperren oder wiederherstellen">
  <section class="compass54-lock-card"><img class="compass54-mark" src="${import.meta.env.BASE_URL}icon-192.png" alt="" width="68" height="68"/>
- <h1>${hasVault?'Willkommen zurück':'Compass einrichten'}</h1><p>${hasVault?'Dein persönlicher Arbeitsraum ist geschützt.':'Deine Daten bleiben lokal verschlüsselt. Richte eine Passphrase ein.'}</p>
+ <h1>${hasVault?'Willkommen zurück':recovering?'Tresor wiederherstellen':'Neuen Tresor einrichten'}</h1><p>${hasVault?'Dein persönlicher Arbeitsraum ist geschützt.':recovering?'Kein lokaler Tresor erkannt. Gib deine bisherige Passphrase ein. Compass sucht automatisch eine verschlüsselte Cloud-Sicherung – ohne Google-Anmeldung.':'Nur wenn du noch nie einen Compass-Tresor hattest: neue Passphrase festlegen.'}</p>
  ${notice?`<div class="alert" role="status">${h(notice)}</div>`:''}
  ${error?`<div class="alert bad" role="alert">${h(error)}</div>`:''}
- <form id="vault-form" autocomplete="on"><label class="sr-only" for="passphrase">Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" autocomplete="current-password" placeholder="Passphrase" />
- ${!hasVault?`<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" required minlength="12" autocomplete="new-password" placeholder="Passphrase wiederholen"/>`:''}
- <button type="submit" class="primary-btn">${hasVault?'Entsperren':'Tresor erstellen'}</button>
- ${!hasVault?`<label class="restore-label" for="encrypted-import">Verschlüsseltes Backup wiederherstellen</label><input id="encrypted-import" type="file" accept="application/json"/>`:''}
+ <form id="vault-form" autocomplete="on"><label class="sr-only" for="passphrase">Tresor-Passphrase</label><input id="passphrase" name="passphrase" type="password" required minlength="12" autocomplete="current-password" placeholder="Bisherige Tresor-Passphrase" />
+ ${!hasVault&&!recovering?`<label class="sr-only" for="passphrase-repeat">Passphrase wiederholen</label><input id="passphrase-repeat" name="repeat" type="password" required minlength="12" autocomplete="new-password" placeholder="Passphrase wiederholen"/>`:''}
+ <button type="submit" class="primary-btn">${hasVault?'Entsperren':recovering?'Sicher aus Cloud wiederherstellen':'Neuen Tresor erstellen'}</button>
+ ${!hasVault?`<button type="button" class="secondary-btn" data-action="vault-recovery-toggle">${recovering?'Ich habe keinen Tresor – neu einrichten':'Ich habe bereits einen Tresor – wiederherstellen'}</button><label class="restore-label" for="encrypted-import">Alternativ: Verschlüsseltes JSON-Backup importieren</label><input id="encrypted-import" type="file" accept="application/json"/><small>Automatisch funktioniert es, sobald ein anderes Gerät einen vollständigen Cloud-Tresor gesichert hat. Eine fehlende Sicherung verändert keine lokalen Daten.</small>`:''}
  </form><small class="compass54-lock-foot">Compass · Relaxed Control · Lokal verschlüsselt</small></section></main>`;
 }
 
@@ -2555,7 +2579,7 @@ function systemScreen(){
  <section class="module-card module-active"><div class="module-head"><div class="module-title">${ico('shield',22)}<h2>Lokaler Tresor</h2></div></div><p class="module-subtitle">Verschlüsselt und offline nutzbar.</p>
  <label style="display:grid;gap:5px;margin:10px 0">Automatische Sperre bei Inaktivität · dieses Gerät <select id="vault58-idle">${VAULT_IDLE_MINUTES_163.map(n=>`<option value="${n}" ${vaultIdleMinutes163===n?'selected':''}>${n<60?n+' Minuten':n===60?'1 Stunde':n===120?'2 Stunden':'4 Stunden'}</option>`).join('')}</select></label><p class="small-muted">Standard: 1 Stunde. Diese Einstellung gilt nur in diesem Browser auf diesem Gerät; am Handy kannst du eine andere wählen. Nur auf vertrauenswürdigen Geräten verlängern. Manuell sperren bleibt jederzeit möglich. Bei einem gesperrten Gerät bleibt Compass zusätzlich durch die Gerätesperre geschützt.</p>
  <div class="security-line">${ico('check',17)} AES-256-GCM verschlüsselte Speicherung</div><div class="security-line">${ico('check',17)} Passphrase bleibt auf deinem Gerät</div><div class="security-line">${ico('check',17)} Keine privaten Aufgaben in GitHub</div>
- <button class="secondary-btn full" data-action="export-encrypted">Verschlüsseltes Backup herunterladen</button><button class="secondary-btn full" data-action="export-json">Klartext-JSON exportieren</button><p class="small-muted">Klartext-Exporte enthalten unverschlüsselte private Inhalte.</p></section></div>
+ <p class="small-muted">${recoveryLastSavedAt?'Letzte vollständige Cloud-Tresorsicherung: '+h(date(recoveryLastSavedAt)):recoveryLastError?'Cloud-Sicherung noch nicht erfolgreich: '+h(recoveryLastError):'Noch keine vollständige Cloud-Tresorsicherung auf diesem Gerät bestätigt.'}</p><button class="secondary-btn full" data-action="vault-backup-now" ${!authToken||!recoveryLocatorValue?'disabled':''}>Jetzt verschlüsselt in Cloud sichern</button><p class="small-muted">Bei bestehender Compass-Sitzung regelmäßige verschlüsselte Backups. Auf einem anderen Gerät nur Tresor-Passphrase zum Wiederherstellen nötig; keine Google-Anmeldung für den Download.</p><button class="secondary-btn full" data-action="export-encrypted">Verschlüsseltes Backup herunterladen</button><button class="secondary-btn full" data-action="export-json">Klartext-JSON exportieren</button><p class="small-muted">Klartext-Exporte enthalten unverschlüsselte private Inhalte.</p></section></div>
  ${privateMirrorSettings()}
  ${outlookCalendarPanel61(state?.outlookCalendar61,{connected:outlook61Connected,port:outlook724Port,token:outlook724Token,back:outlook61Back,forward:outlook61Forward,descriptions:outlook61Descriptions,message:outlook61Message})}
  <section class="work-card people-sync719"><div class="work-heading"><span>${ico('people',18)} Kontaktprofile geräteübergreifend</span><span class="quiet-tag">E2EE · ausdrücklich aktivieren</span></div>
@@ -3490,9 +3514,24 @@ function bind() {
       const status=app.querySelector('#mm571-autosave-status');if(status)status.textContent='Speichert …';morningScheduleDraftSave();};
     mm571Note.onblur=()=>{morningJournalBlur().catch(ex=>console.warn('Journal nachbearbeiten:',ex.message));};
   }
+  const recoveryToggle=app.querySelector('[data-action="vault-recovery-toggle"]');if(recoveryToggle)recoveryToggle.onclick=()=>{vaultRecoveryMode=!vaultRecoveryMode;notice='';error='';render();};
   const vaultForm=app.querySelector('#vault-form');if(vaultForm)vaultForm.onsubmit=async ev=>{
     ev.preventDefault();const unlockMeasurement=performanceTrace.start();const form=new FormData(vaultForm),p=String(form.get('passphrase')||'');
-    try {reportUnlockStage137('decrypt');const compass55UnlockStep=performanceTrace.start();if(hasVault){state=await vault.unlock(p);}else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}performanceTrace.end('Tresor: Entschlüsseln',tab,compass55UnlockStep);
+    try {reportUnlockStage137('decrypt');const compass55UnlockStep=performanceTrace.start();
+      if(hasVault){state=await vault.unlock(p);}
+      else if(vaultRecoveryMode){
+        if(!navigator.onLine)throw new Error('Für die Cloud-Wiederherstellung wird eine Internetverbindung benötigt.');
+        const locator=await recoveryLocator(p);
+        const backup=await cloudRecoverVault(config.apiUrl,locator);
+        if(!backup)throw new Error('Noch keine Cloud-Sicherung. Bitte den bestehenden Computer-Tresor mit der neuen Version sichern.');
+        if(!await vault.verifyEncryptedBundle(p,backup))throw new Error('Passphrase falsch oder Cloud-Sicherung beschädigt. Es wurde nichts importiert.');
+        await vault.importEncrypted(backup);hasVault=true;state=await vault.unlock(p);
+        // An imported PC snapshot is a new DEVICE: do not inherit its source/writer role.
+        if(state?.privateDeviceMirror?.mode==='source')state.privateDeviceMirror.mode='receiver';
+        toast('Verschlüsselter Cloud-Tresor wiederhergestellt.');
+      }else {if(p!==form.get('repeat'))throw new Error('Die Passphrasen stimmen nicht überein.');state=await vault.create(p);hasVault=true;}
+      recoveryLocatorValue=await recoveryLocator(p);
+      performanceTrace.end('Tresor: Entschlüsseln',tab,compass55UnlockStep);
       // Draft bytes are separate from the full Vault payload, but use the same key.
       reportUnlockStage137('drafts');const compass55DraftStep=performanceTrace.start();state[EDIT_DRAFT_VAULT_KEY]={...(state[EDIT_DRAFT_VAULT_KEY]||{}),...(await vault.loadEditDrafts().catch(()=>({})))};performanceTrace.end('Tresor: Entwürfe laden',tab,compass55DraftStep);
       reportUnlockStage137('merge');const compass55Keys=['tasks','taskPending','taskVersions','taskConflicts','projects','projectPending','projectVersions','projectConflicts','discoveredEvents','eventPreferences','eventVersions','eventPending','eventDeleted','eventConflicts'];const compass55Missing=compass55Keys.some(key=>state[key]==null);prepareTasks(state);eventState(state);const compass55Pruned=prunePastEvents(state,localDate(),0,0);const compass55SaveStep=performanceTrace.start();if(compass55Missing||compass55Pruned>0){await persist();performanceTrace.end('Tresor: Startzustand speichern',tab,compass55SaveStep);}else{performanceTrace.end('Tresor: Startzustand unverändert',tab,compass55SaveStep);}
@@ -4457,6 +4496,7 @@ async function placeInDailyPlan(taskId,start,moveId=null){
  toast('Arbeitsblock im lokalen Tagesplan gespeichert – kein Google-Termin erstellt.');
 }
 async function runAction(action,id,stepId=null,plannerDay=null) {
+ if(action==='vault-recovery-toggle'){if(!hasVault){vaultRecoveryMode=!vaultRecoveryMode;notice='';error='';render();}return;}
  if(action==='today59-top-toggle'){
   if(!state||tab!=='today')return;
   await mutate(s=>{s.uiPreferences??={};s.uiPreferences.todayTopCollapsed59=s.uiPreferences.todayTopCollapsed59!==true;});return;
@@ -6255,7 +6295,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!confirm('Alle lokal importierten Garmin- und Fitdays-Messungen auf diesem Gerät löschen? Health-Connect-Daten in der Cloud bleiben unverändert.'))return;
       await mutate(s=>{delete s.healthImports;});selectedGarminNight='';healthFilePreview=null;toast('Lokale Garmin- und Fitdays-Daten gelöscht.');return;
     }
-    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;outlook724Token='';outlook724Connected=false;outlook61Connected=false;outlook724Preview=[];authToken='';currentUser='';notice='';error='';render();return;}
+    if(action==='lock'){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureSkipNextSnapshot=true;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;healthFilePreview=null;selectedGarminNight='';clearTimeout(syncTimer);calendarToken='';calendarEvents=[];calendarExpires=0;healthDays=[];healthDevices=[];healthPairCode='';healthError='';widgetPairCode='';widgetDevices=[];await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();forgetCloudRecovery();vault.lock();state=null;outlook724Token='';outlook724Connected=false;outlook61Connected=false;outlook724Preview=[];authToken='';currentUser='';notice='';error='';render();return;}
     if(action==='widget-pair'){if(!authToken)return;try{const out=await request(config.apiUrl,authToken,'/api/widget/pair/start',{method:'POST'});widgetPairCode=out.code;widgetConnectError='';render();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='widget-revoke'){if(!authToken||!confirm('Widget-Gerät wirklich trennen? Der Widget-Zugang wird sofort ungültig.'))return;try{await request(config.apiUrl,authToken,'/api/widget/device/revoke',{method:'POST',body:JSON.stringify({deviceHash:id})});await reloadWidgetDevices();}catch(ex){widgetConnectError=ex.message;render();}return;}
     if(action==='health-pair'){
@@ -6403,6 +6443,7 @@ async function runAction(action,id,stepId=null,plannerDay=null) {
       if(!confirm('Diesen Inbox-Eintrag archivieren?'))return;
       await mutate(s=>{const r=s.records[id];r.deleted=true;r.updatedAt=stamp();s.pending.push(makeMutation(r));});return;
     }
+    if(action==='vault-backup-now'){try{await cloudRecoveryBackup(true);toast('Cloud-Tresor erfolgreich gesichert.');}catch(ex){toast(ex.message,true);}return;}
     if(action==='export-encrypted'){download(`compass-vault-${new Date().toISOString().slice(0,10)}.json`,await vault.exportEncrypted());toast('Verschlüsseltes Backup erstellt.');return;}
     if(action==='export-json'){if(!confirm('Klartext-Export erstellen? Die Datei ist NICHT verschlüsselt.'))return;download('compass-export-unencrypted.json',state);toast('JSON-Export erstellt. Sicher aufbewahren.');return;}
     if(action==='resolve-remote'||action==='resolve-local'){
@@ -6442,7 +6483,7 @@ async function renderGoogleButton() {
         await vault.saveSession(session);
         authToken=session.token;currentUser=session.email;
         toast('Compass verbunden. Die Anmeldung bleibt im verschlüsselten Tresor gespeichert.');
-        await syncNow();
+        await syncNow();scheduleCloudRecoveryBackup(1000);
       }catch(ex){authToken='';currentUser='';toast(ex.status===401?'Dieses Google-Konto ist nicht freigeschaltet.':ex.message,true);}
     },auto_select:false});
     window.google.accounts.id.renderButton(root,{theme:'outline',size:'large',type:'standard',text:'signin_with',shape:'rectangular'});
@@ -6584,7 +6625,7 @@ async function syncNow({silent=false}={}) {
     if(state?.privateDeviceMirror?.mode==='source')await publishPrivateMirror();
     else if(state?.privateDeviceMirror?.mode==='receiver')await receivePrivateMirror();
     if(state?.privateDeviceMirror?.key)await syncPersonalJournal();
-    lastSyncAt=Date.now();
+    lastSyncAt=Date.now();scheduleCloudRecoveryBackup(1000);
     notice=state.conflicts.length?'Synchronisiert – bitte Konflikte prüfen.':state.peopleSyncEnabled&&state.privateDeviceMirror?.key&&journalSyncStatus==='ok'?'Planung, Inbox und aktivierte verschlüsselte Kontaktprofile abgeglichen.':'Planung & Inbox synchronisiert · Kontakte bleiben auf diesem Gerät, sofern nicht ausdrücklich für E2EE aktiviert.';
     error='';
   }catch(ex){
@@ -6642,7 +6683,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   }});
 window.addEventListener('offline',render);
 for(const e of ['pointerdown','keydown','touchstart'])document.addEventListener(e,()=>{lastActivity=Date.now();coreIdlePolicy.noteActivity(lastActivity);},{passive:true});
-setInterval(async()=>{if(state&&vaultIdleElapsed163({now:Date.now(),lastActivity,minutes:vaultIdleMinutes163,activeRoutine:document.documentElement.dataset.compassRoutineActive==='yes',graceUntil:Number(document.documentElement.dataset.compassRoutineGraceUntil||0)})){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Wegen Inaktivität automatisch gesperrt.';render();}},60000);
+setInterval(async()=>{if(state&&vaultIdleElapsed163({now:Date.now(),lastActivity,minutes:vaultIdleMinutes163,activeRoutine:document.documentElement.dataset.compassRoutineActive==='yes',graceUntil:Number(document.documentElement.dataset.compassRoutineGraceUntil||0)})){await morningBeforeLock();feelingOverlayOpen=false;feelingDraft=newFeelingDraft();captureOverlayOpen=false;captureDraft={title:'',note:'',noteOpen:false};dashboardCaptureDraft='';captureSkipNextSnapshot=true;smartHubEntries=[];smartHubStage=null;smartHubFolders.health=null;smartHubFolders.finance=null;delete smartHubFolderStatus.health;delete smartHubFolderStatus.finance;clearTimeout(syncTimer);await editDraftGuard.flush().catch(()=>{});await vault.flushCoreWrites().catch(()=>{});editDraftGuard.reset();forgetCloudRecovery();vault.lock();state=null;authToken='';currentUser='';calendarToken='';calendarEvents=[];calendarExpires=0;notice='Wegen Inaktivität automatisch gesperrt.';render();}},60000);
 (async()=>{
   try{config=await fetch(`${import.meta.env.BASE_URL}runtime-config.json`,{cache:'no-store'}).then(r=>r.json());}
   catch{config={};}

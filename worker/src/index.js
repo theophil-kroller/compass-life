@@ -2,6 +2,7 @@ import {watchDashboard,watchCalendarPublish,watchShoppingToggle} from './watch-d
 import {publicBitcoinLongHistory} from './market-bitcoin-long-v40.js';
 import {publicKrakenHistory} from './market-kraken-v39.js';
 import {privateMirror} from './private-device-mirror.js';
+import {vaultRecoveryPublic,vaultRecoveryPrivate} from './vault-recovery-v059171.js';
 import {privateMirrorChunks} from './private-device-chunks-v552.js';
 import {listProjects,putProject} from './projects.js';
 import {readWeeklyReview,writeWeeklyReview} from './weekly-review.js';
@@ -138,6 +139,7 @@ async function applyOne(env,sub,raw) {
 }
 async function route(req,env,identity) {
   const url=new URL(req.url);
+  if(/^\/api\/vault-recovery\/(begin|part|commit)$/.test(url.pathname))return vaultRecoveryPrivate(req,env,identity);
   if(/^\/api\/private-device\/(finance|health|journal)$/.test(url.pathname))return privateMirror(req,env,identity);
   if(/^\/api\/private-device\/(finance|health|journal)\/(parts|commit)$/.test(url.pathname))return privateMirrorChunks(req,env,identity);
   if(req.method==='POST' && url.pathname==='/api/widget/pair/start')return startWidgetPair(env,identity);
@@ -234,6 +236,8 @@ export default {
         return finish(googleIdentity?await issueSession(env,googleIdentity):json({error:'unauthorized'},401));
       }
       if(path==='/api/session' && req.method==='DELETE')return finish(await revokeSession(req,env));
+      // Password-derived lookup capability: ciphertext only; no OAuth required for recovery.
+      if(/^\/api\/vault-recovery\/[a-f0-9]{64}(?:\/[a-f0-9]{32}\/\d{1,3})?$/.test(path) && req.method==='GET')return finish(await vaultRecoveryPublic(req,env));
       const identity=await authorize(req,env);
       if(!identity)return finish(json({error:'unauthorized'},401));
       return finish(await route(req,env,identity));

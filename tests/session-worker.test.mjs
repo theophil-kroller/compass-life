@@ -17,6 +17,7 @@ source=source.replace("import {listDiscoveryEvents,upsertDiscoveryEvents} from '
 source=source.replace("import {schemaStatus} from './schema.js';", "const schemaStatus=async()=>({ready:true,requiredMigration:null,missing:[]});");
 source=source.replace("import {listTasks,putTask} from './tasks.js';", "const listTasks=()=>{};const putTask=()=>{};");
 source=source.replace("import {privateMirror} from './private-device-mirror.js';","const privateMirror=()=>new Response(null,{status:404});");
+source=source.replace("import {vaultRecoveryPublic,vaultRecoveryPrivate} from './vault-recovery-v059171.js';","const vaultRecoveryPublic=()=>new Response(null,{status:404});const vaultRecoveryPrivate=()=>new Response(null,{status:404});");
 source=source.replace("import {privateMirrorChunks} from './private-device-chunks-v552.js';","const privateMirrorChunks=()=>new Response(null,{status:404});");
 source=source.replace("import {publicKrakenHistory} from './market-kraken-v39.js';","const publicKrakenHistory=()=>new Response(null,{status:503});");
 // The Worker imports the watch dashboard, but these tests deliberately isolate

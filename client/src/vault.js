@@ -139,7 +139,17 @@ export function saveEditDrafts(drafts){
 export function lock(){key=null;}
 export async function exportEncrypted() {
   await flushCoreWrites();
-  return {application:'Compass',vaultVersion:1,meta:await kvGet('meta'),payload:await kvGet('payload'),coreJournal:await kvGet(CORE_JOURNAL_KEY),sealedCapture:{publicKey:await kvGet(publicCaptureKey),privateKey:await kvGet(privateCaptureKey),queue:await kvGet(lockedQueueKey)}};
+  return {application:'Compass',vaultVersion:1,meta:await kvGet('meta'),payload:await kvGet('payload'),coreJournal:await kvGet(CORE_JOURNAL_KEY),editDrafts:await kvGet(EDIT_DRAFTS_RECORD),sealedCapture:{publicKey:await kvGet(publicCaptureKey),privateKey:await kvGet(privateCaptureKey),queue:await kvGet(lockedQueueKey)}};
+}
+/** Test a downloaded backup in memory BEFORE writing anything to IndexedDB. */
+export async function verifyEncryptedBundle(passphrase,bundle){
+ if(bundle?.application!=='Compass'||bundle?.vaultVersion!==1||!bundle?.meta?.salt||!bundle?.payload?.iv||!bundle?.payload?.data)return false;
+ try{
+  const candidate=await derive(passphrase,from64(bundle.meta.salt));
+  const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(bundle.payload.iv)},candidate,from64(bundle.payload.data));
+  const value=JSON.parse(dec.decode(plain));
+  return value?.format===1&&value.records&&Array.isArray(value.pending);
+ }catch{return false;}
 }
 export async function importEncrypted(bundle) {
   if(await exists())throw new Error('Import nur in einem neuen, leeren Browser-Tresor möglich.');
@@ -147,6 +157,7 @@ export async function importEncrypted(bundle) {
     throw new Error('Ungültiger Compass-Tresorexport.');
   await kvPut('meta',bundle.meta);await kvPut('payload',bundle.payload);
   if(Array.isArray(bundle.coreJournal)&&bundle.coreJournal.length)await kvPut(CORE_JOURNAL_KEY,bundle.coreJournal);
+  if(bundle.editDrafts?.iv&&bundle.editDrafts?.data)await kvPut(EDIT_DRAFTS_RECORD,bundle.editDrafts);
   if(bundle.sealedCapture?.publicKey&&bundle.sealedCapture?.privateKey){await kvPut(privateCaptureKey,bundle.sealedCapture.privateKey);await kvPut(publicCaptureKey,bundle.sealedCapture.publicKey);if(Array.isArray(bundle.sealedCapture.queue))await kvPut(lockedQueueKey,bundle.sealedCapture.queue);}
 }
 
