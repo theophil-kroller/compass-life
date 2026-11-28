@@ -1,3 +1,4 @@
+import {FOOD_INDEX_170,foodPortion170} from './food-proteins-nectar-v059170.js';
 import {FOOD_INDEX_169,foodPortion169} from './food-package-collection-v059169.js';
 import {BILLA_SAHNE_PUDDING_ID_168,NOEM_PRO20_VANILLA_ID_168,RAPUNZEL_CRANBERRY_ID_168,packagedPortion168} from './food-desserts-cranberries-v059168.js';
 import {TAKEAWAY_NOODLE_BOX_ID_167,TAKEAWAY_NOODLE_BOX_ASSUMPTIONS_167,noodleBoxPortion167} from './takeaway-noodlebox-v059167.js';
@@ -99,6 +100,24 @@ export function dailyDozenIngredientEvidence404(state,day){
     else if(spec.group==='fruit')add('fruit',parsed.grams/120,'Frisches Obst · essbares Gewicht / 120 g mittlere Portion',sourceId);
     else if(id==='spelt-spaghetti-dry-20261115')notes.wholegrains.push('Dinkel-Spaghetti ohne Vollkornangabe: keine automatische Vollkorn-Gutschrift.');
     else if(id==='calpis-kyohou-grape-diluted-20261115')notes.beverages.push('Calpis als gezuckertes Mischgetränk: erfasst, aber nicht als Wasser-/ungesüßte Getränkemenge gutgeschrieben.');
+   }
+   continue;
+  }
+  if(Object.hasOwn(FOOD_INDEX_170,id)){
+   const portion=foodPortion170(id,a);
+   if(!portion)continue;
+   if(id==='schalkmuehle-tropical-treasure-protein-20g-20261128'){
+    notes.nuts.push('Tropical Treasure: 32 % entöltes Sonnenblumenkernpulver und 10 % entöltes Kürbiskernpulver (in 20 g: 8,4 g Pulver); keine äquivalente volle Nuss-/Samenportion belegbar.');
+    notes.beans.push('22 % Ackerbohnen-Proteinisolat ist keine Portion gekochter Hülsenfrüchte.');
+    notes.fruit.push('Fruchtpulver (Banane, Mango, Acerola): nicht gleichbedeutend mit einer vollen Portion frischem Obst.');
+   } else if(id==='raab-bio-soya-cocoa-protein-shake-20g-20261128'){
+    notes.beans.push('Raab Soja Kakao: Sojaprotein ist keine Portion gekochter Sojabohnen.');
+    notes.spices.push('Kakao als Zutat, aber keine belegte Daily-Dozen-Gewürzportion.');
+   } else if(id==='raab-bio-soya-vanilla-protein-shake-20g-20261128'){
+    notes.beans.push('Raab Soja Vanille: Sojaprotein ist keine Portion gekochter Sojabohnen.');
+   } else if(id==='voelkel-bio-maracuja-nectar-200ml-20261128'){
+    notes.fruit.push('Voelkel Maracuja-Nektar enthält nur 30 % Saft und zugesetzten Zucker; keine automatische ganze Obstportion.');
+    notes.beverages.push('Gezuckerter Nektar zählt nicht als Wasser oder ungesüßter Tee.');
    }
    continue;
   }
