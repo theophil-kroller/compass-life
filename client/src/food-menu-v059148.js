@@ -20,6 +20,14 @@ const explicit=Object.freeze({
  'billa-sahnepudding-vanille-500g-20261125':'sweets',
  'noem-pro20-topfencreme-vanille-235g-20261125':'dairy',
  'rapunzel-cranberries-apple-concentrate-100g-20261125':'fruitnuts',
+ 'nestelberg-dried-figs-10g-20261128':'fruitnuts',
+ 'mango-turmeric-latte-chia-pudding-dry-50g-20261128':'meals',
+ 'bio-amaranth-berries-muesli-50g-20261128':'meals',
+ 'ecomil-barista-coconut-200ml-20261128':'drinks',
+ 'morgenland-organic-dried-goji-30g-20261128':'fruitnuts',
+ 'govinda-organic-barberries-30g-20261128':'fruitnuts',
+ 'rapunzel-organic-dried-physalis-30g-20261128':'fruitnuts',
+ 'raab-bio-rice-protein-neutral-20g-20261128':'sport',
  'homemade-millet-egg-bake-little-date-syrup-20261123':'meals',
  'homemade-millet-egg-bake-pear-breakfast-20261123':'meals',
  'braineffect-mct-c8-oil':'ingredients','water-glass':'drinks',
@@ -60,7 +68,7 @@ const proteinIds=new Set([
  'milsani-skyr-maracuja-150g','spar-freefrom-bio-skyr-250g','bio-magertopfen-250g',
  'dr-oetker-high-protein-milchreis-zimt-400g','billa-high-protein-griesspudding-zimt-500g','noem-pro20-topfencreme-blueberry-cheesecake-235g','noem-pro20-topfencreme-vanille-235g-20261125',
  'alpro-plant-protein-vanilla-pudding-200g','alpro-plant-protein-chocolate-pudding-200g',
- 'organic-hemp-fruit-protein-bar-35g'
+ 'organic-hemp-fruit-protein-bar-35g','raab-bio-rice-protein-neutral-20g-20261128'
 ]);
 export function foodCategory148(food){
  const id=String(food?.id||''),title=norm(food?.title),group=norm(food?.group);

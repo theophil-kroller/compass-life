@@ -1,3 +1,4 @@
+import {FOOD_INDEX_169,foodPortion169} from './food-package-collection-v059169.js';
 import {BILLA_SAHNE_PUDDING_ID_168,NOEM_PRO20_VANILLA_ID_168,RAPUNZEL_CRANBERRY_ID_168,packagedPortion168} from './food-desserts-cranberries-v059168.js';
 import {TAKEAWAY_NOODLE_BOX_ID_167,TAKEAWAY_NOODLE_BOX_ASSUMPTIONS_167,noodleBoxPortion167} from './takeaway-noodlebox-v059167.js';
 import {MILLET_BAKE_ID_166,MILLET_BAKE_PEAR_ID_166,MILLET_BAKE_ASSUMPTIONS_166,milletBakePortion166} from './millet-egg-bake-v059166.js';
@@ -99,6 +100,23 @@ export function dailyDozenIngredientEvidence404(state,day){
     else if(id==='spelt-spaghetti-dry-20261115')notes.wholegrains.push('Dinkel-Spaghetti ohne Vollkornangabe: keine automatische Vollkorn-Gutschrift.');
     else if(id==='calpis-kyohou-grape-diluted-20261115')notes.beverages.push('Calpis als gezuckertes Mischgetränk: erfasst, aber nicht als Wasser-/ungesüßte Getränkemenge gutgeschrieben.');
    }
+   continue;
+  }
+  if(Object.hasOwn(FOOD_INDEX_169,id)){
+   const product=FOOD_INDEX_169[id],p=foodPortion169(id,a);if(!p)continue;
+   const mass=p.grams;
+   if(id==='nestelberg-dried-figs-10g-20261128')add('fruit',mass/40,`Getrocknete Feigen · ${round(mass)} g, 40 g Trockenobst als Referenzportion`,sourceId);
+   else if(['morgenland-organic-dried-goji-30g-20261128','govinda-organic-barberries-30g-20261128','rapunzel-organic-dried-physalis-30g-20261128'].includes(id))
+    add('berries',mass/40,`${product.title} · ${round(mass)} g getrocknete Früchte, 40 g Trockenbeeren als Orientierungsportion`,sourceId);
+   else if(id==='mango-turmeric-latte-chia-pudding-dry-50g-20261128'){
+    notes.nuts.push('Mango-Kurkuma-Chia-Pudding enthält Chiasamen; deren Gewichtsanteil ist nicht angegeben. Keine erfundene volle Nuss-/Samenportion.');
+    notes.wholegrains.push('Hafervollkorn-Anteil der Trockenmischung nicht quantifiziert; keine automatische Vollkornportion.');
+    notes.spices.push('0,6 % Kurkuma-Latte-Gewürzmischung: zu wenig für eine automatische Daily-Dozen-Gewürzportion.');
+   }else if(id==='bio-amaranth-berries-muesli-50g-20261128'){
+    notes.berries.push('Amaranth-Müsli: Beeren auf der Verpackung abgebildet; exakte Beerenmenge nicht auf dem Foto dokumentiert. Keine automatische Beerenportion.');
+    notes.wholegrains.push('Amaranth-Müsli: Vollkornanteil nicht vollständig beziffert. Keine automatische Vollkornportion.');
+   }else if(id==='ecomil-barista-coconut-200ml-20261128')notes.beverages.push('Kokos-Baristadrink zählt nicht als Wasser oder ungesüßter Tee.');
+   else if(id==='raab-bio-rice-protein-neutral-20g-20261128')notes.wholegrains.push('Reisproteinisolat ist keine Portion Vollkornreis.');
    continue;
   }
   if(id===RAPUNZEL_CRANBERRY_ID_168){
